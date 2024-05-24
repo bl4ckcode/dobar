@@ -1,0 +1,18 @@
+{
+  "app_title": "BARZ",
+  "@app_title": {
+    "description": "Barz app title, your drink instantly on your table! Choose an item from your restaurants menu and enjoy it."
+  },
+  "drinks_bnb_item_title": "Drinks",
+  "@drinks_bnb_item_title": {
+    "description": "Drinks bottom navigation bar item title, find bars/restaurants/drinks to consume close to you."
+  },
+  "profile_bnb_item_title": "Profile",
+  "@profile_bnb_item_title": {
+    "description": "Profile bottom navigation bar item title, your info goes here"
+  },
+  "search_bnb_item_title": "Search",
+  "@search_bnb_item_title": {
+    "description": "Search bottom navigation bar item title, search bars/restaurants here."
+  }
+}
