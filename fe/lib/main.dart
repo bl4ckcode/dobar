@@ -28,7 +28,7 @@ void main() async {
 }
 
 class BarzApp extends StatefulWidget {
-  const BarzApp({Key? key}) : super(key: key);
+  const BarzApp({super.key});
 
   @override
   BarzAppState createState() => BarzAppState();
@@ -66,6 +66,22 @@ class BarzAppState extends State<BarzApp> with WidgetsBindingObserver {
                 localizationsDelegates: AppLocalizations.localizationsDelegates,
                 supportedLocales: AppLocalizations.supportedLocales,
                 theme: ThemeData(
+                  scaffoldBackgroundColor: Colors.white,
+                  primarySwatch: Colors.blue,
+                  fontFamily: "Intel",
+                  elevatedButtonTheme: ElevatedButtonThemeData(
+                    style:
+                        ElevatedButton.styleFrom(foregroundColor: Colors.white),
+                  ),
+                  inputDecorationTheme: const InputDecorationTheme(
+                    filled: true,
+                    fillColor: Colors.white,
+                    errorStyle: TextStyle(height: 0),
+                    border: defaultInputBorder,
+                    enabledBorder: defaultInputBorder,
+                    focusedBorder: defaultInputBorder,
+                    errorBorder: defaultInputBorder,
+                  ),
                   colorScheme: ColorScheme.fromSeed(seedColor: Colors.white),
                   useMaterial3: true,
                 ),
@@ -102,3 +118,13 @@ class AppNotifier extends ChangeNotifier {
     notifyListeners();
   }
 }
+
+const defaultInputBorder = OutlineInputBorder(
+  borderRadius: BorderRadius.all(
+    Radius.circular(16),
+  ),
+  borderSide: BorderSide(
+    color: Color(0xFFDEE3F2),
+    width: 1,
+  ),
+);

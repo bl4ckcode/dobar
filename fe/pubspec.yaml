@@ -61,7 +61,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^2.0.0
+  flutter_lints: ^4.0.0
   json_serializable: ^6.8.0
 
 # For information on the generic Dart part of this file, see the
@@ -76,13 +76,22 @@ flutter:
   uses-material-design: true
 
   assets:
-    - assets/animated-icons.riv
     - assets/images/
+    - assets/RiveAssets/
 
   fonts:
     - family: JuliusSansOne
       fonts:
         - asset: assets/fonts/JuliusSansOne-Regular.ttf
+    - family: Intel
+      fonts:
+        - asset: assets/Fonts/Inter-Regular.ttf
+        - asset: assets/Fonts/Inter-SemiBold.ttf
+          weight: 600
+    - family: Poppins
+      fonts:
+        - asset: assets/Fonts/Poppins-Bold.ttf
+          weight: 700
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware

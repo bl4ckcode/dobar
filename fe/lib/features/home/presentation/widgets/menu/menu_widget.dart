@@ -111,6 +111,7 @@ class _MenuState extends State<Menu> with SingleTickerProviderStateMixin {
               menuTitles[i],
               textAlign: TextAlign.left,
               style: const TextStyle(
+                color: Colors.white60,
                 fontSize: 18,
                 fontWeight: FontWeight.w300,
               ),
@@ -148,12 +149,12 @@ class _MenuState extends State<Menu> with SingleTickerProviderStateMixin {
             style: ElevatedButton.styleFrom(
               shape: const StadiumBorder(),
               backgroundColor:
-                  BarzColors.bottomNavigationBarColor.withOpacity(0.6),
+                  mainColor.withOpacity(0.6),
               padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 14),
             ),
             onPressed: () {},
             child: const Text(
-              'Logout',
+              'Sair',
               style: TextStyle(color: Colors.white, fontSize: 22),
             ),
           ),
@@ -168,11 +169,11 @@ class _MenuState extends State<Menu> with SingleTickerProviderStateMixin {
       fit: StackFit.expand,
       children: [
         Container(
-          decoration: BoxDecoration(
-            color: BarzColors.bottomNavigationBarColor,
-            boxShadow: const [
+          decoration: const BoxDecoration(
+            color: mainColor,
+            boxShadow: [
               BoxShadow(
-                color: Colors.black,
+                color: Colors.white60,
                 blurStyle: BlurStyle.inner,
                 blurRadius: 1,
               ),
@@ -182,8 +183,8 @@ class _MenuState extends State<Menu> with SingleTickerProviderStateMixin {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  BarzColors.bottomNavigationBarColor.withOpacity(.3),
-                  BarzColors.bottomNavigationBarColor.withOpacity(.3),
+                  mainColor.withOpacity(.3),
+                  Colors.white.withOpacity(.3),
                 ],
               ),
             ),

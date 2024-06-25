@@ -1,7 +1,8 @@
 class ParallaxRecipeUiModel {
   String imageUrl;
   String name;
-  String description;
+  String adress;
+  String approximateLocation;
 
-  ParallaxRecipeUiModel({required this.imageUrl, required this.name, required this.description});
+  ParallaxRecipeUiModel({required this.imageUrl, required this.name, required this.adress, required this.approximateLocation});
 }

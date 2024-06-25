@@ -1,5 +1,5 @@
 import 'package:barz/core/utils/constant/colors.dart';
-import 'package:barz/shared/domain/models/bottom_nav_bar/bottom_nav_model.dart';
+import 'package:barz/shared/domain/models/bottom_nav_bar/menu_model.dart';
 import 'package:barz/shared/domain/models/bottom_nav_bar/rive_model.dart';
 import 'package:barz/shared/presentation/widget/bottom_nav_bar/highlight_nav_bar_animated_widget.dart';
 import 'package:flutter/material.dart';
@@ -9,7 +9,7 @@ import 'package:rive/rive.dart';
 class ContainerBottomNavBarAnimated extends StatefulWidget {
   const ContainerBottomNavBarAnimated({required this.pageItems, super.key});
 
-  final List<BottomNavigationModel> pageItems;
+  final List<Menu> pageItems;
 
   @override
   State<ContainerBottomNavBarAnimated> createState() =>
@@ -18,9 +18,9 @@ class ContainerBottomNavBarAnimated extends StatefulWidget {
 
 class _ContainerBottomNavBarAnimatedState
     extends State<ContainerBottomNavBarAnimated> {
-  Color bottonNavBgColor = BarzColors.bottomNavigationBarColor;
+  Color bottonNavBgColor = bottomNavigationBarColor;
 
-  List<SMIBool> riveIconInputs = [];
+  List<SMIBool?> riveIconInputs = [];
   List<StateMachineController?> controllers = [];
   int selctedNavIndex = 0;
 
@@ -28,19 +28,21 @@ class _ContainerBottomNavBarAnimatedState
     StateMachineController? stateMachineController =
         StateMachineController.fromArtboard(artboard, stateMachineName);
 
-    artboard.addController(stateMachineController!);
-    controllers.add(stateMachineController);
+    if (stateMachineController != null) {
+      artboard.addController(stateMachineController);
+      controllers.add(stateMachineController);
 
-    SMIBool active = stateMachineController.findInput<bool>('active') as SMIBool;
-    riveIconInputs.add(active);
+      SMIBool? active = stateMachineController.findInput<bool>('active') as SMIBool?;
+      riveIconInputs.add(active);
+    }
   }
 
   void animateTheIcon(int index) {
-    riveIconInputs[index].change(true);
+    riveIconInputs[index]?.change(true);
     Future.delayed(
       const Duration(seconds: 1),
       () {
-        riveIconInputs[index].change(false);
+        riveIconInputs[index]?.change(false);
       },
     );
   }
@@ -56,14 +58,14 @@ class _ContainerBottomNavBarAnimatedState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: widget.pageItems[selctedNavIndex].left, //Page to display
+      body: widget.pageItems[selctedNavIndex].page, //Page to display
       bottomNavigationBar: SafeArea(
         child: Container(
           height: 72.h,
           padding: const EdgeInsets.symmetric(horizontal: 24),
-          decoration: BoxDecoration(
-            color: BarzColors.bottomNavigationBarColor,
-            boxShadow: const [
+          decoration: const BoxDecoration(
+            color: mainColor,
+            boxShadow: [
               BoxShadow(
                 color: Colors.black38,
                 blurStyle: BlurStyle.outer,
@@ -76,7 +78,7 @@ class _ContainerBottomNavBarAnimatedState
             children: List.generate(
               widget.pageItems.length,
               (index) {
-                final riveIcon = widget.pageItems[index].right as RiveModel;
+                final riveIcon = widget.pageItems[index].rive as RiveModel;
                 return GestureDetector(
                   onTap: () {
                     animateTheIcon(index);
