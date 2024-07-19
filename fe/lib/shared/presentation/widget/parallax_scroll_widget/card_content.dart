@@ -15,7 +15,7 @@ class CardContent extends StatelessWidget {
           parallaxRecipeUiModel.name,
           style: const TextStyle(
             fontSize: 14,
-            fontWeight: FontWeight.normal,
+            fontWeight: FontWeight.bold,
           ),
         ),
         Row(

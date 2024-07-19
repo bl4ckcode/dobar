@@ -14,5 +14,21 @@
   "search_bnb_item_title": "Search",
   "@search_bnb_item_title": {
     "description": "Search bottom navigation bar item title, search bars/restaurants here."
+  },
+  "meet_our_parteners": "Get to know our partners",
+  "@meet_our_parteners": {
+    "description": "Get to know our main partners label"
+  },
+  "here_are_the_closest_partners": "Take a look at the closest partners menu next to you :)",
+  "@here_are_the_closest_partners": {
+    "description": "These are the closest partners next to you label"
+  },
+  "most_wanted": "Most wanted",
+  "@most_wanted": {
+    "description": "Most wanted drinks label"
+  },
+  "want_an_specific_drink": "Thirst for that specific drink? Select it and find where to go!",
+  "@want_an_specific_drink": {
+    "description": "Thirst for that specific drink question label"
   }
 }

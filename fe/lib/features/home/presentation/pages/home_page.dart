@@ -4,7 +4,7 @@ import 'package:barz/features/home/domain/usecases/home_usecase.dart';
 import 'package:barz/features/home/presentation/bloc/home_bloc.dart';
 import 'package:barz/features/home/presentation/pages/drinks/drinks_home_page.dart';
 import 'package:barz/features/home/presentation/pages/profile/profile_home_page.dart';
-import 'package:barz/features/home/presentation/pages/search/SearchHomePage.dart';
+import 'package:barz/features/home/presentation/pages/search/search_home_page.dart';
 import 'package:barz/features/home/presentation/widgets/menu/btm_nav_item.dart';
 import 'package:barz/features/home/presentation/widgets/menu/menu_btn.dart';
 import 'package:barz/shared/domain/models/bottom_nav_bar/menu_model.dart';

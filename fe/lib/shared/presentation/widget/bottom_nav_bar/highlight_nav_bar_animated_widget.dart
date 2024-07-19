@@ -14,8 +14,11 @@ class HighlightAnimatedBar extends StatelessWidget {
       height: 3.h,
       width: isActive ? 28.w : 0.w,
       decoration: const BoxDecoration(
-          color: Colors.black,
-          borderRadius: BorderRadius.all(Radius.circular(12))),
+        color: Colors.black,
+        borderRadius: BorderRadius.all(
+          Radius.circular(12),
+        ),
+      ),
     );
   }
 }

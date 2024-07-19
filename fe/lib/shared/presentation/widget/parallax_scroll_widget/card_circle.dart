@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../domain/models/parallax_recipe_ui_model.dart';
-import 'card_content.dart';
 
 class CircleCard extends StatelessWidget {
   const CircleCard({
@@ -21,19 +20,24 @@ class CircleCard extends StatelessWidget {
         // Image
         ClipOval(
           child: SizedBox.fromSize(
-            size: const Size.fromRadius(48),
+            size: const Size.fromRadius(56),
             child: Image.asset(
               'assets/images/${bar.imageUrl}',
-              fit: BoxFit.fill,
+              fit: BoxFit.fitHeight,
             ),
           ),
         ),
         const SizedBox(
           height: 4,
         ),
-        SizedBox(
-          width: 150,
-          child: CardContent(parallaxRecipeUiModel: bar),
+        Align(
+          child: Text(
+            bar.name,
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         )
       ],
     );

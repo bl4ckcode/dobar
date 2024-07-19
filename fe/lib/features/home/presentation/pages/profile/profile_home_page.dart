@@ -1,4 +1,3 @@
-import 'package:barz/shared/presentation/widget/parallax_scroll_widget/horizontal_sliding_cards.dart';
 import 'package:flutter/material.dart';
 
 class ProfileHomePage extends StatefulWidget {
@@ -11,8 +10,6 @@ class ProfileHomePage extends StatefulWidget {
 class _ProfileHomePageState extends State<ProfileHomePage> {
   @override
   Widget build(BuildContext context) {
-    return const HorizontalSlidingCards(
-      list: [],
-    );
+    return const Text("Test");
   }
 }

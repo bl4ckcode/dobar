@@ -1,4 +1,4 @@
-import 'package:barz/core/utils/extensions/HexColor.dart';
+import 'package:barz/core/utils/extensions/hex_color.dart';
 import 'package:flutter/material.dart';
 
 const Color mainColor = Color(0xFF162A49);

@@ -52,6 +52,12 @@ dependencies:
   rive: ^0.13.4
   velocity_x: ^4.1.2
 
+  # Google Maps
+  google_maps_flutter: ^2.1.7
+  location: ^7.0.0
+  flutter_svg: ^2.0.10+1
+  flutter_polyline_points: ^2.0.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -83,9 +89,10 @@ flutter:
     - family: JuliusSansOne
       fonts:
         - asset: assets/fonts/JuliusSansOne-Regular.ttf
-    - family: Intel
+    - family: Inter
       fonts:
         - asset: assets/Fonts/Inter-Regular.ttf
+          weight: 400
         - asset: assets/Fonts/Inter-SemiBold.ttf
           weight: 600
     - family: Poppins

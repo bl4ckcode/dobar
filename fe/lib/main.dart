@@ -68,7 +68,7 @@ class BarzAppState extends State<BarzApp> with WidgetsBindingObserver {
                 theme: ThemeData(
                   scaffoldBackgroundColor: Colors.white,
                   primarySwatch: Colors.blue,
-                  fontFamily: "Intel",
+                  fontFamily: "Inter",
                   elevatedButtonTheme: ElevatedButtonThemeData(
                     style:
                         ElevatedButton.styleFrom(foregroundColor: Colors.white),
