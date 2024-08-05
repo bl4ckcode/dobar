@@ -1,3 +1,4 @@
+import 'package:barz/shared/presentation/widget/barz_black_elevated_button.dart';
 import 'package:flutter/material.dart';
 import 'package:intl_phone_number_input/intl_phone_number_input.dart';
 
@@ -37,6 +38,14 @@ class _LoginFieldsWidgetState extends State<LoginFieldsWidget> {
             ignoreBlank: false,
             autoValidateMode: AutovalidateMode.onUserInteraction,
             onSaved: (PhoneNumber number) {},
+          ),
+          Container(
+            padding: const EdgeInsets.only(top: 24),
+            width: MediaQuery.of(context).size.width,
+            child: BarzBlackElevatedButton(
+              onPressed: () {},
+              text: "Continue",
+            ),
           ),
         ],
       ),

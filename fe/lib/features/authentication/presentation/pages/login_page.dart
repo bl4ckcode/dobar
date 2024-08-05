@@ -15,7 +15,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: brownBarzBackgroundColor,
+      backgroundColor: mainColor,
       body: PopScope(
         onPopInvoked: (pop) {},
         child: CustomScrollView(
@@ -56,7 +56,7 @@ class _LoginPageState extends State<LoginPage> {
                           child: Text(
                             "or continue with",
                             style: TextStyle(
-                              color: Colors.black26,
+                              color: Colors.black87,
                             ),
                           ),
                         ),
@@ -85,7 +85,10 @@ class _LoginPageState extends State<LoginPage> {
                         children: <TextSpan>[
                           TextSpan(
                             text: 'Terms of Service',
-                            style: const TextStyle(color: Colors.black),
+                            style: const TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                            ),
                             recognizer: TapGestureRecognizer()
                               ..onTap = () {
                                 // Handle Terms of Service tap
@@ -99,7 +102,10 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           TextSpan(
                             text: 'Privacy Policy',
-                            style: const TextStyle(color: Colors.black),
+                            style: const TextStyle(
+                              color: Colors.black,
+                              fontWeight: FontWeight.bold,
+                            ),
                             recognizer: TapGestureRecognizer()
                               ..onTap = () {
                                 // Handle Privacy Policy tap
