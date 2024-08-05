@@ -16,10 +16,10 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             IconButton(
-              padding: EdgeInsets.zero,
+              padding: const EdgeInsets.only(right: 32),
               onPressed: () {},
               icon: Image.asset(
-                "assets/images/icons/email.png",
+                "assets/icons/email.png",
                 height: 64,
                 width: 64,
               ),
@@ -28,16 +28,16 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
               padding: EdgeInsets.zero,
               onPressed: () {},
               icon: Image.asset(
-                "assets/images/icons/google.png",
+                "assets/icons/google.png",
                 height: 64,
                 width: 64,
               ),
             ),
             IconButton(
-              padding: EdgeInsets.zero,
+              padding: const EdgeInsets.only(left: 32),
               onPressed: () {},
               icon: Image.asset(
-                "assets/images/icons/apple.png",
+                "assets/icons/apple.png",
                 height: 64,
                 width: 64,
               ),

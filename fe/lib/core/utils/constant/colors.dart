@@ -11,4 +11,4 @@ const Color shadowColorLight = Color(0xFF4A5367);
 const Color shadowColorDark = Colors.black;
 
 //Login page colors
-final Color brownBarzBackgroundColor = HexColor.fromHex('#4d422c');
+const Color brownBarzBackgroundColor = Color(0xFF6b5d3c);

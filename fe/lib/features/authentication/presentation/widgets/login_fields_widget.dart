@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl_phone_number_input/intl_phone_number_input.dart';
 
 class LoginFieldsWidget extends StatefulWidget {
   const LoginFieldsWidget({super.key});
@@ -8,43 +9,37 @@ class LoginFieldsWidget extends StatefulWidget {
 }
 
 class _LoginFieldsWidgetState extends State<LoginFieldsWidget> {
+  final phoneNumber = PhoneNumber(dialCode: '+55', isoCode: "BR");
+
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            IconButton(
-              padding: EdgeInsets.zero,
-              onPressed: () {},
-              icon: Image.asset(
-                "assets/images/icons/email.png",
-                height: 64,
-                width: 64,
-              ),
+    return Container(
+      padding: const EdgeInsets.only(left: 24, right: 24),
+      child: Column(
+        children: [
+          InternationalPhoneNumberInput(
+            initialValue: phoneNumber,
+            hintText: '(XX) XXXXX-XXXX',
+            textStyle: const TextStyle(fontWeight: FontWeight.bold),
+            formatInput: true,
+            keyboardType: const TextInputType.numberWithOptions(
+              signed: true,
+              decimal: true,
             ),
-            IconButton(
-              padding: EdgeInsets.zero,
-              onPressed: () {},
-              icon: Image.asset(
-                "assets/images/icons/google.png",
-                height: 64,
-                width: 64,
-              ),
+            onInputChanged: (PhoneNumber number) {},
+            selectorConfig: const SelectorConfig(
+              selectorType: PhoneInputSelectorType.BOTTOM_SHEET,
+              leadingPadding: 24,
+              trailingSpace: false,
+              setSelectorButtonAsPrefixIcon: true,
+              useEmoji: true,
             ),
-            IconButton(
-              padding: EdgeInsets.zero,
-              onPressed: () {},
-              icon: Image.asset(
-                "assets/images/icons/apple.svg",
-                height: 64,
-                width: 64,
-              ),
-            ),
-          ],
-        )
-      ],
+            ignoreBlank: false,
+            autoValidateMode: AutovalidateMode.onUserInteraction,
+            onSaved: (PhoneNumber number) {},
+          ),
+        ],
+      ),
     );
   }
 }

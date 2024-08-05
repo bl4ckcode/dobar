@@ -1,12 +1,14 @@
 import 'package:barz/core/utils/injections.dart';
+import 'package:barz/features/authentication/presentation/pages/login_page.dart';
 import 'package:barz/features/home/presentation/pages/home_page.dart';
-import 'package:barz/shared/data/data_sources/app_shared_prefs.dart';
 import 'package:device_preview/device_preview.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
+
+import 'core/utils/app_notifier.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
 
@@ -85,37 +87,15 @@ class BarzAppState extends State<BarzApp> with WidgetsBindingObserver {
                   colorScheme: ColorScheme.fromSeed(seedColor: Colors.white),
                   useMaterial3: true,
                 ),
-                home: const HomePage(),
+                home: value.isAuthenticated
+                    ? const HomePage()
+                    : const LoginPage(),
               );
             },
           );
         },
       ),
     );
-  }
-}
-
-class AppNotifier extends ChangeNotifier {
-  late bool darkTheme;
-
-  AppNotifier() {
-    _initialise();
-  }
-
-  Future _initialise() async {
-    darkTheme = getItInjector<AppSharedPrefs>().getIsDarkTheme();
-
-    notifyListeners();
-  }
-
-  void updateThemeTitle(bool newDarkTheme) {
-    darkTheme = newDarkTheme;
-    if (getItInjector<AppSharedPrefs>().getIsDarkTheme()) {
-      SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.light);
-    } else {
-      SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
-    }
-    notifyListeners();
   }
 }
 
