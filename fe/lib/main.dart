@@ -1,6 +1,5 @@
+import 'package:barz/core/router/router.dart';
 import 'package:barz/core/utils/injections.dart';
-import 'package:barz/features/authentication/presentation/pages/login_page.dart';
-import 'package:barz/features/home/presentation/pages/home_page.dart';
 import 'package:device_preview/device_preview.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -87,9 +86,9 @@ class BarzAppState extends State<BarzApp> with WidgetsBindingObserver {
                   colorScheme: ColorScheme.fromSeed(seedColor: Colors.white),
                   useMaterial3: true,
                 ),
-                home: value.isAuthenticated
-                    ? const HomePage()
-                    : const LoginPage(),
+                initialRoute:
+                    value.isAuthenticated ? AppRouter.home : AppRouter.login,
+                onGenerateRoute: AppRouter.route,
               );
             },
           );

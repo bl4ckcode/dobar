@@ -1,29 +1,28 @@
+import 'package:barz/features/authentication/presentation/pages/login_page.dart';
 import 'package:barz/features/home/presentation/pages/home_page.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 class AppRouter {
-  static String currentRoute = "/";
+  static const String login = '/login';
+  static const String home = '/home';
 
   static Route<dynamic> route(RouteSettings settings) {
-    currentRoute = settings.name ?? "/";
-
     switch (settings.name) {
-      case '/home_page':
-        return CupertinoPageRoute(
-          settings: RouteSettings(name: settings.name),
-          builder: (_) => const HomePage(),
-        );
-
+      case login:
+        return MaterialPageRoute(builder: (_) => const LoginPage());
+      case home:
+        return MaterialPageRoute(builder: (_) => const HomePage());
       default:
-        return CupertinoPageRoute(
-          settings: RouteSettings(name: settings.name),
-          builder: (_) => Scaffold(
-            body: Center(
-              child: Text('No route defined for ${settings.name} \n must add default placeholder page'),
-            ),
-          ),
-        );
+        return _errorRoute();
     }
+  }
+
+  static Route<dynamic> _errorRoute() {
+    return MaterialPageRoute(builder: (_) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Error')),
+        body: const Center(child: Text('Page not found')),
+      );
+    });
   }
 }

@@ -1,8 +1,11 @@
+import 'package:barz/core/router/router.dart';
+import 'package:barz/core/utils/app_notifier.dart';
 import 'package:barz/core/utils/constant/colors.dart';
 import 'package:barz/features/authentication/presentation/widgets/login_buttons_widget.dart';
 import 'package:barz/features/authentication/presentation/widgets/login_fields_widget.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -12,6 +15,19 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
+  void _handleLogin() {
+    // This function will be called when the user taps the Continue button.
+    // Here you will later integrate the authentication API and handle the result.
+
+    // For now, let's assume the login is successful:
+    final appNotifier = Provider.of<AppNotifier>(context, listen: false);
+    appNotifier.login();
+
+    // Navigate to the HomePage
+    Navigator.pushNamedAndRemoveUntil(
+        context, AppRouter.home, (Route<dynamic> route) => false);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -39,9 +55,9 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ),
                   ),
-                  const Padding(
-                    padding: EdgeInsets.only(top: 24.0),
-                    child: LoginFieldsWidget(),
+                  Padding(
+                    padding: const EdgeInsets.only(top: 24.0),
+                    child: LoginFieldsWidget(onLoginPressed: _handleLogin),
                   ),
                   const Padding(
                     padding: EdgeInsets.only(
