@@ -22,6 +22,7 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
                 "assets/icons/email.png",
                 height: 64,
                 width: 64,
+                color: Colors.white,
               ),
             ),
             IconButton(
@@ -31,6 +32,7 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
                 "assets/icons/google.png",
                 height: 64,
                 width: 64,
+                color: Colors.white,
               ),
             ),
             IconButton(
@@ -40,6 +42,7 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
                 "assets/icons/apple.png",
                 height: 64,
                 width: 64,
+                color: Colors.white,
               ),
             ),
           ],
