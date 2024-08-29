@@ -5,7 +5,7 @@ part 'login_params.g.dart';
 
 @freezed
 class LoginParams with _$LoginParams {
-  factory LoginParams({
+  const factory LoginParams({
     String? phoneNumber,
     String? email,
     String? password,
