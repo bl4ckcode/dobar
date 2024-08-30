@@ -1,11 +1,15 @@
 import 'package:barz/core/router/router.dart';
-import 'package:barz/core/utils/app_notifier.dart';
 import 'package:barz/core/utils/constant/colors.dart';
+import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/authentication/presentation/widgets/login_buttons_widget.dart';
 import 'package:barz/features/authentication/presentation/widgets/login_fields_widget.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:barz/features/authentication/presentation/bloc/login_bloc.dart';
+import 'package:barz/features/authentication/presentation/bloc/login_event.dart';
+import 'package:barz/features/authentication/presentation/bloc/login_state.dart';
+import 'package:barz/features/authentication/domain/usecases/login_usecase.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -15,17 +19,26 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  void _handleLogin() {
-    // This function will be called when the user taps the Continue button.
-    // Here you will later integrate the authentication API and handle the result.
+  late LoginBloc _loginBloc;
 
-    // For now, let's assume the login is successful:
-    final appNotifier = Provider.of<AppNotifier>(context, listen: false);
-    appNotifier.login();
+  @override
+  void initState() {
+    super.initState();
+    _loginBloc = LoginBloc(loginUseCase: getItInjector<LoginUsecase>());
+  }
 
-    // Navigate to the HomePage
-    Navigator.pushNamedAndRemoveUntil(
-        context, AppRouter.home, (Route<dynamic> route) => false);
+  @override
+  void dispose() {
+    _loginBloc.close();
+    super.dispose();
+  }
+
+  void _handleLogin(String? phoneNumber) {
+    _loginBloc.add(LoginEvent.loginButtonPressed(
+      phoneNumber: phoneNumber,
+      email: null,
+      password: null,
+    ));
   }
 
   @override
@@ -34,125 +47,142 @@ class _LoginPageState extends State<LoginPage> {
       backgroundColor: mainColor,
       body: PopScope(
         onPopInvoked: (pop) {},
-        child: CustomScrollView(
-          slivers: <Widget>[
-            SliverToBoxAdapter(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  Align(
-                    alignment: Alignment.topCenter,
-                    child: SizedBox(
-                      width: MediaQuery.of(context).size.width,
-                      child: Center(
-                        child: Transform.scale(
-                          scale: 1.2,
-                          child: Image.asset(
-                            'assets/login/barz_text_icon.png',
-                            fit: BoxFit.fill,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(top: 24.0),
-                    child: LoginFieldsWidget(onLoginPressed: _handleLogin),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.only(
-                      left: 24,
-                      right: 24,
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(child: Divider()),
-                        Padding(
-                          padding: EdgeInsets.all(12),
-                          child: Text(
-                            "or continue with",
-                            style: TextStyle(
-                              color: Colors.black87,
+        child: BlocListener<LoginBloc, LoginState>(
+          bloc: _loginBloc,
+          listener: (context, state) {
+            if (state is Success) {
+              Navigator.pushNamedAndRemoveUntil(
+                  context, AppRouter.home, (Route<dynamic> route) => false);
+            } else if (state is Failure) {
+              // Show an error message
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(state.error)),
+              );
+            }
+          },
+          child: Scaffold(
+            backgroundColor: mainColor,
+            body: CustomScrollView(
+              slivers: <Widget>[
+                SliverToBoxAdapter(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    children: [
+                      Align(
+                        alignment: Alignment.topCenter,
+                        child: SizedBox(
+                          width: MediaQuery.of(context).size.width,
+                          child: Center(
+                            child: Transform.scale(
+                              scale: 1.2,
+                              child: Image.asset(
+                                'assets/login/barz_text_icon.png',
+                                fit: BoxFit.fill,
+                              ),
                             ),
                           ),
                         ),
-                        Expanded(child: Divider()),
-                      ],
-                    ),
-                  ),
-                  const Padding(
-                    padding: EdgeInsets.only(
-                      left: 24,  
-                      right: 24,
-                      bottom: 24,
-                    ),
-                    child: LoginButtonsWidget(),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(
-                      left: 24,
-                      right: 24,
-                    ),
-                    child: RichText(
-                      textAlign: TextAlign.center,
-                      text: TextSpan(
-                        text: 'By clicking continue, you agree to our ',
-                        style: const TextStyle(color: Colors.white),
-                        children: <TextSpan>[
-                          TextSpan(
-                            text: 'Terms of Service',
-                            style: const TextStyle(
-                              color: Colors.black,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            recognizer: TapGestureRecognizer()
-                              ..onTap = () {
-                                // Handle Terms of Service tap
-
-                                // You can navigate to another page or show a dialog here
-                              },
-                          ),
-                          const TextSpan(
-                            text: ' and ',
-                            style: TextStyle(color: Colors.white),
-                          ),
-                          TextSpan(
-                            text: 'Privacy Policy',
-                            style: const TextStyle(
-                              color: Colors.black,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            recognizer: TapGestureRecognizer()
-                              ..onTap = () {
-                                // Handle Privacy Policy tap
-
-                                // You can navigate to another page or show a dialog here
-                              },
-                          ),
-                        ],
                       ),
-                    ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 24.0),
+                        child: LoginFieldsWidget(onLoginPressed: _handleLogin),
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.only(
+                          left: 24,
+                          right: 24,
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(child: Divider()),
+                            Padding(
+                              padding: EdgeInsets.all(12),
+                              child: Text(
+                                "or continue with",
+                                style: TextStyle(
+                                  color: Colors.white54,
+                                ),
+                              ),
+                            ),
+                            Expanded(child: Divider()),
+                          ],
+                        ),
+                      ),
+                      const Padding(
+                        padding: EdgeInsets.only(
+                          left: 24,
+                          right: 24,
+                          bottom: 24,
+                        ),
+                        child: LoginButtonsWidget(),
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(
+                          left: 24,
+                          right: 24,
+                        ),
+                        child: RichText(
+                          textAlign: TextAlign.center,
+                          text: TextSpan(
+                            text: 'By clicking continue, you agree to our ',
+                            style: const TextStyle(color: Colors.white),
+                            children: <TextSpan>[
+                              TextSpan(
+                                text: 'Terms of Service',
+                                style: const TextStyle(
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                recognizer: TapGestureRecognizer()
+                                  ..onTap = () {
+                                    // Handle Terms of Service tap
+
+                                    // You can navigate to another page or show a dialog here
+                                  },
+                              ),
+                              const TextSpan(
+                                text: ' and ',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                              TextSpan(
+                                text: 'Privacy Policy',
+                                style: const TextStyle(
+                                  color: Colors.black,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                                recognizer: TapGestureRecognizer()
+                                  ..onTap = () {
+                                    // Handle Privacy Policy tap
+
+                                    // You can navigate to another page or show a dialog here
+                                  },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-            SliverFillRemaining(
-              hasScrollBody: false,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Expanded(child: SizedBox(height: 132)),
-                  Transform.scale(
-                    scale: 1.8,
-                    child: Image.asset(
-                      width: MediaQuery.of(context).size.width,
-                      'assets/login/barz_cup_icon.png',
-                    ),
+                ),
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Expanded(child: SizedBox(height: 132)),
+                      Transform.scale(
+                        scale: 1.8,
+                        child: Image.asset(
+                          width: MediaQuery.of(context).size.width,
+                          'assets/login/barz_cup_icon.png',
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

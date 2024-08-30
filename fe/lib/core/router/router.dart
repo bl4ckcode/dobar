@@ -48,7 +48,7 @@ class AppRouter {
           ),
         );
       },
-      transitionDuration: const Duration(milliseconds: 3000), // Adjust the duration as needed
+      transitionDuration: const Duration(milliseconds: 1500), // Adjust the duration as needed
     );
   }
 }

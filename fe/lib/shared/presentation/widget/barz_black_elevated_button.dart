@@ -15,10 +15,10 @@ class BarzBlackElevatedButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 1000),
       curve: Curves.easeInOut,
       decoration: BoxDecoration(
-        color: isEnabled ? Colors.black : Colors.blueGrey,
+        color: isEnabled ? Colors.black : Colors.grey,
         borderRadius: BorderRadius.circular(10),
         boxShadow: [
           if (isEnabled)
@@ -31,7 +31,7 @@ class BarzBlackElevatedButton extends StatelessWidget {
         ]
       ),
       child: ElevatedButton(
-        onPressed: onPressed,
+        onPressed: isEnabled ? onPressed : null,
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.transparent,
           foregroundColor: Colors.white,

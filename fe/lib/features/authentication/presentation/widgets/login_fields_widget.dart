@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:intl_phone_number_input/intl_phone_number_input.dart';
 
 class LoginFieldsWidget extends StatefulWidget {
-  final VoidCallback onLoginPressed;
+  final void Function(String? phoneNumber) onLoginPressed;
 
   const LoginFieldsWidget({super.key, required this.onLoginPressed});
 
@@ -12,8 +12,16 @@ class LoginFieldsWidget extends StatefulWidget {
 }
 
 class _LoginFieldsWidgetState extends State<LoginFieldsWidget> {
+  final TextEditingController _phoneController = TextEditingController();
   final phoneNumber = PhoneNumber(dialCode: '+55', isoCode: "BR");
+
   bool isPhoneNumberValid = false; // State variable to track validity
+
+  void _onLoginButtonPressed() {
+    widget.onLoginPressed(
+      _phoneController.text,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -24,6 +32,7 @@ class _LoginFieldsWidgetState extends State<LoginFieldsWidget> {
           InternationalPhoneNumberInput(
             initialValue: phoneNumber,
             hintText: '(XX) XXXXX-XXXX',
+            textFieldController: _phoneController,
             textStyle: const TextStyle(fontWeight: FontWeight.bold),
             formatInput: true,
             keyboardType: const TextInputType.numberWithOptions(
@@ -51,7 +60,7 @@ class _LoginFieldsWidgetState extends State<LoginFieldsWidget> {
             padding: const EdgeInsets.only(top: 24),
             width: MediaQuery.of(context).size.width,
             child: BarzBlackElevatedButton(
-              onPressed: isPhoneNumberValid ? widget.onLoginPressed : () {},
+              onPressed: _onLoginButtonPressed,
               text: "Continue",
               isEnabled: isPhoneNumberValid,
             ),

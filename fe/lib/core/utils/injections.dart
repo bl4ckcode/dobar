@@ -1,5 +1,6 @@
 import 'package:barz/core/network/dio_network.dart';
 import 'package:barz/core/utils/log/app_logger.dart';
+import 'package:barz/features/authentication/auth_injection.dart';
 import 'package:barz/features/home/home_injection.dart';
 import 'package:barz/shared/app_injections.dart';
 import 'package:get_it/get_it.dart';
@@ -11,6 +12,7 @@ Future<void> initInjections() async {
   await initSharedPrefsInjections();
   await initAppInjections();
   await initDioInjections();
+  await initLoginInjections();
   await initHomeInjections();
 }
 

@@ -1,20 +1,15 @@
-import 'package:json_annotation/json_annotation.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 
-/*part 'home_model.g.dart';*/
+part 'home_model.freezed.dart';
+part 'home_model.g.dart';
 
-@JsonSerializable(fieldRename: FieldRename.snake)
-class HomeModel {
-  List<String> restaurants;
-  String? title;
+@freezed
+class HomeModel with _$HomeModel{
+  const factory HomeModel({
+    List<String?>? restaurants,
+    String? title,
+  }) = _HomeModel;
 
-  HomeModel({required this.restaurants, this.title});
-
-  /*factory HomeModel.fromJson(json) => _$HomeModelFromJson(json);
-
-  toJson() => _$HomeModelToJson(this);
-
-  static List<HomeModel> fromJsonList(List? json) {
-    return json?.map((e) => HomeModel.fromJson(e)).toList() ?? [];
-  }*/
+  factory HomeModel.fromJson(Map<String, dynamic> json) =>
+      _$HomeModelFromJson(json);
 }
-
