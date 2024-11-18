@@ -20,6 +20,7 @@ class _DrinksHomePageState extends State<DrinksHomePage> {
       body: SafeArea(
         bottom: false,
         child: Column(
+          mainAxisSize: MainAxisSize.max,
           mainAxisAlignment: MainAxisAlignment.start,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[

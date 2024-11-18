@@ -18,7 +18,7 @@ class BarzBlackElevatedButton extends StatelessWidget {
       duration: const Duration(milliseconds: 1000),
       curve: Curves.easeInOut,
       decoration: BoxDecoration(
-        color: isEnabled ? Colors.black : Colors.grey,
+        color: isEnabled ? Colors.black : Colors.blueGrey,
         borderRadius: BorderRadius.circular(10),
         boxShadow: [
           if (isEnabled)

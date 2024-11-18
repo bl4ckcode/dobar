@@ -3,11 +3,8 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_polyline_points/flutter_polyline_points.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
-
-import '../../../../../core/utils/constant/colors.dart';
 
 class SearchHomePage extends StatefulWidget {
   const SearchHomePage({super.key});
@@ -126,7 +123,10 @@ class _SearchHomePageState extends State<SearchHomePage> {
     return Scaffold(
       body: SafeArea(
         bottom: false,
-        child: googleMapWidget(),
+        child: Padding(
+          padding: const EdgeInsets.only(bottom: 120),
+          child: googleMapWidget(),
+        ),
       ),
     );
   }

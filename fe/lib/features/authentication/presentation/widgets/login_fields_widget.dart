@@ -1,6 +1,7 @@
+import 'package:barz/core/utils/constant/colors.dart';
 import 'package:barz/shared/presentation/widget/barz_black_elevated_button.dart';
 import 'package:flutter/material.dart';
-import 'package:intl_phone_number_input/intl_phone_number_input.dart';
+import 'package:intl_phone_field/intl_phone_field.dart';
 
 class LoginFieldsWidget extends StatefulWidget {
   final void Function(String? phoneNumber) onLoginPressed;
@@ -12,14 +13,12 @@ class LoginFieldsWidget extends StatefulWidget {
 }
 
 class _LoginFieldsWidgetState extends State<LoginFieldsWidget> {
-  final TextEditingController _phoneController = TextEditingController();
-  final phoneNumber = PhoneNumber(dialCode: '+55', isoCode: "BR");
-
+  String? completePhoneNumber;
   bool isPhoneNumberValid = false; // State variable to track validity
 
   void _onLoginButtonPressed() {
     widget.onLoginPressed(
-      _phoneController.text,
+      completePhoneNumber,
     );
   }
 
@@ -29,32 +28,42 @@ class _LoginFieldsWidgetState extends State<LoginFieldsWidget> {
       padding: const EdgeInsets.only(left: 24, right: 24),
       child: Column(
         children: [
-          InternationalPhoneNumberInput(
-            initialValue: phoneNumber,
-            hintText: '(XX) XXXXX-XXXX',
-            textFieldController: _phoneController,
-            textStyle: const TextStyle(fontWeight: FontWeight.bold),
-            formatInput: true,
-            keyboardType: const TextInputType.numberWithOptions(
-              signed: true,
-              decimal: true,
+          IntlPhoneField(
+            decoration: const InputDecoration(
+              hintText: 'Enter your phone number', // Use hintText instead of labelText
+              hintStyle: TextStyle(color: Colors.white), // Customize hint style
+              border: OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.white), // Adjust border color if needed
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.white), // Set the border color when focused
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: mainColor), // Set the border color when not focused
+              ),
+              contentPadding: EdgeInsets.all(16), // Add padding if needed
+              // Customize the character count label (counter)
+              counterStyle: TextStyle(color: Colors.white), // Set counter label to white
+              // Customize error colors
+              errorStyle: TextStyle(height: 0), // Set error text to yellow
+              errorBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.transparent), // Set error border to yellow
+              ),
+              focusedErrorBorder: OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.blueGrey), // Border color when focused and error is present
+              ),
             ),
-            onInputChanged: (PhoneNumber number) {
+            initialCountryCode: 'BR', // Set the initial country code
+            onChanged: (phone) {
               setState(() {
-                isPhoneNumberValid = number.phoneNumber != null &&
-                    number.phoneNumber!.length > 13;
-              }); // Validate phone number on change
+                completePhoneNumber = phone.completeNumber;
+                isPhoneNumberValid = phone.completeNumber.length > 13;
+              });
             },
-            selectorConfig: const SelectorConfig(
-              selectorType: PhoneInputSelectorType.BOTTOM_SHEET,
-              leadingPadding: 24,
-              trailingSpace: false,
-              setSelectorButtonAsPrefixIcon: true,
-              useEmoji: true,
-            ),
-            ignoreBlank: false,
-            autoValidateMode: AutovalidateMode.disabled,
-            onSaved: (PhoneNumber number) {},
+            validator: (value) {
+              // Return empty to prevent error messages
+              return null;
+            },
           ),
           Container(
             padding: const EdgeInsets.only(top: 24),

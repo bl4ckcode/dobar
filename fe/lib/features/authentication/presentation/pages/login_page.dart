@@ -35,9 +35,7 @@ class _LoginPageState extends State<LoginPage> {
 
   void _handleLogin(String? phoneNumber) {
     _loginBloc.add(LoginEvent.loginButtonPressed(
-      phoneNumber: phoneNumber,
-      email: null,
-      password: null,
+      token: phoneNumber!
     ));
   }
 
@@ -46,7 +44,7 @@ class _LoginPageState extends State<LoginPage> {
     return Scaffold(
       backgroundColor: mainColor,
       body: PopScope(
-        onPopInvoked: (pop) {},
+        onPopInvokedWithResult: (left, right) {},
         child: BlocListener<LoginBloc, LoginState>(
           bloc: _loginBloc,
           listener: (context, state) {
@@ -54,7 +52,6 @@ class _LoginPageState extends State<LoginPage> {
               Navigator.pushNamedAndRemoveUntil(
                   context, AppRouter.home, (Route<dynamic> route) => false);
             } else if (state is Failure) {
-              // Show an error message
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text(state.error)),
               );
@@ -65,103 +62,102 @@ class _LoginPageState extends State<LoginPage> {
             body: CustomScrollView(
               slivers: <Widget>[
                 SliverToBoxAdapter(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.start,
-                    children: [
-                      Align(
-                        alignment: Alignment.topCenter,
-                        child: SizedBox(
-                          width: MediaQuery.of(context).size.width,
-                          child: Center(
-                            child: Transform.scale(
-                              scale: 1.2,
-                              child: Image.asset(
-                                'assets/login/barz_text_icon.png',
-                                fit: BoxFit.fill,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 24),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        Align(
+                          alignment: Alignment.topCenter,
+                          child: SizedBox(
+                            width: MediaQuery.of(context).size.width,
+                            child: Center(
+                              child: Transform.scale(
+                                scale: 1.2,
+                                child: Image.asset(
+                                  'assets/login/barz_text_icon.png',
+                                  fit: BoxFit.fill,
+                                ),
                               ),
                             ),
                           ),
                         ),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(top: 24.0),
-                        child: LoginFieldsWidget(onLoginPressed: _handleLogin),
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.only(
-                          left: 24,
-                          right: 24,
+                        Padding(
+                          padding: const EdgeInsets.only(top: 24.0),
+                          child: LoginFieldsWidget(onLoginPressed: _handleLogin),
                         ),
-                        child: Row(
-                          children: [
-                            Expanded(child: Divider()),
-                            Padding(
-                              padding: EdgeInsets.all(12),
-                              child: Text(
-                                "or continue with",
-                                style: TextStyle(
-                                  color: Colors.white54,
+                        const Padding(
+                          padding: EdgeInsets.only(
+                            left: 24,
+                            right: 24,
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(child: Divider()),
+                              Padding(
+                                padding: EdgeInsets.all(12),
+                                child: Text(
+                                  "or continue with",
+                                  style: TextStyle(
+                                    color: Colors.white54,
+                                  ),
                                 ),
                               ),
-                            ),
-                            Expanded(child: Divider()),
-                          ],
-                        ),
-                      ),
-                      const Padding(
-                        padding: EdgeInsets.only(
-                          left: 24,
-                          right: 24,
-                          bottom: 24,
-                        ),
-                        child: LoginButtonsWidget(),
-                      ),
-                      Padding(
-                        padding: const EdgeInsets.only(
-                          left: 24,
-                          right: 24,
-                        ),
-                        child: RichText(
-                          textAlign: TextAlign.center,
-                          text: TextSpan(
-                            text: 'By clicking continue, you agree to our ',
-                            style: const TextStyle(color: Colors.white),
-                            children: <TextSpan>[
-                              TextSpan(
-                                text: 'Terms of Service',
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                recognizer: TapGestureRecognizer()
-                                  ..onTap = () {
-                                    // Handle Terms of Service tap
-
-                                    // You can navigate to another page or show a dialog here
-                                  },
-                              ),
-                              const TextSpan(
-                                text: ' and ',
-                                style: TextStyle(color: Colors.white),
-                              ),
-                              TextSpan(
-                                text: 'Privacy Policy',
-                                style: const TextStyle(
-                                  color: Colors.black,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                                recognizer: TapGestureRecognizer()
-                                  ..onTap = () {
-                                    // Handle Privacy Policy tap
-
-                                    // You can navigate to another page or show a dialog here
-                                  },
-                              ),
+                              Expanded(child: Divider()),
                             ],
                           ),
                         ),
-                      ),
-                    ],
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            left: 24,
+                            right: 24,
+                            bottom: 24,
+                          ),
+                          child: LoginButtonsWidget(loginBloc: _loginBloc),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            left: 24,
+                            right: 24,
+                          ),
+                          child: RichText(
+                            textAlign: TextAlign.center,
+                            text: TextSpan(
+                              text: 'By clicking continue, you agree to our ',
+                              style: const TextStyle(color: Colors.white),
+                              children: <TextSpan>[
+                                TextSpan(
+                                  text: 'Terms of Service',
+                                  style: const TextStyle(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  recognizer: TapGestureRecognizer()
+                                    ..onTap = () {
+                                      // Handle Terms of Service tap
+                                    },
+                                ),
+                                const TextSpan(
+                                  text: ' and ',
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                                TextSpan(
+                                  text: 'Privacy Policy',
+                                  style: const TextStyle(
+                                    color: Colors.black,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  recognizer: TapGestureRecognizer()
+                                    ..onTap = () {
+                                      // Handle Privacy Policy tap
+                                    },
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
                 SliverFillRemaining(

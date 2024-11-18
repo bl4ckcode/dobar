@@ -1,3 +1,4 @@
+import 'package:barz/core/network/api_config.dart';
 import 'package:barz/core/network/api_response.dart';
 import 'package:barz/core/network/exceptions.dart';
 import 'package:barz/features/authentication/data/data_sources/abstract_login_api.dart';
@@ -12,12 +13,19 @@ class LoginApi extends AbstractLoginApi {
   @override
   Future<ApiResponse<String?>> login(LoginParams params) async {
     try {
-      final result = (await dio.get(""));
-      if (result.data == null) {
-        throw ServerException("Unknown Error", result.statusCode);
+      final response = await dio.post(
+        "$baseUrl/auth/sms/send", // Your backend endpoint for sending SMS
+        data: {
+          'phone_number': params.phoneNumber,
+        },
+        options: Options(headers: getHeaders()),
+      );
+
+      if (response.data == null) {
+        throw ServerException("Unknown Error", response.statusCode);
       }
 
-      return ApiResponse.fromJson<String>(result.data);
+      return ApiResponse.fromJson<String>(response.data);
     } on DioException catch (e) {
       throw ServerException(
           e.message ?? "Unknown error", e.response?.statusCode);
