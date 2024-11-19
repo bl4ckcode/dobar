@@ -35,7 +35,7 @@ class _LoginPageState extends State<LoginPage> {
 
   void _handleLogin(String? phoneNumber) {
     _loginBloc.add(LoginEvent.loginButtonPressed(
-      token: phoneNumber!
+        phoneNumber: phoneNumber!
     ));
   }
 

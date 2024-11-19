@@ -21,7 +21,7 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
     emit(const LoginState.loading());
     try {
       final params = LoginParams(
-        phoneNumber: event.token,  // Assuming the key here is phoneNumber
+        phoneNumber: event.phoneNumber,
       );
       await loginUseCase.call(params);
       emit(const LoginState.success());
@@ -36,9 +36,9 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
       ) async {
     emit(const LoginState.loading());
     try {
-      // Use Google token for login or pass to your use case
       final params = LoginParams(
-        googleId: event.token,  // Google token used here
+        email: event.key,
+        googleId: event.token,
       );
       await loginUseCase.call(params);
       emit(const LoginState.success());
@@ -53,9 +53,9 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
       ) async {
     emit(const LoginState.loading());
     try {
-      // Use Apple token for login or pass to your use case
       final params = LoginParams(
-        appleId: event.token,  // Apple token used here
+        email: event.key,
+        appleId: event.token,
       );
       await loginUseCase.call(params);
       emit(const LoginState.success());
@@ -70,9 +70,9 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
       ) async {
     emit(const LoginState.loading());
     try {
-      // Use Facebook token for login or pass to your use case
       final params = LoginParams(
-        facebookId: event.token,  // Facebook token used here
+        email: event.key,
+        facebookId: event.token,
       );
       await loginUseCase.call(params);
       emit(const LoginState.success());

@@ -6,7 +6,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
-
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'core/utils/app_notifier.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
@@ -16,6 +17,11 @@ void main() async {
 
   // Inject all dependencies
   await initInjections();
+
+  // Initialize Firebase SDK
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   runApp(DevicePreview(
     builder: (context) {
