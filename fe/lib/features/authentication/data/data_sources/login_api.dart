@@ -25,11 +25,13 @@ class LoginApi extends AbstractLoginApi {
           await _firebaseAuth.signInWithCredential(credential);
         },
         verificationFailed: (FirebaseAuthException e) {
-          completer.completeError(ServerException(e.message ?? "Unknown Firebase Error", null));
+          completer.completeError(
+              ServerException(e.message ?? "Unknown Firebase Error", null));
         },
         codeSent: (String verificationId, int? resendToken) {
           // Complete with success when the verification code is sent
-          completer.complete(ApiResponse.success(verificationId)); // Verification ID for later verification
+          completer.complete(ApiResponse.success(
+              verificationId)); // Verification ID for later verification
         },
         codeAutoRetrievalTimeout: (String verificationId) {
           // Optionally handle timeouts

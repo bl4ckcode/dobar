@@ -15,13 +15,13 @@ final navigatorKey = GlobalKey<NavigatorState>();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Inject all dependencies
-  await initInjections();
-
   // Initialize Firebase SDK
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+
+  // Inject all dependencies
+  await initInjections();
 
   runApp(DevicePreview(
     builder: (context) {
