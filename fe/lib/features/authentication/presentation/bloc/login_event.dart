@@ -8,6 +8,11 @@ class LoginEvent with _$LoginEvent {
     required String phoneNumber,
   }) = LoginButtonPressed;
 
+  const factory LoginEvent.verifyCodeButtonPressed({
+    required String verificationId,
+    required String smsCode,
+  }) = VerifyCodeButtonPressed;
+
   const factory LoginEvent.googleLoginPressed({
     required String key,
     required String token,
@@ -23,3 +28,4 @@ class LoginEvent with _$LoginEvent {
     required String token,
   }) = FacebookLoginPressed;
 }
+
