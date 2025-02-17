@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:barz/features/authentication/domain/models/login_params.dart';
 import 'package:barz/features/authentication/domain/usecases/login_usecase.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -20,30 +22,44 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
     on<FacebookLoginPressed>(_onFacebookLoginPressed);
   }
 
-  Future<void> _onLoginButtonPressed(
+  _onLoginButtonPressed(
       LoginButtonPressed event, Emitter<LoginState> emit) async {
     emit(const LoginState.loading());
+
+    final completer = Completer<void>();
 
     try {
       await firebaseAuth.verifyPhoneNumber(
         phoneNumber: event.phoneNumber,
         verificationCompleted: (PhoneAuthCredential credential) async {
-          // Automatically sign in the user if verification completes automatically.
-          await firebaseAuth.signInWithCredential(credential);
-          emit(const LoginState.success());
+          try {
+            await firebaseAuth.signInWithCredential(credential);
+            emit(const LoginState.success());
+          } catch (e) {
+            emit(LoginState.failure(error: e.toString()));
+          } finally {
+            completer.complete();
+          }
         },
         verificationFailed: (FirebaseAuthException e) {
           emit(LoginState.failure(error: e.message ?? "Verification failed."));
+          completer.complete();
         },
         codeSent: (String verificationId, int? resendToken) {
           emit(LoginState.codeSent(verificationId: verificationId));
+          completer.complete();
         },
         codeAutoRetrievalTimeout: (String verificationId) {
-          // Called when auto-retrieval times out.
+          // Handle timeout if needed, but complete to avoid hanging
+          completer.complete();
         },
       );
+
+      // Wait for the completer to finish (triggered by a callback)
+      await completer.future;
     } catch (e) {
       emit(LoginState.failure(error: e.toString()));
+      completer.complete();
     }
   }
 

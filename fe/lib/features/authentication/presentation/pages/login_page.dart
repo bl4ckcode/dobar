@@ -1,4 +1,3 @@
-import 'package:barz/core/router/router.dart';
 import 'package:barz/core/utils/constant/colors.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/authentication/presentation/widgets/login_buttons_widget.dart';
@@ -40,7 +39,9 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _handleLogin(String? phoneNumber) {
-    _loginBloc.add(LoginEvent.loginButtonPressed(phoneNumber: phoneNumber!));
+    if (phoneNumber != null) {
+      _loginBloc.add(LoginEvent.loginButtonPressed(phoneNumber: phoneNumber));
+    }
   }
 
   @override
