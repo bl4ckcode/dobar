@@ -1,6 +1,4 @@
 import 'dart:async';
-
-import 'package:barz/core/network/dio_network.dart';
 import 'package:dio/dio.dart';
 import 'package:barz/core/network/api_response.dart';
 import 'package:barz/core/network/exceptions.dart';
@@ -12,33 +10,29 @@ class LoginNetworkDataSource {
   final Dio dio;
   final FirebaseAuth _firebaseAuth;
 
-  LoginNetworkDataSource(
-      {required this.dio, required FirebaseAuth firebaseAuth})
-      : _firebaseAuth = firebaseAuth;
+  LoginNetworkDataSource({
+    required this.dio,
+    required FirebaseAuth firebaseAuth,
+  }) : _firebaseAuth = firebaseAuth;
 
-  Future<ApiResponse<String?>> login(LoginParams params) async {
+  // Phone Number Authentication
+  Future<ApiResponse<String?>> loginWithPhone(LoginParams params) async {
     try {
-      String? firebaseUid = params.firebaseUid;
-
-      // If Firebase UID is not provided, perform Firebase phone authentication
-      if (firebaseUid == null && params.phoneNumber != null) {
-        final verificationId = await _loginWithPhone(params.phoneNumber!);
-        firebaseUid = verificationId; // Use verificationId as a temporary UID
-      }
+      // Perform Firebase phone authentication
+      final verificationId = await _loginWithPhone(params.phoneNumber!);
 
       // Call back-end API to complete the login process
-      final response = await DioNetwork.appAPI.post(
-        '${baseUrl}login/', // Use the baseUrl from api_config.dart
+      final response = await dio.post(
+        '${baseUrl}auth/phone',
         data: {
-          'firebase_uid': firebaseUid,
-          'phone_number': params.phoneNumber,
+          "firebase_uid": verificationId,
+          "phone_number": params.phoneNumber,
         },
-        options:
-            Options(headers: getHeaders()), // Use headers from api_config.dart
+        options: Options(headers: getHeaders()),
       );
 
       if (response.statusCode == 200) {
-        return ApiResponse.success(response.data['token']);
+        return ApiResponse.success(response.data['access_token']);
       } else {
         throw ServerException('Failed to login: ${response.statusCode}', null);
       }
@@ -50,6 +44,85 @@ class LoginNetworkDataSource {
     }
   }
 
+  // Google Sign-In Authentication
+  Future<ApiResponse<String?>> loginWithGoogle(LoginParams params) async {
+    try {
+      // Call back-end API to complete the login process
+      final response = await dio.post(
+        '${baseUrl}auth/google',
+        data: {
+          "email": params.email,
+          "google_id": params.googleId,
+        },
+        options: Options(headers: getHeaders()),
+      );
+
+      if (response.statusCode == 200) {
+        return ApiResponse.success(response.data['access_token']);
+      } else {
+        throw ServerException('Failed to login: ${response.statusCode}', null);
+      }
+    } on DioException catch (e) {
+      throw ServerException(
+          e.message ?? 'Dio error occurred', e.response?.statusCode);
+    } catch (e) {
+      throw ServerException(e.toString(), null);
+    }
+  }
+
+  // Apple Sign-In Authentication
+  Future<ApiResponse<String?>> loginWithApple(LoginParams params) async {
+    try {
+      // Call back-end API to complete the login process
+      final response = await dio.post(
+        '${baseUrl}auth/apple',
+        data: {
+          "email": params.email,
+          "apple_id": params.appleId,
+        },
+        options: Options(headers: getHeaders()),
+      );
+
+      if (response.statusCode == 200) {
+        return ApiResponse.success(response.data['access_token']);
+      } else {
+        throw ServerException('Failed to login: ${response.statusCode}', null);
+      }
+    } on DioException catch (e) {
+      throw ServerException(
+          e.message ?? 'Dio error occurred', e.response?.statusCode);
+    } catch (e) {
+      throw ServerException(e.toString(), null);
+    }
+  }
+
+  // Facebook Sign-In Authentication
+  Future<ApiResponse<String?>> loginWithFacebook(LoginParams params) async {
+    try {
+      // Call back-end API to complete the login process
+      final response = await dio.post(
+        '${baseUrl}auth/facebook',
+        data: {
+          "email": params.email,
+          "facebook_id": params.facebookId,
+        },
+        options: Options(headers: getHeaders()),
+      );
+
+      if (response.statusCode == 200) {
+        return ApiResponse.success(response.data['access_token']);
+      } else {
+        throw ServerException('Failed to login: ${response.statusCode}', null);
+      }
+    } on DioException catch (e) {
+      throw ServerException(
+          e.message ?? 'Dio error occurred', e.response?.statusCode);
+    } catch (e) {
+      throw ServerException(e.toString(), null);
+    }
+  }
+
+  // Helper function for Firebase phone authentication
   Future<String> _loginWithPhone(String phoneNumber) async {
     final completer = Completer<String>();
 
@@ -80,6 +153,7 @@ class LoginNetworkDataSource {
     return completer.future;
   }
 
+  // Verify SMS code for phone authentication
   Future<ApiResponse<String?>> verifySmsCode({
     required String verificationId,
     required String smsCode,
@@ -92,7 +166,7 @@ class LoginNetworkDataSource {
 
       // Sign in with the credential
       final UserCredential userCredential =
-          await _firebaseAuth.signInWithCredential(credential);
+      await _firebaseAuth.signInWithCredential(credential);
 
       // Return the Firebase UID
       return ApiResponse.success(userCredential.user?.uid);

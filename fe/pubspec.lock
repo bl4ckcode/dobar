@@ -364,7 +364,7 @@ packages:
     source: hosted
     version: "9.0.0"
   flutter_facebook_auth:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
       name: flutter_facebook_auth
       sha256: d542743aee9571fad59aa4cfb645640dbb49f23b039d07c34b5e21bc3d5857e9
@@ -587,7 +587,7 @@ packages:
     source: hosted
     version: "0.5.10"
   google_sign_in:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
       name: google_sign_in
       sha256: fad6ddc80c427b0bba705f2116204ce1173e09cf299f85e053d57a55e5b2dd56

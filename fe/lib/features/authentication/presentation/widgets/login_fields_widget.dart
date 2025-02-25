@@ -30,39 +30,58 @@ class _LoginFieldsWidgetState extends State<LoginFieldsWidget> {
         children: [
           IntlPhoneField(
             decoration: const InputDecoration(
-              hintText: 'Enter your phone number', // Use hintText instead of labelText
-              hintStyle: TextStyle(color: Colors.white), // Customize hint style
+              hintText: 'Enter your phone number',
+              // Use hintText instead of labelText
+              hintStyle: TextStyle(color: Colors.white),
+              // Customize hint style
               border: OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.white), // Adjust border color if needed
+                borderSide: BorderSide(
+                    color: Colors.white), // Adjust border color if needed
               ),
               focusedBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.white), // Set the border color when focused
+                borderSide: BorderSide(
+                    color: Colors.white), // Set the border color when focused
               ),
               enabledBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: mainColor), // Set the border color when not focused
+                borderSide: BorderSide(
+                    color: mainColor), // Set the border color when not focused
               ),
-              contentPadding: EdgeInsets.all(16), // Add padding if needed
+              contentPadding: EdgeInsets.all(16),
+              // Add padding if needed
               // Customize the character count label (counter)
-              counterStyle: TextStyle(color: Colors.white), // Set counter label to white
+              counterStyle: TextStyle(color: Colors.white),
+              // Set counter label to white
               // Customize error colors
-              errorStyle: TextStyle(height: 0), // Set error text to yellow
+              errorStyle: TextStyle(height: 1),
+              // Set error text to yellow
               errorBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.transparent), // Set error border to yellow
+                borderSide:
+                    BorderSide(color: Colors.red), // Set error border to yellow
               ),
               focusedErrorBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.blueGrey), // Border color when focused and error is present
+                borderSide: BorderSide(
+                    color: Colors
+                        .blueGrey), // Border color when focused and error is present
               ),
             ),
             initialCountryCode: 'BR', // Set the initial country code
             onChanged: (phone) {
               setState(() {
                 completePhoneNumber = phone.completeNumber;
-                isPhoneNumberValid = phone.completeNumber.length > 13;
               });
             },
             validator: (value) {
-              // Return empty to prevent error messages
-              return null;
+              try {
+                setState(() {
+                  isPhoneNumberValid = value?.isValidNumber() ?? false;
+                });
+              } catch (e) {
+                setState(() {
+                  isPhoneNumberValid = false;
+                });
+              }
+
+              return " ";
             },
           ),
           Container(

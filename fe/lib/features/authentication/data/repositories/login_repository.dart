@@ -16,10 +16,61 @@ class LoginRepositoryImpl extends AbstractLoginRepository {
   });
 
   @override
-  Future<Either<Failure, String?>> login(LoginParams params) async {
+  Future<Either<Failure, String?>> loginWithPhone(LoginParams params) async {
     try {
-      // Call the network data source to login
-      final result = await networkDataSource.login(params);
+      // Call the network data source for phone authentication
+      final result = await networkDataSource.loginWithPhone(params);
+
+      // Cache the token locally
+      if (result.result != null) {
+        await localDataSource.cacheUserToken(result.result!);
+      }
+
+      return Right(result.result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message, e.statusCode));
+    }
+  }
+
+  @override
+  Future<Either<Failure, String?>> loginWithGoogle(LoginParams params) async {
+    try {
+      // Call the network data source for Google Sign-In
+      final result = await networkDataSource.loginWithGoogle(params);
+
+      // Cache the token locally
+      if (result.result != null) {
+        await localDataSource.cacheUserToken(result.result!);
+      }
+
+      return Right(result.result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message, e.statusCode));
+    }
+  }
+
+  @override
+  Future<Either<Failure, String?>> loginWithApple(LoginParams params) async {
+    try {
+      // Call the network data source for Apple Sign-In
+      final result = await networkDataSource.loginWithApple(params);
+
+      // Cache the token locally
+      if (result.result != null) {
+        await localDataSource.cacheUserToken(result.result!);
+      }
+
+      return Right(result.result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message, e.statusCode));
+    }
+  }
+
+  @override
+  Future<Either<Failure, String?>> loginWithFacebook(LoginParams params) async {
+    try {
+      // Call the network data source for Facebook Sign-In
+      final result = await networkDataSource.loginWithFacebook(params);
 
       // Cache the token locally
       if (result.result != null) {

@@ -31,7 +31,7 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
         phoneNumber: event.phoneNumber,
       );
 
-      final result = await loginUseCase.call(params);
+      final result = await loginUseCase.loginWithPhone(params);
 
       result.fold(
         (failure) {
@@ -57,10 +57,10 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
       );
 
       result.fold(
-            (failure) {
+        (failure) {
           emit(LoginState.failure(error: failure.errorMessage));
         },
-            (firebaseUid) {
+        (firebaseUid) {
           // Optionally, you can send the Firebase UID to your back-end here
           emit(const LoginState.success());
         },
@@ -79,7 +79,7 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
         email: event.key,
         googleId: event.token,
       );
-      await loginUseCase.call(params);
+      await loginUseCase.loginWithGoogle(params);
       emit(const LoginState.success());
     } catch (e) {
       emit(LoginState.failure(error: e.toString()));
@@ -95,7 +95,7 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
         email: event.key,
         appleId: event.token,
       );
-      await loginUseCase.call(params);
+      await loginUseCase.loginWithApple(params);
       emit(const LoginState.success());
     } catch (e) {
       emit(LoginState.failure(error: e.toString()));
@@ -111,7 +111,7 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
         email: event.key,
         facebookId: event.token,
       );
-      await loginUseCase.call(params);
+      await loginUseCase.loginWithFacebook(params);
       emit(const LoginState.success());
     } catch (e) {
       emit(LoginState.failure(error: e.toString()));
