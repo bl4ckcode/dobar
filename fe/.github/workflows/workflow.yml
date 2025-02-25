@@ -18,7 +18,7 @@ jobs:
       - name: Install Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.13.0' # Compatible with Dart 3.2.6 or later
+          flutter-version: '3.29.0'
 
       # Install dependencies
       - name: Install Dependencies
