@@ -120,29 +120,3 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 ---
 
 Made with ❤️ by [bl4ckcode](https://github.com/bl4ckcode)
-```
-
----
-
-### **How to Use This README**
-1. Copy the content above into a new file named `README.md` in the root of your repository.
-2. Customize the sections (e.g., replace `bl4ckcode` with your GitHub username).
-3. Commit and push the file to GitHub:
-   ```bash
-   git add README.md
-   git commit -m "Add README.md"
-   git push origin main
-   ```
-
----
-
-### **What’s Included in the README**
-1. **Project Overview:** A brief description of the project.
-2. **Features:** Highlights the key features of the backend.
-3. **Technologies:** Lists the technologies used.
-4. **Setup Instructions:** Step-by-step guide to set up the project locally.
-5. **Environment Variables:** Explains the required environment variables.
-6. **API Endpoints:** Documents the available API endpoints.
-7. **Authentication:** Explains how authentication works.
-8. **Contributing:** Guidelines for contributing to the project.
-9. **License:** Specifies the license for the project.
