@@ -1,3 +1,4 @@
+import 'package:barz/core/utils/constant/colors.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:barz/features/authentication/presentation/bloc/login_bloc.dart';
@@ -6,8 +7,9 @@ import 'package:barz/features/authentication/presentation/bloc/login_state.dart'
 
 class LoginValidatePhoneNumberPage extends StatefulWidget {
   final String verificationId;
+  final LoginBloc loginBloc;
 
-  const LoginValidatePhoneNumberPage({super.key, required this.verificationId});
+  const LoginValidatePhoneNumberPage({super.key, required this.verificationId, required this.loginBloc});
 
   @override
   State<LoginValidatePhoneNumberPage> createState() =>
@@ -16,13 +18,11 @@ class LoginValidatePhoneNumberPage extends StatefulWidget {
 
 class _LoginValidatePhoneNumberPageState
     extends State<LoginValidatePhoneNumberPage> {
-  late LoginBloc _loginBloc;
   final TextEditingController _smsCodeController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _loginBloc = context.read<LoginBloc>();
   }
 
   @override
@@ -34,7 +34,7 @@ class _LoginValidatePhoneNumberPageState
   void _handleCodeVerification() {
     final smsCode = _smsCodeController.text.trim();
     if (smsCode.isNotEmpty) {
-      _loginBloc.add(VerifyCodeButtonPressed(
+      widget.loginBloc.add(VerifyCodeButtonPressed(
         verificationId: widget.verificationId,
         smsCode: smsCode,
       ));
@@ -48,8 +48,10 @@ class _LoginValidatePhoneNumberPageState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: mainColor,
       appBar: AppBar(title: const Text("Verify Phone Number")),
       body: BlocListener<LoginBloc, LoginState>(
+        bloc: widget.loginBloc,
         listener: (context, state) {
           if (state is Success) {
             Navigator.pushNamedAndRemoveUntil(

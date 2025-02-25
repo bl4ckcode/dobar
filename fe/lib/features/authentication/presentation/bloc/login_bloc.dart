@@ -22,44 +22,27 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
     on<FacebookLoginPressed>(_onFacebookLoginPressed);
   }
 
-  _onLoginButtonPressed(
+  Future<void> _onLoginButtonPressed(
       LoginButtonPressed event, Emitter<LoginState> emit) async {
     emit(const LoginState.loading());
 
-    final completer = Completer<void>();
-
     try {
-      await firebaseAuth.verifyPhoneNumber(
+      final params = LoginParams(
         phoneNumber: event.phoneNumber,
-        verificationCompleted: (PhoneAuthCredential credential) async {
-          try {
-            await firebaseAuth.signInWithCredential(credential);
-            emit(const LoginState.success());
-          } catch (e) {
-            emit(LoginState.failure(error: e.toString()));
-          } finally {
-            completer.complete();
-          }
-        },
-        verificationFailed: (FirebaseAuthException e) {
-          emit(LoginState.failure(error: e.message ?? "Verification failed."));
-          completer.complete();
-        },
-        codeSent: (String verificationId, int? resendToken) {
-          emit(LoginState.codeSent(verificationId: verificationId));
-          completer.complete();
-        },
-        codeAutoRetrievalTimeout: (String verificationId) {
-          // Handle timeout if needed, but complete to avoid hanging
-          completer.complete();
-        },
       );
 
-      // Wait for the completer to finish (triggered by a callback)
-      await completer.future;
+      final result = await loginUseCase.call(params);
+
+      result.fold(
+        (failure) {
+          emit(LoginState.failure(error: failure.errorMessage));
+        },
+        (verificationId) {
+          emit(LoginState.codeSent(verificationId: verificationId ?? ""));
+        },
+      );
     } catch (e) {
       emit(LoginState.failure(error: e.toString()));
-      completer.complete();
     }
   }
 
@@ -68,13 +51,20 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
     emit(const LoginState.loading());
 
     try {
-      final PhoneAuthCredential credential = PhoneAuthProvider.credential(
+      final result = await loginUseCase.verifySmsCode(
         verificationId: event.verificationId,
         smsCode: event.smsCode,
       );
 
-      await firebaseAuth.signInWithCredential(credential);
-      emit(const LoginState.success());
+      result.fold(
+            (failure) {
+          emit(LoginState.failure(error: failure.errorMessage));
+        },
+            (firebaseUid) {
+          // Optionally, you can send the Firebase UID to your back-end here
+          emit(const LoginState.success());
+        },
+      );
     } catch (e) {
       emit(LoginState.failure(error: "Invalid verification code."));
     }

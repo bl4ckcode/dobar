@@ -6,9 +6,11 @@ import 'package:barz/features/home/data/repositories/home_impl_repo.dart';
 import 'package:barz/features/home/domain/repositories/abstract_home_repository.dart';
 import 'package:barz/features/home/domain/usecases/home_usecase.dart';
 
-initHomeInjections() {
+Future<void> initHomeInjections() async {
   getItInjector.registerSingleton<HomeImplApi>(HomeImplApi(DioNetwork.appAPI));
-  getItInjector.registerSingleton<AbstractHomeRepository>(HomeRepositoryImpl(getItInjector()));
-  getItInjector.registerSingleton<HomeSharedPrefs>(HomeSharedPrefs(getItInjector()));
+  getItInjector.registerSingleton<AbstractHomeRepository>(
+      HomeRepositoryImpl(getItInjector()));
+  getItInjector
+      .registerSingleton<HomeSharedPrefs>(HomeSharedPrefs(getItInjector()));
   getItInjector.registerSingleton<HomeUseCase>(HomeUseCase(getItInjector()));
 }

@@ -7,15 +7,20 @@ import 'package:dartz/dartz.dart';
 class LoginUsecase extends UseCase<String?, LoginParams> {
   final AbstractLoginRepository repository;
 
-  LoginUsecase(this.repository);
+  LoginUsecase({required this.repository});
 
   @override
   Future<Either<Failure, String?>> call(LoginParams params) async {
-    final result = await repository.login(params);
-    return result.fold((l) {
-      return Left(l);
-    }, (r) async {
-      return Right(r);
-    });
+    return await repository.login(params);
+  }
+
+  Future<Either<Failure, String?>> verifySmsCode({
+    required String verificationId,
+    required String smsCode,
+  }) async {
+    return await repository.verifySmsCode(
+      verificationId: verificationId,
+      smsCode: smsCode,
+    );
   }
 }

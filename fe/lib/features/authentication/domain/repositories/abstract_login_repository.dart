@@ -4,4 +4,13 @@ import 'package:dartz/dartz.dart';
 
 abstract class AbstractLoginRepository {
   Future<Either<Failure, String?>> login(LoginParams params);
+
+  Future<Either<Failure, String?>> verifySmsCode({
+    required String verificationId,
+    required String smsCode,
+  });
+
+  Future<Either<Failure, String?>> getCachedToken();
+
+  Future<Either<Failure, void>> logout();
 }

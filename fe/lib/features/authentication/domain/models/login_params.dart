@@ -11,6 +11,7 @@ class LoginParams with _$LoginParams {
     String? googleId,
     String? appleId,
     String? facebookId,
+    String? firebaseUid,
   }) = _LoginParams;
 
   factory LoginParams.fromJson(Map<String, dynamic> json) =>

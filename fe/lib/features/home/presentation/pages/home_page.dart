@@ -2,9 +2,6 @@ import 'package:barz/core/utils/constant/colors.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/home/domain/usecases/home_usecase.dart';
 import 'package:barz/features/home/presentation/bloc/home_bloc.dart';
-import 'package:barz/features/home/presentation/pages/drinks/drinks_home_page.dart';
-import 'package:barz/features/home/presentation/pages/profile/profile_home_page.dart';
-import 'package:barz/features/home/presentation/pages/search/search_home_page.dart';
 import 'package:barz/features/home/presentation/widgets/menu/btm_nav_item.dart';
 import 'package:barz/features/home/presentation/widgets/menu/menu_btn.dart';
 import 'package:barz/shared/domain/models/bottom_nav_bar/menu_model.dart';
@@ -28,30 +25,6 @@ class _HomePageState extends State<HomePage>
     with SingleTickerProviderStateMixin {
   final HomeBloc _bloc = HomeBloc(homeUseCase: getItInjector<HomeUseCase>());
 
-  final List<Menu> bottomNavItems = [
-    Menu(
-      const DrinksHomePage(),
-      RiveModel(
-          src: "assets/RiveAssets/icons.riv",
-          artboard: "HOME",
-          stateMachineName: "HOME_interactivity"),
-    ),
-    Menu(
-      const SearchHomePage(),
-      RiveModel(
-          src: "assets/RiveAssets/icons.riv",
-          artboard: "SEARCH",
-          stateMachineName: "SEARCH_Interactivity"),
-    ),
-    Menu(
-      const ProfileHomePage(),
-      RiveModel(
-          src: "assets/RiveAssets/icons.riv",
-          artboard: "USER",
-          stateMachineName: "USER_Interactivity"),
-    ),
-  ];
-
   late SMIBool isMenuOpenInput;
 
   late AnimationController _drawerSlideController;
@@ -65,7 +38,7 @@ class _HomePageState extends State<HomePage>
   @override
   void initState() {
     super.initState();
-    selectedBottonNav = bottomNavItems.first;
+    selectedBottonNav = homeBottomNavItems.first;
     selectedSideMenu = sidebarMenus.first;
 
     _drawerSlideController = AnimationController(
@@ -191,14 +164,14 @@ class _HomePageState extends State<HomePage>
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               ...List.generate(
-                bottomNavItems.length,
+                homeBottomNavItems.length,
                 (index) {
-                  RiveModel navBar = bottomNavItems[index].rive;
+                  RiveModel navBar = homeBottomNavItems[index].rive;
                   return BtmNavItem(
                     navBar: navBar,
                     press: () {
                       RiveUtils.chnageSMIBoolState(navBar.status!);
-                      updateSelectedBtmNav(bottomNavItems[index]);
+                      updateSelectedBtmNav(homeBottomNavItems[index]);
                     },
                     riveOnInit: (artboard) {
                       navBar.status = RiveUtils.getRiveInput(artboard,
