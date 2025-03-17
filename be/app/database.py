@@ -1,14 +1,14 @@
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.ext.declarative import declarative_base
 from databases import Database
+from dotenv import load_dotenv
 import os
 
-# Fetch the database URL from environment variables for flexibility
-DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./test.db")
+# Load environment variables
+load_dotenv()
 
-# If using PostgreSQL or MySQL, it might look something like this:
-# DATABASE_URL = "postgresql://user:password@localhost/dbname"
-# DATABASE_URL = "mysql+pymysql://user:password@localhost/dbname"
+# PostgreSQL connection URL
+DATABASE_URL = f"postgresql://{os.getenv('POSTGRES_USER')}:{os.getenv('POSTGRES_PASSWORD')}@{os.getenv('POSTGRES_HOST')}:{os.getenv('POSTGRES_PORT')}/{os.getenv('POSTGRES_DB')}"
 
 # Initialize the database connection
 database = Database(DATABASE_URL)

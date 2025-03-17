@@ -1,6 +1,9 @@
 from .database import engine, Base, database
 from fastapi import FastAPI
-from .auth.routes import router
+from .auth.routes import auth_router
+from .bars_and_restaurants.routes.bars import bars_router
+from .bars_and_restaurants.routes.menus import menus_router
+from fastapi.openapi.utils import get_openapi
 from contextlib import asynccontextmanager
 from firebase_admin import auth, initialize_app, credentials
 
@@ -17,5 +20,26 @@ async def lifespan(app: FastAPI):
     await database.disconnect()
 
 app = FastAPI(lifespan=lifespan)
-# Include the router
-app.include_router(router, prefix="/auth")
+
+# Include the authrouter
+app.include_router(auth_router, prefix="/auth")
+
+# Include the bars router
+app.include_router(bars_router, prefix="/bars")
+
+# Include the menus router
+app.include_router(menus_router, prefix="/menus")
+
+def custom_openapi():
+    if app.openapi_schema:
+        return app.openapi_schema
+    openapi_schema = get_openapi(
+        title="BARZ-BACKEND API",
+        version="1.1.0",
+        description="All backend routes for the BARZ app, including authentication, bars, and menus. This API is used to authenticate, manage bar and restaurant data.",  
+        routes=app.routes,
+    )
+    app.openapi_schema = openapi_schema
+    return app.openapi_schema
+
+app.openapi = custom_openapi
