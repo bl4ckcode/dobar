@@ -3,6 +3,8 @@ from fastapi import FastAPI
 from .auth.routes import auth_router
 from .bars_and_restaurants.routes.bars import bars_router
 from .bars_and_restaurants.routes.menus import menus_router
+from .bars_and_restaurants.routes.orders import orders_router
+from .bars_and_restaurants.services.connection_manager import ws_router
 from fastapi.openapi.utils import get_openapi
 from contextlib import asynccontextmanager
 from firebase_admin import auth, initialize_app, credentials
@@ -29,6 +31,12 @@ app.include_router(bars_router, prefix="/bars")
 
 # Include the menus router
 app.include_router(menus_router, prefix="/menus")
+
+# Include the orders router
+app.include_router(orders_router, prefix="/orders")
+
+# Include sockets router
+app.include_router(ws_router)
 
 def custom_openapi():
     if app.openapi_schema:

@@ -10,3 +10,4 @@ async def stream_order_changes():
         async for change in change_stream:
             # Convert BSON to JSON string for easier consumption
             yield dumps(change)
+

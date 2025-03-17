@@ -1,1 +1,40 @@
+# Ignore virtual environment directories
+venv/
+env/
+ENV/
+.venv/
+.ENV/
+
+# Ignore Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ignore environment variable files
 .env
+.env.*
+
+# Ignore IDE/editor specific files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Ignore macOS specific files
+.DS_Store
+
+# Ignore log files
+*.log
+
+# Ignore compiled files
+*.so
+*.dll
+*.dylib
+.DS_Store
+.env
+app/.DS_Store
+app/__pycache__/database.cpython-312.pyc
+app/__pycache__/main.cpython-312.pyc
+app/auth/.DS_Store
+app/auth/__pycache__/routes.cpython-312.pyc
+app/bars_and_restaurants/routes/__pycache__/bars.cpython-312.pyc
