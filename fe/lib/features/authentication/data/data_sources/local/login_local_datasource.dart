@@ -1,5 +1,7 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../../../../../core/network/api_config.dart';
+
 class LoginLocalDataSource {
   final SharedPreferences sharedPreferences;
 
@@ -7,6 +9,7 @@ class LoginLocalDataSource {
 
   Future<void> cacheUserToken(String token) async {
     await sharedPreferences.setString('user_token', token);
+    setAuthToken(token);
   }
 
   Future<String?> getCachedUserToken() async {
@@ -15,5 +18,6 @@ class LoginLocalDataSource {
 
   Future<void> clearCachedUserToken() async {
     await sharedPreferences.remove('user_token');
+    setAuthToken("");
   }
 }

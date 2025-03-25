@@ -2,6 +2,7 @@ import 'package:barz/core/utils/constant/colors.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/authentication/presentation/widgets/login_buttons_widget.dart';
 import 'package:barz/features/authentication/presentation/widgets/login_fields_widget.dart';
+import 'package:barz/shared/presentation/loading_util.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -54,13 +55,7 @@ class _LoginPageState extends State<LoginPage> {
           bloc: _loginBloc,
           listener: (context, state) {
             if (state is Loading) {
-              // Show a loading indicator
-              showDialog(
-                context: context,
-                barrierDismissible: false,
-                builder: (_) =>
-                    const Center(child: CircularProgressIndicator()),
-              );
+              LoadingUtil.showLoadingDialog(context);
             } else if (state is CodeSent) {
               // Dismiss the loading dialog
               Navigator.of(context).pop();
