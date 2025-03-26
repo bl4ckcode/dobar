@@ -2,7 +2,7 @@ from fastapi import WebSocket, APIRouter, WebSocketDisconnect
 from bson.json_util import dumps
 from ..models.nosql_models import menus_collection, orders_collection
 
-ws_router = APIRouter()
+ws_router = APIRouter(tags=["WebSocket"])
 
 class ConnectionManager:
     def __init__(self):

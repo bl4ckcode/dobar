@@ -5,11 +5,15 @@ from ..models.nosql_models import menus_collection
 from ..schemas.menus import MenuCreate, Menu
 from app.database import database  # Use the async database connection
 
-menus_router = APIRouter()
+menus_router = APIRouter(prefix="/menus", tags=["Menus"])
 
 # Helper functions
 async def get_bar_by_id(bar_id: int):
     query = Bar.__table__.select().where(Bar.id == bar_id)
+    return await database.fetch_one(query)
+
+async def get_menu_by_bar_id(bar_id: int):
+    query = Menu.__table__.select().where(Menu.bar_id == bar_id)
     return await database.fetch_one(query)
 
 async def create_new_menu_in_mongo(menu_data: dict):
@@ -63,12 +67,13 @@ async def create_menu(menu: MenuCreate):
 # Route to fetch a menu by bar ID
 @menus_router.get("/{bar_id}", response_model=list[Menu])
 async def read_menus_by_bar_id(bar_id: int):
-    menus = await get_menu_by_bar_id(bar_id)
-    
-    if not menus:
-        raise HTTPException(status_code=404, detail="No menus found for this bar")
-    
-    return menus
+    menu = await get_menu_by_bar_id(bar_id)
+    if not menu:
+        raise HTTPException(status_code=404, detail="Menu not found")
+    items = await get_menu_items_from_mongo(menu.menu_id)
+    if items is None:
+        items = []
+    return Menu(**menu.dict(), items=items)
 
 # Route to fetch menu items from MongoDB
 @menus_router.get("/items/{menu_id}")

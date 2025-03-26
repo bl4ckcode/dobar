@@ -24,16 +24,16 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 # Include the authrouter
-app.include_router(auth_router, prefix="/auth")
+app.include_router(auth_router)
 
 # Include the bars router
-app.include_router(bars_router, prefix="/bars")
+app.include_router(bars_router)
 
 # Include the menus router
-app.include_router(menus_router, prefix="/menus")
+app.include_router(menus_router)
 
 # Include the orders router
-app.include_router(orders_router, prefix="/orders")
+app.include_router(orders_router)
 
 # Include sockets router
 app.include_router(ws_router)

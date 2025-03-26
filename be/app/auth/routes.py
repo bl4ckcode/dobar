@@ -9,7 +9,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from firebase_admin import auth
 import os
 
-auth_router = APIRouter()
+auth_router = APIRouter(prefix="/auth", tags=["Auth"])
 
 # Load SECRET_KEY from environment variables
 SECRET_KEY = os.getenv("SECRET_KEY", "fallback-secret-key")

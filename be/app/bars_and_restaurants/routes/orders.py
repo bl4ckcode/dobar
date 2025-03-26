@@ -4,7 +4,7 @@ from ..models.relational_models import Order as OrderModel
 from ..schemas.orders import OrderCreate, Order as OrderSchema
 from app.database import database  # Use the async database connection
 
-orders_router = APIRouter()
+orders_router = APIRouter(prefix="/orders", tags=["Orders"])
 
 @orders_router.websocket("/ws/orders")
 async def orders_websocket(websocket: WebSocket):

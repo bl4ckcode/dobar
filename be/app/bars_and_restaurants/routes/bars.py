@@ -7,7 +7,7 @@ from ..schemas.bars import BarCreate, Bar
 from ..models.nosql_models import insert_bar_into_mongo  # Import from nosql models
 from app.database import database  # Use the async database connection
 
-bars_router = APIRouter()
+bars_router = APIRouter(prefix="/bars", tags=["Bars"])
 
 # Helper functions
 async def get_bar_owner_by_id(id: int):
