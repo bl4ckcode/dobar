@@ -32,9 +32,3 @@ __pycache__/
 *.dylib
 .DS_Store
 .env
-app/.DS_Store
-app/__pycache__/database.cpython-312.pyc
-app/__pycache__/main.cpython-312.pyc
-app/auth/.DS_Store
-app/auth/__pycache__/routes.cpython-312.pyc
-app/bars_and_restaurants/routes/__pycache__/bars.cpython-312.pyc
