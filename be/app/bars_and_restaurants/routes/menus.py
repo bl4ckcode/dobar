@@ -31,10 +31,6 @@ async def update_menu_item_in_mongo(menu_id: int, item_name: str, new_data: dict
         {"$set": {"items.$": new_data}}  # Updates the specific item
     )
 
-async def get_menu_by_bar_id(bar_id: int):
-    query = MenuModel.__table__.select().where(MenuModel.bar_id == bar_id)
-    return await database.fetch_all(query)
-
 async def get_menu_items_from_mongo(menu_id: int):
     menu = await menus_collection.find_one({"menu_id": menu_id})
     if menu:

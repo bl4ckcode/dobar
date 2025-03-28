@@ -1,10 +1,13 @@
+from fastapi.responses import JSONResponse
+from app.errors import CustomHTTPException, ErrorResponse
 from .database import engine, Base, database
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from .auth.routes import auth_router
 from .bars_and_restaurants.routes.bars import bars_router
 from .bars_and_restaurants.routes.menus import menus_router
 from .bars_and_restaurants.routes.orders import orders_router
 from .bars_and_restaurants.services.connection_manager import ws_router
+from .bars_and_restaurants.routes.bar_owners import bar_owners_router
 from fastapi.openapi.utils import get_openapi
 from contextlib import asynccontextmanager
 from firebase_admin import auth, initialize_app, credentials
@@ -23,6 +26,19 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+# Register the custom exception handler
+@app.exception_handler(CustomHTTPException)
+async def custom_http_exception_handler(request: Request, exc: CustomHTTPException):
+    return JSONResponse(
+        status_code=exc.code,
+        content=ErrorResponse(
+            code=exc.code,
+            type=exc.error_type,
+            message=exc.message,
+            data=exc.data
+        ).model_dump()
+    )
+
 # Include the authrouter
 app.include_router(auth_router)
 
@@ -37,6 +53,9 @@ app.include_router(orders_router)
 
 # Include sockets router
 app.include_router(ws_router)
+
+# Include bars owners router
+app.include_router(bar_owners_router)
 
 def custom_openapi():
     if app.openapi_schema:
