@@ -1,4 +1,5 @@
 from fastapi.responses import JSONResponse
+from app.bars_and_restaurants.models.nosql_models import create_geo_index
 from app.errors import CustomHTTPException, ErrorResponse
 from .database import engine, Base, database
 from fastapi import FastAPI, Request
@@ -21,6 +22,7 @@ Base.metadata.create_all(bind=engine)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await database.connect()
+    await create_geo_index()
     yield
     await database.disconnect()
 

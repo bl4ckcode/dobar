@@ -19,7 +19,7 @@ menus_collection = db["menus"]
 async def insert_bar_into_mongo(bar_id, latitude, longitude):
     bar_data = {
         "bar_id": bar_id,
-        "location": {"type": "Point", "coordinates": [latitude, longitude]},  # Geospatial data
+        "location": {"type": "Point", "coordinates": [longitude, latitude]},  # Geospatial data
     }
     await bars_collection.insert_one(bar_data)
 

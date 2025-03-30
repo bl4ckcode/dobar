@@ -1,3 +1,4 @@
+import math
 from fastapi import APIRouter, HTTPException
 from fastapi.params import Query
 from sqlalchemy import and_
@@ -48,10 +49,45 @@ async def create_new_bar(bar_data: dict):
 
     return await database.fetch_one(BarModel.__table__.select().where(BarModel.id == bar_id))
 
-# Helper function to get bars from PostgreSQL by bar IDs
-async def get_bars_by_ids(bar_ids: list[int]):
+# Helper function to get bars from PostgreSQL by bar IDs along with their approximateLocation
+async def get_bars_by_ids(bars_info: list[dict]):
+    # Extract just the bar IDs from the bars_info list
+    bar_ids = [info["bar_id"] for info in bars_info]
+    
+    # Fetch the bar details from PostgreSQL for those IDs
     query = BarModel.__table__.select().where(BarModel.id.in_(bar_ids))
-    return await database.fetch_all(query)
+    pg_bars = await database.fetch_all(query)
+    
+    # Create a mapping from bar_id to the extra attribute approximateLocation
+    extra_data = {info["bar_id"]: info["approximateLocation"] for info in bars_info}
+    
+    # Merge approximateLocation into the PostgreSQL data
+    merged_results = []
+    for bar in pg_bars:
+        bar_dict = dict(bar)  # Convert the Record to a dictionary
+        bar_id = bar_dict["id"]
+        if bar_id in extra_data:
+            bar_dict["approximateLocation"] = extra_data[bar_id]
+        merged_results.append(bar_dict)
+    
+    return merged_results
+
+def haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """
+    Calculate the great-circle distance between two points on the Earth (specified in decimal degrees).
+    Returns distance in meters.
+    """
+    R = 6371000  # Earth radius in meters
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    delta_phi = math.radians(lat2 - lat1)
+    delta_lambda = math.radians(lon2 - lon1)
+    
+    a = math.sin(delta_phi / 2) ** 2 + \
+        math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2) ** 2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    
+    return R * c
 
 # Helper function to perform a geospatial query in MongoDB
 async def find_bars_near_location(latitude: float, longitude: float, max_distance: float):
@@ -69,9 +105,18 @@ async def find_bars_near_location(latitude: float, longitude: float, max_distanc
     if not bars_nearby:
         return []
 
-    # Extract bar IDs from the MongoDB results
-    bar_ids = [bar["bar_id"] for bar in bars_nearby]
-    return bar_ids
+    results = []
+    for bar in bars_nearby:
+        # The 'location' field in MongoDB is stored as GeoJSON, where coordinates are [longitude, latitude]
+        bar_lon, bar_lat = bar["location"]["coordinates"]
+        # Calculate the distance between the bar and the input coordinates
+        distance = haversine(latitude, longitude, bar_lat, bar_lon)
+        results.append({
+            "bar_id": bar["bar_id"],
+            "approximateLocation": distance
+        })
+    
+    return results
 
 @bars_router.post("/", response_model=Bar)
 async def create_bar(bar: BarCreate):
