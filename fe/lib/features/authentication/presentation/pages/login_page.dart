@@ -66,6 +66,7 @@ class _LoginPageState extends State<LoginPage> {
                 MaterialPageRoute(
                   builder: (_) => LoginValidatePhoneNumberPage(
                     verificationId: state.verificationId,
+                    phoneNumber: state.phoneNumber,
                     loginBloc: _loginBloc,
                   ),
                 ),

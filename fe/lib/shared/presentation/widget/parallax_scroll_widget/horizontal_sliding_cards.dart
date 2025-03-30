@@ -10,10 +10,12 @@ class HorizontalSlidingCards extends StatefulWidget {
     super.key,
     required this.list,
     required this.cardsType,
+    required this.onCardTap,
   });
 
   final List<ParallaxRecipeUiModel> list;
   final CardType cardsType;
+  final void Function(ParallaxRecipeUiModel) onCardTap;
 
   @override
   State<HorizontalSlidingCards> createState() => _HorizontalSlidingCardsState();
@@ -33,7 +35,13 @@ class _HorizontalSlidingCardsState extends State<HorizontalSlidingCards> {
           final card = widget.cardsType == CardType.circle ? CircleCard(bar: bar) : RectangleCard(bar: bar);
           return Container(
             padding: const EdgeInsets.only(left: 16, right: 16),
-            child: card,
+            child: GestureDetector(
+              onTap: () {
+                // Notify parent when the card is tapped
+                widget.onCardTap(bar);
+              },
+              child: card,
+            ),
           );
         },
       ),

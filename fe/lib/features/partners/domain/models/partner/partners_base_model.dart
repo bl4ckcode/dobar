@@ -13,12 +13,16 @@ part 'partners_base_model.g.dart';
 @freezed
 class PartnersBaseModel with _$PartnersBaseModel {
   const factory PartnersBaseModel({
-    required int identifier,
-    LocationData? locationData,
-    PersonalData? personalData,
-    PartnerMenu? menu,
-    PartnerPhotos? photos,
-    // PartnerRating? rating,
+    required int id,
+    required String name,
+    required String address,
+    required String email,
+    double? approximateLocation,
+    // LocationData? locationData,
+    // PersonalData? personalData,
+    // PartnerMenu? menu,
+    // PartnerPhotos? photos,
+    // // PartnerRating? rating,
   }) = _PartnersBaseModel;
 
   factory PartnersBaseModel.fromJson(Map<String, dynamic> json) =>

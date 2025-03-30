@@ -3,6 +3,7 @@ import 'package:barz/features/home/domain/usecases/drinks_home_usecase.dart';
 import '../../../../partners/domain/models/partner/partners_params.dart';
 import 'drinks_home_event.dart';
 import 'drinks_home_state.dart';
+import 'drinks_model_mapper.dart';
 
 class DrinksHomeBloc extends Bloc<DrinksHomeEvent, DrinksHomeState> {
   final DrinksHomeUseCase drinksHomeUseCase;
@@ -13,8 +14,6 @@ class DrinksHomeBloc extends Bloc<DrinksHomeEvent, DrinksHomeState> {
           const DrinksHomeState.initial(),
         ) {
     on<DrinksHomeLoadPartners>(_onLoadPartners);
-
-    add(DrinksHomeLoadPartners());
   }
 
   Future<void> _onLoadPartners(
@@ -22,15 +21,20 @@ class DrinksHomeBloc extends Bloc<DrinksHomeEvent, DrinksHomeState> {
     Emitter<DrinksHomeState> emit,
   ) async {
     emit(DrinksHomeState.loading()); // Trigger loading state
+
     final result = await drinksHomeUseCase.getPartners(
-      PartnersParams(),
+      PartnersParams(
+        latitude: event.latitude,
+        longitude: event.longitude,
+        maxDistance: event.maxDistance,
+      ),
     );
     result.fold(
       (failure) => emit(
         DrinksHomeState.failure(error: failure.errorMessage),
       ),
       (data) => emit(
-        DrinksHomeState.success(),
+        DrinksHomeState.success(mapPartnersToUiModel(data)),
       ),
     );
   }

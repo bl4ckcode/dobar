@@ -66,5 +66,9 @@
 	<string>BarZ</string>
 	<key>FacebookAutoLogAppEventsEnabled</key>
 	<true/>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>To find the best bars and restaurants around you, we need your location :)</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>To find the best drinks from the best bars and restaurants around you, we need your location :)</string>
 </dict>
 </plist>

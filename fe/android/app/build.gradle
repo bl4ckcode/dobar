@@ -29,7 +29,7 @@ if (flutterVersionName == null) {
 
 android {
     namespace "com.barz.barz"
-    compileSdkVersion 34
+    compileSdkVersion 35
     ndkVersion "26.1.10909125"
 
     compileOptions {

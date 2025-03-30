@@ -26,48 +26,50 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
       LoginButtonPressed event, Emitter<LoginState> emit) async {
     emit(const LoginState.loading());
 
-    try {
-      final params = LoginParams(
-        phoneNumber: event.phoneNumber,
-      );
+    emit(LoginState.codeSent(verificationId: "", phoneNumber: event.phoneNumber));
 
-      final result = await loginUseCase.loginWithPhone(params);
-
-      result.fold(
-        (failure) {
-          emit(LoginState.failure(error: failure.errorMessage));
-        },
-        (verificationId) {
-          emit(LoginState.codeSent(verificationId: verificationId ?? ""));
-        },
-      );
-    } catch (e) {
-      emit(LoginState.failure(error: e.toString()));
-    }
+    // try {
+    //   final params = LoginParams(
+    //     phoneNumber: event.phoneNumber,
+    //   );
+    //
+    //   final result = await loginUseCase.loginWithPhone(params);
+    //
+    //   result.fold(
+    //     (failure) {
+    //       emit(LoginState.failure(error: failure.errorMessage));
+    //     },
+    //     (verificationId) {
+    //       emit(LoginState.codeSent(verificationId: verificationId ?? "", phoneNumber: event.phoneNumber));
+    //     },
+    //   );
+    // } catch (e) {
+    //   emit(LoginState.failure(error: e.toString()));
+    // }
   }
 
   Future<void> _onVerifyCodeButtonPressed(
       VerifyCodeButtonPressed event, Emitter<LoginState> emit) async {
     emit(const LoginState.loading());
 
-    try {
-      final result = await loginUseCase.verifySmsCode(
-        verificationId: event.verificationId,
-        smsCode: event.smsCode,
-      );
-
-      result.fold(
-        (failure) {
-          emit(LoginState.failure(error: failure.errorMessage));
-        },
-        (firebaseUid) {
-          // Optionally, you can send the Firebase UID to your back-end here
-          emit(const LoginState.success());
-        },
-      );
-    } catch (e) {
-      emit(LoginState.failure(error: "Invalid verification code."));
-    }
+    emit(const LoginState.success());
+    // try {
+    //   final result = await loginUseCase.verifySmsCode(
+    //     verificationId: event.verificationId,
+    //     smsCode: event.smsCode,
+    //   );
+    //
+    //   result.fold(
+    //     (failure) {
+    //       emit(LoginState.failure(error: failure.errorMessage));
+    //     },
+    //     (firebaseUid) {
+    //       emit(const LoginState.success());
+    //     },
+    //   );
+    // } catch (e) {
+    //   emit(LoginState.failure(error: "Invalid verification code."));
+    // }
   }
 
   Future<void> _onGoogleLoginPressed(

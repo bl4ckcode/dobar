@@ -6,7 +6,7 @@ part 'login_state.freezed.dart';
 class LoginState with _$LoginState {
   const factory LoginState.initial() = Initial;
   const factory LoginState.loading() = Loading;
-  const factory LoginState.codeSent({required String verificationId}) = CodeSent;
+  const factory LoginState.codeSent({required String verificationId, required String phoneNumber}) = CodeSent;
   const factory LoginState.success() = Success;
   const factory LoginState.failure({required String error}) = Failure;
 }
