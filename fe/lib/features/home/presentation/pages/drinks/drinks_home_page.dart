@@ -26,7 +26,6 @@ class DrinksHomePage extends StatefulWidget {
 class _DrinksHomePageState extends State<DrinksHomePage> {
   late DrinksHomeBloc _drinksHomeBloc;
   LocationData? _currentLocation;
-  bool _isLocationFetched = false;
 
   @override
   void initState() {
@@ -44,7 +43,6 @@ class _DrinksHomePageState extends State<DrinksHomePage> {
 
       setState(() {
         _currentLocation = currentLocation;
-        _isLocationFetched = true;
       });
 
       // Dispatch the event with location parameters:
@@ -116,7 +114,7 @@ class _DrinksHomePageState extends State<DrinksHomePage> {
             ),
           ),
           TitleSubtitleWidget(
-            title: AppLocalizations.of(context)!.meet_our_parteners,
+            title: AppLocalizations.of(context)!.meet_our_partners,
             subtitle:
                 AppLocalizations.of(context)!.here_are_the_closest_partners,
           ),
@@ -132,7 +130,7 @@ class _DrinksHomePageState extends State<DrinksHomePage> {
           ),
           TitleSubtitleWidget(
             title: AppLocalizations.of(context)!.most_wanted,
-            subtitle: AppLocalizations.of(context)!.want_an_specific_drink,
+            subtitle: AppLocalizations.of(context)!.want_a_specific_drink,
           ),
           HorizontalSlidingCards(
             list: [

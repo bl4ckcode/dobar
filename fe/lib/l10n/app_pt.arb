@@ -1,6 +1,34 @@
 {
   "app_title": "BARZ",
   "@app_title": {
-    "description": "Titulo do aplicativo Barz, sua bebida na hora! Escolha um item do menu do seu restaurante e aproveite."
+    "description": "Título do aplicativo Barz, sua bebida instantaneamente na sua mesa! Escolha um item do menu do seu restaurante e aproveite."
+  },
+  "drinks_bnb_item_title": "Bebidas",
+  "@drinks_bnb_item_title": {
+    "description": "Título do item de navegação inferior 'Bebidas', encontre bares/restaurantes/bebidas para consumir perto de você."
+  },
+  "profile_bnb_item_title": "Perfil",
+  "@profile_bnb_item_title": {
+    "description": "Título do item de navegação inferior 'Perfil', suas informações pessoais estão aqui."
+  },
+  "search_bnb_item_title": "Buscar",
+  "@search_bnb_item_title": {
+    "description": "Título do item de navegação inferior 'Buscar', pesquise bares/restaurantes aqui."
+  },
+  "meet_our_partners": "Conheça nossos parceiros",
+  "@meet_our_partners": {
+    "description": "Rótulo 'Conheça nossos principais parceiros'."
+  },
+  "here_are_the_closest_partners": "Dê uma olhada no menu dos parceiros mais próximos de você :)",
+  "@here_are_the_closest_partners": {
+    "description": "Rótulo 'Estes são os parceiros mais próximos de você'."
+  },
+  "most_wanted": "Mais procurados",
+  "@most_wanted": {
+    "description": "Rótulo 'Bebidas mais procuradas'."
+  },
+  "want_a_specific_drink": "Com sede daquela bebida específica? Selecione-a e descubra onde ir!",
+  "@want_a_specific_drink": {
+    "description": "Rótulo 'Com sede daquela bebida específica?'."
   }
 }
