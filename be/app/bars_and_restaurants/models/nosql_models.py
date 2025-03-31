@@ -16,10 +16,11 @@ reviews_collection = db["reviews"]
 menus_collection = db["menus"]
 
 # Sample schema for bars collection in MongoDB
-async def insert_bar_into_mongo(bar_id, latitude, longitude):
+async def insert_bar_into_mongo(bar_id, latitude, longitude, image_url):
     bar_data = {
         "bar_id": bar_id,
         "location": {"type": "Point", "coordinates": [longitude, latitude]},  # Geospatial data
+        "image_url": image_url,
     }
     await bars_collection.insert_one(bar_data)
 

@@ -1,12 +1,14 @@
 import math
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, UploadFile, File, Form, Depends
 from fastapi.params import Query
+from pydantic import EmailStr
 from sqlalchemy import and_
 
+from app.bars_and_restaurants.services.image_upload import upload_image_to_s3
 from app.errors import CustomHTTPException
 from ..models.relational_models import Bar as BarModel, BarOwner
 from ..models.nosql_models import bars_collection
-from ..schemas.bars import BarCreate, Bar
+from ..schemas.bars import Bar
 from ..models.nosql_models import insert_bar_into_mongo  # Import from nosql models
 from app.database import database  # Use the async database connection
 
@@ -45,8 +47,9 @@ async def create_new_bar(bar_data: dict):
     bar_id = await database.execute(query)
 
     # Insert bar into MongoDB for geospatial and menu
-    await insert_bar_into_mongo(bar_id, bar_data["latitude"], bar_data["longitude"])
+    await insert_bar_into_mongo(bar_id, bar_data["latitude"], bar_data["longitude"], bar_data["image_url"])
 
+    # Fetch the newly created bar from PostgreSQL
     return await database.fetch_one(BarModel.__table__.select().where(BarModel.id == bar_id))
 
 # Helper function to get bars from PostgreSQL by bar IDs along with their approximateLocation
@@ -119,16 +122,33 @@ async def find_bars_near_location(latitude: float, longitude: float, max_distanc
     return results
 
 @bars_router.post("/", response_model=Bar)
-async def create_bar(bar: BarCreate):
+async def create_bar(name: str = Form(...),
+    address: str = Form(...),
+    phone_number: str = Form(...),
+    email: EmailStr = Form(...),
+    owner_id: int = Form(...),
+    latitude: float = Form(...),
+    longitude: float = Form(...),
+    image: UploadFile = File(...)
+):
+    # Upload image to S3
+    try:
+        image_url = await upload_image_to_s3(image.file, image.filename)
+    except Exception as e:
+        raise CustomHTTPException.internal_server_error("Failed to upload image") from e
+
     bar_data = { 
-        "name": bar.name,
-        "address": bar.address,
-        "latitude": bar.latitude,
-        "longitude": bar.longitude,
-        "phone_number": bar.phone_number,
-        "email": bar.email,
-        "owner_id": bar.owner_id,
+        "name": name,
+        "address": address,
+        "latitude": latitude,
+        "longitude": longitude,
+        "phone_number": phone_number,
+        "email": email,
+        "owner_id": owner_id,
+        "image_url": image_url,
     }
+    
+    # Create the bar in PostgreSQL and MongoDB
     return await create_new_bar(bar_data)
 
 @bars_router.get("/{bar_id}", response_model=Bar)

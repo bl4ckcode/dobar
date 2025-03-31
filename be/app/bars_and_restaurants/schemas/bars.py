@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import BaseModel, EmailStr
 
 class BarBase(BaseModel):
@@ -7,9 +8,6 @@ class BarBase(BaseModel):
     email: EmailStr
     owner_id: int
 
-class BarCreate(BarBase):
-    latitude: float
-    longitude: float
-
 class Bar(BarBase):
     id: int
+    image_url: Optional[str]
