@@ -1,0 +1,18 @@
+import 'dart:ffi';
+
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'drinks_home_event.freezed.dart';
+
+@freezed
+class DrinksHomeEvent with _$DrinksHomeEvent {
+  const factory DrinksHomeEvent.loadPartners({
+    double? latitude,
+    double? longitude,
+    double? maxDistance,
+  }) = DrinksHomeLoadPartners;
+  const factory DrinksHomeEvent.cardClicked({
+    required Int64 partnerIdentifier,
+  }) = DrinksHomeCardClicked;
+}
+

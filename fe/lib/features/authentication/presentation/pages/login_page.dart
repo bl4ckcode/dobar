@@ -1,8 +1,9 @@
-import 'package:barz/core/router/router.dart';
 import 'package:barz/core/utils/constant/colors.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/authentication/presentation/widgets/login_buttons_widget.dart';
 import 'package:barz/features/authentication/presentation/widgets/login_fields_widget.dart';
+import 'package:barz/shared/presentation/loading_util.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -10,6 +11,8 @@ import 'package:barz/features/authentication/presentation/bloc/login_bloc.dart';
 import 'package:barz/features/authentication/presentation/bloc/login_event.dart';
 import 'package:barz/features/authentication/presentation/bloc/login_state.dart';
 import 'package:barz/features/authentication/domain/usecases/login_usecase.dart';
+
+import 'login_sms_validation_page.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -24,7 +27,10 @@ class _LoginPageState extends State<LoginPage> {
   @override
   void initState() {
     super.initState();
-    _loginBloc = LoginBloc(loginUseCase: getItInjector<LoginUsecase>());
+    _loginBloc = LoginBloc(
+      loginUseCase: getItInjector<LoginUsecase>(),
+      firebaseAuth: getItInjector<FirebaseAuth>(),
+    );
   }
 
   @override
@@ -34,9 +40,9 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   void _handleLogin(String? phoneNumber) {
-    _loginBloc.add(LoginEvent.loginButtonPressed(
-      token: phoneNumber!
-    ));
+    if (phoneNumber != null) {
+      _loginBloc.add(LoginEvent.loginButtonPressed(phoneNumber: phoneNumber));
+    }
   }
 
   @override
@@ -48,10 +54,28 @@ class _LoginPageState extends State<LoginPage> {
         child: BlocListener<LoginBloc, LoginState>(
           bloc: _loginBloc,
           listener: (context, state) {
-            if (state is Success) {
-              Navigator.pushNamedAndRemoveUntil(
-                  context, AppRouter.home, (Route<dynamic> route) => false);
+            if (state is Loading) {
+              LoadingUtil.showLoadingDialog(context);
+            } else if (state is CodeSent) {
+              // Dismiss the loading dialog
+              Navigator.of(context).pop();
+
+              // Navigate to the phone number validation page
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => LoginValidatePhoneNumberPage(
+                    verificationId: state.verificationId,
+                    phoneNumber: state.phoneNumber,
+                    loginBloc: _loginBloc,
+                  ),
+                ),
+              );
             } else if (state is Failure) {
+              // Dismiss the loading dialog
+              Navigator.of(context).pop();
+
+              // Show an error message
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text(state.error)),
               );
@@ -84,7 +108,8 @@ class _LoginPageState extends State<LoginPage> {
                         ),
                         Padding(
                           padding: const EdgeInsets.only(top: 24.0),
-                          child: LoginFieldsWidget(onLoginPressed: _handleLogin),
+                          child:
+                              LoginFieldsWidget(onLoginPressed: _handleLogin),
                         ),
                         const Padding(
                           padding: EdgeInsets.only(

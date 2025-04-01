@@ -3,16 +3,23 @@ import 'package:barz/core/utils/injections.dart';
 import 'package:device_preview/device_preview.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_gen/gen_l10n/app_localizations.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
-
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'core/utils/app_notifier.dart';
+import 'l10n/app_localizations.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase SDK
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   // Inject all dependencies
   await initInjections();
@@ -69,7 +76,7 @@ class BarzAppState extends State<BarzApp> with WidgetsBindingObserver {
                 theme: ThemeData(
                   scaffoldBackgroundColor: Colors.white,
                   primarySwatch: Colors.blue,
-                  fontFamily: "Inter",
+                  textTheme: GoogleFonts.interTextTheme(),
                   elevatedButtonTheme: ElevatedButtonThemeData(
                     style:
                         ElevatedButton.styleFrom(foregroundColor: Colors.white),
@@ -87,7 +94,8 @@ class BarzAppState extends State<BarzApp> with WidgetsBindingObserver {
                   useMaterial3: true,
                 ),
                 initialRoute:
-                    value.isAuthenticated ? AppRouter.home : AppRouter.login,
+                    AppRouter.home,
+                    // value.isAuthenticated ? AppRouter.home : AppRouter.login,
                 onGenerateRoute: AppRouter.route,
               );
             },

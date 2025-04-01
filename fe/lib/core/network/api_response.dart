@@ -11,6 +11,24 @@ class ApiResponse<T> {
   late final T? result;
   late final T? error;
 
+  // Factory method to create a success response
+  factory ApiResponse.success(T result) {
+    return ApiResponse<T>(
+      statusCode: '200', // or any default success status code
+      result: result,
+      error: null,
+    );
+  }
+
+  // Factory method to create an error response
+  factory ApiResponse.error(String statusCode, T error) {
+    return ApiResponse<T>(
+      statusCode: statusCode,
+      result: null,
+      error: error,
+    );
+  }
+
   static fromJson<T>(Map<dynamic, dynamic> json) {
     return ApiResponse<T>(
       statusCode: json['statusCode'],

@@ -10,5 +10,5 @@ const Color backgroundColorDark = Color(0xFF25254B);
 const Color shadowColorLight = Color(0xFF4A5367);
 const Color shadowColorDark = Colors.black;
 
-//Login page colors
-const Color brownBarzBackgroundColor = Color(0xFF6b5d3c);
+const Color backgroundLightSMS = Color(0xFFFDDE97);
+const Color lighterBluer = Color(0xFF8C94A6);

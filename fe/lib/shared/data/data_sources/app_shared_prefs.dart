@@ -13,4 +13,8 @@ class AppSharedPrefs {
   void setDarkTheme(bool isDark) {
     _preferences.setBool("theme", isDark);
   }
+
+  bool hasCachedUserToken() {
+    return _preferences.containsKey('user_token');
+  }
 }

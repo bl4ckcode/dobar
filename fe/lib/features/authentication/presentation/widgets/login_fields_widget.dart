@@ -1,7 +1,7 @@
 import 'package:barz/core/utils/constant/colors.dart';
 import 'package:barz/shared/presentation/widget/barz_black_elevated_button.dart';
 import 'package:flutter/material.dart';
-import 'package:intl_phone_field/intl_phone_field.dart';
+import 'package:phone_form_field/phone_form_field.dart';
 
 class LoginFieldsWidget extends StatefulWidget {
   final void Function(String? phoneNumber) onLoginPressed;
@@ -14,54 +14,49 @@ class LoginFieldsWidget extends StatefulWidget {
 
 class _LoginFieldsWidgetState extends State<LoginFieldsWidget> {
   String? completePhoneNumber;
-  bool isPhoneNumberValid = false; // State variable to track validity
+  bool isPhoneNumberValid = false;
 
   void _onLoginButtonPressed() {
-    widget.onLoginPressed(
-      completePhoneNumber,
-    );
+    widget.onLoginPressed(completePhoneNumber);
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.only(left: 24, right: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 24),
       child: Column(
         children: [
-          IntlPhoneField(
-            decoration: const InputDecoration(
-              hintText: 'Enter your phone number', // Use hintText instead of labelText
-              hintStyle: TextStyle(color: Colors.white), // Customize hint style
-              border: OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.white), // Adjust border color if needed
+          PhoneFormField(
+            initialValue: PhoneNumber.parse('+55'),
+            decoration: InputDecoration(
+              hintText: 'Enter your phone number',
+              hintStyle: const TextStyle(color: Colors.white),
+              border: const OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.white),
               ),
-              focusedBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.white), // Set the border color when focused
+              focusedBorder: const OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.white),
               ),
               enabledBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: mainColor), // Set the border color when not focused
+                borderSide: BorderSide(color: mainColor),
               ),
-              contentPadding: EdgeInsets.all(16), // Add padding if needed
-              // Customize the character count label (counter)
-              counterStyle: TextStyle(color: Colors.white), // Set counter label to white
-              // Customize error colors
-              errorStyle: TextStyle(height: 0), // Set error text to yellow
-              errorBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.transparent), // Set error border to yellow
-              ),
-              focusedErrorBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.blueGrey), // Border color when focused and error is present
+              contentPadding: const EdgeInsets.all(16),
+              counterStyle: const TextStyle(color: Colors.white),
+              focusedErrorBorder: const OutlineInputBorder(
+                borderSide: BorderSide(color: Colors.blueGrey),
               ),
             ),
-            initialCountryCode: 'BR', // Set the initial country code
             onChanged: (phone) {
               setState(() {
-                completePhoneNumber = phone.completeNumber;
-                isPhoneNumberValid = phone.completeNumber.length > 13;
+                completePhoneNumber = phone.nsn;
+                isPhoneNumberValid = phone.isValid();
               });
             },
-            validator: (value) {
-              // Return empty to prevent error messages
+            // Custom validator (you can tweak this logic as needed)
+            validator: (phone) {
+              if (phone == null || !phone.isValid()) {
+                return " "; // Return an empty error so that error text isn't shown immediately
+              }
               return null;
             },
           ),

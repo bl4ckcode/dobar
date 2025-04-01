@@ -22,12 +22,23 @@
 	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+				<string>app-1-505844682559-ios-3882f0d5cbbf8f9c2ccd8a</string>
+				<string>1874442162960141</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-	<key>NSLocationAlwaysUsageDescription</key>
-	<string>This app uses your location to ensure timely deliveries by showing your position to our restaurants, bars or establishments, even when the app is running in the background.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
@@ -47,5 +58,17 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>FacebookAppID</key>
+	<string>1874442162960141</string>
+	<key>FacebookClientToken</key>
+	<string>a259ad9a153e754cef34ad0a1e2d1b7e</string>
+	<key>FacebookDisplayName</key>
+	<string>BarZ</string>
+	<key>FacebookAutoLogAppEventsEnabled</key>
+	<true/>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>To find the best bars and restaurants around you, we need your location :)</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>To find the best drinks from the best bars and restaurants around you, we need your location :)</string>
 </dict>
 </plist>

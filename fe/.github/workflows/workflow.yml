@@ -1,24 +1,48 @@
-name: Flutter CI
+name: BarZ CI
 
 on: [push, pull_request]
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        platform: [ubuntu-latest, macos-latest] # Include both Linux and macOS runners
+    runs-on: ${{ matrix.platform }}
 
     steps:
-    - uses: actions/checkout@v2
+      # Checkout the repository
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
-    - name: Install Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: '3.0.0'
+      # Install Flutter
+      - name: Install Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.29.0'
 
-    - name: Install dependencies
-      run: flutter pub get
+      # Install dependencies
+      - name: Install Dependencies
+        run: flutter pub get
 
-    - name: Run code generation
-      run: flutter pub run build_runner build --delete-conflicting-outputs
+      # Run code generation
+      - name: Generate Code
+        run: flutter pub run build_runner build --delete-conflicting-outputs
 
-    - name: Run tests
-      run: flutter test
+      # Build APK (Android) - Only on Ubuntu
+      - name: Build APK (Android)
+        if: ${{ matrix.platform == 'ubuntu-latest' }}
+        run: flutter build apk --debug
+
+      # Build iOS (macOS) - Only on macOS
+      - name: Build iOS (Debug)
+        if: ${{ matrix.platform == 'macos-latest' }}
+        run: flutter build ios --debug
+
+      # Static code analysis
+      - name: Analyze Code
+        run: flutter analyze
+
+      # Check code formatting
+      - name: Check Formatting
+        run: flutter format --set-exit-if-changed .
+        

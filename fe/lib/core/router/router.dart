@@ -2,9 +2,12 @@ import 'package:barz/features/authentication/presentation/pages/login_page.dart'
 import 'package:barz/features/home/presentation/pages/home_page.dart';
 import 'package:flutter/material.dart';
 
+import '../../features/partners/presentation/pages/menu/menus_page.dart';
+
 class AppRouter {
   static const String login = '/login';
   static const String home = '/home';
+  static const String partnerMenu = '/partner_menu';
 
   static Route<dynamic> route(RouteSettings settings) {
     switch (settings.name) {
@@ -12,6 +15,8 @@ class AppRouter {
         return _buildRouteWithAnimation(const LoginPage());
       case home:
         return _buildRouteWithAnimation(const HomePage());
+      case partnerMenu:
+        return _buildRouteWithAnimation(const MenusPage());
       default:
         return _errorRoute();
     }

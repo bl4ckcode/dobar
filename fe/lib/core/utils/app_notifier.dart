@@ -13,6 +13,8 @@ class AppNotifier extends ChangeNotifier {
 
   AppNotifier() {
     _initialise();
+
+    // _isAuthenticated = getItInjector<AppSharedPrefs>().hasCachedUserToken();
   }
 
   Future _initialise() async {

@@ -21,11 +21,15 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser != null) {
-        final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+        final GoogleSignInAuthentication googleAuth =
+            await googleUser.authentication;
         if (kDebugMode) {
           print("Google User Token: ${googleAuth.accessToken}");
         }
-        widget.loginBloc.add(LoginEvent.googleLoginPressed(token: googleAuth.accessToken!));
+        widget.loginBloc.add(LoginEvent.googleLoginPressed(
+          key: googleUser.email,
+          token: googleAuth.accessToken!,
+        ));
       }
     } catch (error) {
       if (kDebugMode) {
@@ -34,7 +38,7 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
     }
   }
 
-  Future<void> _signInWithApple() async {
+ // Future<void> _signInWithApple() async {
     // try {
     //   final credential = await SignInWithApple.getAppleIDCredential(
     //     scopes: [
@@ -51,17 +55,24 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
     //     print("Error signing in with Apple: $error");
     //   }
     // }
-  }
+  // }
 
   Future<void> _signInWithFacebook() async {
     try {
       final LoginResult result = await FacebookAuth.instance.login();
       if (result.status == LoginStatus.success) {
+        final Map<String, dynamic> userEmail = await FacebookAuth.instance.getUserData(fields: "email");
         final AccessToken accessToken = result.accessToken!;
+
         if (kDebugMode) {
           print("Facebook User Token: ${accessToken.tokenString}");
         }
-        widget.loginBloc.add(LoginEvent.googleLoginPressed(token: accessToken.tokenString));
+
+        if (userEmail.containsKey("email")) {
+          widget.loginBloc
+              .add(LoginEvent.googleLoginPressed(
+              key: userEmail['email'], token: accessToken.tokenString));
+        }
       }
     } catch (error) {
       if (kDebugMode) {
@@ -99,16 +110,17 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
                 color: Colors.white,
               ),
             ),
-            IconButton(
-              padding: const EdgeInsets.only(left: 32),
-              onPressed: _signInWithApple,
-              icon: Image.asset(
-                "assets/icons/apple.png",
-                height: 64,
-                width: 64,
-                color: Colors.white,
-              ),
-            ),
+            // TODO: ENABLE APPLE SIGN-IN
+            // IconButton(
+            //   padding: const EdgeInsets.only(left: 32),
+            //   onPressed: _signInWithApple,
+            //   icon: Image.asset(
+            //     "assets/icons/apple.png",
+            //     height: 64,
+            //     width: 64,
+            //     color: Colors.white,
+            //   ),
+            // ),
             IconButton(
               padding: const EdgeInsets.only(left: 32),
               onPressed: _signInWithFacebook,

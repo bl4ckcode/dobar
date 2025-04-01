@@ -7,9 +7,11 @@ part 'login_params.g.dart';
 class LoginParams with _$LoginParams {
   const factory LoginParams({
     String? phoneNumber,
+    String? email,
     String? googleId,
     String? appleId,
     String? facebookId,
+    String? firebaseUid,
   }) = _LoginParams;
 
   factory LoginParams.fromJson(Map<String, dynamic> json) =>

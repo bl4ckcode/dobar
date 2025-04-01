@@ -2,21 +2,51 @@ import 'package:barz/core/network/error/failures.dart';
 import 'package:barz/core/utils/usecases/usecase.dart';
 import 'package:barz/features/authentication/domain/models/login_params.dart';
 import 'package:barz/features/authentication/domain/repositories/abstract_login_repository.dart';
-import 'package:barz/features/home/domain/models/home_model.dart';
 import 'package:dartz/dartz.dart';
 
-class LoginUsecase extends UseCase<String?, LoginParams> {
+class LoginUsecase {
   final AbstractLoginRepository repository;
 
-  LoginUsecase(this.repository);
+  LoginUsecase({required this.repository});
 
-  @override
-  Future<Either<Failure, String?>> call(LoginParams params) async {
-    final result = await repository.login(params);
-    return result.fold((l) {
-      return Left(l);
-    }, (r) async {
-      return Right(r);
-    });
+  // Phone Number Authentication
+  Future<Either<Failure, String?>> loginWithPhone(LoginParams params) async {
+    return await repository.loginWithPhone(params);
+  }
+
+  // Google Sign-In Authentication
+  Future<Either<Failure, String?>> loginWithGoogle(LoginParams params) async {
+    return await repository.loginWithGoogle(params);
+  }
+
+  // Apple Sign-In Authentication
+  Future<Either<Failure, String?>> loginWithApple(LoginParams params) async {
+    return await repository.loginWithApple(params);
+  }
+
+  // Facebook Sign-In Authentication
+  Future<Either<Failure, String?>> loginWithFacebook(LoginParams params) async {
+    return await repository.loginWithFacebook(params);
+  }
+
+  // Verify SMS Code
+  Future<Either<Failure, String?>> verifySmsCode({
+    required String verificationId,
+    required String smsCode,
+  }) async {
+    return await repository.verifySmsCode(
+      verificationId: verificationId,
+      smsCode: smsCode,
+    );
+  }
+
+  // Get Cached Token
+  Future<Either<Failure, String?>> getCachedToken() async {
+    return await repository.getCachedToken();
+  }
+
+  // Logout
+  Future<Either<Failure, void>> logout() async {
+    return await repository.logout();
   }
 }
