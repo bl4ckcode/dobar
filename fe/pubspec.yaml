@@ -69,7 +69,7 @@ dependencies:
   pinput: ^5.0.1
   sms_autofill: ^2.4.1
   permission_handler: ^11.4.0
-
+  flutter_animate: ^4.5.2
 
 dev_dependencies:
   flutter_test:

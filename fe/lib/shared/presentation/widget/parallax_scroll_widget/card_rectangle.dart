@@ -11,8 +11,14 @@ class RectangleCard extends StatelessWidget {
 
   final ParallaxRecipeUiModel bar;
 
+  bool _isValidUrl(String url) {
+    return Uri.tryParse(url)?.isAbsolute ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final bool isNetworkImage = _isValidUrl(bar.imageUrl);
+
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.center,
@@ -20,12 +26,19 @@ class RectangleCard extends StatelessWidget {
       children: <Widget>[
         ClipRRect(
           borderRadius: BorderRadius.circular(20),
-          child: Image.asset(
-            width: 150,
-            height: 150,
-            'assets/images/${bar.imageUrl}',
-            fit: BoxFit.fill,
-          ),
+          child: isNetworkImage
+              ? Image.network(
+                  bar.imageUrl,
+                  width: 150,
+                  height: 150,
+                  fit: BoxFit.fill,
+                )
+              : Image.asset(
+                  'assets/images/${bar.imageUrl}',
+                  width: 150,
+                  height: 150,
+                  fit: BoxFit.fill,
+                ),
         ),
         const SizedBox(
           height: 4,

@@ -18,6 +18,8 @@ class PartnersBaseModel with _$PartnersBaseModel {
     required String address,
     required String email,
     double? approximateLocation,
+    @JsonKey(name: 'image_url') String? imageUrl,
+    @JsonKey(name: 'image_url_expiration') double? imageUrlExpiration,
     // LocationData? locationData,
     // PersonalData? personalData,
     // PartnerMenu? menu,

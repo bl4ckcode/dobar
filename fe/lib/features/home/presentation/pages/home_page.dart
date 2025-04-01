@@ -1,7 +1,4 @@
 import 'package:barz/core/utils/constant/colors.dart';
-import 'package:barz/core/utils/injections.dart';
-import 'package:barz/features/home/domain/usecases/home_usecase.dart';
-import 'package:barz/features/home/presentation/bloc/home_bloc.dart';
 import 'package:barz/features/home/presentation/widgets/menu/btm_nav_item.dart';
 import 'package:barz/features/home/presentation/widgets/menu/menu_btn.dart';
 import 'package:barz/shared/domain/models/bottom_nav_bar/menu_model.dart';
@@ -23,8 +20,6 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage>
     with SingleTickerProviderStateMixin {
-  final HomeBloc _bloc = HomeBloc(homeUseCase: getItInjector<HomeUseCase>());
-
   late SMIBool isMenuOpenInput;
 
   late AnimationController _drawerSlideController;
@@ -150,11 +145,11 @@ class _HomePageState extends State<HomePage>
               const EdgeInsets.only(left: 12, top: 12, right: 12, bottom: 12),
           margin: const EdgeInsets.symmetric(horizontal: 24),
           decoration: BoxDecoration(
-            color: mainColor.withOpacity(0.8),
+            color: mainColor.withValues(alpha: 0.8),
             borderRadius: const BorderRadius.all(Radius.circular(24)),
             boxShadow: [
               BoxShadow(
-                color: backgroundColor2.withOpacity(0.3),
+                color: backgroundColor2.withValues(alpha: 0.8),
                 offset: const Offset(0, 20),
                 blurRadius: 20,
               ),

@@ -17,10 +17,11 @@ extension PartnersBaseModelX on PartnersBaseModel {
 
     return ParallaxRecipeUiModel(
       id: id,
-      imageUrl: "",
+      imageUrl: imageUrl ?? "",
       name: name,
       adress: address,
       approximateLocation: formattedDistance,
+      imageUrlExpiration: imageUrlExpiration ?? 0.0,
     );
   }
 }

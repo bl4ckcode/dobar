@@ -4,6 +4,7 @@ class ParallaxRecipeUiModel {
   String name;
   String adress = "";
   String approximateLocation = "";
+  double imageUrlExpiration = 0.0;
 
   ParallaxRecipeUiModel({
     required this.id,
@@ -11,5 +12,10 @@ class ParallaxRecipeUiModel {
     required this.name,
     this.adress = "",
     this.approximateLocation = "",
+    this.imageUrlExpiration = 0.0
   });
+
+  bool isImageUrlExpired() {
+    return DateTime.now().millisecondsSinceEpoch ~/ 1000 > imageUrlExpiration;
+  }
 }

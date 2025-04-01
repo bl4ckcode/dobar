@@ -38,21 +38,23 @@ class _DrinksHomePageState extends State<DrinksHomePage> {
 
   Future<void> _fetchLocationAndLoadPartners() async {
     try {
-      final Location location = Location();
-      final currentLocation = await location.getLocation();
+      if (await requestLocationPermission()) {
+        final Location location = Location();
+        final currentLocation = await location.getLocation();
 
-      setState(() {
-        _currentLocation = currentLocation;
-      });
+        setState(() {
+          _currentLocation = currentLocation;
+        });
 
-      // Dispatch the event with location parameters:
-      _drinksHomeBloc.add(
-        DrinksHomeLoadPartners(
-          latitude: _currentLocation?.latitude,
-          longitude: _currentLocation?.longitude,
-          maxDistance: 35000,
-        ),
-      );
+        // Dispatch the event with location parameters:
+        _drinksHomeBloc.add(
+          DrinksHomeLoadPartners(
+            latitude: _currentLocation?.latitude,
+            longitude: _currentLocation?.longitude,
+            maxDistance: 35000,
+          ),
+        );
+      }
     } catch (e) {
       debugPrint('Error fetching location: $e');
     }
