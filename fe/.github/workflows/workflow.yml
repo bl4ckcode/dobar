@@ -28,15 +28,20 @@ jobs:
       - name: Generate Code
         run: flutter pub run build_runner build --delete-conflicting-outputs
 
+      # Update CocoaPods repositories (only on macOS)
+      - name: Update CocoaPods Repos
+        if: ${{ matrix.platform == 'macos-latest' }}
+        run: pod repo update
+
       # Build APK (Android) - Only on Ubuntu
       - name: Build APK (Android)
         if: ${{ matrix.platform == 'ubuntu-latest' }}
         run: flutter build apk --debug
 
-      # Build iOS (macOS) - Only on macOS
+      # Build iOS (Debug) - Only on macOS
       - name: Build iOS (Debug)
         if: ${{ matrix.platform == 'macos-latest' }}
-        run: flutter build ios --debug
+        run: flutter build ios --debug --no-codesign
 
       # Static code analysis
       - name: Analyze Code
@@ -45,4 +50,3 @@ jobs:
       # Check code formatting
       - name: Check Formatting
         run: flutter format --set-exit-if-changed .
-        
