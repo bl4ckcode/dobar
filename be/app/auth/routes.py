@@ -9,13 +9,12 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from firebase_admin import auth
 import os
 
-
-router = APIRouter()
+auth_router = APIRouter(prefix="/auth", tags=["Auth"])
 
 # Load SECRET_KEY from environment variables
 SECRET_KEY = os.getenv("SECRET_KEY", "fallback-secret-key")
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 360
 
 # Helper functions
 async def get_user_by_firebase_uid(firebase_uid: str):
@@ -78,7 +77,7 @@ async def verify_firebase_token(credentials: HTTPAuthorizationCredentials = Depe
         )
 
 # Routes
-@router.post("/phone", response_model=Token)
+@auth_router.post("/phone", response_model=Token)
 async def phone_login(login_data: PhoneLogin):
     user_data = {
         "firebase_uid": login_data.firebase_uid,
@@ -86,7 +85,7 @@ async def phone_login(login_data: PhoneLogin):
     }
     return await create_or_login_user(user_data)
 
-@router.post("/google", response_model=Token)
+@auth_router.post("/google", response_model=Token)
 async def google_login(login_data: GoogleLogin):
     user_data = {
         "email": login_data.email,
@@ -94,7 +93,7 @@ async def google_login(login_data: GoogleLogin):
     }
     return await create_or_login_user(user_data)
 
-@router.post("/apple", response_model=Token)
+@auth_router.post("/apple", response_model=Token)
 async def apple_login(login_data: AppleLogin):
     user_data = {
         "email": login_data.email,
@@ -102,7 +101,7 @@ async def apple_login(login_data: AppleLogin):
     }
     return await create_or_login_user(user_data)
 
-@router.post("/facebook", response_model=Token)
+@auth_router.post("/facebook", response_model=Token)
 async def facebook_login(login_data: FacebookLogin):
     user_data = {
         "email": login_data.email,
