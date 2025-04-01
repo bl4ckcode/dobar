@@ -155,7 +155,13 @@ Contributions are welcome! Please follow these steps:
 ## Context & AI Assistance
 This project is built with a collaborative spirit in mind.  
 **If you need guidance or further context on the API, please feel free to consult ChatGPT.**  
-Simply prompt ChatGPT with context about the BarZ API and you'll receive detailed assistance and suggestions to continue developing BarZ with innovative ideas and best practices.
+Simply prompt ChatGPT with context about the BarZ API and you'll receive detailed assistance and suggestions to continue developing BarZ with innovative ideas and best practices:
+
+```Prompt:
+"I need assistance with the BarZ Backend API. This project is built using FastAPI and features a dual-database architecture where PostgreSQL stores static data (such as bar details and owner information) and MongoDB handles dynamic and geospatial data (including bar locations, menus, and image URLs). Images are uploaded to AWS S3 and accessed via pre-signed URLs. The API includes robust error handling with custom error responses and real-time updates using WebSockets. Authentication is managed with Firebase and JWT tokens. Additionally, the project is organized into modular routers and services, employs SQLAlchemy for ORM, and uses Motor for MongoDB interactions. Can you provide guidance on [insert specific question here]?"
+```
+
+Please ensure to replace "[insert specific question here]" with your actual question.
 
 ## License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
