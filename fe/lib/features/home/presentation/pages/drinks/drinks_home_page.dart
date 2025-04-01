@@ -12,6 +12,7 @@ import 'package:barz/shared/presentation/loading_util.dart';
 import 'package:barz/shared/presentation/widget/parallax_scroll_widget/horizontal_sliding_cards.dart';
 import 'package:barz/shared/presentation/widget/title_subtitle_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:location/location.dart';
@@ -113,7 +114,7 @@ class _DrinksHomePageState extends State<DrinksHomePage> {
                 fontFamily: 'JuliusSansOne',
                 fontSize: 24.sp,
               ),
-            ),
+            ).animate().fade().scale(),
           ),
           TitleSubtitleWidget(
             title: AppLocalizations.of(context)!.meet_our_partners,

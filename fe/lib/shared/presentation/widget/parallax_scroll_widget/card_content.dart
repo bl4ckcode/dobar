@@ -12,7 +12,12 @@ class CardContent extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: <Widget>[
         Text(
-          parallaxRecipeUiModel.name,
+          parallaxRecipeUiModel.name.length > 15
+              ? '${parallaxRecipeUiModel.name.substring(
+                  0,
+                  15,
+                )}...'
+              : parallaxRecipeUiModel.name,
           style: const TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.bold,
@@ -22,7 +27,10 @@ class CardContent extends StatelessWidget {
           children: <Widget>[
             Text(
               parallaxRecipeUiModel.adress.length > 15
-                  ? '${parallaxRecipeUiModel.adress.substring(0, 15)}...'
+                  ? '${parallaxRecipeUiModel.adress.substring(
+                      0,
+                      15,
+                    )}...'
                   : parallaxRecipeUiModel.adress,
               style: const TextStyle(
                 fontSize: 14,

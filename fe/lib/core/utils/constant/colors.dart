@@ -11,3 +11,4 @@ const Color shadowColorLight = Color(0xFF4A5367);
 const Color shadowColorDark = Colors.black;
 
 const Color backgroundLightSMS = Color(0xFFFDDE97);
+const Color lighterBluer = Color(0xFF8C94A6);

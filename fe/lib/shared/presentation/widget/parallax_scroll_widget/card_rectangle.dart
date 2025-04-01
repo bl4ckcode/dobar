@@ -34,7 +34,7 @@ class RectangleCard extends StatelessWidget {
                   fit: BoxFit.fill,
                 )
               : Image.asset(
-                  'assets/images/${bar.imageUrl}',
+                  'assets/images/cup_placeholder.jpg',
                   width: 150,
                   height: 150,
                   fit: BoxFit.fill,
