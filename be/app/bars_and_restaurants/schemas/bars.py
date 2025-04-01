@@ -10,4 +10,4 @@ class BarBase(BaseModel):
 
 class Bar(BarBase):
     id: int
-    image_url: Optional[str]
+    image_url: Optional[str] = None

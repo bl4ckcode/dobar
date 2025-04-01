@@ -1,10 +1,11 @@
 import math
+import time
 from fastapi import APIRouter, UploadFile, File, Form, Depends
 from fastapi.params import Query
 from pydantic import EmailStr
 from sqlalchemy import and_
 
-from app.bars_and_restaurants.services.image_upload import upload_image_to_s3
+from app.bars_and_restaurants.services.image_upload import generate_presigned_url, upload_image_to_s3, extract_s3_key
 from app.errors import CustomHTTPException
 from ..models.relational_models import Bar as BarModel, BarOwner
 from ..models.nosql_models import bars_collection
@@ -60,17 +61,27 @@ async def get_bars_by_ids(bars_info: list[dict]):
     # Fetch the bar details from PostgreSQL for those IDs
     query = BarModel.__table__.select().where(BarModel.id.in_(bar_ids))
     pg_bars = await database.fetch_all(query)
+
+    current_time = int(time.time())  # Get current timestamp
+
+    # Create a mapping from bar_id to the extra attributes from Mongo
+    extra_data = {
+        info["bar_id"]: {
+            "approximateLocation": info.get("approximateLocation"),
+            "image_url": generate_presigned_url(extract_s3_key(info.get("image_url"))) if info.get("image_url") else None,
+            "image_url_expiration": current_time + 3600 if info.get("image_url") else None  # Expire in 1 hour
+
+        }
+        for info in bars_info
+    }
     
-    # Create a mapping from bar_id to the extra attribute approximateLocation
-    extra_data = {info["bar_id"]: info["approximateLocation"] for info in bars_info}
-    
-    # Merge approximateLocation into the PostgreSQL data
+    # Merge extra data into the PostgreSQL data
     merged_results = []
     for bar in pg_bars:
         bar_dict = dict(bar)  # Convert the Record to a dictionary
         bar_id = bar_dict["id"]
         if bar_id in extra_data:
-            bar_dict["approximateLocation"] = extra_data[bar_id]
+            bar_dict.update(extra_data[bar_id])
         merged_results.append(bar_dict)
     
     return merged_results
@@ -116,7 +127,8 @@ async def find_bars_near_location(latitude: float, longitude: float, max_distanc
         distance = haversine(latitude, longitude, bar_lat, bar_lon)
         results.append({
             "bar_id": bar["bar_id"],
-            "approximateLocation": distance
+            "approximateLocation": distance,
+            "image_url": bar.get("image_url", None),
         })
     
     return results
@@ -181,3 +193,37 @@ async def get_bars(
         raise CustomHTTPException.not_found("No bars found")
 
     return bars
+
+@bars_router.put("/{bar_id}/image", response_model=dict)
+async def update_bar_image(bar_id: int, image: UploadFile = File(...)):
+    # Upload the new image to S3 and get the URL
+    try:
+        image_url = await upload_image_to_s3(image.file, image.filename)
+    except Exception as e:
+        raise CustomHTTPException.internal_server_error("Failed to upload image") from e
+    
+    # Update the document in MongoDB for the given bar_id
+    update_result = await bars_collection.update_one(
+        {"bar_id": bar_id},
+        {"$set": {"image_url": image_url}}
+    )
+    
+    # Check if any document was updated
+    if update_result.modified_count == 0:
+        raise CustomHTTPException.not_found("Bar not found or image URL already exists")
+    
+    return {"message": "Image updated successfully", "image_url": image_url}
+
+@bars_router.get("/bars/{bar_id}/refresh-image")
+async def refresh_image_url(bar_id: int):
+    # Fetch bar data from your database (MongoDB or PostgreSQL)
+    bar = await database.fetch_one(BarModel.__table__.select().where(BarModel.id == bar_id))
+    
+    if not bar or not bar.get("image_url"):
+        return {"error": "Bar not found or no image available"}
+    
+    new_url = generate_presigned_url(bar["image_url"])
+    return {
+        "image_url": new_url,
+        "image_url_expiration": int(time.time()) + 3600  # New expiration timestamp
+    }
