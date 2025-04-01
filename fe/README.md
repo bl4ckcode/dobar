@@ -1,6 +1,6 @@
-# BarZ Frontend
+# BarZ App
 
-Welcome to the **BarZ Frontend** repository! This Flutter project is the user-facing mobile application for BarZ – an app that lets users browse bars and restaurants, view dynamic menus, order drinks/food, and have them delivered directly to their table or preferred location. The application features a beautiful, modern design, real-time updates, and robust integration with our backend services.
+Welcome to the **BarZ App** repository! This Flutter project is the user-facing mobile application for BarZ – an app that lets users browse bars and restaurants, view dynamic menus, order drinks/food, and have them delivered directly to their table or preferred location. The application features a beautiful, modern design, real-time updates, and robust integration with our backend services.
 
 ## Table of Contents
 - [Features](#features)
