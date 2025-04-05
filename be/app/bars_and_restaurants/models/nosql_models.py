@@ -1,13 +1,18 @@
 from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo.server_api import ServerApi
 from dotenv import load_dotenv
 import os
 
 # Load environment variables
 load_dotenv()
 
-# MongoDB connection
-client = AsyncIOMotorClient(f"mongodb://{os.getenv('MONGO_HOST')}:{os.getenv('MONGO_PORT')}/")
-db = client[os.getenv("MONGO_DB")]
+# Get connection variables from .env
+MONGO_URI = os.getenv("MONGO_URI")
+MONGO_DB = os.getenv("MONGO_DB")
+
+# Initialize the AsyncIOMotorClient with the Server API version
+client = AsyncIOMotorClient(MONGO_URI, server_api=ServerApi('1'))
+db = client[MONGO_DB]
 
 # Collections
 bars_collection = db["bars"]
