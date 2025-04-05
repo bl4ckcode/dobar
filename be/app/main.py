@@ -1,3 +1,6 @@
+import json
+import os
+from dotenv import load_dotenv
 from fastapi.responses import JSONResponse
 from app.bars_and_restaurants.models.nosql_models import create_geo_index
 from app.errors import CustomHTTPException, ErrorResponse
@@ -13,8 +16,18 @@ from fastapi.openapi.utils import get_openapi
 from contextlib import asynccontextmanager
 from firebase_admin import auth, initialize_app, credentials
 
-# Initialize Firebase Admin SDK
-cred = credentials.Certificate("/Users/carlosalves/Documents/PDev/barz777-firebase-adminsdk-1daez-49a9bc4a0e.json")
+load_dotenv()
+
+firebase_creds_json = os.getenv("FIREBASE_CREDENTIALS_JSON")
+if not firebase_creds_json:
+    raise CustomHTTPException.internal_server_error("Firebase credentials JSON not found in environment variables.")
+
+try:
+    firebase_creds_dict = json.loads(firebase_creds_json)
+except json.JSONDecodeError as e:
+    raise CustomHTTPException.internal_server_error(f"Error parsing Firebase credentials JSON: {e}")
+
+cred = credentials.Certificate(firebase_creds_dict)
 initialize_app(cred)
 
 Base.metadata.create_all(bind=engine)
