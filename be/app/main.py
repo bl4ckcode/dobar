@@ -14,19 +14,31 @@ from .bars_and_restaurants.services.connection_manager import ws_router
 from .bars_and_restaurants.routes.bar_owners import bar_owners_router
 from fastapi.openapi.utils import get_openapi
 from contextlib import asynccontextmanager
-from firebase_admin import auth, initialize_app, credentials
+from firebase_admin import initialize_app, credentials
+from .payment.routes import payment_router
 
 load_dotenv()
 
-firebase_creds_json = os.getenv("FIREBASE_CREDENTIALS_JSON")
-if not firebase_creds_json:
-    raise CustomHTTPException.internal_server_error("Firebase credentials JSON not found in environment variables.")
+import json
+import os
+from dotenv import load_dotenv
+from firebase_admin import credentials
 
-try:
-    firebase_creds_dict = json.loads(firebase_creds_json)
-except json.JSONDecodeError as e:
-    raise CustomHTTPException.internal_server_error(f"Error parsing Firebase credentials JSON: {e}")
+load_dotenv()
 
+def load_firebase_credentials():
+    raw_json = os.getenv("FIREBASE_CREDENTIALS_JSON")
+
+    if raw_json:
+        try:
+            return json.loads(raw_json)
+        except json.JSONDecodeError as e:
+            raise RuntimeError(f"Invalid FIREBASE_CREDENTIALS_JSON: {e}")
+    else:
+        with open("fb-barz-admin.json") as f:
+            return json.load(f)
+
+firebase_creds_dict = load_firebase_credentials()
 cred = credentials.Certificate(firebase_creds_dict)
 initialize_app(cred)
 
@@ -71,6 +83,9 @@ app.include_router(ws_router)
 
 # Include bars owners router
 app.include_router(bar_owners_router)
+
+# Include the payment router
+app.include_router(payment_router)
 
 def custom_openapi():
     if app.openapi_schema:
