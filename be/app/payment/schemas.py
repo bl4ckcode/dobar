@@ -1,16 +1,27 @@
-from pydantic import BaseModel, constr
 from typing import Optional
+from pydantic import BaseModel, EmailStr, constr, conint
 
-CurrencyCode = constr(min_length=3, max_length=3)
+class CreditCard(BaseModel):
+    number: constr(min_length=13, max_length=19)  # type: ignore
+    holder_name: str
+    exp_month: conint(ge=1, le=12)  # type: ignore
+    exp_year: conint(ge=2024)  # type: ignore
+    cvv: constr(min_length=3, max_length=4)  # type: ignore
+
+class Customer(BaseModel):
+    name: str
+    email: EmailStr
+    document: constr(min_length=11, max_length=14)  # type: ignore
+
+class PaymentMethod(BaseModel):
+    payment_method: str
+    card: CreditCard
 
 class PaymentRequest(BaseModel):
-    amount: float
-    currency: CurrencyCode # type: ignore
-    payment_method: str = "credit_card"
-    installments: Optional[int] = 1
-    card_number: Optional[str] = None
-    card_expiration_date: Optional[str] = None  # Format MMYY
-    card_cvv: Optional[str] = None
+    amount: int
+    currency: str = "BRL"
+    customer: Customer
+    payment_method: PaymentMethod
 
 class RefundRequest(BaseModel):
     charge_id: str
