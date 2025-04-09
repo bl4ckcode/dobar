@@ -163,6 +163,118 @@ Simply prompt ChatGPT with context about the BarZ API and you'll receive detaile
 
 Please ensure to replace "[insert specific question here]" with your actual question.
 
+
+---
+
+## 🧩 Backend Architecture Overview (UML)
+
+The following diagram represents the main entities and relationships in the BarZ backend system (Auth, Bars, Payments):
+
+To view or edit the diagram, use the `.puml` file linked below with [PlantUML](https://plantuml.com/) or any compatible editor:
+
+👉 [Download UML Source (.puml)](./barz_backend_diagram.puml)
+
+```plantuml
+@startuml BarZ_Backend_Diagram
+
+skinparam classAttributeIconSize 0
+skinparam class {
+    BackgroundColor White
+    BorderColor #162A49
+    ArrowColor #162A49
+}
+
+package Auth {
+    class User {
+        id: int
+        firebase_uid: string
+        phone_number: string
+        email: string
+        google_id: string
+        apple_id: string
+        facebook_id: string
+        is_active: boolean
+    }
+
+    class Token {
+        id: int
+        user_id: int
+    }
+
+    Token --> User : belongs to
+}
+
+package Bars {
+    class BarOwner {
+        id: BigInt
+        name: string
+        email: string
+        phone_number: string
+    }
+
+    class Bar {
+        id: int
+        name: string
+        address: string
+        phone_number: string
+        email: string
+        owner_id: BigInt
+    }
+
+    class Menu {
+        id: int
+        bar_id: int
+    }
+
+    class Order {
+        id: int
+        user_id: int
+        bar_id: int
+    }
+
+    Bar --> BarOwner : owned by
+    Menu --> Bar : belongs to
+    Order --> Bar : placed at
+    Order --> User : placed by
+}
+
+package Payments {
+    class Customer {
+        name: string
+        email: string
+        document: string
+        phones: List<string>
+    }
+
+    class Card {
+        holder_name: string
+        number: string
+        exp_month: int
+        exp_year: int
+        cvv: string
+    }
+
+    class Payment {
+        method: string
+        card: Card
+    }
+
+    class Charge {
+        amount: int
+        description: string
+        payment: Payment
+        customer: Customer
+    }
+
+    Charge --> Payment : uses
+    Charge --> Customer : belongs to
+    Payment --> Card : via
+}
+
+@enduml
+```
+
+
 ## License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
