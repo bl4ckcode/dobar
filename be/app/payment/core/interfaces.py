@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 class PaymentGateway(ABC):
     @abstractmethod
@@ -8,7 +8,10 @@ class PaymentGateway(ABC):
         pass
 
     @abstractmethod
-    def refund_charge(self, charge_id: str, amount: float = None) -> Dict[str, Any]:
+    def refund_charge(self, 
+                      charge_id: Optional[str] = None, 
+                      payment_intent_id: Optional[str] = None, 
+                      amount: Optional[float] = None) -> Dict[str, Any]:
         """Refund a specific charge, either fully or partially."""
         pass
 

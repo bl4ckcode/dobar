@@ -24,5 +24,10 @@ class PaymentRequest(BaseModel):
     payment_method: PaymentMethod
 
 class RefundRequest(BaseModel):
-    charge_id: str
+    charge_id: Optional[str] = None
+    payment_intent_id: Optional[str] = None
     amount: Optional[float] = None
+
+    def model_dump(self, *args, **kwargs):
+        # Only include fields that are not None (to prevent issues in Stone)
+        return super().model_dump(*args, **kwargs, exclude_none=True)

@@ -15,7 +15,7 @@ def get_payment_gateway() -> PaymentGateway:
     if gateway_name == 'stone':
         return StonePaymentGateway(config={})
     elif gateway_name == 'stripe':
-        return StripePaymentGateway(config={})
+        return StripePaymentGateway(config={"STRIPE_API_KEY": os.getenv("STRIPE_API_KEY")})
     else:
         raise ValueError(f"Unknown payment gateway: {gateway_name}")
 

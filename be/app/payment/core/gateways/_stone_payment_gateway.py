@@ -1,6 +1,7 @@
 # This module is internal and should not be imported directly.
 # Use `get_payment_gateway()` from `factory.py` instead.
 
+from typing import Optional
 from app.payment.core.interfaces import PaymentGateway
 
 from app.payment.pagarme_sdk.pagarmeapisdk.pagarmeapisdk_client import PagarmeapisdkClient
@@ -90,17 +91,33 @@ class StonePaymentGateway(PaymentGateway):
             order_id="ORDER_XYZ"
         )
 
-    def refund_charge(self, charge_id: str, amount: int = None) -> dict:
+    def refund_charge(
+        self,
+        charge_id: Optional[str] = None,
+        payment_intent_id: Optional[str] = None,
+        amount: Optional[float] = None
+    ) -> dict:
         try:
+            if not charge_id:
+                raise ValueError("Stone requires a charge_id to refund.")
+
             cancel_request = (
-                CreateCancelChargeRequest(amount=amount)
+                CreateCancelChargeRequest(amount=int(amount * 100))  # Convert to cents
                 if amount else
                 CreateCancelChargeRequest()
             )
 
             response = self.client.charges.cancel_charge(charge_id, cancel_request)
-            return response
+            return {
+                "status": "success",
+                "refund_id": response.id,
+                "amount_refunded": response.amount,
+                "status_stone": response.status
+            }
 
         except ErrorException as e:
             logging.error(f"Error occurred while refunding charge {charge_id}: {e}")
-            raise e
+            return {"status": "failure", "error": str(e)}
+        except Exception as e:
+            logging.error(f"Unexpected error: {e}")
+            return {"status": "failure", "error": str(e)}

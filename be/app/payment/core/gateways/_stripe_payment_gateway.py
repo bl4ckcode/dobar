@@ -1,24 +1,72 @@
 from ..interfaces import PaymentGateway
-from typing import Dict, Any
-import app.payment.core.gateways._stripe_payment_gateway as _stripe_payment_gateway
+from typing import Dict, Any, Optional
+import stripe
 
 class StripePaymentGateway(PaymentGateway):
     def __init__(self, config: Dict[str, Any]):
-        _stripe_payment_gateway.api_key = config.get("STRIPE_API_KEY")
-        # Configure any additional settings if necessary
+        stripe.api_key = config.get("STRIPE_API_KEY")
 
     def create_charge(self, amount: float, currency: str, **kwargs) -> Dict[str, Any]:
-        # Use stripe.Charge.create() or stripe.PaymentIntent.create()
-        charge = _stripe_payment_gateway.PaymentIntent.create(
-            amount=int(amount * 100),  # Stripe expects amounts in cents
-            currency=currency,
-            **kwargs
-        )
-        return {"status": "success", "charge_id": charge.id}
+        try:
+            if "payment_method_id" in kwargs:
+                # PRODUCTION FLOW
+                intent = stripe.PaymentIntent.create(
+                    amount=int(amount * 100),
+                    currency=currency.lower(),
+                    payment_method=kwargs["payment_method_id"],
+                    confirmation_method="manual",
+                    confirm=True,
+                    receipt_email=kwargs.get("customer_email")
+                )
+            elif "card" in kwargs:
+                # DEV FLOW (raw card to token to payment_method)
+                token = stripe.Token.create(card=kwargs["card"])
+                payment_method = stripe.PaymentMethod.create(type="card", card={"token": token.id})
+                intent = stripe.PaymentIntent.create(
+                    amount=int(amount * 100),
+                    currency=currency.lower(),
+                    payment_method=payment_method.id,
+                    confirmation_method="manual",
+                    confirm=True,
+                    receipt_email=kwargs.get("customer_email")
+                )
+            else:
+                return {"status": "error", "message": "Missing payment_method_id or card"}
 
-    def refund_charge(self, charge_id: str, amount: float = None) -> Dict[str, Any]:
-        refund = _stripe_payment_gateway.Refund.create(
-            payment_intent=charge_id,
-            amount=int(amount * 100) if amount else None
-        )
-        return {"status": "success", "refund_id": refund.id}
+            return {
+                "status": "success",
+                "payment_intent_id": intent.id,
+                "client_secret": intent.client_secret,
+                "receipt_email": intent.receipt_email
+            }
+
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
+
+    def refund_charge(self, charge_id: Optional[str] = None, payment_intent_id: Optional[str] = None, amount: Optional[float] = None) -> Dict[str, Any]:
+        try:
+            refund_params = {}
+
+            if charge_id:
+                refund_params["charge"] = charge_id
+            elif payment_intent_id:
+                refund_params["payment_intent"] = payment_intent_id
+            else:
+                return {"status": "error", "message": "Either charge_id or payment_intent_id is required"}
+
+            if amount:
+                refund_params["amount"] = int(amount * 100)
+
+            refund = stripe.Refund.create(**refund_params)
+
+            return {
+                "status": "success",
+                "refund_id": refund.id,
+                "amount_refunded": refund.amount,
+                "currency": refund.currency,
+                "status_stripe": refund.status
+            }
+
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
