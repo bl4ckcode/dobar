@@ -92,7 +92,7 @@ def custom_openapi():
         return app.openapi_schema
     openapi_schema = get_openapi(
         title="BARZ-BACKEND API",
-        version="1.1.0",
+        version="1.2.0",
         description="All backend routes for the BARZ app, including authentication, bars, and menus. This API is used to authenticate, manage bar and restaurant data.",  
         routes=app.routes,
     )

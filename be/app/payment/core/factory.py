@@ -1,6 +1,6 @@
-from app.payment.core.stripe.stripe import StripePaymentGateway
+from app.payment.core.gateways._stripe_payment_gateway import StripePaymentGateway
 from .interfaces import PaymentGateway
-from .pagarme._stone_payment_gateway import StonePaymentGateway
+from .gateways._stone_payment_gateway import StonePaymentGateway
 from dotenv import load_dotenv
 import os
 
