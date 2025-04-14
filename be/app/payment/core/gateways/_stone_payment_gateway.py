@@ -3,6 +3,7 @@
 
 from typing import Optional
 from app.payment.core.interfaces import PaymentGateway
+from app.payment.utils.currency import normalize_currency
 
 from app.payment.pagarme_sdk.pagarmeapisdk.pagarmeapisdk_client import PagarmeapisdkClient
 from app.payment.pagarme_sdk.pagarmeapisdk.http.auth.basic_auth import BasicAuthCredentials

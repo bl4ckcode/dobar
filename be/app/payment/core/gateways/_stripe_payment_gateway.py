@@ -1,5 +1,6 @@
 from ..interfaces import PaymentGateway
 from typing import Dict, Any, Optional
+from app.payment.utils.currency import normalize_currency
 import stripe
 
 class StripePaymentGateway(PaymentGateway):
@@ -12,7 +13,7 @@ class StripePaymentGateway(PaymentGateway):
                 # PRODUCTION FLOW
                 intent = stripe.PaymentIntent.create(
                     amount=int(amount * 100),
-                    currency=currency.lower(),
+                    currency = normalize_currency(currency, target="stripe"),
                     payment_method=kwargs["payment_method_id"],
                     confirmation_method="manual",
                     confirm=True,
@@ -24,7 +25,7 @@ class StripePaymentGateway(PaymentGateway):
                 payment_method = stripe.PaymentMethod.create(type="card", card={"token": token.id})
                 intent = stripe.PaymentIntent.create(
                     amount=int(amount * 100),
-                    currency=currency.lower(),
+                    currency=normalize_currency(currency, target="stripe"),
                     payment_method=payment_method.id,
                     confirmation_method="manual",
                     confirm=True,
@@ -64,7 +65,7 @@ class StripePaymentGateway(PaymentGateway):
                 "status": "success",
                 "refund_id": refund.id,
                 "amount_refunded": refund.amount,
-                "currency": refund.currency,
+                "currency": normalize_currency(refund.currency, target="stripe"),
                 "status_stripe": refund.status
             }
 
