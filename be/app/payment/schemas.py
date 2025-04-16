@@ -15,7 +15,7 @@ class Customer(BaseModel):
 
 class PaymentMethod(BaseModel):
     payment_method: str
-    card: CreditCard
+    card: Optional[CreditCard] = None
 
 class PaymentRequest(BaseModel):
     amount: int

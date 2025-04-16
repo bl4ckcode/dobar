@@ -10,7 +10,7 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 # Initialize the database connection
-database = Database(DATABASE_URL)
+database = Database(DATABASE_URL, min_size=1, max_size=5)
 engine = create_engine(DATABASE_URL)
 metadata = MetaData()
 

@@ -9,30 +9,25 @@ class StripePaymentGateway(PaymentGateway):
 
     def create_charge(self, amount: float, currency: str, **kwargs) -> Dict[str, Any]:
         try:
-            if "payment_method_id" in kwargs:
-                # PRODUCTION FLOW
-                intent = stripe.PaymentIntent.create(
-                    amount=int(amount * 100),
-                    currency = normalize_currency(currency, target="stripe"),
-                    payment_method=kwargs["payment_method_id"],
-                    confirmation_method="manual",
-                    confirm=True,
-                    receipt_email=kwargs.get("customer_email")
-                )
-            elif "card" in kwargs:
-                # DEV FLOW (raw card to token to payment_method)
-                token = stripe.Token.create(card=kwargs["card"])
-                payment_method = stripe.PaymentMethod.create(type="card", card={"token": token.id})
-                intent = stripe.PaymentIntent.create(
-                    amount=int(amount * 100),
-                    currency=normalize_currency(currency, target="stripe"),
-                    payment_method=payment_method.id,
-                    confirmation_method="manual",
-                    confirm=True,
-                    receipt_email=kwargs.get("customer_email")
-                )
-            else:
-                return {"status": "error", "message": "Missing payment_method_id or card"}
+            payment_method_data = kwargs.get("payment_method", {})
+            customer_data = kwargs.get("customer", {})
+
+            payment_method_id = payment_method_data.get("payment_method_id") or payment_method_data.get("payment_method")
+            customer_id = customer_data.get("stripe_customer_id")  # Optional, for saved cards
+
+            if not payment_method_id:
+                return {"status": "error", "message": "Missing payment_method_id or test payment method"}
+
+            # Confirming explicitly — no automatic_payment_methods
+            intent = stripe.PaymentIntent.create(
+                amount=int(amount * 100),
+                currency=normalize_currency(currency, target="stripe"),
+                payment_method=payment_method_id,
+                customer=customer_id,
+                confirm=True,
+                receipt_email=customer_data.get("email"),
+                return_url="https://barz.com.br/pay/return"  # Optional for wallets/redirects
+            )
 
             return {
                 "status": "success",
@@ -71,3 +66,26 @@ class StripePaymentGateway(PaymentGateway):
 
         except Exception as e:
             return {"status": "error", "message": str(e)}
+        
+    def create_checkout_session(self, success_url: str, cancel_url: str) -> Dict[str, Any]:
+        try:
+            session = stripe.checkout.Session.create(
+                success_url=success_url,
+                cancel_url=cancel_url,
+                payment_method_types=["card"],
+                mode="payment",
+                line_items=[{
+                    "price_data": {
+                        "currency": "brl",
+                        "product_data": {
+                            "name": "BarZ Ads Boost"
+                        },
+                        "unit_amount": 2990  # R$29.90
+                    },
+                    "quantity": 1
+                }]
+            )
+            return {"status": "success", "checkout_url": session.url}
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+

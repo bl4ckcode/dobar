@@ -12,12 +12,23 @@ async def create_charge(
     payment_request: PaymentRequest,
     gateway = Depends(get_payment_gateway)
 ):
-    return gateway.create_charge(
+    response = gateway.create_charge(
         amount=payment_request.amount,
         currency=payment_request.currency,
         customer=payment_request.customer.model_dump(),
         payment_method=payment_request.payment_method.model_dump()
     )
+
+    if response.get("status") == "error":
+        raise CustomHTTPException(
+            code=400,
+            error_type="payment_error",
+            message=response.get("message", "Unknown payment error"),
+            data=response
+        )
+
+    return response
+
 
 @payment_router.post("/refund")
 async def refund_charge(
@@ -45,3 +56,26 @@ async def refund_charge(
         )
     return response
    
+from fastapi import Query
+
+@payment_router.post("/checkout")
+async def create_checkout(
+    success_url: str = Query(..., description="URL to redirect after successful payment"),
+    cancel_url: str = Query(..., description="URL to redirect after cancellation"),
+    gateway: PaymentGateway = Depends(get_payment_gateway)
+):
+    if not hasattr(gateway, "create_checkout_session"):
+        raise CustomHTTPException(
+            code=400,
+            error_type="unsupported_gateway",
+            message="This gateway does not support hosted checkout"
+        )
+
+    response = gateway.create_checkout_session(success_url, cancel_url)
+    if response.get("status") == "error":
+        raise CustomHTTPException(
+            code=400,
+            error_type="stripe_error",
+            message=response.get("message", "Failed to create checkout session")
+        )
+    return response
