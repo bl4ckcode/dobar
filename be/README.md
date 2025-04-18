@@ -14,6 +14,28 @@ Welcome to the **BarZ Backend** repository! This is the backend service for the 
 - [License](#license)
 
 ## Features
+### Payments & Gateway Integration
+
+BarZ backend now supports flexible and scalable payment integrations:
+
+- **Stripe Support:**
+  - Create charges (`PaymentIntent`)
+  - Save cards using `SetupIntent`
+  - Accept Apple Pay / Google Pay using `allow_redirects: if_required`
+  - Use test methods like `pm_card_visa` for safe dev testing
+
+- **Stone (Pagar.me) Support:**
+  - Charge and refund functionality wrapped in a shared gateway interface
+  - Fully switchable via `.env` (`PAYMENT_GATEWAY=stripe|stone`)
+
+- **Routes Added:**
+  - `POST /payments/charge`: One-time charge
+  - `POST /payments/refund`: Refund a payment
+  - `POST /payments/setup`: Save a card for future use
+  - `POST /payments/checkout`: Stripe-hosted checkout (partner use)
+
+- PgBouncer-ready DB pooling for efficient resource usage
+- Payment routing fully abstracted with dynamic gateway factory
 - **User Authentication:** Supports Firebase phone authentication, Google Sign-In, Apple Sign-In, and Facebook Sign-In.
 - **JWT Tokens:** Secure authentication using JSON Web Tokens (JWT).
 - **Bars & Restaurants API:**  
@@ -178,3 +200,30 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 ---
 
 Made with ❤️ by [bl4ckcode](https://github.com/bl4ckcode)
+
+
+## 🧾 Pull Request Template
+
+### 🚀 Summary
+<!-- Describe the purpose of the PR -->
+
+### 📌 Related Issues
+Closes #[IssueNumber]
+
+### ✨ Features Added
+- [ ] New API endpoints
+- [ ] New database models or migrations
+- [ ] Utility or interface improvements
+- [ ] Third-party SDKs integrated
+
+### 🔍 How to Test
+<!-- List curl commands or frontend actions to verify the functionality -->
+
+### 📁 Files Modified
+<!-- Optional: Summary of touched files -->
+
+### ✅ Checklist
+- [ ] Code compiles and passes type checks
+- [ ] No hardcoded secrets or dev keys
+- [ ] Tests added or manual test instructions provided
+- [ ] Routes documented in README or OpenAPI
