@@ -7,12 +7,10 @@ import os
 # Load environment variables
 load_dotenv()
 
-# PostgreSQL connection URL using ScaleGrid configuration
-DATABASE_URL = f"postgresql://{os.getenv('POSTGRES_USER')}:{os.getenv('POSTGRES_PASSWORD')}@" \
-               f"{os.getenv('POSTGRES_HOST')}:{os.getenv('POSTGRES_PORT')}/{os.getenv('POSTGRES_DB')}?sslmode=require"
+DATABASE_URL = os.getenv("DATABASE_URL")
 
 # Initialize the database connection
-database = Database(DATABASE_URL)
+database = Database(DATABASE_URL, min_size=1, max_size=5)
 engine = create_engine(DATABASE_URL)
 metadata = MetaData()
 

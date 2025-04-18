@@ -163,6 +163,15 @@ Simply prompt ChatGPT with context about the BarZ API and you'll receive detaile
 
 Please ensure to replace "[insert specific question here]" with your actual question.
 
+
+---
+
+## 🧩 Backend Architecture Overview (UML)
+
+The following diagram represents the main entities and relationships in the BarZ backend system (Auth, Bars, Payments):
+
+![barz_backend_diagram](https://github.com/user-attachments/assets/aa051d94-8cb2-4960-b4f9-00fc512c3076)
+
 ## License
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
