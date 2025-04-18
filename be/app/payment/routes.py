@@ -79,3 +79,15 @@ async def create_checkout(
             message=response.get("message", "Failed to create checkout session")
         )
     return response
+
+@payment_router.post("/setup")
+async def setup_payment_method(customer_id: str, gateway: PaymentGateway = Depends(get_payment_gateway)):
+    response = gateway.create_setup_intent(customer_id)
+    if response.get("status") == "error":
+        raise CustomHTTPException(
+            code=400,
+            error_type="stripe_error",
+            message=response.get("message"),
+            data=response
+        )
+    return response

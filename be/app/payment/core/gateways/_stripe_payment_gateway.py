@@ -88,4 +88,21 @@ class StripePaymentGateway(PaymentGateway):
             return {"status": "success", "checkout_url": session.url}
         except Exception as e:
             return {"status": "error", "message": str(e)}
+        
+    def create_setup_intent(self, customer_id: str) -> Dict[str, Any]:
+        try:
+            intent = stripe.SetupIntent.create(
+                customer=customer_id,
+                payment_method_types=["card"]
+            )
+
+            return {
+                "status": "success",
+                "setup_intent_id": intent.id,
+                "client_secret": intent.client_secret
+            }
+
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+
 
