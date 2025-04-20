@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../domain/models/menu/item_menu_ui_model.dart';
 import '../../../domain/models/menu/menu_type.dart';
-import '../../widgets/bar_menu/menu_card.dart';
+import '../../../../menus/presentation/widgets/menu_card.dart';
 
 class BarMenusList extends StatefulWidget {
   const BarMenusList({

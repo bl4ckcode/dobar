@@ -94,8 +94,7 @@ class BarzAppState extends State<BarzApp> with WidgetsBindingObserver {
                   useMaterial3: true,
                 ),
                 initialRoute:
-                    AppRouter.home,
-                    // value.isAuthenticated ? AppRouter.home : AppRouter.login,
+                    value.isAuthenticated ? AppRouter.home : AppRouter.login,
                 onGenerateRoute: AppRouter.route,
               );
             },

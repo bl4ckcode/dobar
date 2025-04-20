@@ -3,6 +3,7 @@
 *.log
 *.pyc
 *.swp
+*.lock
 .DS_Store
 .atom/
 .build/
@@ -43,10 +44,16 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+/android/.gradle
+/android/build
+/android/caches
+/android/.idea
+/android/.settings
+/android/.flutter-plugins
+/android/.flutter-plugins-dependencies
+/android/local.properties
+/android/wrapper
 
 # Freezed generated files
 *.freezed.dart
 *.g.dart
-
-#
-*.lock

@@ -2,7 +2,7 @@ import 'package:barz/core/utils/constant/colors.dart';
 import 'package:barz/shared/presentation/widget/animated_gif_widget.dart';
 import 'package:flutter/material.dart';
 
-import '../../../domain/models/menu/item_menu_ui_model.dart';
+import '../../../menus/domain/models/menu/item_menu_ui_model.dart';
 
 class BarMenuCard extends StatelessWidget {
   final ItemMenuUiModel item;

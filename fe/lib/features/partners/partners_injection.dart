@@ -1,7 +1,4 @@
 import 'package:barz/features/partners/data/data_sources/partners_network_datasource.dart';
-import 'package:barz/features/home/domain/usecases/drinks_home_usecase.dart';
-import 'package:barz/features/partners/domain/usecases/menus_usecase.dart';
-import 'package:barz/features/partners/presentation/bloc/menus_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../core/network/dio_network.dart';
@@ -28,20 +25,6 @@ Future<void> initPartnersInjection() async {
     () => PartnersRepositoryImpl(
       networkDataSource: getItInjector<PartnersNetworkDataSource>(),
       localDataSource: getItInjector<PartnersLocalDatasource>(),
-    ),
-  );
-
-  // Register MenusUseCase
-  getItInjector.registerLazySingleton<MenusUseCase>(
-    () => MenusUseCase(
-      repository: getItInjector<AbstractPartnersRepository>(),
-    ),
-  );
-
-  // Register MenusBloc
-  getItInjector.registerLazySingleton<MenusBloc>(
-    () => MenusBloc(
-      menusUseCase: getItInjector<MenusUseCase>(),
     ),
   );
 }

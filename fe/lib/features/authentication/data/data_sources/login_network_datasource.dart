@@ -37,11 +37,8 @@ class LoginNetworkDataSource {
         throw ServerException('Failed to login: ${response.statusCode}', null);
       }
     } on DioException catch (e) {
-      return ApiResponse.success(
-        "AD8T5IuEiFvYziaay-iKwlsUNcZuaqzLD3mm4wAohalJyFJgcoslUsSp_G2fr1qZoByqxq5hfVGMYU3oCVK-VrvHps4DU8XzoWRsYQ56t3ASg41oeHxrLQdY33eMk6DJAEm_s2L9EU3Kv-PpgnxFztYLGvEqMj2N9A",
-      );
-      // throw ServerException(
-      //     e.message ?? 'Dio error occurred', e.response?.statusCode);
+      throw ServerException(
+          e.message ?? 'Dio error occurred', e.response?.statusCode);
     } catch (e) {
       throw ServerException(e.toString(), null);
     }

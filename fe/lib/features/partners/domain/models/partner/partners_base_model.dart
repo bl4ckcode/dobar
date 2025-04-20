@@ -14,6 +14,8 @@ part 'partners_base_model.g.dart';
 class PartnersBaseModel with _$PartnersBaseModel {
   const factory PartnersBaseModel({
     required int id,
+    required int ownerId,
+    required String phoneNumber,
     required String name,
     required String address,
     required String email,

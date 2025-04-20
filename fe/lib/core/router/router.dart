@@ -1,8 +1,7 @@
 import 'package:barz/features/authentication/presentation/pages/login_page.dart';
 import 'package:barz/features/home/presentation/pages/home_page.dart';
+import 'package:barz/features/menus/presentation/pages/menu/menus_page.dart';
 import 'package:flutter/material.dart';
-
-import '../../features/partners/presentation/pages/menu/menus_page.dart';
 
 class AppRouter {
   static const String login = '/login';
@@ -42,7 +41,8 @@ class AppRouter {
         const end = Offset.zero;
         const curve = Curves.ease;
 
-        var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+        var tween =
+            Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
         var offsetAnimation = animation.drive(tween);
 
         return SlideTransition(
@@ -53,7 +53,8 @@ class AppRouter {
           ),
         );
       },
-      transitionDuration: const Duration(milliseconds: 1500), // Adjust the duration as needed
+      transitionDuration:
+          const Duration(milliseconds: 1500), // Adjust the duration as needed
     );
   }
 }
