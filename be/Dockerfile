@@ -1,5 +1,5 @@
 # Use an official Python runtime as a parent image
-FROM python:3.11-slim
+FROM python:alpine
 
 # Set workdir inside container
 WORKDIR /app
@@ -10,12 +10,19 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Install dependencies
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+    # Copy only git-related things first to initialize submodule
+COPY .git .git
+COPY .gitmodules .gitmodules
+
+# Clone submodule
+RUN git submodule update --init --recursive
 
 # Copy rest of the code
 COPY . .
+
+# Install dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
 # Expose port
 EXPOSE 8080

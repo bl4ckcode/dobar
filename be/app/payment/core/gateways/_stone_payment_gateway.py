@@ -5,16 +5,16 @@ from typing import Optional
 from app.payment.core.interfaces import PaymentGateway
 from app.payment.utils.currency import normalize_currency
 
-from app.payment.pagarme_sdk.pagarmeapisdk.pagarmeapisdk_client import PagarmeapisdkClient
-from app.payment.pagarme_sdk.pagarmeapisdk.http.auth.basic_auth import BasicAuthCredentials
-from app.payment.pagarme_sdk.pagarmeapisdk.configuration import Environment
-from app.payment.pagarme_sdk.pagarmeapisdk.exceptions.error_exception import ErrorException
-from app.payment.pagarme_sdk.pagarmeapisdk.models.create_charge_request import CreateChargeRequest
-from app.payment.pagarme_sdk.pagarmeapisdk.models.create_cancel_charge_request import CreateCancelChargeRequest
-from app.payment.pagarme_sdk.pagarmeapisdk.models.create_customer_request import CreateCustomerRequest
-from app.payment.pagarme_sdk.pagarmeapisdk.models.create_payment_request import CreatePaymentRequest
-from app.payment.pagarme_sdk.pagarmeapisdk.models.create_credit_card_payment_request import CreateCreditCardPaymentRequest
-from app.payment.pagarme_sdk.pagarmeapisdk.models.create_card_request import CreateCardRequest
+from pagarmeapisdk.pagarmeapisdk_client import PagarmeapisdkClient
+from pagarmeapisdk.http.auth.basic_auth import BasicAuthCredentials
+from pagarmeapisdk.configuration import Environment
+from pagarmeapisdk.exceptions.error_exception import ErrorException
+from pagarmeapisdk.models.create_charge_request import CreateChargeRequest
+from pagarmeapisdk.models.create_cancel_charge_request import CreateCancelChargeRequest
+from pagarmeapisdk.models.create_customer_request import CreateCustomerRequest
+from pagarmeapisdk.models.create_payment_request import CreatePaymentRequest
+from pagarmeapisdk.models.create_credit_card_payment_request import CreateCreditCardPaymentRequest
+from pagarmeapisdk.models.create_card_request import CreateCardRequest
 
 from dotenv import load_dotenv
 
