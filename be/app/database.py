@@ -11,6 +11,8 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 
 # Initialize the database connection
 database = Database(DATABASE_URL, min_size=1, max_size=5)
+print("🐛 DATABASE_URL =", DATABASE_URL)
+
 engine = create_engine(DATABASE_URL)
 metadata = MetaData()
 
