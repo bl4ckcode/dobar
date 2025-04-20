@@ -3,7 +3,6 @@
 *.log
 *.pyc
 *.swp
-*.lock
 .DS_Store
 .atom/
 .build/
@@ -57,3 +56,6 @@ app.*.map.json
 # Freezed generated files
 *.freezed.dart
 *.g.dart
+
+# Ignore fucking pubsec
+pubspec.lock
