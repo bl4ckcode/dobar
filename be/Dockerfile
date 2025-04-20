@@ -4,9 +4,10 @@ FROM python:3.11-slim
 # Set workdir inside container
 WORKDIR /app
 
-# Install system dependencies (optional: for psycopg2 or uvicorn)
-RUN apt-get update && apt-get install -y \
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    git \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
