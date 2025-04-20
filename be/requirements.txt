@@ -11,7 +11,7 @@ attrs==24.2.0
 bcrypt==4.2.0
 boto3==1.37.23
 botocore==1.37.23
-CacheControl==0.14.2
+CacheControl==0.12.14
 cachetools==5.5.2
 certifi==2024.8.30
 cffi==1.17.0
@@ -81,3 +81,6 @@ uvloop==0.19.0
 watchfiles==0.23.0
 websockets==12.0
 yarl==1.9.7
+apimatic-core==0.2.19
+apimatic-core-interfaces==0.1.6
+apimatic-requests-client-adapter==0.1.7
