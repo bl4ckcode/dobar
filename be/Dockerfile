@@ -1,5 +1,5 @@
 # Use an official Python runtime as a parent image
-FROM python:alpine
+FROM python:3.11-slim
 
 # Set workdir inside container
 WORKDIR /app
