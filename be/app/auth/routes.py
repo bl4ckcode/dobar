@@ -40,12 +40,23 @@ async def create_access_token(data: dict):
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 
+async def get_or_create_user(firebase_uid: str, phone_number: str):
+    user = await get_user_by_firebase_uid(firebase_uid)
+    if not user:
+        user_data = {
+            "firebase_uid": firebase_uid,
+            "phone_number": phone_number,
+            "is_active": True,
+        }
+        user_id = await database.execute(User.__table__.insert().values(**user_data))
+        user = await database.fetch_one(User.__table__.select().where(User.id == user_id))
+    return user
+
 async def create_or_login_user(user_data: dict):
     # Check if user already exists
     user = None
-    if "firebase_uid" in user_data:
-        user = await get_user_by_firebase_uid(user_data["firebase_uid"])
-    elif "google_id" in user_data:
+    
+    if "google_id" in user_data:
         user = await get_user_by_google_id(user_data["google_id"])
     elif "apple_id" in user_data:
         user = await get_user_by_apple_id(user_data["apple_id"])
@@ -77,13 +88,16 @@ async def verify_firebase_token(credentials: HTTPAuthorizationCredentials = Depe
         )
 
 # Routes
-@auth_router.post("/phone", response_model=Token)
-async def phone_login(login_data: PhoneLogin):
-    user_data = {
-        "firebase_uid": login_data.firebase_uid,
-        "phone_number": login_data.phone_number,
-    }
-    return await create_or_login_user(user_data)
+@auth_router.post("/phone")
+async def phone_login(firebase_user=Depends(verify_firebase_token)):
+    firebase_uid = firebase_user["uid"]
+    phone_number = firebase_user.get("phone_number")
+
+    user = await get_or_create_user(firebase_uid, phone_number)
+
+    # Generate token for your app
+    access_token = await create_access_token(data={"sub": str(user["id"])})
+    return {"access_token": access_token, "token_type": "bearer"}
 
 @auth_router.post("/google", response_model=Token)
 async def google_login(login_data: GoogleLogin):
