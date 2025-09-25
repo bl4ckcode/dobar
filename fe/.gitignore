@@ -59,3 +59,8 @@ app.*.map.json
 
 # Ignore fucking pubsec
 pubspec.lock
+
+# Android native build artifacts
+android/app/.cxx/
+android/app/CMakeCache.txt
+android/app/**/CMakeFiles/
