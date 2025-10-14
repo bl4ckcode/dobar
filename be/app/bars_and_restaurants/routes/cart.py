@@ -6,7 +6,7 @@ from fastapi import APIRouter, HTTPException, Depends, status
 from sqlalchemy import and_
 from typing import List, Optional
 from decimal import Decimal
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from app.auth.middleware import get_current_active_user
 from app.auth.auth_models import User
@@ -253,7 +253,7 @@ async def checkout(
     total = subtotal + tax + tip + delivery_fee - discount
     
     # Estimate ready time (30 minutes from now - should be based on bar settings)
-    estimated_ready_time = datetime.utcnow() + timedelta(minutes=30)
+    estimated_ready_time = datetime.now(timezone.utc) + timedelta(minutes=30)
     
     # Start transaction to create order
     transaction = await database.transaction()

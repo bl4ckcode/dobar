@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, Depends, status, Query
 from sqlalchemy import and_, or_, desc
 from typing import Optional, List
-from datetime import datetime
+from datetime import datetime, timezone
 
 from ..services.realtime_updates import stream_order_changes
 from ..models.relational_models import Order as OrderModel
@@ -176,7 +176,7 @@ async def cancel_order(
             .where(OrderModel.id == order_id)
             .values(
                 status="cancelled",
-                updated_at=datetime.utcnow()
+                updated_at=datetime.now(timezone.utc)
             )
         )
         await database.execute(update_query)
@@ -256,12 +256,12 @@ async def update_order_status(
         # Prepare update data
         update_data = {
             "status": status_update.new_status,
-            "updated_at": datetime.utcnow()
+            "updated_at": datetime.now(timezone.utc)
         }
         
         # Update completed_at if status is completed
         if status_update.new_status == "completed":
-            update_data["completed_at"] = datetime.utcnow()
+            update_data["completed_at"] = datetime.now(timezone.utc)
         
         # Update estimated_ready_time if provided
         if status_update.estimated_ready_time:
