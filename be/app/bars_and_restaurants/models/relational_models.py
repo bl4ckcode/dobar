@@ -1,5 +1,6 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, BigInteger
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, BigInteger, DateTime
 from sqlalchemy.orm import relationship
+from datetime import datetime
 from ...database import Base  # Ensure this is the correct import path
 
 class BarOwner(Base):
@@ -40,5 +41,28 @@ class Order(Base):
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), index=True)
     bar_id = Column(Integer, ForeignKey("bars.id"), index=True)
-    status = Column(String, nullable=True)  # e.g., "pending", "completed", "cancelled"
+    status = Column(String, nullable=True, default="pending")  # pending, confirmed, preparing, ready, completed, cancelled
     total_price = Column(Float, nullable=True)
+    subtotal = Column(Float, nullable=True)
+    tax = Column(Float, nullable=True, default=0.0)
+    tip = Column(Float, nullable=True, default=0.0)
+    delivery_fee = Column(Float, nullable=True, default=0.0)
+    discount = Column(Float, nullable=True, default=0.0)
+    
+    # Payment information
+    payment_id = Column(String, nullable=True)  # Payment gateway transaction ID
+    payment_status = Column(String, nullable=True)  # pending, paid, failed, refunded
+    payment_method = Column(String, nullable=True)  # credit_card, debit_card, pix, etc.
+    
+    # Order type
+    order_type = Column(String, nullable=True)  # delivery, pickup, dine_in
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    estimated_ready_time = Column(DateTime, nullable=True)
+    completed_at = Column(DateTime, nullable=True)
+    
+    # Relationships
+    items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
+    status_history = relationship("OrderStatusHistory", back_populates="order", cascade="all, delete-orphan")

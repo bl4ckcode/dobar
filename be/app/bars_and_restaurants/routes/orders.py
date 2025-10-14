@@ -1,8 +1,21 @@
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, Depends, status, Query
+from sqlalchemy import and_, or_, desc
+from typing import Optional, List
+from datetime import datetime
+
 from ..services.realtime_updates import stream_order_changes
 from ..models.relational_models import Order as OrderModel
-from ..schemas.orders import OrderCreate, Order as OrderSchema
-from app.database import database  # Use the async database connection
+from ..models.cart_models import OrderItem as OrderItemModel, OrderStatusHistory as OrderStatusHistoryModel
+from ..schemas.orders import (
+    OrderCreate, 
+    Order as OrderSchema, 
+    OrderStatusUpdate, 
+    OrderWithHistory,
+    OrderListResponse
+)
+from app.database import database
+from app.auth.middleware import get_current_active_user, get_optional_user
+from app.auth.auth_models import User
 
 orders_router = APIRouter(prefix="/orders", tags=["Orders"])
 
@@ -30,8 +43,49 @@ async def create_order(order: OrderCreate):
     
     return db_order
 
+@orders_router.get("/user/me", response_model=OrderListResponse)
+async def get_my_orders(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=100),
+    status: Optional[str] = None,
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get the current user's order history with pagination."""
+    # Build query
+    query = OrderModel.__table__.select().where(OrderModel.user_id == current_user["id"])
+    
+    # Filter by status if provided
+    if status:
+        query = query.where(OrderModel.status == status)
+    
+    # Order by created_at descending (newest first)
+    query = query.order_by(desc(OrderModel.created_at))
+    
+    # Get total count
+    count_query = query.with_only_columns(OrderModel.id).alias("count")
+    total = await database.fetch_val(f"SELECT COUNT(*) FROM ({count_query.compile(compile_kwargs={'literal_binds': True})}) AS count")
+    
+    # Apply pagination
+    offset = (page - 1) * page_size
+    query = query.limit(page_size).offset(offset)
+    
+    # Fetch orders
+    orders = await database.fetch_all(query)
+    
+    return OrderListResponse(
+        orders=[OrderSchema(**dict(order)) for order in orders],
+        total=total or 0,
+        page=page,
+        page_size=page_size
+    )
+
+
 @orders_router.get("/{order_id}", response_model=OrderSchema)
-async def read_order(order_id: int):
+async def get_order(
+    order_id: int,
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get order details. Users can only view their own orders."""
     # Fetch the order by ID
     query = OrderModel.__table__.select().where(OrderModel.id == order_id)
     db_order = await database.fetch_one(query)
@@ -39,4 +93,215 @@ async def read_order(order_id: int):
     if db_order is None:
         raise HTTPException(status_code=404, detail="Order not found")
     
+    # Verify ownership
+    if db_order["user_id"] != current_user["id"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to view this order"
+        )
+    
     return db_order
+
+
+@orders_router.get("/{order_id}/timeline", response_model=OrderWithHistory)
+async def get_order_timeline(
+    order_id: int,
+    current_user: User = Depends(get_current_active_user)
+):
+    """Get order details with full status history."""
+    # Fetch the order
+    query = OrderModel.__table__.select().where(OrderModel.id == order_id)
+    db_order = await database.fetch_one(query)
+    
+    if db_order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    # Verify ownership
+    if db_order["user_id"] != current_user["id"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to view this order"
+        )
+    
+    # Fetch status history
+    history_query = (
+        OrderStatusHistoryModel.__table__
+        .select()
+        .where(OrderStatusHistoryModel.order_id == order_id)
+        .order_by(OrderStatusHistoryModel.changed_at)
+    )
+    status_history = await database.fetch_all(history_query)
+    
+    return OrderWithHistory(
+        **dict(db_order),
+        status_history=[dict(h) for h in status_history]
+    )
+
+
+@orders_router.post("/{order_id}/cancel", response_model=OrderSchema)
+async def cancel_order(
+    order_id: int,
+    current_user: User = Depends(get_current_active_user)
+):
+    """Cancel an order. Only allowed if status is pending or confirmed."""
+    # Fetch the order
+    query = OrderModel.__table__.select().where(OrderModel.id == order_id)
+    db_order = await database.fetch_one(query)
+    
+    if db_order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    # Verify ownership
+    if db_order["user_id"] != current_user["id"]:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have permission to cancel this order"
+        )
+    
+    # Check if order can be cancelled
+    if db_order["status"] not in ["pending", "confirmed"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Cannot cancel order with status: {db_order['status']}"
+        )
+    
+    # Start transaction
+    transaction = await database.transaction()
+    
+    try:
+        # Update order status
+        update_query = (
+            OrderModel.__table__
+            .update()
+            .where(OrderModel.id == order_id)
+            .values(
+                status="cancelled",
+                updated_at=datetime.utcnow()
+            )
+        )
+        await database.execute(update_query)
+        
+        # Add status history entry
+        history_data = {
+            "order_id": order_id,
+            "previous_status": db_order["status"],
+            "new_status": "cancelled",
+            "changed_by_user_id": current_user["id"],
+            "note": "Cancelled by customer"
+        }
+        await database.execute(
+            OrderStatusHistoryModel.__table__.insert().values(**history_data)
+        )
+        
+        await transaction.commit()
+        
+        # Fetch updated order
+        updated_order = await database.fetch_one(
+            OrderModel.__table__.select().where(OrderModel.id == order_id)
+        )
+        
+        # TODO: Trigger refund if payment was completed
+        # TODO: Trigger WebSocket notification
+        
+        return updated_order
+        
+    except Exception as e:
+        await transaction.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to cancel order: {str(e)}"
+        )
+
+
+@orders_router.put("/{order_id}/status", response_model=OrderSchema)
+async def update_order_status(
+    order_id: int,
+    status_update: OrderStatusUpdate,
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Update order status. Only allowed for bar owners.
+    Status flow: pending -> confirmed -> preparing -> ready -> completed
+    """
+    # Fetch the order
+    query = OrderModel.__table__.select().where(OrderModel.id == order_id)
+    db_order = await database.fetch_one(query)
+    
+    if db_order is None:
+        raise HTTPException(status_code=404, detail="Order not found")
+    
+    # TODO: Verify user is bar owner of the bar
+    # For now, we'll allow any authenticated user (should be restricted to bar owners)
+    
+    # Validate status transition
+    valid_transitions = {
+        "pending": ["confirmed", "cancelled"],
+        "confirmed": ["preparing", "cancelled"],
+        "preparing": ["ready", "cancelled"],
+        "ready": ["completed"],
+        "completed": [],
+        "cancelled": []
+    }
+    
+    if status_update.new_status not in valid_transitions.get(db_order["status"], []):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Invalid status transition from {db_order['status']} to {status_update.new_status}"
+        )
+    
+    # Start transaction
+    transaction = await database.transaction()
+    
+    try:
+        # Prepare update data
+        update_data = {
+            "status": status_update.new_status,
+            "updated_at": datetime.utcnow()
+        }
+        
+        # Update completed_at if status is completed
+        if status_update.new_status == "completed":
+            update_data["completed_at"] = datetime.utcnow()
+        
+        # Update estimated_ready_time if provided
+        if status_update.estimated_ready_time:
+            update_data["estimated_ready_time"] = status_update.estimated_ready_time
+        
+        # Update order status
+        update_query = (
+            OrderModel.__table__
+            .update()
+            .where(OrderModel.id == order_id)
+            .values(**update_data)
+        )
+        await database.execute(update_query)
+        
+        # Add status history entry
+        history_data = {
+            "order_id": order_id,
+            "previous_status": db_order["status"],
+            "new_status": status_update.new_status,
+            "changed_by_user_id": current_user["id"],
+            "note": status_update.note
+        }
+        await database.execute(
+            OrderStatusHistoryModel.__table__.insert().values(**history_data)
+        )
+        
+        await transaction.commit()
+        
+        # Fetch updated order
+        updated_order = await database.fetch_one(
+            OrderModel.__table__.select().where(OrderModel.id == order_id)
+        )
+        
+        # TODO: Trigger WebSocket notification
+        
+        return updated_order
+        
+    except Exception as e:
+        await transaction.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update order status: {str(e)}"
+        )
