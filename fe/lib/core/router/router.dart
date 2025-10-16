@@ -3,6 +3,8 @@ import 'package:barz/features/home/presentation/pages/home_page.dart';
 import 'package:barz/features/menus/presentation/pages/menu/menus_page.dart';
 import 'package:flutter/material.dart';
 
+import '../../features/partners/presentation/pages/menu/menus_page.dart';
+
 class AppRouter {
   static const String login = '/login';
   static const String home = '/home';
