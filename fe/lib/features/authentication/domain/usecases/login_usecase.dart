@@ -1,8 +1,8 @@
 import 'package:barz/core/network/error/failures.dart';
-import 'package:barz/core/utils/usecases/usecase.dart';
 import 'package:barz/features/authentication/domain/models/login_params.dart';
 import 'package:barz/features/authentication/domain/repositories/abstract_login_repository.dart';
 import 'package:dartz/dartz.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginUsecase {
   final AbstractLoginRepository repository;
@@ -10,8 +10,8 @@ class LoginUsecase {
   LoginUsecase({required this.repository});
 
   // Phone Number Authentication
-  Future<Either<Failure, String?>> loginWithPhone(LoginParams params) async {
-    return await repository.loginWithPhone(params);
+  Future<Either<Failure, String?>> complete(User? user) async {
+    return await repository.completeLoginWithBackend(user);
   }
 
   // Google Sign-In Authentication

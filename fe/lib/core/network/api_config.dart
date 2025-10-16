@@ -1,4 +1,4 @@
-const String baseUrl = "http://10.0.2.2:8000/";
+const String baseUrl = "https://barz-backend-bold-sun-5691.fly.dev/";
 const defaultHeaders = {
   'Content-Type': 'application/json',
   'Authorization': 'Bearer ',

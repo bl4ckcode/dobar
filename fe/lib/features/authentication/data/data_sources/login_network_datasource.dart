@@ -15,38 +15,6 @@ class LoginNetworkDataSource {
     required FirebaseAuth firebaseAuth,
   }) : _firebaseAuth = firebaseAuth;
 
-  // Phone Number Authentication
-  Future<ApiResponse<String?>> loginWithPhone(LoginParams params) async {
-    try {
-      // Perform Firebase phone authentication
-      final verificationId = await _loginWithPhone(params.phoneNumber!);
-
-      // Call back-end API to complete the login process
-      final response = await dio.post(
-        '${baseUrl}auth/phone',
-        data: {
-          "firebase_uid": verificationId,
-          "phone_number": params.phoneNumber,
-        },
-        options: Options(headers: getHeaders()),
-      );
-
-      if (response.statusCode == 200) {
-        return ApiResponse.success(response.data['access_token']);
-      } else {
-        throw ServerException('Failed to login: ${response.statusCode}', null);
-      }
-    } on DioException catch (e) {
-      return ApiResponse.success(
-        "AD8T5IuEiFvYziaay-iKwlsUNcZuaqzLD3mm4wAohalJyFJgcoslUsSp_G2fr1qZoByqxq5hfVGMYU3oCVK-VrvHps4DU8XzoWRsYQ56t3ASg41oeHxrLQdY33eMk6DJAEm_s2L9EU3Kv-PpgnxFztYLGvEqMj2N9A",
-      );
-      // throw ServerException(
-      //     e.message ?? 'Dio error occurred', e.response?.statusCode);
-    } catch (e) {
-      throw ServerException(e.toString(), null);
-    }
-  }
-
   // Google Sign-In Authentication
   Future<ApiResponse<String?>> loginWithGoogle(LoginParams params) async {
     try {
@@ -68,8 +36,6 @@ class LoginNetworkDataSource {
     } on DioException catch (e) {
       throw ServerException(
           e.message ?? 'Dio error occurred', e.response?.statusCode);
-    } catch (e) {
-      throw ServerException(e.toString(), null);
     }
   }
 
@@ -94,8 +60,6 @@ class LoginNetworkDataSource {
     } on DioException catch (e) {
       throw ServerException(
           e.message ?? 'Dio error occurred', e.response?.statusCode);
-    } catch (e) {
-      throw ServerException(e.toString(), null);
     }
   }
 
@@ -120,40 +84,7 @@ class LoginNetworkDataSource {
     } on DioException catch (e) {
       throw ServerException(
           e.message ?? 'Dio error occurred', e.response?.statusCode);
-    } catch (e) {
-      throw ServerException(e.toString(), null);
     }
-  }
-
-  // Helper function for Firebase phone authentication
-  Future<String> _loginWithPhone(String phoneNumber) async {
-    final completer = Completer<String>();
-
-    await _firebaseAuth.verifyPhoneNumber(
-      phoneNumber: phoneNumber,
-      verificationCompleted: (PhoneAuthCredential credential) async {
-        // Automatically sign in the user if verification completes
-        await _firebaseAuth.signInWithCredential(credential);
-        completer.complete(_firebaseAuth.currentUser?.uid); // Use Firebase UID
-      },
-      verificationFailed: (FirebaseAuthException e) {
-        completer.completeError(
-          ServerException(e.message ?? "Unknown Firebase Error", null),
-        );
-      },
-      codeSent: (String verificationId, int? resendToken) {
-        // Complete with the verificationId for later verification
-        completer.complete(verificationId);
-      },
-      codeAutoRetrievalTimeout: (String verificationId) {
-        // Handle timeout
-        completer.completeError(
-          ServerException("Code retrieval timed out: $verificationId", null),
-        );
-      },
-    );
-
-    return completer.future;
   }
 
   // Verify SMS code for phone authentication
@@ -171,6 +102,9 @@ class LoginNetworkDataSource {
       final UserCredential userCredential =
           await _firebaseAuth.signInWithCredential(credential);
 
+      // Call back-end API to complete the login process
+      await completeLoginWithBackend(userCredential.user);
+
       // Return the Firebase UID
       return ApiResponse.success(userCredential.user?.uid);
     } on FirebaseAuthException catch (e) {
@@ -178,5 +112,23 @@ class LoginNetworkDataSource {
     } catch (e) {
       throw ServerException(e.toString(), null);
     }
+  }
+
+  Future<ApiResponse<String>> completeLoginWithBackend(User? user) async {
+    if (user == null) throw ServerException("No user", null);
+    // Get Firebase ID token
+    final idToken = await user.getIdToken();
+    // Set token globally
+    setAuthToken(idToken ?? "");
+    // Call the backend login route using shared headers
+    final response = await dio.post(
+      '${baseUrl}auth/phone',
+      options: Options(
+        headers: getHeaders(),
+      ),
+    );
+    // Extract token from response and return
+    final token = response.data['access_token'] as String;
+    return ApiResponse.success(token);
   }
 }
