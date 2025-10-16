@@ -5,6 +5,7 @@ import 'package:barz/features/authentication/data/data_sources/login_network_dat
 import 'package:barz/features/authentication/domain/models/login_params.dart';
 import 'package:barz/features/authentication/domain/repositories/abstract_login_repository.dart';
 import 'package:dartz/dartz.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginRepositoryImpl extends AbstractLoginRepository {
   final LoginNetworkDataSource networkDataSource;
@@ -16,10 +17,10 @@ class LoginRepositoryImpl extends AbstractLoginRepository {
   });
 
   @override
-  Future<Either<Failure, String?>> loginWithPhone(LoginParams params) async {
+  Future<Either<Failure, String?>> completeLoginWithBackend(User? user) async {
     try {
       // Call the network data source for phone authentication
-      final result = await networkDataSource.loginWithPhone(params);
+      final result = await networkDataSource.completeLoginWithBackend(user);
 
       // Cache the token locally
       if (result.result != null) {

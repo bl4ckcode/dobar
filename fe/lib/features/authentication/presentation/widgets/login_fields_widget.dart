@@ -48,7 +48,7 @@ class _LoginFieldsWidgetState extends State<LoginFieldsWidget> {
             ),
             onChanged: (phone) {
               setState(() {
-                completePhoneNumber = phone.nsn;
+                completePhoneNumber = phone.international;
                 isPhoneNumberValid = phone.isValid();
               });
             },

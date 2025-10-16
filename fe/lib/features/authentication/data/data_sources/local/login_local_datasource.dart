@@ -9,7 +9,6 @@ class LoginLocalDataSource {
 
   Future<void> cacheUserToken(String token) async {
     await sharedPreferences.setString('user_token', token);
-    setAuthToken(token);
   }
 
   Future<String?> getCachedUserToken() async {

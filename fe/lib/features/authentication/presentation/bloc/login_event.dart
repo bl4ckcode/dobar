@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'login_event.freezed.dart';
@@ -27,5 +28,21 @@ class LoginEvent with _$LoginEvent {
     required String key,
     required String token,
   }) = FacebookLoginPressed;
-}
 
+  const factory LoginEvent.autoVerifyCompleted(
+    PhoneAuthCredential credential,
+  ) = LoginAutoVerifyCompleted;
+
+  const factory LoginEvent.verificationFailed(
+    String error,
+  ) = LoginVerificationFailed;
+
+  const factory LoginEvent.codeSent(
+    String verificationId,
+    String phoneNumber,
+  ) = LoginCodeSent;
+
+  const factory LoginEvent.verificationTimeout(
+    String verificationId,
+  ) = LoginVerificationTimeout;
+}
