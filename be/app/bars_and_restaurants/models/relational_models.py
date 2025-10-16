@@ -25,6 +25,7 @@ class Bar(Base):
 
     # Relationship with menus
     menus = relationship("Menu", back_populates="bar")
+    cashback_transactions = relationship("CashbackLedger", back_populates="bar")
 
 class Menu(Base):
     __tablename__ = "menus"
@@ -66,3 +67,4 @@ class Order(Base):
     # Relationships
     items = relationship("OrderItem", back_populates="order", cascade="all, delete-orphan")
     status_history = relationship("OrderStatusHistory", back_populates="order", cascade="all, delete-orphan")
+    cashback_transactions = relationship("CashbackLedger", back_populates="order")

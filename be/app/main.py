@@ -91,6 +91,10 @@ app.include_router(bar_owners_router)
 # Include the payment router
 app.include_router(payment_router)
 
+# Include the wallet router
+from .bars_and_restaurants.routes.wallet import wallet_router
+app.include_router(wallet_router)
+
 def custom_openapi():
     if app.openapi_schema:
         return app.openapi_schema

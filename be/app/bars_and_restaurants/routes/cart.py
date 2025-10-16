@@ -364,6 +364,34 @@ async def checkout(
             OrderModel.__table__.select().where(OrderModel.id == order_id)
         )
         
+        # Generate cashback for successful order (async, non-blocking)
+        try:
+            from app.bars_and_restaurants.services.wallet_service import WalletService
+            from app.bars_and_restaurants.schemas.wallet import EarnCashbackRequest
+            from app.bars_and_restaurants.models.wallet_models import FundingSource
+            from app.database import SessionLocal
+            
+            # Create a new DB session for cashback (separate from async database)
+            db = SessionLocal()
+            try:
+                # Default cashback: 5% funded by BarZ, expires in 90 days
+                cashback_req = EarnCashbackRequest(
+                    user_id=current_user["id"],
+                    order_id=order_id,
+                    bar_id=bar_id,
+                    order_total=total,
+                    cashback_percentage=Decimal("0.05"),  # 5%
+                    funded_by=FundingSource.BARZ,
+                    expires_days=90
+                )
+                
+                WalletService.earn_cashback(db, cashback_req, auto_available=False)
+            finally:
+                db.close()
+        except Exception as cashback_error:
+            # Log error but don't fail the order
+            print(f"Failed to generate cashback for order {order_id}: {cashback_error}")
+        
         # TODO: Trigger WebSocket notification for real-time updates
         
         return CheckoutResponse(

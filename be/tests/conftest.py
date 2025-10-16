@@ -207,3 +207,85 @@ def create_test_token(user_id: int) -> str:
     to_encode.update({"exp": expire})
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
+
+
+# ============== Wallet Test Fixtures ==============
+
+@pytest.fixture
+def db_session():
+    """Create a synchronous database session for wallet tests."""
+    from sqlalchemy.orm import Session
+    
+    session = sessionmaker(bind=test_engine)(class_=Session)
+    yield session
+    session.rollback()
+    session.close()
+
+
+@pytest.fixture
+def test_user(db_session):
+    """Create a test user for wallet tests."""
+    from app.auth.auth_models import User
+    
+    user = User(
+        firebase_uid="test_wallet_user_123",
+        phone_number="+1234567890",
+        email="wallet_test@example.com",
+        is_active=True
+    )
+    db_session.add(user)
+    db_session.commit()
+    db_session.refresh(user)
+    return user
+
+
+@pytest.fixture
+def test_bar(db_session):
+    """Create a test bar for wallet tests."""
+    from app.bars_and_restaurants.models.relational_models import Bar, BarOwner
+    
+    # Create bar owner first
+    owner = BarOwner(
+        name="Test Owner",
+        email="owner@test.com",
+        phone_number="+1234567890"
+    )
+    db_session.add(owner)
+    db_session.commit()
+    db_session.refresh(owner)
+    
+    # Create bar
+    bar = Bar(
+        name="Test Wallet Bar",
+        address="123 Test St",
+        phone_number="+1234567890",
+        email="bar@test.com",
+        owner_id=owner.id
+    )
+    db_session.add(bar)
+    db_session.commit()
+    db_session.refresh(bar)
+    return bar
+
+
+@pytest.fixture
+def test_order(db_session, test_user, test_bar):
+    """Create a test order for wallet tests."""
+    from app.bars_and_restaurants.models.relational_models import Order
+    from datetime import datetime, timezone
+    
+    order = Order(
+        user_id=test_user.id,
+        bar_id=test_bar.id,
+        status="completed",
+        total_price=100.0,
+        subtotal=90.0,
+        tax=10.0,
+        payment_status="paid",
+        order_type="dine_in",
+        created_at=datetime.now(timezone.utc)
+    )
+    db_session.add(order)
+    db_session.commit()
+    db_session.refresh(order)
+    return order
