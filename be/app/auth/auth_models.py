@@ -1,4 +1,5 @@
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy.orm import relationship
 from ..database import Base
 
 class User(Base):
@@ -12,6 +13,10 @@ class User(Base):
     apple_id = Column(String, unique=True, nullable=True)  # Apple ID for OAuth
     facebook_id = Column(String, unique=True, nullable=True)  # Facebook ID for OAuth
     is_active = Column(Boolean, default=True)  # Whether the user is active
+    
+    # Wallet relationships
+    wallet = relationship("UserWallet", back_populates="user", uselist=False, cascade="all, delete-orphan")
+    cashback_transactions = relationship("CashbackLedger", back_populates="user", cascade="all, delete-orphan")
 
 class Token(Base):
     __tablename__ = "tokens"

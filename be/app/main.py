@@ -10,6 +10,7 @@ from .auth.routes import auth_router
 from .bars_and_restaurants.routes.bars import bars_router
 from .bars_and_restaurants.routes.menus import menus_router
 from .bars_and_restaurants.routes.orders import orders_router
+from .bars_and_restaurants.routes.cart import cart_router
 from .bars_and_restaurants.services.connection_manager import ws_router
 from .bars_and_restaurants.routes.bar_owners import bar_owners_router
 from fastapi.openapi.utils import get_openapi
@@ -78,6 +79,9 @@ app.include_router(menus_router)
 # Include the orders router
 app.include_router(orders_router)
 
+# Include the cart router
+app.include_router(cart_router)
+
 # Include sockets router
 app.include_router(ws_router)
 
@@ -86,6 +90,10 @@ app.include_router(bar_owners_router)
 
 # Include the payment router
 app.include_router(payment_router)
+
+# Include the wallet router
+from .bars_and_restaurants.routes.wallet import wallet_router
+app.include_router(wallet_router)
 
 def custom_openapi():
     if app.openapi_schema:
