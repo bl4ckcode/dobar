@@ -43,7 +43,8 @@ firebase_creds_dict = load_firebase_credentials()
 cred = credentials.Certificate(firebase_creds_dict)
 initialize_app(cred)
 
-# Removed Base.metadata.create_all(bind=engine) - using Alembic migrations instead
+# Create tables on startup (temporary - will migrate to Alembic when DB is healthy)
+Base.metadata.create_all(bind=engine)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
