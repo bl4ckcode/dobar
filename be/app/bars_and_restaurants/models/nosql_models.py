@@ -19,7 +19,6 @@ client = AsyncIOMotorClient(
     tls=True,
     tlsCAFile=certifi.where(),
     tlsDisableOCSPEndpointCheck=True,
-    tlsDisableCertificateRevocationCheck=True,
     serverSelectionTimeoutMS=15000,
     connectTimeoutMS=15000,
 )
