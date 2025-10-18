@@ -13,19 +13,11 @@ from .bars_and_restaurants.routes.orders import orders_router
 from .bars_and_restaurants.routes.cart import cart_router
 from .bars_and_restaurants.services.connection_manager import ws_router
 from .bars_and_restaurants.routes.bar_owners import bar_owners_router
+from .bars_and_restaurants.routes.wallet import wallet_router
 from fastapi.openapi.utils import get_openapi
 from contextlib import asynccontextmanager
 from firebase_admin import initialize_app, credentials
 from .payment.routes import payment_router
-
-load_dotenv()
-
-import json
-import os
-from dotenv import load_dotenv
-from firebase_admin import credentials
-
-load_dotenv()
 
 def load_firebase_credentials():
     raw_json = os.getenv("FIREBASE_CREDENTIALS_JSON")
@@ -43,14 +35,12 @@ firebase_creds_dict = load_firebase_credentials()
 cred = credentials.Certificate(firebase_creds_dict)
 initialize_app(cred)
 
-# Create tables on startup (temporary - will migrate to Alembic when DB is healthy)
 Base.metadata.create_all(bind=engine)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await database.connect()
     
-    # Try MongoDB connection, but don't crash if it fails
     try:
         await create_geo_index()
         print("✅ MongoDB connected successfully")
@@ -75,32 +65,14 @@ async def custom_http_exception_handler(request: Request, exc: CustomHTTPExcepti
         ).model_dump()
     )
 
-# Include the authrouter
 app.include_router(auth_router)
-
-# Include the bars router
 app.include_router(bars_router)
-
-# Include the menus router
 app.include_router(menus_router)
-
-# Include the orders router
 app.include_router(orders_router)
-
-# Include the cart router
 app.include_router(cart_router)
-
-# Include sockets router
 app.include_router(ws_router)
-
-# Include bars owners router
 app.include_router(bar_owners_router)
-
-# Include the payment router
 app.include_router(payment_router)
-
-# Include the wallet router
-from .bars_and_restaurants.routes.wallet import wallet_router
 app.include_router(wallet_router)
 
 def custom_openapi():
