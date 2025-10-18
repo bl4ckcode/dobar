@@ -49,7 +49,14 @@ Base.metadata.create_all(bind=engine)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     await database.connect()
-    await create_geo_index()
+    
+    # Try MongoDB connection, but don't crash if it fails
+    try:
+        await create_geo_index()
+        print("✅ MongoDB connected successfully")
+    except Exception as e:
+        print(f"⚠️  MongoDB connection failed (app will continue without MongoDB): {e}")
+    
     yield
     await database.disconnect()
 

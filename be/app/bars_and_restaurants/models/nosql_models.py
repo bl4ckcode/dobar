@@ -3,6 +3,7 @@ from pymongo.server_api import ServerApi
 from dotenv import load_dotenv
 import os
 import ssl
+import certifi
 
 # Load environment variables
 load_dotenv()
@@ -12,12 +13,12 @@ MONGO_URI = os.getenv("MONGO_URI")
 MONGO_DB = os.getenv("MONGO_DB")
 
 # Initialize the AsyncIOMotorClient with the Server API version and SSL settings
-# Using ssl_cert_reqs=ssl.CERT_NONE to bypass certificate validation issues
+# Use certifi for proper SSL certificate validation
 client = AsyncIOMotorClient(
     MONGO_URI, 
     server_api=ServerApi('1'),
     tls=True,
-    tlsAllowInvalidCertificates=True
+    tlsCAFile=certifi.where()
 )
 db = client[MONGO_DB]
 
