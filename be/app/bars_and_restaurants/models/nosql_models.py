@@ -12,11 +12,16 @@ load_dotenv()
 MONGO_URI = os.getenv("MONGO_URI")
 MONGO_DB = os.getenv("MONGO_DB")
 
-# Initialize the AsyncIOMotorClient with the Server API version and SSL settings
-# Use certifi for proper SSL certificate validation
+# Initialize the AsyncIOMotorClient with explicit TLS and CA bundle.
 client = AsyncIOMotorClient(
-    MONGO_URI, 
-    server_api=ServerApi('1')
+    MONGO_URI,
+    server_api=ServerApi('1'),
+    tls=True,
+    tlsCAFile=certifi.where(),
+    tlsDisableOCSPEndpointCheck=True,
+    tlsDisableCertificateRevocationCheck=True,
+    serverSelectionTimeoutMS=15000,
+    connectTimeoutMS=15000,
 )
 db = client[MONGO_DB]
 
