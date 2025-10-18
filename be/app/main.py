@@ -45,7 +45,9 @@ async def lifespan(app: FastAPI):
         await create_geo_index()
         print("✅ MongoDB connected successfully")
     except Exception as e:
-        print(f"⚠️  MongoDB connection failed (app will continue without MongoDB): {e}")
+        print(f"⚠️  MongoDB connection failed (app will continue without MongoDB):")
+        print(f"   Error: {type(e).__name__}: {str(e)}")
+        print(f"   Hint: Check MongoDB Atlas network access whitelist for IP: Check Fly.io machine IPs")
     
     yield
     await database.disconnect()

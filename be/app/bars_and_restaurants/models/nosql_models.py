@@ -16,9 +16,7 @@ MONGO_DB = os.getenv("MONGO_DB")
 # Use certifi for proper SSL certificate validation
 client = AsyncIOMotorClient(
     MONGO_URI, 
-    server_api=ServerApi('1'),
-    tls=True,
-    tlsCAFile=certifi.where()
+    server_api=ServerApi('1')
 )
 db = client[MONGO_DB]
 
