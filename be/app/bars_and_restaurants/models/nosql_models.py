@@ -2,8 +2,6 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from pymongo.server_api import ServerApi
 from dotenv import load_dotenv
 import os
-import ssl
-import certifi
 
 # Load environment variables
 load_dotenv()
@@ -12,15 +10,10 @@ load_dotenv()
 MONGO_URI = os.getenv("MONGO_URI")
 MONGO_DB = os.getenv("MONGO_DB")
 
-# Initialize the AsyncIOMotorClient with explicit TLS and CA bundle.
+# Initialize the AsyncIOMotorClient (TLS/SSL is handled by the connection URI)
 client = AsyncIOMotorClient(
     MONGO_URI,
-    server_api=ServerApi('1'),
-    tls=True,
-    tlsCAFile=certifi.where(),
-    tlsDisableOCSPEndpointCheck=True,
-    serverSelectionTimeoutMS=15000,
-    connectTimeoutMS=15000,
+    server_api=ServerApi('1')
 )
 db = client[MONGO_DB]
 
