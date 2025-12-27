@@ -1,7 +1,17 @@
 # This module is internal and should not be imported directly.
 # Use `get_payment_gateway()` from `factory.py` instead.
+"""
+Stone/Pagar.me Payment Gateway Implementation.
 
-from typing import Optional
+Supports:
+- Credit Card: Full support with installments, auth_only, auth_and_capture
+- Debit Card: Requires 3DS authentication (threed_secure object)
+- PIX: Brazilian instant payment with QR code generation
+
+Reference: https://docs.pagar.me/reference/introducao-1
+"""
+
+from typing import Dict, Any, Optional
 from app.payment.core.interfaces import PaymentGateway
 from app.payment.utils.currency import normalize_currency
 
@@ -14,8 +24,14 @@ from pagarmeapisdk.models.create_cancel_charge_request import CreateCancelCharge
 from pagarmeapisdk.models.create_customer_request import CreateCustomerRequest
 from pagarmeapisdk.models.create_payment_request import CreatePaymentRequest
 from pagarmeapisdk.models.create_credit_card_payment_request import CreateCreditCardPaymentRequest
+from pagarmeapisdk.models.create_debit_card_payment_request import CreateDebitCardPaymentRequest
 from pagarmeapisdk.models.create_card_request import CreateCardRequest
 from pagarmeapisdk.models.create_pix_payment_request import CreatePixPaymentRequest
+from pagarmeapisdk.models.create_payment_authentication_request import CreatePaymentAuthenticationRequest
+from pagarmeapisdk.models.create_three_d_secure_request import CreateThreeDSecureRequest
+from pagarmeapisdk.models.pix_additional_information import PixAdditionalInformation
+from pagarmeapisdk.models.create_phones_request import CreatePhonesRequest
+from pagarmeapisdk.models.create_phone_request import CreatePhoneRequest
 
 from dotenv import load_dotenv
 
@@ -24,85 +40,351 @@ import logging
 
 load_dotenv()
 
-def get_pagarme_client():
+logger = logging.getLogger(__name__)
+
+
+def _get_pagarme_client(environment: str = "production") -> PagarmeapisdkClient:
+    """Initialize Pagar.me SDK client with credentials from environment.
+    
+    Args:
+        environment: "production" or "sandbox"
+        
+    Returns:
+        Configured PagarmeapisdkClient instance
+        
+    Raises:
+        ValueError: If PAGARME_USERNAME is not configured
+    """
     username = os.getenv('PAGARME_USERNAME')
-    password = os.getenv('PAGARME_PASSWORD')
+    password = os.getenv('PAGARME_PASSWORD', '')
 
     if not username:
-        raise ValueError("Pagar.me API key is missing in .env file.")
+        raise ValueError("Pagar.me API key (PAGARME_USERNAME) is missing in environment.")
 
-    client = PagarmeapisdkClient(
+    env = Environment.SANDBOX if environment.lower() == "sandbox" else Environment.PRODUCTION
+
+    return PagarmeapisdkClient(
         basic_auth_credentials=BasicAuthCredentials(
             username=username,
             password=password
         ),
-        environment=Environment.PRODUCTION  # or Environment.SANDBOX
+        environment=env
     )
 
-    return client
-
 class StonePaymentGateway(PaymentGateway):
-    def __init__(self, config: dict):
-        self.client = get_pagarme_client()
+    """Stone/Pagar.me Payment Gateway.
+    
+    Supports three payment methods for the Brazilian market:
+    - credit_card: With installments (1-12), auth_only or auth_and_capture
+    - debit_card: Requires 3DS authentication (Gateway customers only)
+    - pix: Brazilian instant payment with QR code
+    
+    Configuration:
+        config["PAGARME_USERNAME"]: API key (secret key)
+        config["PAGARME_PASSWORD"]: Optional password (usually empty)
+        config["PAGARME_ENV"]: "sandbox" or "production" (default: production)
+    """
 
-    def create_charge(self, amount: int, currency: str, customer: dict, payment_method: dict) -> dict:
+    # Supported payment methods
+    PAYMENT_METHODS = {"credit_card", "debit_card", "pix"}
+    
+    # Max statement descriptor length (PSP mode)
+    MAX_STATEMENT_DESCRIPTOR_LENGTH = 13
+
+    def __init__(self, config: Dict[str, Any]):
+        """Initialize Stone gateway with configuration.
+        
+        Args:
+            config: Dictionary with PAGARME_USERNAME, PAGARME_PASSWORD, PAGARME_ENV
+        """
+        self._environment = config.get("PAGARME_ENV", "production")
+        
+        # Check if credentials are available
+        username = config.get("PAGARME_USERNAME") or os.getenv("PAGARME_USERNAME")
+        self._credentials_configured = bool(username)
+        
+        if self._credentials_configured:
+            try:
+                self._client = _get_pagarme_client(self._environment)
+            except ValueError as e:
+                logger.warning(f"Pagar.me client initialization failed: {e}")
+                self._client = None
+                self._credentials_configured = False
+        else:
+            self._client = None
+
+    def create_charge(
+        self, 
+        amount: float, 
+        currency: str, 
+        customer: Optional[Dict[str, Any]] = None,
+        payment_method: Optional[Dict[str, Any]] = None,
+        **kwargs
+    ) -> Dict[str, Any]:
         """Create a Stone/Pagar.me charge.
 
-        Supports both traditional credit card payments and Pix payments.
-        Pix is selected when `payment_method["payment_method"] == "pix"`.
+        Supports credit_card, debit_card, and pix payment methods.
+        
+        Args:
+            amount: Amount in BRL (will be converted to cents)
+            currency: Currency code (should be BRL for Pagar.me)
+            customer: Customer data with name, email, document, phones
+            payment_method: Payment details including:
+                - payment_method: "credit_card", "debit_card", or "pix"
+                - For cards: card object with number, holder_name, exp_month, exp_year, cvv
+                - For credit_card: installments (1-12), capture (bool)
+                - For debit_card: authentication (3DS data required)
+                - For pix: expires_in (seconds), additional_information
+            **kwargs: Additional parameters (order_id, metadata, etc.)
+            
+        Returns:
+            Dictionary with charge result including:
+            - status: "success" or "error"
+            - charge_id: Pagar.me charge ID
+            - For PIX: qr_code, qr_code_url, pix_copia_e_cola
         """
+        if not self._credentials_configured or not self._client:
+            return {
+                "status": "error",
+                "provider": "stone",
+                "message": "Pagar.me credentials not configured",
+            }
 
-        customer_model = self._build_customer_model(customer)
-        payment_model = self._build_payment_model(payment_method, amount)
-        charge_request = self._build_charge_request(amount, customer_model, payment_model)
+        if not customer:
+            return {
+                "status": "error",
+                "provider": "stone", 
+                "message": "Customer data is required",
+            }
+
+        if not payment_method:
+            return {
+                "status": "error",
+                "provider": "stone",
+                "message": "Payment method data is required",
+            }
+
+        method = payment_method.get("payment_method", "credit_card")
+        if method not in self.PAYMENT_METHODS:
+            return {
+                "status": "error",
+                "provider": "stone",
+                "message": f"Unsupported payment method: {method}. Supported: {self.PAYMENT_METHODS}",
+            }
+
+        # Convert amount to cents (Pagar.me expects integer cents)
+        amount_cents = int(amount * 100)
 
         try:
-            return self.client.charges.create_charge(charge_request)
-        except ErrorException as e:
-            logging.error(f"Error occurred while creating charge: {e}")
-            raise e
+            customer_model = self._build_customer_model(customer)
+            payment_model = self._build_payment_model(payment_method, amount_cents)
+            
+            order_id = kwargs.get("order_id", f"order_{os.urandom(8).hex()}")
+            charge_request = CreateChargeRequest(
+                amount=amount_cents,
+                customer=customer_model,
+                payment=payment_model,
+                order_id=order_id
+            )
 
-    def _build_customer_model(self, customer: dict) -> CreateCustomerRequest:
+            response = self._client.charges.create_charge(charge_request)
+            
+            return self._normalize_charge_response(response, method)
+
+        except ErrorException as e:
+            logger.error(f"Pagar.me API error creating charge: {e}")
+            return {
+                "status": "error",
+                "provider": "stone",
+                "message": str(e),
+                "errors": getattr(e, 'errors', None),
+            }
+        except Exception as e:
+            logger.error(f"Unexpected error creating charge: {e}")
+            return {
+                "status": "error",
+                "provider": "stone",
+                "message": f"Unexpected error: {str(e)}",
+            }
+
+    def _build_customer_model(self, customer: Dict[str, Any]) -> CreateCustomerRequest:
+        """Build customer model from customer data.
+        
+        PIX payments require complete customer data including phone numbers.
+        """
+        phones = None
+        if "phones" in customer:
+            phones_data = customer["phones"]
+            home_phone = None
+            mobile_phone = None
+            
+            if "home_phone" in phones_data:
+                hp = phones_data["home_phone"]
+                home_phone = CreatePhoneRequest(
+                    country_code=hp.get("country_code", "55"),
+                    area_code=hp.get("area_code", ""),
+                    number=hp.get("number", "")
+                )
+            
+            if "mobile_phone" in phones_data:
+                mp = phones_data["mobile_phone"]
+                mobile_phone = CreatePhoneRequest(
+                    country_code=mp.get("country_code", "55"),
+                    area_code=mp.get("area_code", ""),
+                    number=mp.get("number", "")
+                )
+            
+            phones = CreatePhonesRequest(
+                home_phone=home_phone,
+                mobile_phone=mobile_phone
+            )
+
         return CreateCustomerRequest(
             name=customer["name"],
             email=customer["email"],
-            document=customer["document"]
+            document=customer.get("document"),
+            phones=phones
         )
 
-    def _build_credit_card_model(self, payment_method: dict) -> CreateCreditCardPaymentRequest:
-        card = CreateCardRequest(
-            number=payment_method["card"]["number"],
-            holder_name=payment_method["card"]["holder_name"],
-            exp_month=payment_method["card"]["exp_month"],
-            exp_year=payment_method["card"]["exp_year"],
-            cvv=payment_method["card"]["cvv"]
+    def _build_card_model(self, card_data: Dict[str, Any]) -> CreateCardRequest:
+        """Build card request model from card data."""
+        return CreateCardRequest(
+            number=card_data.get("number"),
+            holder_name=card_data.get("holder_name"),
+            exp_month=card_data.get("exp_month"),
+            exp_year=card_data.get("exp_year"),
+            cvv=card_data.get("cvv"),
+            brand=card_data.get("brand"),
+            holder_document=card_data.get("holder_document")
         )
+
+    def _build_credit_card_model(self, payment_method: Dict[str, Any]) -> CreateCreditCardPaymentRequest:
+        """Build credit card payment request.
+        
+        Supports:
+        - card: Raw card data (number, holder_name, exp_month, exp_year, cvv)
+        - card_id: Stored card ID
+        - card_token: Tokenized card from frontend
+        - installments: 1-12
+        - capture: True for auth_and_capture, False for auth_only
+        - statement_descriptor: Max 13 chars (PSP mode)
+        """
+        card = None
+        card_id = payment_method.get("card_id")
+        card_token = payment_method.get("card_token")
+        
+        if "card" in payment_method and not card_id and not card_token:
+            card = self._build_card_model(payment_method["card"])
+        
+        statement_descriptor = payment_method.get("statement_descriptor", "")
+        if len(statement_descriptor) > self.MAX_STATEMENT_DESCRIPTOR_LENGTH:
+            statement_descriptor = statement_descriptor[:self.MAX_STATEMENT_DESCRIPTOR_LENGTH]
+
         return CreateCreditCardPaymentRequest(
             card=card,
+            card_id=card_id,
+            card_token=card_token,
             installments=payment_method.get("installments", 1),
-            capture=payment_method.get("capture", True)
+            capture=payment_method.get("capture", True),
+            statement_descriptor=statement_descriptor if statement_descriptor else None
         )
 
-    def _build_pix_model(self, payment_method: dict) -> CreatePixPaymentRequest:
+    def _build_pix_model(self, payment_method: Dict[str, Any]) -> CreatePixPaymentRequest:
         """Build a Pix payment model.
 
-        For MVP we rely mostly on provider defaults; callers can later extend
-        `payment_method` with Pix-specific options like `expires_in` or
-        `additional_information` if needed.
+        Pix payments return a QR code that the customer scans to complete payment.
+        
+        Args:
+            payment_method: Dict with optional keys:
+                - expires_in: Seconds until PIX expires (default varies by provider)
+                - expires_at: Datetime when PIX expires (RFC3339)
+                - additional_information: List of {name, value} dicts for PIX receipt
         """
         pix_kwargs = {}
+        
         if "expires_in" in payment_method:
             pix_kwargs["expires_in"] = payment_method["expires_in"]
         if "expires_at" in payment_method:
             pix_kwargs["expires_at"] = payment_method["expires_at"]
-        # `additional_information` can be passed as a list of dictionaries
-        # already shaped for `PixAdditionalInformation` if desired.
+            
+        # Build additional_information if provided
         if "additional_information" in payment_method:
-            pix_kwargs["additional_information"] = payment_method["additional_information"]
+            additional_info = []
+            for item in payment_method["additional_information"]:
+                additional_info.append(
+                    PixAdditionalInformation(
+                        name=item.get("name", ""),
+                        value=item.get("value", "")
+                    )
+                )
+            if additional_info:
+                pix_kwargs["additional_information"] = additional_info
 
         return CreatePixPaymentRequest(**pix_kwargs)
 
-    def _build_payment_model(self, payment_method: dict, amount: int) -> CreatePaymentRequest:
+    def _build_debit_card_model(self, payment_method: Dict[str, Any]) -> CreateDebitCardPaymentRequest:
+        """Build debit card payment request.
+        
+        IMPORTANT: Debit card requires 3DS authentication (Gateway customers only).
+        The 3DS authentication must be performed externally before calling this method.
+        
+        Args:
+            payment_method: Dict with:
+                - card: Raw card data OR card_id OR card_token
+                - authentication: 3DS authentication data (REQUIRED)
+                    - type: Authentication type (e.g., "threed_secure")
+                    - threed_secure: {mpi, cavv, eci, transaction_id, ds_transaction_id, version}
+                - statement_descriptor: Max 13 chars
+        """
+        card = None
+        card_id = payment_method.get("card_id")
+        card_token = payment_method.get("card_token")
+        
+        if "card" in payment_method and not card_id and not card_token:
+            card = self._build_card_model(payment_method["card"])
+
+        # Build 3DS authentication (required for debit)
+        authentication = None
+        auth_data = payment_method.get("authentication")
+        if auth_data:
+            threed_secure = None
+            if "threed_secure" in auth_data:
+                tds = auth_data["threed_secure"]
+                threed_secure = CreateThreeDSecureRequest(
+                    mpi=tds.get("mpi"),
+                    cavv=tds.get("cavv"),
+                    eci=tds.get("eci"),
+                    transaction_id=tds.get("transaction_id"),
+                    ds_transaction_id=tds.get("ds_transaction_id"),
+                    version=tds.get("version")
+                )
+            authentication = CreatePaymentAuthenticationRequest(
+                mtype=auth_data.get("type", "threed_secure"),
+                threed_secure=threed_secure
+            )
+        
+        statement_descriptor = payment_method.get("statement_descriptor", "")
+        if len(statement_descriptor) > self.MAX_STATEMENT_DESCRIPTOR_LENGTH:
+            statement_descriptor = statement_descriptor[:self.MAX_STATEMENT_DESCRIPTOR_LENGTH]
+
+        return CreateDebitCardPaymentRequest(
+            card=card,
+            card_id=card_id,
+            card_token=card_token,
+            authentication=authentication,
+            statement_descriptor=statement_descriptor if statement_descriptor else None
+        )
+
+    def _build_payment_model(self, payment_method: Dict[str, Any], amount: int) -> CreatePaymentRequest:
+        """Build payment request model based on payment method type.
+        
+        Args:
+            payment_method: Payment data including payment_method type
+            amount: Amount in cents
+            
+        Returns:
+            CreatePaymentRequest configured for the specific payment method
+        """
         method = payment_method.get("payment_method", "credit_card")
 
         if method == "pix":
@@ -113,6 +395,15 @@ class StonePaymentGateway(PaymentGateway):
                 amount=amount
             )
 
+        if method == "debit_card":
+            debit_card = self._build_debit_card_model(payment_method)
+            return CreatePaymentRequest(
+                payment_method="debit_card",
+                debit_card=debit_card,
+                amount=amount
+            )
+
+        # Default to credit card
         credit_card = self._build_credit_card_model(payment_method)
         return CreatePaymentRequest(
             payment_method="credit_card",
@@ -120,41 +411,214 @@ class StonePaymentGateway(PaymentGateway):
             amount=amount
         )
 
-    def _build_charge_request(self, amount: int, customer: CreateCustomerRequest, payment: CreatePaymentRequest) -> CreateChargeRequest:
-        return CreateChargeRequest(
-            amount=amount,
-            customer=customer,
-            payment=payment,
-            order_id="ORDER_XYZ"
-        )
+    def _normalize_charge_response(self, response: Any, payment_method: str) -> Dict[str, Any]:
+        """Normalize Pagar.me charge response to standard format.
+        
+        Args:
+            response: Raw Pagar.me API response
+            payment_method: The payment method used (credit_card, debit_card, pix)
+            
+        Returns:
+            Normalized dictionary with charge details
+        """
+        result = {
+            "status": "success",
+            "provider": "stone",
+            "charge_id": getattr(response, "id", None),
+            "charge_status": getattr(response, "status", None),
+            "amount": getattr(response, "amount", None),
+            "currency": "BRL",
+            "payment_method": payment_method,
+            "created_at": getattr(response, "created_at", None),
+        }
+
+        # Extract transaction info if available
+        last_transaction = getattr(response, "last_transaction", None)
+        if last_transaction:
+            result["transaction_id"] = getattr(last_transaction, "id", None)
+            result["transaction_status"] = getattr(last_transaction, "status", None)
+            
+            # For PIX, extract QR code data
+            if payment_method == "pix":
+                result["qr_code"] = getattr(last_transaction, "qr_code", None)
+                result["qr_code_url"] = getattr(last_transaction, "qr_code_url", None)
+                # Some responses have pix_copia_e_cola (copy-paste code)
+                result["pix_copia_e_cola"] = getattr(last_transaction, "qr_code", None)
+                result["expires_at"] = getattr(last_transaction, "expires_at", None)
+            
+            # For cards, extract additional info
+            if payment_method in ("credit_card", "debit_card"):
+                result["acquirer_message"] = getattr(last_transaction, "acquirer_message", None)
+                result["acquirer_return_code"] = getattr(last_transaction, "acquirer_return_code", None)
+
+        return result
 
     def refund_charge(
         self,
         charge_id: Optional[str] = None,
         payment_intent_id: Optional[str] = None,
         amount: Optional[float] = None
-    ) -> dict:
+    ) -> Dict[str, Any]:
+        """Refund a Pagar.me charge (full or partial).
+        
+        Args:
+            charge_id: The Pagar.me charge ID to refund (required)
+            payment_intent_id: Not used for Stone, ignored
+            amount: Amount to refund in BRL. If None, full refund.
+            
+        Returns:
+            Dictionary with refund result
+        """
+        if not self._credentials_configured or not self._client:
+            return {
+                "status": "error",
+                "provider": "stone",
+                "message": "Pagar.me credentials not configured",
+            }
+
+        if not charge_id:
+            return {
+                "status": "error",
+                "provider": "stone",
+                "message": "Stone requires a charge_id to refund.",
+            }
+
         try:
-            if not charge_id:
-                raise ValueError("Stone requires a charge_id to refund.")
+            cancel_request = None
+            if amount is not None:
+                # Partial refund - convert to cents
+                amount_cents = int(amount * 100)
+                cancel_request = CreateCancelChargeRequest(amount=amount_cents)
+            else:
+                cancel_request = CreateCancelChargeRequest()
 
-            cancel_request = (
-                CreateCancelChargeRequest(amount=int(amount * 100))  # Convert to cents
-                if amount else
-                CreateCancelChargeRequest()
-            )
-
-            response = self.client.charges.cancel_charge(charge_id, cancel_request)
+            response = self._client.charges.cancel_charge(charge_id, cancel_request)
+            
             return {
                 "status": "success",
-                "refund_id": response.id,
-                "amount_refunded": response.amount,
-                "status_stone": response.status
+                "provider": "stone",
+                "refund_id": getattr(response, "id", None),
+                "charge_id": charge_id,
+                "amount_refunded": getattr(response, "canceled_amount", getattr(response, "amount", None)),
+                "charge_status": getattr(response, "status", None),
             }
 
         except ErrorException as e:
-            logging.error(f"Error occurred while refunding charge {charge_id}: {e}")
-            return {"status": "failure", "error": str(e)}
+            logger.error(f"Pagar.me API error refunding charge {charge_id}: {e}")
+            return {
+                "status": "error",
+                "provider": "stone",
+                "message": str(e),
+                "errors": getattr(e, 'errors', None),
+            }
         except Exception as e:
-            logging.error(f"Unexpected error: {e}")
-            return {"status": "failure", "error": str(e)}
+            logger.error(f"Unexpected error refunding charge {charge_id}: {e}")
+            return {
+                "status": "error",
+                "provider": "stone",
+                "message": f"Unexpected error: {str(e)}",
+            }
+
+    def capture_charge(
+        self,
+        payment_intent_id: str,
+        amount: Optional[float] = None,
+    ) -> Dict[str, Any]:
+        """Capture a previously authorized charge.
+        
+        Use this when create_charge was called with capture=False (auth_only).
+        
+        Args:
+            payment_intent_id: The charge ID to capture
+            amount: Amount to capture in BRL. If None, captures full amount.
+            
+        Returns:
+            Dictionary with capture result
+        """
+        if not self._credentials_configured or not self._client:
+            return {
+                "status": "error",
+                "provider": "stone",
+                "message": "Pagar.me credentials not configured",
+            }
+
+        if not payment_intent_id:
+            return {
+                "status": "error",
+                "provider": "stone",
+                "message": "charge_id (payment_intent_id) is required to capture.",
+            }
+
+        try:
+            # Pagar.me uses capture_charge endpoint
+            capture_kwargs = {}
+            if amount is not None:
+                capture_kwargs["amount"] = int(amount * 100)
+
+            response = self._client.charges.capture_charge(
+                charge_id=payment_intent_id,
+                request=capture_kwargs if capture_kwargs else None
+            )
+            
+            return {
+                "status": "success",
+                "provider": "stone",
+                "charge_id": getattr(response, "id", None),
+                "charge_status": getattr(response, "status", None),
+                "amount_captured": getattr(response, "amount", None),
+            }
+
+        except ErrorException as e:
+            logger.error(f"Pagar.me API error capturing charge {payment_intent_id}: {e}")
+            return {
+                "status": "error",
+                "provider": "stone",
+                "message": str(e),
+            }
+        except Exception as e:
+            logger.error(f"Unexpected error capturing charge {payment_intent_id}: {e}")
+            return {
+                "status": "error",
+                "provider": "stone",
+                "message": f"Unexpected error: {str(e)}",
+            }
+
+    def get_charge(self, charge_id: str) -> Dict[str, Any]:
+        """Retrieve a charge by ID.
+        
+        Args:
+            charge_id: The Pagar.me charge ID
+            
+        Returns:
+            Dictionary with charge details
+        """
+        if not self._credentials_configured or not self._client:
+            return {
+                "status": "error",
+                "provider": "stone",
+                "message": "Pagar.me credentials not configured",
+            }
+
+        try:
+            response = self._client.charges.get_charge(charge_id)
+            
+            payment_method = "unknown"
+            if hasattr(response, "payment_method"):
+                payment_method = response.payment_method
+            
+            return self._normalize_charge_response(response, payment_method)
+
+        except ErrorException as e:
+            logger.error(f"Pagar.me API error getting charge {charge_id}: {e}")
+            return {
+                "status": "error",
+                "provider": "stone",
+                "message": str(e),
+            }
+        except Exception as e:
+            logger.error(f"Unexpected error getting charge {charge_id}: {e}")
+            return {
+                "status": "error",
+                "provider": "stone",
+                "message": f"Unexpected error: {str(e)}",
+            }
