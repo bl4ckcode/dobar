@@ -15,6 +15,7 @@ from pagarmeapisdk.models.create_customer_request import CreateCustomerRequest
 from pagarmeapisdk.models.create_payment_request import CreatePaymentRequest
 from pagarmeapisdk.models.create_credit_card_payment_request import CreateCreditCardPaymentRequest
 from pagarmeapisdk.models.create_card_request import CreateCardRequest
+from pagarmeapisdk.models.create_pix_payment_request import CreatePixPaymentRequest
 
 from dotenv import load_dotenv
 
@@ -45,9 +46,14 @@ class StonePaymentGateway(PaymentGateway):
         self.client = get_pagarme_client()
 
     def create_charge(self, amount: int, currency: str, customer: dict, payment_method: dict) -> dict:
+        """Create a Stone/Pagar.me charge.
+
+        Supports both traditional credit card payments and Pix payments.
+        Pix is selected when `payment_method["payment_method"] == "pix"`.
+        """
+
         customer_model = self._build_customer_model(customer)
-        credit_card = self._build_credit_card_model(payment_method)
-        payment_model = self._build_payment_model(payment_method, credit_card, amount)
+        payment_model = self._build_payment_model(payment_method, amount)
         charge_request = self._build_charge_request(amount, customer_model, payment_model)
 
         try:
@@ -77,7 +83,37 @@ class StonePaymentGateway(PaymentGateway):
             capture=payment_method.get("capture", True)
         )
 
-    def _build_payment_model(self, payment_method: dict, credit_card: CreateCreditCardPaymentRequest, amount: int) -> CreatePaymentRequest:
+    def _build_pix_model(self, payment_method: dict) -> CreatePixPaymentRequest:
+        """Build a Pix payment model.
+
+        For MVP we rely mostly on provider defaults; callers can later extend
+        `payment_method` with Pix-specific options like `expires_in` or
+        `additional_information` if needed.
+        """
+        pix_kwargs = {}
+        if "expires_in" in payment_method:
+            pix_kwargs["expires_in"] = payment_method["expires_in"]
+        if "expires_at" in payment_method:
+            pix_kwargs["expires_at"] = payment_method["expires_at"]
+        # `additional_information` can be passed as a list of dictionaries
+        # already shaped for `PixAdditionalInformation` if desired.
+        if "additional_information" in payment_method:
+            pix_kwargs["additional_information"] = payment_method["additional_information"]
+
+        return CreatePixPaymentRequest(**pix_kwargs)
+
+    def _build_payment_model(self, payment_method: dict, amount: int) -> CreatePaymentRequest:
+        method = payment_method.get("payment_method", "credit_card")
+
+        if method == "pix":
+            pix = self._build_pix_model(payment_method)
+            return CreatePaymentRequest(
+                payment_method="pix",
+                pix=pix,
+                amount=amount
+            )
+
+        credit_card = self._build_credit_card_model(payment_method)
         return CreatePaymentRequest(
             payment_method="credit_card",
             credit_card=credit_card,

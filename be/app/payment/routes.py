@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from app.errors import CustomHTTPException
 from .schemas import PaymentRequest, RefundRequest
@@ -55,9 +55,26 @@ async def refund_charge(
             data=response
         )
     return response
-   
-from fastapi import Query
 
+
+@payment_router.post("/capture")
+async def capture_charge(
+    payment_intent_id: str,
+    amount: float | None = None,
+    gateway: PaymentGateway = Depends(get_payment_gateway),
+):
+    response = gateway.capture_charge(payment_intent_id=payment_intent_id, amount=amount)
+
+    if response.get("status") == "error":
+        raise CustomHTTPException(
+            code=400,
+            error_type="payment_error",
+            message=response.get("message", "Failed to capture payment"),
+            data=response,
+        )
+
+    return response
+   
 @payment_router.post("/checkout")
 async def create_checkout(
     success_url: str = Query(..., description="URL to redirect after successful payment"),
