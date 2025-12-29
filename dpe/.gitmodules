@@ -1,0 +1,3 @@
+[submodule "dobar_payment/pagarme_sdk"]
+	path = dobar_payment/pagarme_sdk
+	url = https://github.com/pagarme/pagarme-python-sdk.git
