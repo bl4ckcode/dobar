@@ -19,9 +19,11 @@ from pagarmeapisdk.pagarmeapisdk_client import PagarmeapisdkClient
 from pagarmeapisdk.http.auth.basic_auth import BasicAuthCredentials
 from pagarmeapisdk.configuration import Environment
 from pagarmeapisdk.exceptions.error_exception import ErrorException
-from pagarmeapisdk.models.create_charge_request import CreateChargeRequest
+from pagarmeapisdk.models.create_order_request import CreateOrderRequest
+from pagarmeapisdk.models.create_order_item_request import CreateOrderItemRequest
 from pagarmeapisdk.models.create_cancel_charge_request import CreateCancelChargeRequest
 from pagarmeapisdk.models.create_customer_request import CreateCustomerRequest
+from pagarmeapisdk.models.create_address_request import CreateAddressRequest
 from pagarmeapisdk.models.create_payment_request import CreatePaymentRequest
 from pagarmeapisdk.models.create_credit_card_payment_request import CreateCreditCardPaymentRequest
 from pagarmeapisdk.models.create_debit_card_payment_request import CreateDebitCardPaymentRequest
@@ -47,7 +49,9 @@ def _get_pagarme_client(environment: str = "production") -> PagarmeapisdkClient:
     """Initialize Pagar.me SDK client with credentials from environment.
     
     Args:
-        environment: "production" or "sandbox"
+        environment: "production" or "sandbox" (informational only - 
+                     Pagar.me uses the same URL for both; sandbox/production 
+                     is determined by API key type: sk_test_* for sandbox)
         
     Returns:
         Configured PagarmeapisdkClient instance
@@ -61,14 +65,18 @@ def _get_pagarme_client(environment: str = "production") -> PagarmeapisdkClient:
     if not username:
         raise ValueError("Pagar.me API key (PAGARME_USERNAME) is missing in environment.")
 
-    env = Environment.SANDBOX if environment.lower() == "sandbox" else Environment.PRODUCTION
+    # Pagar.me uses a single API endpoint (api.pagar.me/core/v5) for both sandbox and production.
+    # The environment is determined by the API key type:
+    # - sk_test_* keys work in sandbox mode
+    # - sk_* keys (without 'test') work in production mode
+    # So we always use Environment.PRODUCTION (the only defined value in the SDK)
 
     return PagarmeapisdkClient(
         basic_auth_credentials=BasicAuthCredentials(
             username=username,
             password=password
         ),
-        environment=env
+        environment=Environment.PRODUCTION
     )
 
 class StonePaymentGateway(PaymentGateway):
@@ -179,17 +187,29 @@ class StonePaymentGateway(PaymentGateway):
             customer_model = self._build_customer_model(customer)
             payment_model = self._build_payment_model(payment_method, amount_cents)
             
-            order_id = kwargs.get("order_id", f"order_{os.urandom(8).hex()}")
-            charge_request = CreateChargeRequest(
+            order_code = kwargs.get("order_id", f"order_{os.urandom(8).hex()}")
+            
+            # Create order item representing the purchase
+            order_item = CreateOrderItemRequest(
                 amount=amount_cents,
+                description=kwargs.get("description", "Payment"),
+                quantity=1,
+                category=kwargs.get("category", "payment")
+            )
+            
+            # Pagar.me V5 uses orders.create_order() with payments array
+            # Setting closed=True will automatically process the payment
+            order_request = CreateOrderRequest(
+                items=[order_item],
                 customer=customer_model,
-                payment=payment_model,
-                order_id=order_id
+                payments=[payment_model],
+                code=order_code,
+                closed=True
             )
 
-            response = self._client.charges.create_charge(charge_request)
+            response = self._client.orders.create_order(order_request)
             
-            return self._normalize_charge_response(response, method)
+            return self._normalize_order_response(response, method)
 
         except ErrorException as e:
             logger.error(f"Pagar.me API error creating charge: {e}")
@@ -211,7 +231,13 @@ class StonePaymentGateway(PaymentGateway):
         """Build customer model from customer data.
         
         PIX payments require complete customer data including phone numbers.
+        
+        Pagar.me requires:
+        - name, email, document, mtype (type), address, metadata, phones, code
+        
+        For flexibility, we use sensible defaults for optional fields the caller doesn't provide.
         """
+        # Build phones
         phones = None
         if "phones" in customer:
             phones_data = customer["phones"]
@@ -238,12 +264,61 @@ class StonePaymentGateway(PaymentGateway):
                 home_phone=home_phone,
                 mobile_phone=mobile_phone
             )
+        else:
+            # Default phones object if not provided
+            phones = CreatePhonesRequest(home_phone=None, mobile_phone=None)
+
+        # Build address
+        address = None
+        if "address" in customer:
+            addr = customer["address"]
+            address = CreateAddressRequest(
+                street=addr.get("street", ""),
+                number=addr.get("number", ""),
+                zip_code=addr.get("zip_code", ""),
+                neighborhood=addr.get("neighborhood", ""),
+                city=addr.get("city", ""),
+                state=addr.get("state", ""),
+                country=addr.get("country", "BR"),
+                complement=addr.get("complement", ""),
+                line_1=addr.get("line_1", ""),
+                line_2=addr.get("line_2", ""),
+                metadata=addr.get("metadata", {})
+            )
+        else:
+            # Default empty address - Pagar.me requires this field
+            address = CreateAddressRequest(
+                street="",
+                number="",
+                zip_code="",
+                neighborhood="",
+                city="",
+                state="",
+                country="BR",
+                complement="",
+                line_1="",
+                line_2="",
+                metadata={}
+            )
+
+        # Customer type: 'individual' or 'company'
+        mtype = customer.get("type", "individual")
+        
+        # Customer code - use email or generate if not provided
+        code = customer.get("code", customer.get("email", ""))
+        
+        # Metadata
+        metadata = customer.get("metadata", {})
 
         return CreateCustomerRequest(
             name=customer["name"],
             email=customer["email"],
-            document=customer.get("document"),
-            phones=phones
+            document=customer.get("document", ""),
+            mtype=mtype,
+            address=address,
+            metadata=metadata,
+            phones=phones,
+            code=code
         )
 
     def _build_card_model(self, card_data: Dict[str, Any]) -> CreateCardRequest:
@@ -410,6 +485,58 @@ class StonePaymentGateway(PaymentGateway):
             credit_card=credit_card,
             amount=amount
         )
+
+    def _normalize_order_response(self, response: Any, payment_method: str) -> Dict[str, Any]:
+        """Normalize Pagar.me order response to standard format.
+        
+        When creating an order with closed=True, the payment is processed automatically.
+        The order response contains charges array with the payment results.
+        
+        Args:
+            response: Raw Pagar.me order API response (GetOrderResponse)
+            payment_method: The payment method used (credit_card, debit_card, pix)
+            
+        Returns:
+            Normalized dictionary with charge details
+        """
+        result = {
+            "status": "success",
+            "provider": "stone",
+            "order_id": getattr(response, "id", None),
+            "order_code": getattr(response, "code", None),
+            "order_status": getattr(response, "status", None),
+            "amount": getattr(response, "amount", None),
+            "currency": "BRL",
+            "payment_method": payment_method,
+            "created_at": getattr(response, "created_at", None),
+        }
+
+        # Extract charge info from the order
+        charges = getattr(response, "charges", None)
+        if charges and len(charges) > 0:
+            charge = charges[0]  # Get the first charge
+            result["charge_id"] = getattr(charge, "id", None)
+            result["charge_status"] = getattr(charge, "status", None)
+            
+            # Extract transaction info
+            last_transaction = getattr(charge, "last_transaction", None)
+            if last_transaction:
+                result["transaction_id"] = getattr(last_transaction, "id", None)
+                result["transaction_status"] = getattr(last_transaction, "status", None)
+                
+                # For PIX, extract QR code data
+                if payment_method == "pix":
+                    result["qr_code"] = getattr(last_transaction, "qr_code", None)
+                    result["qr_code_url"] = getattr(last_transaction, "qr_code_url", None)
+                    result["pix_copia_e_cola"] = getattr(last_transaction, "qr_code", None)
+                    result["expires_at"] = getattr(last_transaction, "expires_at", None)
+                
+                # For cards, extract additional info
+                if payment_method in ("credit_card", "debit_card"):
+                    result["acquirer_message"] = getattr(last_transaction, "acquirer_message", None)
+                    result["acquirer_return_code"] = getattr(last_transaction, "acquirer_return_code", None)
+
+        return result
 
     def _normalize_charge_response(self, response: Any, payment_method: str) -> Dict[str, Any]:
         """Normalize Pagar.me charge response to standard format.
