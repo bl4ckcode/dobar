@@ -85,4 +85,4 @@ yarl==1.9.7
 apimatic-core==0.2.19
 apimatic-core-interfaces==0.1.6
 apimatic-requests-client-adapter==0.1.7
-dobar-payment-engine @ git+https://github.com/bl4ckcode/dobar-payment-engine.git@main
+# dobar-payment-engine installed separately in Dockerfile with auth

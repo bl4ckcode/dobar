@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.4
 # Use an official Python runtime as a parent image
 FROM python:3.11-slim
 
@@ -16,19 +17,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Ensure CA store exists and is up to date
 RUN update-ca-certificates
 
-    # Copy only git-related things first to initialize submodule
-COPY .git .git
-COPY .gitmodules .gitmodules
-
-# Clone submodule
-RUN git submodule update --init --recursive
-
-# Copy rest of the code
+# Copy application code
 COPY . .
 
-# Install dependencies
+# Install dependencies with GitHub token for private repos
+# The token is passed as a build secret and never stored in the image
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN --mount=type=secret,id=GITHUB_TOKEN \
+    GITHUB_TOKEN=$(cat /run/secrets/GITHUB_TOKEN) && \
+    pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir "dobar-payment-engine @ git+https://${GITHUB_TOKEN}@github.com/bl4ckcode/dobar-payment-engine.git@main"
 
 # Expose port
 EXPOSE 8080
