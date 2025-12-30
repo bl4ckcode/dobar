@@ -1,0 +1,102 @@
+name: Flutter Tests
+
+on:
+  push:
+    branches: [main, develop, 'feat/**']
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test:
+    name: Run Flutter Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run analyzer
+        run: flutter analyze --no-fatal-infos
+
+      - name: Run tests with coverage
+        run: flutter test --coverage --reporter expanded
+
+      - name: Check test coverage
+        run: |
+          if [ -f coverage/lcov.info ]; then
+            echo "Coverage report generated"
+            # Parse coverage percentage
+            COVERAGE=$(lcov --summary coverage/lcov.info 2>&1 | grep "lines" | awk '{print $2}' | sed 's/%//')
+            echo "Line coverage: $COVERAGE%"
+          fi
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          file: coverage/lcov.info
+          fail_ci_if_error: false
+        continue-on-error: true
+
+  test-matrix:
+    name: Test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            flutter-version: '3.24.0'
+          - os: macos-latest
+            flutter-version: '3.24.0'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ matrix.flutter-version }}
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run unit tests
+        run: flutter test --reporter expanded
+
+  payment-tests:
+    name: Payment Integration Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.0'
+          channel: 'stable'
+          cache: true
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run payment tests only
+        run: flutter test test/features/payments/ --reporter expanded
+
+      - name: Run error handling tests
+        run: flutter test test/core/ --reporter expanded
