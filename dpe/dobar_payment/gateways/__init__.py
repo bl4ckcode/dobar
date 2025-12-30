@@ -7,6 +7,9 @@ Available gateways:
 - PaypalPaymentGateway: For global PayPal payments
 """
 
+# Initialize pagarme_sdk path fix BEFORE importing Stone gateway
+import dobar_payment.pagarme_sdk  # noqa: F401
+
 from .stripe import StripePaymentGateway
 from .stone import StonePaymentGateway
 from .paypal import PaypalPaymentGateway
