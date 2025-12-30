@@ -1,6 +1,7 @@
 # dobar-payment-engine
 
-A payment processing engine for Python applications. Provides a unified interface for multiple payment gateways with built-in reliability patterns.
+A payment processing engine for Python applications. 
+Provides a unified interface for multiple payment gateways with built-in reliability patterns.
 
 ## Supported Gateways
 
