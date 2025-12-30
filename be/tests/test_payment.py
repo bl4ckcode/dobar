@@ -30,7 +30,7 @@ class TestPaymentCharge:
             }
         }
         
-        with patch("app.payment.core.factory.get_payment_gateway", return_value=mock_payment_gateway):
+        with patch("app.payment.get_payment_gateway", return_value=mock_payment_gateway):
             response = await client.post("/payments/charge", json=payment_request)
         
         assert response.status_code == 200
@@ -79,7 +79,7 @@ class TestPaymentCharge:
             def create_charge(self, **kwargs):
                 return {"status": "error", "message": "Card declined"}
         
-        with patch("app.payment.core.factory.get_payment_gateway", return_value=MockFailedGateway()):
+        with patch("app.payment.get_payment_gateway", return_value=MockFailedGateway()):
             response = await client.post("/payments/charge", json=payment_request)
         
         assert response.status_code == 400
@@ -108,7 +108,7 @@ class TestPaymentCharge:
             },
         }
 
-        with patch("app.payment.core.factory.get_payment_gateway", return_value=mock_payment_gateway):
+        with patch("app.payment.get_payment_gateway", return_value=mock_payment_gateway):
             response = await client.post("/payments/charge", json=payment_request)
 
         assert response.status_code == 200
@@ -128,7 +128,7 @@ class TestPaymentRefund:
             "amount": 5000  # Partial refund
         }
         
-        with patch("app.payment.core.factory.get_payment_gateway", return_value=mock_payment_gateway):
+        with patch("app.payment.get_payment_gateway", return_value=mock_payment_gateway):
             response = await client.post("/payments/refund", json=refund_request)
         
         assert response.status_code == 200
@@ -143,7 +143,7 @@ class TestPaymentRefund:
             "payment_intent_id": "test_intent_123"
         }
         
-        with patch("app.payment.core.factory.get_payment_gateway", return_value=mock_payment_gateway):
+        with patch("app.payment.get_payment_gateway", return_value=mock_payment_gateway):
             response = await client.post("/payments/refund", json=refund_request)
         
         assert response.status_code == 200
@@ -153,7 +153,7 @@ class TestPaymentRefund:
         """Test refund without charge_id or payment_intent_id."""
         refund_request = {}
         
-        with patch("app.payment.core.factory.get_payment_gateway", return_value=mock_payment_gateway):
+        with patch("app.payment.get_payment_gateway", return_value=mock_payment_gateway):
             response = await client.post("/payments/refund", json=refund_request)
         
         # Should fail validation
@@ -177,7 +177,7 @@ class TestPaymentCapture:
                     "charge_id": "CAPTURE123",
                 }
 
-        with patch("app.payment.core.factory.get_payment_gateway", return_value=MockCaptureGateway()):
+        with patch("app.payment.get_payment_gateway", return_value=MockCaptureGateway()):
             response = await client.post(
                 "/payments/capture",
                 params={"payment_intent_id": "ORDER123", "amount": 100.0},
@@ -196,7 +196,7 @@ class TestPaymentCapture:
             def capture_charge(self, payment_intent_id: str, amount: float | None = None):
                 return {"status": "error", "message": "Failed to capture"}
 
-        with patch("app.payment.core.factory.get_payment_gateway", return_value=MockCaptureFailGateway()):
+        with patch("app.payment.get_payment_gateway", return_value=MockCaptureFailGateway()):
             response = await client.post(
                 "/payments/capture",
                 params={"payment_intent_id": "ORDER123"},
@@ -218,7 +218,7 @@ class TestPaypalGatewayUnit:
     def test_capture_charge_success(self, monkeypatch):
         """capture_charge should normalize a successful PayPal capture response."""
         from unittest.mock import MagicMock
-        from app.payment.core.gateways._paypal_payment_gateway import PaypalPaymentGateway
+        from app.payment import PaypalPaymentGateway
 
         # Create mock API response
         mock_capture = MagicMock()
@@ -259,7 +259,7 @@ class TestPaypalGatewayUnit:
     def test_capture_charge_http_error(self, monkeypatch):
         """SDK error from PayPal capture should surface as status=error."""
         from unittest.mock import MagicMock
-        from app.payment.core.gateways._paypal_payment_gateway import PaypalPaymentGateway
+        from app.payment import PaypalPaymentGateway
 
         mock_result = MagicMock()
         mock_result.is_success.return_value = False
@@ -279,7 +279,7 @@ class TestPaypalGatewayUnit:
     def test_refund_charge_success(self, monkeypatch):
         """refund_charge should call captures refund and normalize success."""
         from unittest.mock import MagicMock
-        from app.payment.core.gateways._paypal_payment_gateway import PaypalPaymentGateway
+        from app.payment import PaypalPaymentGateway
 
         mock_refund = MagicMock()
         mock_refund.id = "REFUND123"
@@ -306,7 +306,7 @@ class TestPaypalGatewayUnit:
 
     def test_refund_charge_missing_ids(self):
         """refund_charge should error if no identifiers are provided."""
-        from app.payment.core.gateways._paypal_payment_gateway import PaypalPaymentGateway
+        from app.payment import PaypalPaymentGateway
 
         gateway = PaypalPaymentGateway({"PAYPAL_CLIENT_ID": "id", "PAYPAL_CLIENT_SECRET": "secret"})
         result = gateway.refund_charge()
@@ -317,7 +317,7 @@ class TestPaypalGatewayUnit:
     def test_create_checkout_session_success(self, monkeypatch):
         """create_checkout_session should return a checkout_url on success."""
         from unittest.mock import MagicMock
-        from app.payment.core.gateways._paypal_payment_gateway import PaypalPaymentGateway
+        from app.payment import PaypalPaymentGateway
 
         mock_link = MagicMock()
         mock_link.rel = "approve"
@@ -350,7 +350,7 @@ class TestPaypalGatewayUnit:
     def test_create_checkout_session_missing_approval_link(self, monkeypatch):
         """If PayPal does not return an approval link, treat as error."""
         from unittest.mock import MagicMock
-        from app.payment.core.gateways._paypal_payment_gateway import PaypalPaymentGateway
+        from app.payment import PaypalPaymentGateway
 
         mock_order = MagicMock()
         mock_order.id = "ORDER_NO_LINK"
@@ -378,7 +378,7 @@ class TestPaypalGatewayUnit:
     def test_create_charge_success(self, monkeypatch):
         """create_charge should return normalized order data on success."""
         from unittest.mock import MagicMock
-        from app.payment.core.gateways._paypal_payment_gateway import PaypalPaymentGateway
+        from app.payment import PaypalPaymentGateway
 
         mock_link = MagicMock()
         mock_link.rel = "approve"
@@ -408,7 +408,7 @@ class TestPaypalGatewayUnit:
 
     def test_create_charge_no_credentials(self):
         """create_charge should error if credentials are not configured."""
-        from app.payment.core.gateways._paypal_payment_gateway import PaypalPaymentGateway
+        from app.payment import PaypalPaymentGateway
 
         gateway = PaypalPaymentGateway({})
         result = gateway.create_charge(amount=100.0, currency="USD")
@@ -432,7 +432,7 @@ class TestPaymentCheckout:
                     "checkout_url": "https://checkout.stripe.com/test"
                 }
         
-        with patch("app.payment.core.factory.get_payment_gateway", return_value=MockCheckoutGateway()):
+        with patch("app.payment.get_payment_gateway", return_value=MockCheckoutGateway()):
             response = await client.post(
                 "/payments/checkout",
                 params={
@@ -449,7 +449,7 @@ class TestPaymentCheckout:
     @pytest.mark.asyncio
     async def test_create_checkout_unsupported_gateway(self, client: AsyncClient, mock_payment_gateway):
         """Test checkout with gateway that doesn't support it."""
-        with patch("app.payment.core.factory.get_payment_gateway", return_value=mock_payment_gateway):
+        with patch("app.payment.get_payment_gateway", return_value=mock_payment_gateway):
             response = await client.post(
                 "/payments/checkout",
                 params={
@@ -476,7 +476,7 @@ class TestPaymentSetup:
                     "client_secret": "test_secret"
                 }
         
-        with patch("app.payment.core.factory.get_payment_gateway", return_value=MockSetupGateway()):
+        with patch("app.payment.get_payment_gateway", return_value=MockSetupGateway()):
             response = await client.post(
                 "/payments/setup",
                 params={"customer_id": "test_customer_123"}
@@ -499,8 +499,8 @@ class TestPaymentGatewayFactory:
         os.environ["PAYMENT_GATEWAY"] = "stripe"
         os.environ["STRIPE_API_KEY"] = "test_key"
         
-        from app.payment.core.factory import get_payment_gateway
-        from app.payment.core.gateways._stripe_payment_gateway import StripePaymentGateway
+        from app.payment import get_payment_gateway
+        from app.payment import StripePaymentGateway
         
         gateway = get_payment_gateway()
         assert isinstance(gateway, StripePaymentGateway)
@@ -510,8 +510,8 @@ class TestPaymentGatewayFactory:
         import os
         os.environ["PAYMENT_GATEWAY"] = "stone"
         
-        from app.payment.core.factory import get_payment_gateway
-        from app.payment.core.gateways._stone_payment_gateway import StonePaymentGateway
+        from app.payment import get_payment_gateway
+        from app.payment import StonePaymentGateway
         
         gateway = get_payment_gateway()
         assert isinstance(gateway, StonePaymentGateway)
@@ -522,8 +522,8 @@ class TestPaymentGatewayFactory:
         This is a focused unit test that checks we branch to the Pix
         payment path without actually calling the remote Pagar.me API.
         """
-        from app.payment.core.gateways import _stone_payment_gateway as stone_module
-        from app.payment.core.gateways._stone_payment_gateway import StonePaymentGateway
+        from app.payment import _stone_payment_gateway as stone_module
+        from app.payment import StonePaymentGateway
 
         class DummyClient:
             class charges:
@@ -556,7 +556,7 @@ class TestPaymentGatewayFactory:
         import os
         os.environ["PAYMENT_GATEWAY"] = "unknown"
         
-        from app.payment.core.factory import get_payment_gateway
+        from app.payment import get_payment_gateway
         
         with pytest.raises(ValueError):
             get_payment_gateway()
@@ -568,8 +568,8 @@ class TestPaymentGatewayFactory:
         os.environ["PAYPAL_CLIENT_ID"] = "test_client_id"
         os.environ["PAYPAL_CLIENT_SECRET"] = "test_client_secret"
 
-        from app.payment.core.factory import get_payment_gateway
-        from app.payment.core.gateways._paypal_payment_gateway import PaypalPaymentGateway
+        from app.payment import get_payment_gateway
+        from app.payment import PaypalPaymentGateway
 
         gateway = get_payment_gateway()
         assert isinstance(gateway, PaypalPaymentGateway)

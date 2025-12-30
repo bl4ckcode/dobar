@@ -19,7 +19,7 @@ PIX payments generate a test QR code that won't actually work but validates the 
 import pytest
 import os
 from datetime import datetime, timedelta
-from app.payment.core.gateways._stone_payment_gateway import StonePaymentGateway
+from app.payment import StonePaymentGateway
 
 
 # Pagar.me Sandbox test cards

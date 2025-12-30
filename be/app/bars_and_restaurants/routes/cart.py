@@ -14,8 +14,7 @@ from ..models.cart_models import Cart as CartModel, CartItem as CartItemModel, O
 from ..models.relational_models import Order as OrderModel
 from ..schemas.cart import Cart, CartItem, CartItemCreate, CartItemUpdate, CheckoutRequest, CheckoutResponse
 from app.database import database
-from app.payment.core.factory import get_payment_gateway
-from app.payment.core.interfaces import PaymentGateway
+from app.payment import get_payment_gateway, PaymentGateway
 
 cart_router = APIRouter(prefix="/cart", tags=["Cart"])
 

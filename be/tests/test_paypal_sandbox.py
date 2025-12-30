@@ -9,7 +9,7 @@ so we test up to order creation and verify the approval URL is returned.
 """
 
 import pytest
-from app.payment.core.gateways._paypal_payment_gateway import PaypalPaymentGateway
+from app.payment import PaypalPaymentGateway
 
 # PayPal Sandbox Credentials
 SANDBOX_CLIENT_ID = "AWWab3ocAALVelW7RZai0FDh9Q9mcDM6844R2wO6l6T6zhZwo1St9eUx5cZHdDKLkDiI8RvJ2JWrG723"

@@ -18,7 +18,7 @@ Reference: https://docs.stripe.com/testing
 
 import pytest
 import os
-from app.payment.core.gateways._stripe_payment_gateway import StripePaymentGateway
+from app.payment import StripePaymentGateway
 
 
 # Stripe test payment method tokens - these work in sandbox
