@@ -14,6 +14,9 @@ Reference: https://docs.pagar.me/reference/introducao-1
 from typing import Dict, Any, Optional
 from dobar_payment.interfaces import PaymentGateway
 
+# Initialize pagarme_sdk path fix before importing SDK modules
+import dobar_payment.pagarme_sdk
+
 
 from dobar_payment.pagarme_sdk.pagarmeapisdk.pagarmeapisdk_client import PagarmeapisdkClient
 from dobar_payment.pagarme_sdk.pagarmeapisdk.http.auth.basic_auth import BasicAuthCredentials
