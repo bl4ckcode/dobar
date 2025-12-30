@@ -2,8 +2,7 @@ from fastapi import APIRouter, Depends, Query
 
 from app.errors import CustomHTTPException
 from .schemas import PaymentRequest, RefundRequest
-from .core.factory import get_payment_gateway
-from .core.interfaces import PaymentGateway
+from dobar_payment import get_payment_gateway, PaymentGateway
 
 payment_router = APIRouter(prefix="/payments", tags=["Payments"])
 
