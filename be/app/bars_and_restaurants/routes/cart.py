@@ -20,14 +20,12 @@ cart_router = APIRouter(prefix="/cart", tags=["Cart"])
 
 
 async def get_or_create_cart(user_id: int) -> CartModel:
-    """Get or create a cart for the user."""
-    # Check if cart exists
     query = CartModel.__table__.select().where(CartModel.user_id == user_id)
     cart = await database.fetch_one(query)
     
     if not cart:
-        # Create new cart
-        cart_data = {"user_id": user_id}
+        now = datetime.now(timezone.utc)
+        cart_data = {"user_id": user_id, "created_at": now, "updated_at": now}
         cart_id = await database.execute(CartModel.__table__.insert().values(**cart_data))
         cart = await database.fetch_one(CartModel.__table__.select().where(CartModel.id == cart_id))
     
@@ -86,25 +84,25 @@ async def add_item_to_cart(
     existing_item = await database.fetch_one(query)
     
     if existing_item:
-        # Update quantity
         new_quantity = existing_item["quantity"] + item.quantity
         update_query = (
             CartItemModel.__table__
             .update()
             .where(CartItemModel.id == existing_item["id"])
-            .values(quantity=new_quantity)
+            .values(quantity=new_quantity, updated_at=datetime.now(timezone.utc))
         )
         await database.execute(update_query)
         
-        # Fetch updated item
         return await database.fetch_one(
             CartItemModel.__table__.select().where(CartItemModel.id == existing_item["id"])
         )
     else:
-        # Add new item
+        now = datetime.now(timezone.utc)
         item_data = {
             **item.model_dump(),
-            "cart_id": cart["id"]
+            "cart_id": cart["id"],
+            "created_at": now,
+            "updated_at": now
         }
         item_id = await database.execute(CartItemModel.__table__.insert().values(**item_data))
         return await database.fetch_one(
@@ -136,12 +134,11 @@ async def update_cart_item(
             detail="Cart item not found"
         )
     
-    # Update quantity
     update_query = (
         CartItemModel.__table__
         .update()
         .where(CartItemModel.id == item_id)
-        .values(quantity=item_update.quantity)
+        .values(quantity=item_update.quantity, updated_at=datetime.now(timezone.utc))
     )
     await database.execute(update_query)
     

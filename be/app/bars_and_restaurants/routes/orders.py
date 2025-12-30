@@ -30,14 +30,15 @@ async def orders_websocket(websocket: WebSocket):
 
 @orders_router.post("/", response_model=OrderSchema)
 async def create_order(order: OrderCreate):
-    # Convert Pydantic model to dictionary
+    from datetime import datetime, timezone
     order_data = order.model_dump()
+    order_data["status"] = order_data.get("status", "pending")
+    order_data["created_at"] = datetime.now(timezone.utc)
+    order_data["updated_at"] = datetime.now(timezone.utc)
     
-    # Create a new order
     query = OrderModel.__table__.insert().values(**order_data)
     order_id = await database.execute(query)
     
-    # Fetch the newly created order
     query = OrderModel.__table__.select().where(OrderModel.id == order_id)
     db_order = await database.fetch_one(query)
     
@@ -123,12 +124,11 @@ async def get_order_timeline(
             detail="You don't have permission to view this order"
         )
     
-    # Fetch status history
     history_query = (
         OrderStatusHistoryModel.__table__
         .select()
         .where(OrderStatusHistoryModel.order_id == order_id)
-        .order_by(OrderStatusHistoryModel.changed_at)
+        .order_by(OrderStatusHistoryModel.timestamp)
     )
     status_history = await database.fetch_all(history_query)
     
@@ -181,13 +181,11 @@ async def cancel_order(
         )
         await database.execute(update_query)
         
-        # Add status history entry
         history_data = {
             "order_id": order_id,
-            "previous_status": db_order["status"],
-            "new_status": "cancelled",
-            "changed_by_user_id": current_user["id"],
-            "note": "Cancelled by customer"
+            "status": "cancelled",
+            "updated_by_user_id": current_user["id"],
+            "notes": "Cancelled by customer"
         }
         await database.execute(
             OrderStatusHistoryModel.__table__.insert().values(**history_data)
@@ -243,24 +241,22 @@ async def update_order_status(
         "cancelled": []
     }
     
-    if status_update.new_status not in valid_transitions.get(db_order["status"], []):
+    if status_update.status not in valid_transitions.get(db_order["status"], []):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid status transition from {db_order['status']} to {status_update.new_status}"
+            detail=f"Invalid status transition from {db_order['status']} to {status_update.status}"
         )
     
     # Start transaction
     transaction = await database.transaction()
     
     try:
-        # Prepare update data
         update_data = {
-            "status": status_update.new_status,
+            "status": status_update.status,
             "updated_at": datetime.now(timezone.utc)
         }
         
-        # Update completed_at if status is completed
-        if status_update.new_status == "completed":
+        if status_update.status == "completed":
             update_data["completed_at"] = datetime.now(timezone.utc)
         
         # Update estimated_ready_time if provided
@@ -276,13 +272,11 @@ async def update_order_status(
         )
         await database.execute(update_query)
         
-        # Add status history entry
         history_data = {
             "order_id": order_id,
-            "previous_status": db_order["status"],
-            "new_status": status_update.new_status,
-            "changed_by_user_id": current_user["id"],
-            "note": status_update.note
+            "status": status_update.status,
+            "updated_by_user_id": current_user["id"],
+            "notes": status_update.notes
         }
         await database.execute(
             OrderStatusHistoryModel.__table__.insert().values(**history_data)

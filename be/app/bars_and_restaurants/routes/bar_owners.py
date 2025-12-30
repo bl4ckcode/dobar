@@ -7,16 +7,10 @@ from ..schemas.bar_owners import BarOwnerCreate, BarOwner
 bar_owners_router = APIRouter(prefix="/barowners", tags=["Bar Owners"])
 
 async def create_new_bar_owner(owner_data: dict):
-    query = (
-        BarOwnerModel.__table__
-        .insert()
-        .values(**owner_data)
-        .returning(BarOwnerModel.id)  # Ensure the query returns the id
-    )
-    owner_id = await database.execute(query)
-    # Now fetch the newly created row
+    query = BarOwnerModel.__table__.insert().values(**owner_data)
+    await database.execute(query)
     return await database.fetch_one(
-        BarOwnerModel.__table__.select().where(BarOwnerModel.id == owner_id)
+        BarOwnerModel.__table__.select().where(BarOwnerModel.id == owner_data["id"])
     )
 
 async def get_existing_bar_owner(owner_id: int):

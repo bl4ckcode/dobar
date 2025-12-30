@@ -21,9 +21,9 @@ class Bar(Base):
     address = Column(String, unique=True, index=True, nullable=True)
     phone_number = Column(String, index=True, nullable=True)
     email = Column(String, index=True, nullable=True)
-    owner_id = Column(BigInteger, ForeignKey("bar_owners.id"), index=True)  # Link to bar owner
+    owner_id = Column(BigInteger, ForeignKey("bar_owners.id"), index=True)
 
-    # Relationship with menus
+    owner = relationship("BarOwner", back_populates="bars")
     menus = relationship("Menu", back_populates="bar")
     cashback_transactions = relationship("CashbackLedger", back_populates="bar")
 

@@ -80,44 +80,76 @@ async def setup_database():
 
 @pytest.fixture
 async def client() -> AsyncGenerator[AsyncClient, None]:
-    """Create a test client for making requests."""
-    # Import and replace the database at runtime
     import app.database as db_module
     import app.auth.routes as auth_routes
+    import app.auth.middleware as auth_middleware
     import app.bars_and_restaurants.routes.bars as bars_routes
+    import app.bars_and_restaurants.routes.bar_owners as bar_owners_routes
     import app.bars_and_restaurants.routes.orders as orders_routes
     import app.bars_and_restaurants.routes.menus as menus_routes
+    import app.bars_and_restaurants.routes.cart as cart_routes
+    import app.bars_and_restaurants.routes.wallet as wallet_routes
     
-    # Store original database
     original_db = db_module.database
     
-    # Replace with test database globally
     db_module.database = test_database
     auth_routes.database = test_database
+    auth_middleware.database = test_database
     bars_routes.database = test_database
+    bar_owners_routes.database = test_database
     orders_routes.database = test_database
     menus_routes.database = test_database
+    cart_routes.database = test_database
+    wallet_routes.database = test_database
     
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
     
-    # Restore original database
     db_module.database = original_db
     auth_routes.database = original_db
+    auth_middleware.database = original_db
     bars_routes.database = original_db
+    bar_owners_routes.database = original_db
     orders_routes.database = original_db
     menus_routes.database = original_db
+    cart_routes.database = original_db
+    wallet_routes.database = original_db
 
 
 @pytest.fixture
 def mock_firebase_token():
-    """Mock Firebase token for testing authentication."""
     return {
         "uid": "test_firebase_uid_123",
         "phone_number": "+1234567890",
         "email": "test@example.com"
     }
+
+
+@pytest.fixture
+async def test_user_in_db(setup_database):
+    from app.auth.auth_models import User
+    user_data = {
+        "firebase_uid": "test_firebase_uid_123",
+        "phone_number": "+1234567890",
+        "email": "test@example.com",
+        "is_active": True
+    }
+    user_id = await test_database.execute(User.__table__.insert().values(**user_data))
+    return {"id": user_id, **user_data}
+
+
+@pytest.fixture
+def auth_headers(test_user_in_db):
+    token = create_test_token(test_user_in_db["id"])
+    return {"Authorization": f"Bearer {token}"}
+
+
+@pytest.fixture
+async def auth_client(client: AsyncClient, test_user_in_db) -> AsyncGenerator[tuple, None]:
+    token = create_test_token(test_user_in_db["id"])
+    headers = {"Authorization": f"Bearer {token}"}
+    yield client, headers, test_user_in_db
 
 
 @pytest.fixture
@@ -133,16 +165,93 @@ def sample_user_data():
 
 @pytest.fixture
 def sample_bar_data():
-    """Sample bar data for testing."""
     return {
         "name": "Test Bar",
         "address": "123 Test Street",
         "phone_number": "+1234567890",
         "email": "bar@test.com",
-        "owner_id": 1,
-        "latitude": 40.7128,
-        "longitude": -74.0060
+        "owner_id": 1
     }
+
+
+@pytest.fixture
+async def test_bar_owner_in_db(setup_database):
+    from app.bars_and_restaurants.models.relational_models import BarOwner
+    import random
+    owner_data = {
+        "id": random.randint(1, 999999),
+        "name": "Test Owner",
+        "email": f"owner{random.randint(1,9999)}@test.com",
+        "phone_number": "+1234567890"
+    }
+    await test_database.execute(BarOwner.__table__.insert().values(**owner_data))
+    return owner_data
+
+
+@pytest.fixture
+async def test_bar_in_db(test_bar_owner_in_db):
+    from app.bars_and_restaurants.models.relational_models import Bar
+    bar_data = {
+        "name": "Test Bar",
+        "address": "123 Test Street",
+        "phone_number": "+1234567890",
+        "email": "bar@test.com",
+        "owner_id": test_bar_owner_in_db["id"]
+    }
+    bar_id = await test_database.execute(Bar.__table__.insert().values(**bar_data))
+    return {"id": bar_id, **bar_data}
+
+
+@pytest.fixture
+async def second_test_bar_in_db(test_bar_owner_in_db):
+    from app.bars_and_restaurants.models.relational_models import Bar
+    bar_data = {
+        "name": "Second Test Bar",
+        "address": "456 Other Street",
+        "phone_number": "+9876543210",
+        "email": "bar2@test.com",
+        "owner_id": test_bar_owner_in_db["id"]
+    }
+    bar_id = await test_database.execute(Bar.__table__.insert().values(**bar_data))
+    return {"id": bar_id, **bar_data}
+
+
+@pytest.fixture
+async def test_order_in_db(test_user_in_db, test_bar_in_db):
+    from app.bars_and_restaurants.models.relational_models import Order
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    order_data = {
+        "user_id": test_user_in_db["id"],
+        "bar_id": test_bar_in_db["id"],
+        "status": "pending",
+        "total_price": 25.00,
+        "subtotal": 20.00,
+        "tax": 5.00,
+        "order_type": "pickup",
+        "payment_method": "credit_card",
+        "created_at": now,
+        "updated_at": now
+    }
+    order_id = await test_database.execute(Order.__table__.insert().values(**order_data))
+    return {"id": order_id, **order_data}
+
+
+@pytest.fixture
+async def test_completed_order_in_db(test_user_in_db, test_bar_in_db):
+    from app.bars_and_restaurants.models.relational_models import Order
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    order_data = {
+        "user_id": test_user_in_db["id"],
+        "bar_id": test_bar_in_db["id"],
+        "status": "completed",
+        "total_price": 25.00,
+        "created_at": now,
+        "updated_at": now
+    }
+    order_id = await test_database.execute(Order.__table__.insert().values(**order_data))
+    return {"id": order_id, **order_data}
 
 
 @pytest.fixture
