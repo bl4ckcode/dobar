@@ -1,229 +1,119 @@
-# BarZ Backend
+# barz-backend
 
-Welcome to the **BarZ Backend** repository! This is the backend service for the BarZ app, which allows users to browse restaurant/bar menus, place orders, and have their orders delivered to their table or location. This project now includes a comprehensive Bars and Restaurants API with dual-database architecture, real-time updates, AWS S3 image storage with pre-signed URLs, and robust error handling.
+Backend API for the BarZ application. Enables users to browse restaurant and bar menus, place orders, and receive deliveries to their table.
 
-## Table of Contents
-- [Features](#features)
-- [Technologies](#technologies)
-- [Setup](#setup)
-- [Environment Variables](#environment-variables)
-- [API Endpoints](#api-endpoints)
-- [Authentication](#authentication)
-- [Contributing](#contributing)
-- [Context & AI Assistance](#context--ai-assistance)
-- [License](#license)
+## Architecture
 
-## Features
-### Payments & Gateway Integration
-
-BarZ backend now supports flexible and scalable payment integrations:
-
-- **Stripe Support:**
-  - Create charges (`PaymentIntent`)
-  - Save cards using `SetupIntent`
-  - Accept Apple Pay / Google Pay using `allow_redirects: if_required`
-  - Use test methods like `pm_card_visa` for safe dev testing
-
-- **Stone (Pagar.me) Support:**
-  - Charge and refund functionality wrapped in a shared gateway interface
-  - Fully switchable via `.env` (`PAYMENT_GATEWAY=stripe|stone`)
-
-- **Routes Added:**
-  - `POST /payments/charge`: One-time charge
-  - `POST /payments/refund`: Refund a payment
-  - `POST /payments/setup`: Save a card for future use
-  - `POST /payments/checkout`: Stripe-hosted checkout (partner use)
-
-- PgBouncer-ready DB pooling for efficient resource usage
-- Payment routing fully abstracted with dynamic gateway factory
-- **User Authentication:** Supports Firebase phone authentication, Google Sign-In, Apple Sign-In, and Facebook Sign-In.
-- **JWT Tokens:** Secure authentication using JSON Web Tokens (JWT).
-- **Bars & Restaurants API:**  
-  - **Dual Database Architecture:**  
-    - **PostgreSQL:** Stores static data (e.g., bar details, owner info) using SQLAlchemy models.  
-    - **MongoDB:** Stores dynamic and geospatial data (e.g., bar locations, menus, and image URLs).  
-  - **Real-Time Updates:** WebSocket endpoints using MongoDB change streams allow live updates on orders, menus, and bar status.
-  - **Image Handling:** Restaurant images are stored in AWS S3. Pre-signed URLs are generated to securely serve images to the Flutter frontend.
-  - **Robust Error Handling:** Consistent error responses using a unified error model and custom exception helpers.
-- **Scalable Architecture:** Built with FastAPI for high performance and scalability.
-
-## Technologies
-- **Backend Framework:** [FastAPI](https://fastapi.tiangolo.com/)
-- **Databases:**  
-  - PostgreSQL (static data via SQLAlchemy ORM)  
-  - MongoDB (dynamic data & geospatial queries via Motor)
-- **Image Storage:** AWS S3 with pre-signed URL generation
-- **Real-Time Communication:** WebSockets for live updates
-- **Authentication:** Firebase, JWT
-- **Package Manager:** Poetry or Pip
-- **Other Tools:** GitHub, Docker (optional)
+- **Framework**: FastAPI
+- **Databases**: PostgreSQL (static data), MongoDB (dynamic/geospatial data)
+- **Storage**: AWS S3 for images
+- **Authentication**: Firebase (phone, Google, Apple, Facebook) with JWT
+- **Payments**: [dobar-payment-engine](https://github.com/bl4ckcode/dobar-payment-engine)
+- **Real-time**: WebSocket connections via MongoDB change streams
 
 ## Setup
 
 ### Prerequisites
+
 - Python 3.8+
-- Firebase project (for authentication)
-- AWS account with S3 access
-- PostgreSQL & MongoDB instances (local or hosted)
-- GitHub account (for repository management)
+- PostgreSQL
+- MongoDB
+- AWS S3 bucket
+- Firebase project
 
 ### Installation
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/bl4ckcode/barz-backend.git
-   cd barz-backend
-   ```
 
-2. **Set up a virtual environment:**
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
+```bash
+git clone https://github.com/bl4ckcode/barz-backend.git
+cd barz-backend
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
 
-3. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
+### Environment Variables
 
-4. **Set up environment variables:**
-   - Create a `.env` file in the root directory.
-   - Add the following variables:
-     ```bash
-     SECRET_KEY=your-secure-secret-key
-     DATABASE_URL=your-postgresql-connection-url
-     MONGO_HOST=your-mongo-host
-     MONGO_PORT=your-mongo-port
-     MONGO_DB=your-mongo-database
-     FIREBASE_CREDENTIALS_PATH=/path/to/firebase-credentials.json
-     AWS_ACCESS_KEY=your-aws-access-key
-     AWS_SECRET_KEY=your-aws-secret-key
-     AWS_REGION=your-aws-region
-     AWS_S3_BUCKET=your-s3-bucket-name
-     ```
-5. **Run the application:**
-   ```bash
-   uvicorn main:app --reload
-   ```
+Create a `.env` file:
 
-6. **Access the API:**
-   - Open your browser and go to `http://127.0.0.1:8000`.
-   - Interactive API docs are available at `http://127.0.0.1:8000/docs`.
+```bash
+# Application
+SECRET_KEY=your-secret-key
 
-## Environment Variables
-The following environment variables are required:
+# PostgreSQL
+DATABASE_URL=postgresql://user:pass@host:port/dbname
 
-| Variable                    | Description                                             | Example Value                                      |
-|-----------------------------|---------------------------------------------------------|----------------------------------------------------|
-| `SECRET_KEY`                | Secret key for JWT token signing                        | `your-secure-secret-key`                           |
-| `DATABASE_URL`              | PostgreSQL database connection URL                      | `postgresql://user:pass@host:port/dbname`           |
-| `MONGO_HOST`                | MongoDB host                                            | `localhost`                                        |
-| `MONGO_PORT`                | MongoDB port                                            | `27017`                                            |
-| `MONGO_DB`                  | MongoDB database name                                   | `barz_db`                                          |
-| `FIREBASE_CREDENTIALS_PATH` | Path to Firebase Admin SDK credentials file             | `/path/to/firebase-credentials.json`               |
-| `AWS_ACCESS_KEY`            | AWS access key for S3                                     | `your-aws-access-key`                              |
-| `AWS_SECRET_KEY`            | AWS secret key for S3                                     | `your-aws-secret-key`                              |
-| `AWS_REGION`                | AWS region for S3                                         | `sa-east-1`                                        |
-| `AWS_S3_BUCKET`             | AWS S3 bucket name                                        | `barz-images`                                      |
+# MongoDB
+MONGO_HOST=localhost
+MONGO_PORT=27017
+MONGO_DB=barz_db
+
+# Firebase
+FIREBASE_CREDENTIALS_PATH=/path/to/credentials.json
+
+# AWS S3
+AWS_ACCESS_KEY=your-access-key
+AWS_SECRET_KEY=your-secret-key
+AWS_REGION=sa-east-1
+AWS_S3_BUCKET=barz-images
+
+# Payments
+PAYMENT_GATEWAY=stripe
+STRIPE_API_KEY=sk_...
+```
+
+### Run
+
+```bash
+uvicorn app.main:app --reload
+```
+
+API documentation available at `http://localhost:8000/docs`
 
 ## API Endpoints
+
 ### Authentication
-- **POST `/auth/phone`**: Login or register with Firebase phone authentication.
-- **POST `/auth/google`**: Login or register with Google Sign-In.
-- **POST `/auth/apple`**: Login or register with Apple Sign-In.
-- **POST `/auth/facebook`**: Login or register with Facebook Sign-In.
 
-#### Example Request (Phone Login)
-```json
-{
-  "firebase_uid": "your-firebase-uid",
-  "phone_number": "+1234567890"
-}
-```
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/auth/phone` | Phone authentication |
+| POST | `/auth/google` | Google Sign-In |
+| POST | `/auth/apple` | Apple Sign-In |
+| POST | `/auth/facebook` | Facebook Sign-In |
 
-#### Example Response
-```json
-{
-  "access_token": "your-jwt-token",
-  "token_type": "bearer"
-}
-```
+### Bars and Restaurants
 
-### Bars & Restaurants API
-- **GET `/bars/`**: Retrieve bars near a given location using geospatial queries. Returns additional fields like `approximateLocation` and a pre-signed `image_url`.
-- **POST `/bars/`**: Create a new bar with associated data (including image upload via multipart/form-data).  
-- **PUT `/bars/{bar_id}/image`**: Update the image for a specific bar by uploading a new image to AWS S3, which returns a fresh pre-signed URL.
-- **Other Endpoints:** Additional endpoints for menus, orders, and bar owner management.
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/bars/` | List bars near location |
+| POST | `/bars/` | Create new bar |
+| PUT | `/bars/{id}/image` | Update bar image |
 
-### Real-Time Updates
-- **WebSocket Endpoints:**  
-  - `/ws`: General WebSocket connection.  
-  - `/ws/orders`: Receive real-time order updates.  
-  - `/ws/menus`: Receive real-time menu updates.
+### Payments
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/payments/charge` | Create charge |
+| POST | `/payments/refund` | Refund payment |
+| POST | `/payments/capture` | Capture authorized payment |
+| POST | `/payments/setup` | Save card for future use |
+| POST | `/payments/checkout` | Create hosted checkout |
+
+### WebSocket
+
+| Endpoint | Description |
+|----------|-------------|
+| `/ws` | General connection |
+| `/ws/orders` | Order updates |
+| `/ws/menus` | Menu updates |
 
 ## Authentication
-- **JWT Tokens:** All authenticated endpoints require a valid JWT token in the `Authorization` header.
-  ```bash
-  Authorization: Bearer <your-jwt-token>
-  ```
 
-## Contributing
-Contributions are welcome! Please follow these steps:
-1. Fork the repository.
-2. Create a new branch (`git checkout -b feature/YourFeatureName`).
-3. Commit your changes (`git commit -m 'Add some feature'`).
-4. Push to the branch (`git push origin feature/YourFeatureName`).
-5. Open a pull request.
+All protected endpoints require a JWT token:
 
-## Context & AI Assistance
-This project is built with a collaborative spirit in mind.  
-**If you need guidance or further context on the API, please feel free to consult ChatGPT.**  
-Simply prompt ChatGPT with context about the BarZ API and you'll receive detailed assistance and suggestions to continue developing BarZ with innovative ideas and best practices:
-
-```Prompt:
-"I need assistance with the BarZ Backend API. This project is built using FastAPI and features a dual-database architecture where PostgreSQL stores static data (such as bar details and owner information) and MongoDB handles dynamic and geospatial data (including bar locations, menus, and image URLs). Images are uploaded to AWS S3 and accessed via pre-signed URLs. The API includes robust error handling with custom error responses and real-time updates using WebSockets. Authentication is managed with Firebase and JWT tokens. Additionally, the project is organized into modular routers and services, employs SQLAlchemy for ORM, and uses Motor for MongoDB interactions. Can you provide guidance on [insert specific question here]?"
+```
+Authorization: Bearer <token>
 ```
 
-Please ensure to replace "[insert specific question here]" with your actual question.
-
-
----
-
-## 🧩 Backend Architecture Overview (UML)
-
-The following diagram represents the main entities and relationships in the BarZ backend system (Auth, Bars, Payments):
-
-![barz_backend_diagram](https://github.com/user-attachments/assets/aa051d94-8cb2-4960-b4f9-00fc512c3076)
-
 ## License
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
----
-
-Made with ❤️ by [bl4ckcode](https://github.com/bl4ckcode)
-
-
-## 🧾 Pull Request Template
-
-### 🚀 Summary
-<!-- Describe the purpose of the PR -->
-
-### 📌 Related Issues
-Closes #[IssueNumber]
-
-### ✨ Features Added
-- [ ] New API endpoints
-- [ ] New database models or migrations
-- [ ] Utility or interface improvements
-- [ ] Third-party SDKs integrated
-
-### 🔍 How to Test
-<!-- List curl commands or frontend actions to verify the functionality -->
-
-### 📁 Files Modified
-<!-- Optional: Summary of touched files -->
-
-### ✅ Checklist
-- [ ] Code compiles and passes type checks
-- [ ] No hardcoded secrets or dev keys
-- [ ] Tests added or manual test instructions provided
-- [ ] Routes documented in README or OpenAPI
+MIT
