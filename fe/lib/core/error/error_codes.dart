@@ -41,6 +41,9 @@ enum ErrorCode {
   partnerClosed('PARTNER_CLOSED', 'Partner is currently closed'),
   itemUnavailable('ITEM_UNAVAILABLE', 'Item is not available'),
   
+  cartItemNotFound('CART_ITEM_NOT_FOUND', 'Cart item not found'),
+  cartEmpty('CART_EMPTY', 'Cart is empty'),
+  
   locationPermissionDenied('LOCATION_PERMISSION_DENIED', 'Location permission denied'),
   locationServiceDisabled('LOCATION_SERVICE_DISABLED', 'Location service is disabled'),
   

@@ -31,6 +31,13 @@ void main() {
       expect(ErrorCode.pixExpired.defaultMessage, 'PIX payment has expired');
       expect(ErrorCode.noInternet.defaultMessage, 'No internet connection');
     });
+
+    test('Cart error codes exist and have correct values', () {
+      expect(ErrorCode.fromCode('CART_ITEM_NOT_FOUND'), ErrorCode.cartItemNotFound);
+      expect(ErrorCode.fromCode('CART_EMPTY'), ErrorCode.cartEmpty);
+      expect(ErrorCode.cartItemNotFound.defaultMessage, 'Cart item not found');
+      expect(ErrorCode.cartEmpty.defaultMessage, 'Cart is empty');
+    });
   });
 
   group('ServerException', () {
