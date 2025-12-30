@@ -33,7 +33,6 @@ Track transaction lifecycle.
 ### Intelligent Routing
 
 Route transactions to optimal gateways.
-Available strategies: `PRIORITY`, `ROUND_ROBIN`, `WEIGHTED`, `LEAST_LATENCY`, `HIGHEST_SUCCESS`, `COST_OPTIMIZED`, `ADAPTIVE`
 
 ## Response Format
 
