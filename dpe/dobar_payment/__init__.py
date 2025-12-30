@@ -28,7 +28,7 @@ __version__ = "2.0.0"
 __author__ = "Carlos Alves"
 
 from .interfaces import PaymentGateway, GatewayCapability
-from .factory import PaymentEngine, GatewayRegistry, get_registry, get_payment_engine
+from .factory import PaymentEngine, GatewayRegistry, get_registry, get_payment_engine, get_payment_gateway
 from .exceptions import (
     PaymentException,
     PaymentErrorCode,
@@ -133,6 +133,7 @@ __all__ = [
     "GatewayCapability",
     "get_registry",
     "get_payment_engine",
+    "get_payment_gateway",
     
     # Models
     "PaymentStatus",

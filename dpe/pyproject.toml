@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dobar-payment-engine"
-version = "1.0.0"
+version = "2.0.0"
 description = "Enterprise-grade payment processing engine for Latin America"
 readme = "README.md"
 license = {text = "MIT"}
