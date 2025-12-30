@@ -77,7 +77,8 @@ class TestOrderCancellation:
         client, headers, user = auth_client
         response = await client.post(f"/orders/{test_completed_order_in_db['id']}/cancel", headers=headers)
         assert response.status_code == 400
-        assert "cannot cancel" in response.json()["detail"].lower()
+        assert response.json()["error_code"] == "ORDER_CANCELLED"
+        assert "cannot cancel" in response.json()["message"].lower()
 
 
 @pytest.mark.asyncio
@@ -101,4 +102,5 @@ class TestOrderStatusUpdate:
             headers=headers
         )
         assert response.status_code == 400
-        assert "invalid status transition" in response.json()["detail"].lower()
+        assert response.json()["error_code"] == "BAD_REQUEST"
+        assert "invalid status transition" in response.json()["message"].lower()

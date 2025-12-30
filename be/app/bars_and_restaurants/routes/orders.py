@@ -1,8 +1,9 @@
-from fastapi import APIRouter, HTTPException, WebSocket, WebSocketDisconnect, Depends, status, Query
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, status, Query
 from sqlalchemy import and_, or_, desc
 from typing import Optional, List
 from datetime import datetime, timezone
 
+from app.errors import APIError
 from ..services.realtime_updates import stream_order_changes
 from ..models.relational_models import Order as OrderModel
 from ..models.cart_models import OrderItem as OrderItemModel, OrderStatusHistory as OrderStatusHistoryModel
@@ -92,14 +93,11 @@ async def get_order(
     db_order = await database.fetch_one(query)
     
     if db_order is None:
-        raise HTTPException(status_code=404, detail="Order not found")
+        raise APIError.order_not_found()
     
     # Verify ownership
     if db_order["user_id"] != current_user["id"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have permission to view this order"
-        )
+        raise APIError.forbidden("You don't have permission to view this order")
     
     return db_order
 
@@ -115,14 +113,11 @@ async def get_order_timeline(
     db_order = await database.fetch_one(query)
     
     if db_order is None:
-        raise HTTPException(status_code=404, detail="Order not found")
+        raise APIError.order_not_found()
     
     # Verify ownership
     if db_order["user_id"] != current_user["id"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have permission to view this order"
-        )
+        raise APIError.forbidden("You don't have permission to view this order")
     
     history_query = (
         OrderStatusHistoryModel.__table__
@@ -149,21 +144,15 @@ async def cancel_order(
     db_order = await database.fetch_one(query)
     
     if db_order is None:
-        raise HTTPException(status_code=404, detail="Order not found")
+        raise APIError.order_not_found()
     
     # Verify ownership
     if db_order["user_id"] != current_user["id"]:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have permission to cancel this order"
-        )
+        raise APIError.forbidden("You don't have permission to cancel this order")
     
     # Check if order can be cancelled
     if db_order["status"] not in ["pending", "confirmed"]:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Cannot cancel order with status: {db_order['status']}"
-        )
+        raise APIError.order_cancelled(f"Cannot cancel order with status: {db_order['status']}")
     
     # Start transaction
     transaction = await database.transaction()
@@ -205,10 +194,7 @@ async def cancel_order(
         
     except Exception as e:
         await transaction.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to cancel order: {str(e)}"
-        )
+        raise APIError.server_error(f"Failed to cancel order: {str(e)}")
 
 
 @orders_router.put("/{order_id}/status", response_model=OrderSchema)
@@ -226,7 +212,7 @@ async def update_order_status(
     db_order = await database.fetch_one(query)
     
     if db_order is None:
-        raise HTTPException(status_code=404, detail="Order not found")
+        raise APIError.order_not_found()
     
     # TODO: Verify user is bar owner of the bar
     # For now, we'll allow any authenticated user (should be restricted to bar owners)
@@ -242,9 +228,8 @@ async def update_order_status(
     }
     
     if status_update.status not in valid_transitions.get(db_order["status"], []):
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail=f"Invalid status transition from {db_order['status']} to {status_update.status}"
+        raise APIError.bad_request(
+            f"Invalid status transition from {db_order['status']} to {status_update.status}"
         )
     
     # Start transaction
@@ -295,7 +280,4 @@ async def update_order_status(
         
     except Exception as e:
         await transaction.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update order status: {str(e)}"
-        )
+        raise APIError.server_error(f"Failed to update order status: {str(e)}")

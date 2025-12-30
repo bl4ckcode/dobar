@@ -465,7 +465,8 @@ class TestOrderCancellation:
         )
         
         assert response.status_code == 400
-        assert "cannot cancel" in response.json()["detail"].lower()
+        assert response.json()["error_code"] == "ORDER_CANCELLED"
+        assert "cannot cancel" in response.json()["message"].lower()
     
     @pytest.mark.asyncio
     async def test_cannot_cancel_other_users_order(self, client: AsyncClient, mock_firebase_token, setup_database):
@@ -592,7 +593,8 @@ class TestOrderStatusUpdate:
         )
         
         assert response.status_code == 400
-        assert "invalid" in response.json()["detail"].lower()
+        assert response.json()["error_code"] == "BAD_REQUEST"
+        assert "invalid" in response.json()["message"].lower()
     
     @pytest.mark.asyncio
     async def test_update_completed_order_status(self, client: AsyncClient, mock_firebase_token, setup_database, sample_user_data):

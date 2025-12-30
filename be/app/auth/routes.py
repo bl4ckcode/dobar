@@ -4,9 +4,10 @@ from jose import jwt
 from .auth_models import User
 from ..database import database
 from .schemas import PhoneLogin, GoogleLogin, AppleLogin, FacebookLogin, Token
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from firebase_admin import auth
+from app.errors import APIError
 import os
 
 auth_router = APIRouter(prefix="/auth", tags=["Auth"])
@@ -81,11 +82,7 @@ async def verify_firebase_token(credentials: HTTPAuthorizationCredentials = Depe
         decoded_token = auth.verify_id_token(token)
         return decoded_token
     except Exception:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+        raise APIError.invalid_token("Invalid Firebase authentication credentials")
 
 # Routes
 @auth_router.post("/phone")

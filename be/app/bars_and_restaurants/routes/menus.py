@@ -1,9 +1,10 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from sqlalchemy import and_
 from ..models.relational_models import Menu as MenuModel, Bar
 from ..models.nosql_models import menus_collection
 from ..schemas.menus import MenuCreate, Menu
 from app.database import database  # Use the async database connection
+from app.errors import APIError
 
 menus_router = APIRouter(prefix="/menus", tags=["Menus"])
 
@@ -21,7 +22,7 @@ async def create_new_menu_in_mongo(menu_data: dict):
     existing_menu = await menus_collection.find_one({"menu_id": menu_id})
     
     if existing_menu:
-        raise HTTPException(status_code=400, detail="Menu with this ID already exists in MongoDB")
+        raise APIError.conflict("Menu with this ID already exists")
     
     await menus_collection.insert_one(menu_data)
 
@@ -43,7 +44,7 @@ async def create_menu(menu: MenuCreate):
     # Check if the bar exists in the relational DB
     bar = await get_bar_by_id(menu.bar_id)
     if not bar:
-        raise HTTPException(status_code=404, detail="Bar not found")
+        raise APIError.partner_not_found("Bar not found")
     
     # Create the menu in PostgreSQL
     menu_postgres_data = {key: value for key, value in menu.dict().items() if key != "items"}
@@ -65,7 +66,7 @@ async def create_menu(menu: MenuCreate):
 async def read_menus_by_bar_id(bar_id: int):
     menu = await get_menu_by_bar_id(bar_id)
     if not menu:
-        raise HTTPException(status_code=404, detail="Menu not found")
+        raise APIError.not_found("Menu not found for this bar")
     items = await get_menu_items_from_mongo(menu.menu_id)
     if items is None:
         items = []
@@ -77,7 +78,7 @@ async def read_menu_items(menu_id: int):
     items = await get_menu_items_from_mongo(menu_id)
     
     if items is None:
-        raise HTTPException(status_code=404, detail="No items found for this menu")
+        raise APIError.item_unavailable("No items found for this menu")
     
     return {"items": items}
 
@@ -87,7 +88,7 @@ async def update_menu_item(menu_id: int, item_name: str, new_data: dict):
     # Check if menu exists
     menu = await menus_collection.find_one({"menu_id": menu_id})
     if not menu:
-        raise HTTPException(status_code=404, detail="Menu not found in MongoDB")
+        raise APIError.not_found("Menu not found")
     
     # Update the specific menu item
     await update_menu_item_in_mongo(menu_id, item_name, new_data)

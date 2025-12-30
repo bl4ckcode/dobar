@@ -115,7 +115,7 @@ class TestCheckout:
         }
         response = await client.post("/cart/checkout", json=checkout_data, headers=headers)
         assert response.status_code == 400
-        assert "empty" in response.json()["detail"].lower()
+        assert response.json()["error_code"] == "CART_EMPTY"
 
     async def test_checkout_mixed_bars_fails(self, auth_client, test_bar_in_db, second_test_bar_in_db):
         client, headers, user = auth_client
@@ -142,4 +142,5 @@ class TestCheckout:
         }
         response = await client.post("/cart/checkout", json=checkout_data, headers=headers)
         assert response.status_code == 400
-        assert "same bar" in response.json()["detail"].lower()
+        assert response.json()["error_code"] == "BAD_REQUEST"
+        assert "same bar" in response.json()["message"].lower()

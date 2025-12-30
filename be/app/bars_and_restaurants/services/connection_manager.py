@@ -1,11 +1,11 @@
 from fastapi import WebSocket, APIRouter, WebSocketDisconnect, Query, status
-from fastapi.exceptions import HTTPException
 from bson.json_util import dumps
 from datetime import datetime, timezone
 import json
 from jose import jwt, JWTError
 import os
 
+from app.errors import APIError
 from ..models.nosql_models import menus_collection, orders_collection
 from app.database import database
 from app.bars_and_restaurants.models.relational_models import Order
@@ -85,16 +85,10 @@ async def verify_token_and_get_user_id(token: str) -> int:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: int = payload.get("user_id")
         if user_id is None:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid authentication token"
-            )
+            raise APIError.invalid_token()
         return user_id
     except JWTError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid authentication token"
-        )
+        raise APIError.invalid_token()
 
 
 @ws_router.websocket("/ws/orders/{order_id}/status")

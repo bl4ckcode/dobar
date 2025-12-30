@@ -6,7 +6,7 @@ from pydantic import EmailStr
 from sqlalchemy import and_
 
 from app.bars_and_restaurants.services.image_upload import generate_presigned_url, upload_image_to_s3, extract_s3_key
-from app.errors import CustomHTTPException
+from app.errors import APIError
 from ..models.relational_models import Bar as BarModel, BarOwner
 from ..models.nosql_models import bars_collection
 from ..schemas.bars import Bar
@@ -23,7 +23,7 @@ async def get_bar_owner_by_id(id: int):
 async def get_existing_bar(owner_id: int, address: str):
     existiing_owner = await get_bar_owner_by_id(owner_id)
     if not existiing_owner:
-        raise CustomHTTPException.not_found()
+        raise APIError.partner_not_found("Bar owner not found")
 
     query = BarModel.__table__.select().where(
         and_(
@@ -40,7 +40,7 @@ async def create_new_bar(bar_data: dict):
     existing_bar = await get_existing_bar(owner_id, bar_data["address"])
     
     if existing_bar:
-        raise CustomHTTPException.conflict()
+        raise APIError.conflict("A bar with this address already exists for this owner")
     
     # Create the bar in PostgreSQL
     bar_postgres_data = {key: value for key, value in bar_data.items() if key not in ["latitude", "longitude"]}
@@ -147,7 +147,7 @@ async def create_bar(name: str = Form(...),
     try:
         image_url = await upload_image_to_s3(image.file, image.filename)
     except Exception as e:
-        raise CustomHTTPException.internal_server_error("Failed to upload image") from e
+        raise APIError.server_error("Failed to upload image") from e
 
     bar_data = { 
         "name": name,
@@ -170,7 +170,7 @@ async def read_bar(bar_id: int):
     db_bar = await database.fetch_one(query)
     
     if db_bar is None:
-        raise CustomHTTPException.not_found()
+        raise APIError.partner_not_found("Bar not found")
     
     return db_bar
 
@@ -184,13 +184,13 @@ async def get_bars(
     bar_ids = await find_bars_near_location(latitude, longitude, max_distance)
     
     if not bar_ids:
-        raise CustomHTTPException.not_found("No bars found within the specified distance")
+        raise APIError.partner_not_found("No bars found within the specified distance")
     
     # Fetch bar details from PostgreSQL using the bar IDs
     bars = await get_bars_by_ids(bar_ids)
     
     if not bars:
-        raise CustomHTTPException.not_found("No bars found")
+        raise APIError.partner_not_found("No bars found")
 
     return bars
 
@@ -200,7 +200,7 @@ async def update_bar_image(bar_id: int, image: UploadFile = File(...)):
     try:
         image_url = await upload_image_to_s3(image.file, image.filename)
     except Exception as e:
-        raise CustomHTTPException.internal_server_error("Failed to upload image") from e
+        raise APIError.server_error("Failed to upload image") from e
     
     # Update the document in MongoDB for the given bar_id
     update_result = await bars_collection.update_one(
@@ -210,7 +210,7 @@ async def update_bar_image(bar_id: int, image: UploadFile = File(...)):
     
     # Check if any document was updated
     if update_result.modified_count == 0:
-        raise CustomHTTPException.not_found("Bar not found or image URL already exists")
+        raise APIError.partner_not_found("Bar not found or image URL already exists")
     
     return {"message": "Image updated successfully", "image_url": image_url}
 

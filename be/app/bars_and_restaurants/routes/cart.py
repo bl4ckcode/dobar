@@ -2,7 +2,7 @@
 Cart management routes.
 """
 
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, Depends, status
 from sqlalchemy import and_
 from typing import List, Optional
 from decimal import Decimal
@@ -10,6 +10,7 @@ from datetime import datetime, timedelta, timezone
 
 from app.auth.middleware import get_current_active_user
 from app.auth.auth_models import User
+from app.errors import APIError
 from ..models.cart_models import Cart as CartModel, CartItem as CartItemModel, OrderItem as OrderItemModel
 from ..models.relational_models import Order as OrderModel
 from ..schemas.cart import Cart, CartItem, CartItemCreate, CartItemUpdate, CheckoutRequest, CheckoutResponse
@@ -129,10 +130,7 @@ async def update_cart_item(
     cart_item = await database.fetch_one(query)
     
     if not cart_item:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Cart item not found"
-        )
+        raise APIError.cart_item_not_found()
     
     update_query = (
         CartItemModel.__table__
@@ -165,10 +163,7 @@ async def remove_cart_item(
     cart_item = await database.fetch_one(query)
     
     if not cart_item:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Cart item not found"
-        )
+        raise APIError.cart_item_not_found()
     
     # Delete item
     delete_query = CartItemModel.__table__.delete().where(CartItemModel.id == item_id)
@@ -209,18 +204,12 @@ async def checkout(
     cart_items = await get_cart_items(cart["id"])
     
     if not cart_items:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Cart is empty"
-        )
+        raise APIError.cart_empty()
     
     # Validate all items from same bar
     bar_ids = set(item["bar_id"] for item in cart_items)
     if len(bar_ids) > 1:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="All items must be from the same bar"
-        )
+        raise APIError.bad_request("All items must be from the same bar")
     
     bar_id = bar_ids.pop()
     
@@ -342,10 +331,7 @@ async def checkout(
         # If payment failed, rollback and raise error
         if payment_error:
             await transaction.rollback()
-            raise HTTPException(
-                status_code=status.HTTP_402_PAYMENT_REQUIRED,
-                detail=payment_error
-            )
+            raise APIError.payment_declined(message=payment_error)
         
         # Clear cart
         await database.execute(
@@ -399,12 +385,9 @@ async def checkout(
             estimated_ready_time=order["estimated_ready_time"]
         )
         
-    except HTTPException:
+    except APIError:
         await transaction.rollback()
         raise
     except Exception as e:
         await transaction.rollback()
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Checkout failed: {str(e)}"
-        )
+        raise APIError.server_error(f"Checkout failed: {str(e)}")

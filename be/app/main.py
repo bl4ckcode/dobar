@@ -3,7 +3,7 @@ import os
 from dotenv import load_dotenv
 from fastapi.responses import JSONResponse
 from app.bars_and_restaurants.models.nosql_models import create_geo_index
-from app.errors import CustomHTTPException, ErrorResponse
+from app.errors import APIError, ErrorResponse, ErrorCode
 from .database import engine, Base, database
 from fastapi import FastAPI, Request
 from .auth.routes import auth_router
@@ -54,17 +54,29 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# Register the custom exception handler
-@app.exception_handler(CustomHTTPException)
-async def custom_http_exception_handler(request: Request, exc: CustomHTTPException):
+# Register the custom exception handler for APIError
+@app.exception_handler(APIError)
+async def api_error_handler(request: Request, exc: APIError):
+    """Handle APIError exceptions with standardized error response."""
     return JSONResponse(
-        status_code=exc.code,
+        status_code=exc.status_code,
+        content=exc.to_response().model_dump(exclude_none=True)
+    )
+
+
+# Catch-all handler for unhandled exceptions
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception):
+    """Handle unexpected exceptions with standardized error response."""
+    # Log the actual error for debugging (in production, use proper logging)
+    print(f"Unhandled exception: {type(exc).__name__}: {str(exc)}")
+    
+    return JSONResponse(
+        status_code=500,
         content=ErrorResponse(
-            code=exc.code,
-            type=exc.error_type,
-            message=exc.message,
-            data=exc.data
-        ).model_dump()
+            error_code=ErrorCode.UNKNOWN.value,
+            message="An unexpected error occurred"
+        ).model_dump(exclude_none=True)
     )
 
 app.include_router(auth_router)

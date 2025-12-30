@@ -27,8 +27,9 @@ class TestBarOwners:
         response1 = await client.post("/barowners/", json=owner_data)
         assert response1.status_code == 200
         response2 = await client.post("/barowners/", json=owner_data)
-        assert response2.status_code == 400
-        assert "already exists" in response2.json()["detail"].lower()
+        assert response2.status_code == 409
+        assert response2.json()["error_code"] == "CONFLICT"
+        assert "already exists" in response2.json()["message"].lower()
 
 
 @pytest.mark.asyncio

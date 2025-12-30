@@ -1,7 +1,7 @@
 """
 Wallet API Routes
 """
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy.orm import Session
 from typing import Optional
 from decimal import Decimal
@@ -9,6 +9,7 @@ from decimal import Decimal
 from app.database import get_db
 from app.auth.middleware import get_current_user
 from app.auth.auth_models import User
+from app.errors import APIError
 from app.bars_and_restaurants.services.wallet_service import WalletService
 from app.bars_and_restaurants.schemas.wallet import (
     WalletBalanceResponse,
@@ -123,21 +124,12 @@ async def apply_cashback_to_order(
     
     # Validate sufficient balance
     if amount_to_apply > wallet.available_balance:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail={
-                "error": "insufficient_balance",
-                "requested_amount": float(amount_to_apply),
-                "available_balance": float(wallet.available_balance),
-                "shortfall": float(amount_to_apply - wallet.available_balance)
-            }
+        raise APIError.insufficient_funds(
+            message=f"Insufficient wallet balance. Requested: ${float(amount_to_apply):.2f}, Available: ${float(wallet.available_balance):.2f}"
         )
     
     if amount_to_apply <= 0:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No cashback available to apply"
-        )
+        raise APIError.bad_request("No cashback available to apply")
     
     # Note: The actual redemption happens when order is placed
     # This endpoint just validates and returns the discount to be applied
@@ -198,9 +190,9 @@ async def make_cashback_available(
     try:
         transaction_uuid = UUID(transaction_id)
     except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid transaction ID format"
+        raise APIError.validation_error(
+            message="Invalid transaction ID format",
+            details={"transaction_id": ["Must be a valid UUID"]}
         )
     
     transaction = WalletService.make_cashback_available(db, transaction_uuid)
@@ -229,9 +221,9 @@ async def expire_cashback_transaction(
     try:
         transaction_uuid = UUID(transaction_id)
     except ValueError:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid transaction ID format"
+        raise APIError.validation_error(
+            message="Invalid transaction ID format",
+            details={"transaction_id": ["Must be a valid UUID"]}
         )
     
     transaction = WalletService.expire_cashback(db, transaction_uuid)

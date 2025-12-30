@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, Query
 
-from app.errors import CustomHTTPException
+from app.errors import APIError, map_gateway_error
 from .schemas import PaymentRequest, RefundRequest
 from dobar_payment import get_payment_gateway, PaymentGateway
 
@@ -19,11 +19,12 @@ async def create_charge(
     )
 
     if response.get("status") == "error":
-        raise CustomHTTPException(
-            code=400,
-            error_type="payment_error",
-            message=response.get("message", "Unknown payment error"),
-            data=response
+        gateway_code = response.get("code", "unknown")
+        transaction_id = response.get("transaction_id")
+        raise APIError.payment_declined(
+            message=response.get("message", "Payment was declined"),
+            gateway_code=gateway_code,
+            transaction_id=transaction_id
         )
 
     return response
@@ -38,20 +39,17 @@ async def refund_charge(
     
     # Compatibility fallback if neither ID is provided
     if not data.get("charge_id") and not data.get("payment_intent_id"):
-        raise CustomHTTPException(
-            code=422,
-            error_type="validation_error",
-            message="You must provide either charge_id or payment_intent_id to refund"
+        raise APIError.validation_error(
+            message="You must provide either charge_id or payment_intent_id to refund",
+            details={"charge_id": ["Either charge_id or payment_intent_id is required"]}
         )
 
     response = gateway.refund_charge(**data)
     
     if response.get("status") == "failure":
-        raise CustomHTTPException(
-            code=400,
-            error_type="payment_error",
-            message=response.get("error", "Unknown error"),
-            data=response
+        raise APIError.refund_failed(
+            message=response.get("error", "Refund could not be processed"),
+            transaction_id=response.get("transaction_id")
         )
     return response
 
@@ -65,11 +63,10 @@ async def capture_charge(
     response = gateway.capture_charge(payment_intent_id=payment_intent_id, amount=amount)
 
     if response.get("status") == "error":
-        raise CustomHTTPException(
-            code=400,
-            error_type="payment_error",
+        raise APIError.payment_declined(
             message=response.get("message", "Failed to capture payment"),
-            data=response,
+            gateway_code=response.get("code"),
+            transaction_id=payment_intent_id
         )
 
     return response
@@ -81,18 +78,15 @@ async def create_checkout(
     gateway: PaymentGateway = Depends(get_payment_gateway)
 ):
     if not hasattr(gateway, "create_checkout_session"):
-        raise CustomHTTPException(
-            code=400,
-            error_type="unsupported_gateway",
+        raise APIError.bad_request(
             message="This gateway does not support hosted checkout"
         )
 
     response = gateway.create_checkout_session(success_url, cancel_url)
     if response.get("status") == "error":
-        raise CustomHTTPException(
-            code=400,
-            error_type="stripe_error",
-            message=response.get("message", "Failed to create checkout session")
+        raise APIError.payment_declined(
+            message=response.get("message", "Failed to create checkout session"),
+            gateway_code=response.get("code")
         )
     return response
 
@@ -100,10 +94,8 @@ async def create_checkout(
 async def setup_payment_method(customer_id: str, gateway: PaymentGateway = Depends(get_payment_gateway)):
     response = gateway.create_setup_intent(customer_id)
     if response.get("status") == "error":
-        raise CustomHTTPException(
-            code=400,
-            error_type="stripe_error",
-            message=response.get("message"),
-            data=response
+        raise APIError.payment_declined(
+            message=response.get("message", "Failed to setup payment method"),
+            gateway_code=response.get("code")
         )
     return response

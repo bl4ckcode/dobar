@@ -3,12 +3,13 @@ Authentication middleware for JWT token verification.
 Provides dependencies for protecting routes and getting the current user.
 """
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
 from typing import Optional
 import os
 
+from app.errors import APIError
 from ..database import database
 from .auth_models import User
 
@@ -33,31 +34,25 @@ async def get_current_user(
         User: The authenticated user
         
     Raises:
-        HTTPException: If token is invalid, expired, or user not found
+        APIError: If token is invalid, expired, or user not found
     """
-    credentials_exception = HTTPException(
-        status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Could not validate credentials",
-        headers={"WWW-Authenticate": "Bearer"},
-    )
-    
     try:
         token = credentials.credentials
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("sub")
         
         if user_id is None:
-            raise credentials_exception
+            raise APIError.invalid_token()
             
     except JWTError:
-        raise credentials_exception
+        raise APIError.invalid_token()
     
     # Fetch user from database
     query = User.__table__.select().where(User.id == int(user_id))
     user = await database.fetch_one(query)
     
     if user is None:
-        raise credentials_exception
+        raise APIError.user_not_found()
         
     return user
 
@@ -75,13 +70,10 @@ async def get_current_active_user(
         User: The authenticated and active user
         
     Raises:
-        HTTPException: If user is inactive
+        APIError: If user is inactive
     """
     if not current_user["is_active"]:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Inactive user"
-        )
+        raise APIError.forbidden("User account is inactive")
     return current_user
 
 
@@ -134,11 +126,8 @@ def verify_user_owns_resource(user: User, resource_user_id: int) -> bool:
         bool: True if user owns the resource
         
     Raises:
-        HTTPException: If user does not own the resource
+        APIError: If user does not own the resource
     """
     if user["id"] != resource_user_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not authorized to access this resource"
-        )
+        raise APIError.forbidden("Not authorized to access this resource")
     return True

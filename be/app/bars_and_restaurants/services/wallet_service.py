@@ -16,7 +16,7 @@ from app.bars_and_restaurants.schemas.wallet import (
     EarnCashbackRequest, CashbackTransactionResponse, WalletBalanceResponse,
     CashbackCalculation
 )
-from fastapi import HTTPException, status
+from app.errors import APIError
 
 
 class WalletService:
@@ -137,10 +137,7 @@ class WalletService:
         ).first()
         
         if not transaction:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Pending cashback transaction not found"
-            )
+            raise APIError.not_found("Pending cashback transaction not found")
         
         # Update transaction status
         transaction.status = CashbackStatus.AVAILABLE
@@ -184,14 +181,8 @@ class WalletService:
         
         # Check sufficient balance
         if wallet.available_balance < amount:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail={
-                    "error": "insufficient_balance",
-                    "requested_amount": float(amount),
-                    "available_balance": float(wallet.available_balance),
-                    "shortfall": float(amount - wallet.available_balance)
-                }
+            raise APIError.insufficient_funds(
+                message=f"Insufficient wallet balance. Requested: ${float(amount):.2f}, Available: ${float(wallet.available_balance):.2f}"
             )
         
         # Create redemption transaction (negative amount)
@@ -229,10 +220,7 @@ class WalletService:
         ).first()
         
         if not transaction:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Active cashback transaction not found"
-            )
+            raise APIError.not_found("Active cashback transaction not found")
         
         # Update transaction status
         old_status = transaction.status
