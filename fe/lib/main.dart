@@ -1,15 +1,9 @@
-import 'package:barz/core/router/router.dart';
-import 'package:barz/core/utils/injections.dart';
-import 'package:device_preview/device_preview.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:provider/provider.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
-import 'core/utils/app_notifier.dart';
-import 'l10n/app_localizations.dart';
+import 'ui/shell/wireframe_shell.dart';
+import 'core/utils/constant/colors.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
 
@@ -21,15 +15,7 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Inject all dependencies
-  await initInjections();
-
-  runApp(DevicePreview(
-    builder: (context) {
-      return const BarzApp();
-    },
-    enabled: false,
-  ));
+  runApp(const BarzApp());
 
   SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
   SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle.dark);
@@ -61,47 +47,15 @@ class BarzAppState extends State<BarzApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (_) => AppNotifier(),
-      child: Consumer<AppNotifier>(
-        builder: (context, value, child) {
-          return ScreenUtilInit(
-            designSize: const Size(360, 690),
-            minTextAdapt: true,
-            splitScreenMode: true,
-            builder: (context, child) {
-              return MaterialApp(
-                localizationsDelegates: AppLocalizations.localizationsDelegates,
-                supportedLocales: AppLocalizations.supportedLocales,
-                theme: ThemeData(
-                  scaffoldBackgroundColor: Colors.white,
-                  primarySwatch: Colors.blue,
-                  textTheme: GoogleFonts.interTextTheme(),
-                  elevatedButtonTheme: ElevatedButtonThemeData(
-                    style:
-                        ElevatedButton.styleFrom(foregroundColor: Colors.white),
-                  ),
-                  inputDecorationTheme: const InputDecorationTheme(
-                    filled: true,
-                    fillColor: Colors.white,
-                    errorStyle: TextStyle(height: 0),
-                    border: defaultInputBorder,
-                    enabledBorder: defaultInputBorder,
-                    focusedBorder: defaultInputBorder,
-                    errorBorder: defaultInputBorder,
-                  ),
-                  colorScheme: ColorScheme.fromSeed(seedColor: Colors.white),
-                  useMaterial3: true,
-                ),
-                initialRoute:
-                    AppRouter.home,
-                    // value.isAuthenticated ? AppRouter.home : AppRouter.login,
-                onGenerateRoute: AppRouter.route,
-              );
-            },
-          );
-        },
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(
+        scaffoldBackgroundColor: barzYellow,
+        colorScheme: ColorScheme.fromSeed(seedColor: barzYellow, brightness: Brightness.light),
+        textTheme: Typography.blackCupertino,
+        useMaterial3: true,
       ),
+      home: const WireframeShell(),
     );
   }
 }
