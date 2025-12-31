@@ -41,4 +41,4 @@ All gateways return a standardized response:
 
 ## License
 
-Carlos Augusto Alves
+Proprietary License. See [LICENSE](LICENSE) for details.
