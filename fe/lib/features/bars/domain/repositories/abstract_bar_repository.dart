@@ -1,0 +1,11 @@
+import 'package:barz/core/network/error/failures.dart';
+import 'package:barz/features/bars/domain/models/bar_model.dart';
+import 'package:barz/features/bars/domain/models/menu_model.dart';
+import 'package:dartz/dartz.dart';
+
+abstract class AbstractBarRepository {
+  Future<Either<Failure, List<BarModel>>> getNearbyBars(
+      double lat, double lng, double maxDistance);
+  Future<Either<Failure, BarModel>> getBar(int barId);
+  Future<Either<Failure, List<MenuModel>>> getBarMenus(int barId);
+}

@@ -1,14 +1,23 @@
 import 'package:barz/features/authentication/presentation/pages/login_page.dart';
+import 'package:barz/features/bars/presentation/pages/bar_detail_page.dart';
+import 'package:barz/features/bars/presentation/pages/bars_page.dart';
+import 'package:barz/features/cart/presentation/pages/cart_page.dart';
 import 'package:barz/features/home/presentation/pages/home_page.dart';
-import 'package:barz/features/menus/presentation/pages/menu/menus_page.dart';
+import 'package:barz/features/orders/presentation/pages/order_detail_page.dart';
+import 'package:barz/features/orders/presentation/pages/orders_page.dart';
+import 'package:barz/features/partners/presentation/pages/menu/menus_page.dart'
+    as partners;
 import 'package:flutter/material.dart';
-
-import '../../features/partners/presentation/pages/menu/menus_page.dart';
 
 class AppRouter {
   static const String login = '/login';
   static const String home = '/home';
   static const String partnerMenu = '/partner_menu';
+  static const String cart = '/cart';
+  static const String orders = '/orders';
+  static const String orderDetail = '/order_detail';
+  static const String bars = '/bars';
+  static const String barDetail = '/bar_detail';
 
   static Route<dynamic> route(RouteSettings settings) {
     switch (settings.name) {
@@ -17,7 +26,23 @@ class AppRouter {
       case home:
         return _buildRouteWithAnimation(const HomePage());
       case partnerMenu:
-        return _buildRouteWithAnimation(const MenusPage());
+        return _buildRouteWithAnimation(const partners.MenusPage());
+      case bars:
+        final args = settings.arguments as Map<String, double>;
+        return _buildRouteWithAnimation(BarsPage(
+          latitude: args['latitude']!,
+          longitude: args['longitude']!,
+        ));
+      case barDetail:
+        final barId = settings.arguments as int;
+        return _buildRouteWithAnimation(BarDetailPage(barId: barId));
+      case cart:
+        return _buildRouteWithAnimation(const CartPage());
+      case orders:
+        return _buildRouteWithAnimation(const OrdersPage());
+      case orderDetail:
+        final orderId = settings.arguments as int;
+        return _buildRouteWithAnimation(OrderDetailPage(orderId: orderId));
       default:
         return _errorRoute();
     }
@@ -32,13 +57,10 @@ class AppRouter {
     });
   }
 
-  // This method builds a route with a custom animation
   static PageRouteBuilder _buildRouteWithAnimation(Widget page) {
     return PageRouteBuilder(
       pageBuilder: (context, animation, secondaryAnimation) => page,
       transitionsBuilder: (context, animation, secondaryAnimation, child) {
-        // You can customize the transition here
-        // Example: Fade transition with slide
         const begin = Offset(1.0, 0.0);
         const end = Offset.zero;
         const curve = Curves.ease;
@@ -55,8 +77,7 @@ class AppRouter {
           ),
         );
       },
-      transitionDuration:
-          const Duration(milliseconds: 1500), // Adjust the duration as needed
+      transitionDuration: const Duration(milliseconds: 1500),
     );
   }
 }
