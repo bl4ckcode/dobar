@@ -12,9 +12,9 @@ class PromotionsRepositoryImpl implements PromotionsRepository {
   PromotionsRepositoryImpl(this._datasource);
 
   @override
-  Future<Either<Failure, List<PromotionModel>>> getPromotions() async {
+  Future<Either<Failure, List<PromotionModel>>> getPromotions({bool activeOnly = true}) async {
     try {
-      final result = await _datasource.getPromotions();
+      final result = await _datasource.getPromotions(activeOnly: activeOnly);
       return Right(result);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message, e.statusCode));
@@ -22,9 +22,39 @@ class PromotionsRepositoryImpl implements PromotionsRepository {
   }
 
   @override
-  Future<Either<Failure, List<PromotionModel>>> getPromotionsByType(PromotionType type) async {
+  Future<Either<Failure, List<PromotionModel>>> getPromotionsByDiscountType(DiscountType type) async {
     try {
-      final result = await _datasource.getPromotionsByType(type);
+      final result = await _datasource.getPromotionsByDiscountType(type);
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message, e.statusCode));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<PromotionModel>>> getPromotionsByBar(int barId, {bool activeOnly = true}) async {
+    try {
+      final result = await _datasource.getPromotionsByBar(barId, activeOnly: activeOnly);
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message, e.statusCode));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<PromotionModel>>> getNearbyPromotions({
+    required double latitude,
+    required double longitude,
+    double maxDistance = 5000,
+    bool activeOnly = true,
+  }) async {
+    try {
+      final result = await _datasource.getNearbyPromotions(
+        latitude: latitude,
+        longitude: longitude,
+        maxDistance: maxDistance,
+        activeOnly: activeOnly,
+      );
       return Right(result);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message, e.statusCode));
@@ -78,6 +108,9 @@ class PromotionsRepositoryImpl implements PromotionsRepository {
       return Right(result);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message, e.statusCode));
+    }
+  }
+});
     }
   }
 }

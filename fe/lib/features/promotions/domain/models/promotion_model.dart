@@ -1,88 +1,128 @@
-enum PromotionType { banner, featured, drink, partner, cashback, premium }
+enum DiscountType { percentage, fixed, bogo }
 
 class PromotionModel {
   final int id;
-  final PromotionType type;
+  final int barId;
   final String title;
-  final String? subtitle;
   final String? description;
-  final String? imageUrl;
-  final String? actionUrl;
-  final int? partnerId;
-  final int? offerId;
-  final int? drinkId;
-  final double? cashbackPercentage;
-  final int priority;
-  final DateTime startDate;
-  final DateTime endDate;
+  final DiscountType discountType;
+  final double discountValue;
+  final String? startTime;
+  final String? endTime;
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final bool recurring;
+  final List<String> recurringDays;
+  final String? terms;
   final bool isActive;
-  final DateTime createdAt;
+  final String? imageUrl;
+  final int? imageUrlExpiration;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+  
+  // For nearby endpoint - includes bar info
+  final String? barName;
+  final String? barAddress;
+  final double? approximateLocation;
 
   PromotionModel({
     required this.id,
-    required this.type,
+    required this.barId,
     required this.title,
-    this.subtitle,
     this.description,
-    this.imageUrl,
-    this.actionUrl,
-    this.partnerId,
-    this.offerId,
-    this.drinkId,
-    this.cashbackPercentage,
-    this.priority = 0,
-    required this.startDate,
-    required this.endDate,
+    required this.discountType,
+    required this.discountValue,
+    this.startTime,
+    this.endTime,
+    this.startDate,
+    this.endDate,
+    this.recurring = false,
+    this.recurringDays = const [],
+    this.terms,
     this.isActive = true,
-    required this.createdAt,
+    this.imageUrl,
+    this.imageUrlExpiration,
+    this.createdAt,
+    this.updatedAt,
+    this.barName,
+    this.barAddress,
+    this.approximateLocation,
   });
 
   factory PromotionModel.fromJson(Map<String, dynamic> json) {
     return PromotionModel(
       id: json['id'],
-      type: PromotionType.values.firstWhere(
-          (e) => e.name == json['type'],
-          orElse: () => PromotionType.banner),
+      barId: json['bar_id'],
       title: json['title'],
-      subtitle: json['subtitle'],
       description: json['description'],
-      imageUrl: json['image_url'],
-      actionUrl: json['action_url'],
-      partnerId: json['partner_id'],
-      offerId: json['offer_id'],
-      drinkId: json['drink_id'],
-      cashbackPercentage: (json['cashback_percentage'] as num?)?.toDouble(),
-      priority: json['priority'] ?? 0,
-      startDate: DateTime.parse(json['start_date']),
-      endDate: DateTime.parse(json['end_date']),
+      discountType: DiscountType.values.firstWhere(
+          (e) => e.name == json['discount_type'],
+          orElse: () => DiscountType.percentage),
+      discountValue: (json['discount_value'] as num?)?.toDouble() ?? 0.0,
+      startTime: json['start_time'],
+      endTime: json['end_time'],
+      startDate: json['start_date'] != null ? DateTime.tryParse(json['start_date']) : null,
+      endDate: json['end_date'] != null ? DateTime.tryParse(json['end_date']) : null,
+      recurring: json['recurring'] ?? false,
+      recurringDays: (json['recurring_days'] as List<dynamic>?)?.cast<String>() ?? [],
+      terms: json['terms'],
       isActive: json['is_active'] ?? true,
-      createdAt: DateTime.parse(json['created_at']),
+      imageUrl: json['image_url'],
+      imageUrlExpiration: json['image_url_expiration'],
+      createdAt: json['created_at'] != null ? DateTime.tryParse(json['created_at']) : null,
+      updatedAt: json['updated_at'] != null ? DateTime.tryParse(json['updated_at']) : null,
+      // PromotionWithBar fields (from /nearby endpoint)
+      barName: json['bar_name'],
+      barAddress: json['bar_address'],
+      approximateLocation: (json['approximate_location'] as num?)?.toDouble(),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'type': type.name,
+      'bar_id': barId,
       'title': title,
-      'subtitle': subtitle,
       'description': description,
-      'image_url': imageUrl,
-      'action_url': actionUrl,
-      'partner_id': partnerId,
-      'offer_id': offerId,
-      'drink_id': drinkId,
-      'cashback_percentage': cashbackPercentage,
-      'priority': priority,
-      'start_date': startDate.toIso8601String(),
-      'end_date': endDate.toIso8601String(),
+      'discount_type': discountType.name,
+      'discount_value': discountValue,
+      'start_time': startTime,
+      'end_time': endTime,
+      'start_date': startDate?.toIso8601String(),
+      'end_date': endDate?.toIso8601String(),
+      'recurring': recurring,
+      'recurring_days': recurringDays,
+      'terms': terms,
       'is_active': isActive,
-      'created_at': createdAt.toIso8601String(),
+      'image_url': imageUrl,
     };
   }
 
+  /// Formatted discount string for display
+  String get discountText {
+    switch (discountType) {
+      case DiscountType.percentage:
+        return '${discountValue.toInt()}% OFF';
+      case DiscountType.fixed:
+        return 'R\$${discountValue.toStringAsFixed(0)} OFF';
+      case DiscountType.bogo:
+        return 'COMPRE 1 LEVE 2';
+    }
+  }
+
+  /// Time range for display (e.g., "17:00 - 20:00")
+  String? get timeRange {
+    if (startTime != null && endTime != null) {
+      return '$startTime - $endTime';
+    }
+    return null;
+  }
+
   bool get isValid {
+    if (!isActive) return false;
     final now = DateTime.now();
-    return isActive && now.isAfter(startDate) && now.isBefore(endDate);
+    if (startDate != null && now.isBefore(startDate!)) return false;
+    if (endDate != null && now.isAfter(endDate!)) return false;
+    return true;
   }
 }

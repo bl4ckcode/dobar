@@ -8,7 +8,9 @@ class PromotionsBloc extends Bloc<PromotionsEvent, PromotionsState> {
 
   PromotionsBloc(this._usecase) : super(const PromotionsState()) {
     on<LoadPromotions>(_onLoadPromotions);
-    on<LoadPromotionsByType>(_onLoadPromotionsByType);
+    on<LoadPromotionsByDiscountType>(_onLoadPromotionsByDiscountType);
+    on<LoadPromotionsByBar>(_onLoadPromotionsByBar);
+    on<LoadNearbyPromotions>(_onLoadNearbyPromotions);
     on<LoadPromotionById>(_onLoadPromotionById);
     on<LoadOffers>(_onLoadOffers);
     on<LoadOffersByPartnerId>(_onLoadOffersByPartnerId);
@@ -22,19 +24,48 @@ class PromotionsBloc extends Bloc<PromotionsEvent, PromotionsState> {
     Emitter<PromotionsState> emit,
   ) async {
     emit(state.copyWith(isLoading: true, error: null));
-    final result = await _usecase.getPromotions();
+    final result = await _usecase.getPromotions(activeOnly: event.activeOnly);
     result.fold(
       (failure) => emit(state.copyWith(isLoading: false, error: failure.errorMessage)),
       (promotions) => emit(state.copyWith(isLoading: false, promotions: promotions)),
     );
   }
 
-  Future<void> _onLoadPromotionsByType(
-    LoadPromotionsByType event,
+  Future<void> _onLoadPromotionsByDiscountType(
+    LoadPromotionsByDiscountType event,
     Emitter<PromotionsState> emit,
   ) async {
     emit(state.copyWith(isLoading: true, error: null));
-    final result = await _usecase.getPromotionsByType(event.type);
+    final result = await _usecase.getPromotionsByDiscountType(event.type);
+    result.fold(
+      (failure) => emit(state.copyWith(isLoading: false, error: failure.errorMessage)),
+      (promotions) => emit(state.copyWith(isLoading: false, promotions: promotions)),
+    );
+  }
+
+  Future<void> _onLoadPromotionsByBar(
+    LoadPromotionsByBar event,
+    Emitter<PromotionsState> emit,
+  ) async {
+    emit(state.copyWith(isLoading: true, error: null));
+    final result = await _usecase.getPromotionsByBar(event.barId, activeOnly: event.activeOnly);
+    result.fold(
+      (failure) => emit(state.copyWith(isLoading: false, error: failure.errorMessage)),
+      (promotions) => emit(state.copyWith(isLoading: false, promotions: promotions)),
+    );
+  }
+
+  Future<void> _onLoadNearbyPromotions(
+    LoadNearbyPromotions event,
+    Emitter<PromotionsState> emit,
+  ) async {
+    emit(state.copyWith(isLoading: true, error: null));
+    final result = await _usecase.getNearbyPromotions(
+      latitude: event.latitude,
+      longitude: event.longitude,
+      maxDistance: event.maxDistance,
+      activeOnly: event.activeOnly,
+    );
     result.fold(
       (failure) => emit(state.copyWith(isLoading: false, error: failure.errorMessage)),
       (promotions) => emit(state.copyWith(isLoading: false, promotions: promotions)),

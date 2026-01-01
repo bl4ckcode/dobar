@@ -4,8 +4,15 @@ import 'package:barz/features/promotions/domain/models/promotion_model.dart';
 import 'package:barz/features/promotions/domain/models/offer_model.dart';
 
 abstract class PromotionsRepository {
-  Future<Either<Failure, List<PromotionModel>>> getPromotions();
-  Future<Either<Failure, List<PromotionModel>>> getPromotionsByType(PromotionType type);
+  Future<Either<Failure, List<PromotionModel>>> getPromotions({bool activeOnly = true});
+  Future<Either<Failure, List<PromotionModel>>> getPromotionsByDiscountType(DiscountType type);
+  Future<Either<Failure, List<PromotionModel>>> getPromotionsByBar(int barId, {bool activeOnly = true});
+  Future<Either<Failure, List<PromotionModel>>> getNearbyPromotions({
+    required double latitude,
+    required double longitude,
+    double maxDistance = 5000,
+    bool activeOnly = true,
+  });
   Future<Either<Failure, PromotionModel>> getPromotionById(int id);
   Future<Either<Failure, List<OfferModel>>> getOffers();
   Future<Either<Failure, List<OfferModel>>> getOffersByPartnerId(int partnerId);

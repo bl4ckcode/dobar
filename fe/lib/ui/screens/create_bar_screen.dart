@@ -97,7 +97,7 @@ class _CreateBarScreenState extends State<CreateBarScreen> {
       });
 
       await DioNetwork.appAPI.post(
-        '${ApiEndpoints.baseUrl}${ApiEndpoints.bars}/',
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.bars}',
         data: formData,
       );
 
@@ -107,7 +107,8 @@ class _CreateBarScreenState extends State<CreateBarScreen> {
       });
     } catch (e) {
       setState(() {
-        _message = '✗ Failed: ${e.toString().substring(0, 100)}';
+        final errStr = e.toString();
+        _message = '✗ Failed: ${errStr.length > 100 ? errStr.substring(0, 100) : errStr}';
       });
     } finally {
       setState(() => _loading = false);

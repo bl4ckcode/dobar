@@ -1,5 +1,6 @@
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/core/storage/secure_storage.dart';
+import 'package:barz/core/services/token_storage_service.dart';
 import 'package:barz/core/services/version_migration_service.dart';
 import 'package:barz/core/services/app_initializer.dart';
 
@@ -10,6 +11,8 @@ Future<void> initAppInjections() async {
       .registerFactory<AppSharedPrefs>(() => AppSharedPrefs(getItInjector()));
   
   getItInjector.registerLazySingleton<SecureStorage>(() => SecureStorage());
+  
+  getItInjector.registerLazySingleton<TokenStorageService>(() => TokenStorageService());
   
   getItInjector.registerLazySingleton<VersionMigrationService>(
     () => VersionMigrationService(

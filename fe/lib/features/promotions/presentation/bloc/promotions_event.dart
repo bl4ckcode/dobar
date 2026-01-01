@@ -5,8 +5,15 @@ part 'promotions_event.freezed.dart';
 
 @freezed
 class PromotionsEvent with _$PromotionsEvent {
-  const factory PromotionsEvent.loadPromotions() = LoadPromotions;
-  const factory PromotionsEvent.loadPromotionsByType(PromotionType type) = LoadPromotionsByType;
+  const factory PromotionsEvent.loadPromotions({@Default(true) bool activeOnly}) = LoadPromotions;
+  const factory PromotionsEvent.loadPromotionsByDiscountType(DiscountType type) = LoadPromotionsByDiscountType;
+  const factory PromotionsEvent.loadPromotionsByBar(int barId, {@Default(true) bool activeOnly}) = LoadPromotionsByBar;
+  const factory PromotionsEvent.loadNearbyPromotions({
+    required double latitude,
+    required double longitude,
+    @Default(5000.0) double maxDistance,
+    @Default(true) bool activeOnly,
+  }) = LoadNearbyPromotions;
   const factory PromotionsEvent.loadPromotionById(int id) = LoadPromotionById;
   const factory PromotionsEvent.loadOffers() = LoadOffers;
   const factory PromotionsEvent.loadOffersByPartnerId(int partnerId) = LoadOffersByPartnerId;

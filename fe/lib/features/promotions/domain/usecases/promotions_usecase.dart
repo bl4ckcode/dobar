@@ -9,12 +9,30 @@ class PromotionsUsecase {
 
   PromotionsUsecase(this._repository);
 
-  Future<Either<Failure, List<PromotionModel>>> getPromotions() {
-    return _repository.getPromotions();
+  Future<Either<Failure, List<PromotionModel>>> getPromotions({bool activeOnly = true}) {
+    return _repository.getPromotions(activeOnly: activeOnly);
   }
 
-  Future<Either<Failure, List<PromotionModel>>> getPromotionsByType(PromotionType type) {
-    return _repository.getPromotionsByType(type);
+  Future<Either<Failure, List<PromotionModel>>> getPromotionsByDiscountType(DiscountType type) {
+    return _repository.getPromotionsByDiscountType(type);
+  }
+
+  Future<Either<Failure, List<PromotionModel>>> getPromotionsByBar(int barId, {bool activeOnly = true}) {
+    return _repository.getPromotionsByBar(barId, activeOnly: activeOnly);
+  }
+
+  Future<Either<Failure, List<PromotionModel>>> getNearbyPromotions({
+    required double latitude,
+    required double longitude,
+    double maxDistance = 5000,
+    bool activeOnly = true,
+  }) {
+    return _repository.getNearbyPromotions(
+      latitude: latitude,
+      longitude: longitude,
+      maxDistance: maxDistance,
+      activeOnly: activeOnly,
+    );
   }
 
   Future<Either<Failure, PromotionModel>> getPromotionById(int id) {

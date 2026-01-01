@@ -5,8 +5,15 @@ import 'package:barz/features/promotions/domain/models/offer_model.dart';
 import 'package:dio/dio.dart';
 
 abstract class PromotionsDatasource {
-  Future<List<PromotionModel>> getPromotions();
-  Future<List<PromotionModel>> getPromotionsByType(PromotionType type);
+  Future<List<PromotionModel>> getPromotions({bool activeOnly = true});
+  Future<List<PromotionModel>> getPromotionsByDiscountType(DiscountType type);
+  Future<List<PromotionModel>> getPromotionsByBar(int barId, {bool activeOnly = true});
+  Future<List<PromotionModel>> getNearbyPromotions({
+    required double latitude,
+    required double longitude,
+    double maxDistance = 5000,
+    bool activeOnly = true,
+  });
   Future<PromotionModel> getPromotionById(int id);
   Future<List<OfferModel>> getOffers();
   Future<List<OfferModel>> getOffersByPartnerId(int partnerId);
@@ -20,9 +27,12 @@ class PromotionsNetworkDatasource implements PromotionsDatasource {
   PromotionsNetworkDatasource({required this.dio});
 
   @override
-  Future<List<PromotionModel>> getPromotions() async {
+  Future<List<PromotionModel>> getPromotions({bool activeOnly = true}) async {
     try {
-      final response = await dio.get('${ApiEndpoints.baseUrl}${ApiEndpoints.promotions}');
+      final response = await dio.get(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.promotions}',
+        queryParameters: {'active_only': activeOnly},
+      );
       return (response.data as List).map((json) => PromotionModel.fromJson(json)).toList();
     } on DioException catch (e) {
       throw ServerException(e.response?.data?['detail'] ?? 'Failed to get promotions', e.response?.statusCode);
@@ -30,9 +40,12 @@ class PromotionsNetworkDatasource implements PromotionsDatasource {
   }
 
   @override
-  Future<List<PromotionModel>> getPromotionsByType(PromotionType type) async {
+  Future<List<PromotionModel>> getPromotionsByDiscountType(DiscountType type) async {
     try {
-      final response = await dio.get('${ApiEndpoints.baseUrl}${ApiEndpoints.promotions}', queryParameters: {'type': type.name});
+      final response = await dio.get(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.promotions}',
+        queryParameters: {'discount_type': type.name},
+      );
       return (response.data as List).map((json) => PromotionModel.fromJson(json)).toList();
     } on DioException catch (e) {
       throw ServerException(e.response?.data?['detail'] ?? 'Failed to get promotions by type', e.response?.statusCode);
@@ -40,9 +53,45 @@ class PromotionsNetworkDatasource implements PromotionsDatasource {
   }
 
   @override
+  Future<List<PromotionModel>> getPromotionsByBar(int barId, {bool activeOnly = true}) async {
+    try {
+      final response = await dio.get(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.barPromotions(barId)}',
+        queryParameters: {'active_only': activeOnly},
+      );
+      return (response.data as List).map((json) => PromotionModel.fromJson(json)).toList();
+    } on DioException catch (e) {
+      throw ServerException(e.response?.data?['detail'] ?? 'Failed to get bar promotions', e.response?.statusCode);
+    }
+  }
+
+  @override
+  Future<List<PromotionModel>> getNearbyPromotions({
+    required double latitude,
+    required double longitude,
+    double maxDistance = 5000,
+    bool activeOnly = true,
+  }) async {
+    try {
+      final response = await dio.get(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.nearbyPromotions}',
+        queryParameters: {
+          'latitude': latitude,
+          'longitude': longitude,
+          'max_distance': maxDistance,
+          'active_only': activeOnly,
+        },
+      );
+      return (response.data as List).map((json) => PromotionModel.fromJson(json)).toList();
+    } on DioException catch (e) {
+      throw ServerException(e.response?.data?['detail'] ?? 'Failed to get nearby promotions', e.response?.statusCode);
+    }
+  }
+
+  @override
   Future<PromotionModel> getPromotionById(int id) async {
     try {
-      final response = await dio.get('${ApiEndpoints.baseUrl}${ApiEndpoints.promotions}/$id');
+      final response = await dio.get('${ApiEndpoints.baseUrl}${ApiEndpoints.promotion(id)}');
       return PromotionModel.fromJson(response.data);
     } on DioException catch (e) {
       throw ServerException(e.response?.data?['detail'] ?? 'Failed to get promotion', e.response?.statusCode);

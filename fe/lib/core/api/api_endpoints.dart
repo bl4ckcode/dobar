@@ -38,7 +38,13 @@ class ApiEndpoints {
   static const String transactions = '/transactions';
   static const String walletTopUp = '/wallet/top-up';
 
-  static const String promotions = '/promotions';
+  // Promotions
+  static const String promotions = '/promotions/';
+  static String promotion(int id) => '/promotions/$id';
+  static String barPromotions(int barId) => '/promotions/bar/$barId';
+  static const String nearbyPromotions = '/promotions/nearby';
+  static String togglePromotion(int id) => '/promotions/$id/toggle-active';
+  
   static const String offers = '/offers';
 }
 
