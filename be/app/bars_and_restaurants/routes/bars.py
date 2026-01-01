@@ -42,8 +42,8 @@ async def create_new_bar(bar_data: dict):
     if existing_bar:
         raise APIError.conflict("A bar with this address already exists for this owner")
     
-    # Create the bar in PostgreSQL
-    bar_postgres_data = {key: value for key, value in bar_data.items() if key not in ["latitude", "longitude"]}
+    # Create the bar in PostgreSQL (exclude MongoDB-only fields)
+    bar_postgres_data = {key: value for key, value in bar_data.items() if key not in ["latitude", "longitude", "image_url"]}
     query = BarModel.__table__.insert().values(**bar_postgres_data)
     bar_id = await database.execute(query)
 
