@@ -6,13 +6,32 @@
 app = 'barz-backend-bold-sun-5691'
 primary_region = 'gru'
 
+# Graceful shutdown settings
+kill_signal = "SIGTERM"
+kill_timeout = "10s"
+
 [http_service]
   internal_port = 8080
   force_https = true
   auto_stop_machines = 'stop'
   auto_start_machines = true
-  min_machines_running = 0
+  # 🔒 Keep 1 machine running at all times for faster response (no cold starts)
+  min_machines_running = 1
   processes = ['app']
+
+  # Concurrency settings for autoscaling
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 100
+    hard_limit = 200
+
+# Health checks with proper grace period for slow startup (MongoDB Atlas + SQLAlchemy)
+[[http_service.checks]]
+  grace_period = "15s"
+  interval = "30s"
+  method = "GET"
+  timeout = "10s"
+  path = "/health"
 
 [[vm]]
   memory = '1gb'

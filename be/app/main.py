@@ -55,6 +55,14 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+
+# 🏥 Health check endpoint for Fly.io (responds fast, no database calls)
+@app.get("/health", tags=["Health"])
+async def health_check():
+    """Simple health check endpoint for Fly.io proxy."""
+    return {"status": "healthy", "app": "barz-backend"}
+
+
 # Register the custom exception handler for APIError
 @app.exception_handler(APIError)
 async def api_error_handler(request: Request, exc: APIError):
