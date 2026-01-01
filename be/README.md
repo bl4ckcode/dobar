@@ -116,4 +116,4 @@ Authorization: Bearer <token>
 
 ## License
 
-MIT
+Proprietary License. See [LICENSE](LICENSE) for details.
