@@ -6,7 +6,7 @@ class ApiEndpoints {
   static const String authApple = '/auth/apple';
   static const String authFacebook = '/auth/facebook';
 
-  static const String bars = '/bars';
+  static const String bars = '/bars/';
   static String bar(int id) => '/bars/$id';
 
   static String menus(int barId) => '/menus/$barId';

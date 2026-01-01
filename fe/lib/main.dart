@@ -4,40 +4,27 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'firebase_options.dart';
-import 'core/di/injection.dart';
+import 'core/utils/injections.dart';
 import 'core/services/app_initializer.dart';
 import 'core/theme/app_theme.dart';
-import 'ui/screens/login_wireframe.dart';
-
-final navigatorKey = GlobalKey<NavigatorState>();
+import 'core/router/app_router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Configure URL strategy for web to use path-based URLs instead of hash-based
   if (kIsWeb) {
     usePathUrlStrategy();
   }
 
-  // Initialize Firebase SDK
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // Initialize dependencies (DI container)
-  const bool useMockApi = bool.fromEnvironment(
-    'USE_MOCK_API',
-    defaultValue: false,
-  );
-  initDependencies(useMock: useMockApi);
-
-  // CRITICAL: Run app initializer to handle version migrations
-  // This prevents users from being logged out after app updates
-  await getIt<AppInitializer>().run();
+  await initInjections();
+  await getItInjector<AppInitializer>().run();
 
   runApp(const BarzApp());
 
-  // Set preferred orientations for mobile
   if (!kIsWeb) {
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
     SystemChrome.setSystemUIOverlayStyle(
@@ -74,15 +61,13 @@ class BarzAppState extends State<BarzApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      navigatorKey: navigatorKey,
+    return MaterialApp.router(
+      routerConfig: appRouter,
       debugShowCheckedModeBanner: false,
       title: 'Barz',
       theme: getLightTheme(),
       darkTheme: getDarkTheme(),
       themeMode: ThemeMode.light,
-      // Start with login screen - authentication required before main app
-      home: const LoginWireframe(),
     );
   }
 }

@@ -1,42 +1,51 @@
 import 'package:get_it/get_it.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:barz/core/storage/secure_storage.dart';
 import 'package:barz/core/services/version_migration_service.dart';
 import 'package:barz/core/services/app_initializer.dart';
+import 'package:barz/core/network/dio_network.dart';
+import 'package:barz/core/utils/log/app_logger.dart';
+import 'package:barz/core/mocks/mock_bar_repository.dart';
+import 'package:barz/core/mocks/mock_promotions_repository.dart';
+import 'package:barz/features/bars/data/data_sources/bar_network_datasource.dart';
+import 'package:barz/features/bars/data/repositories/bar_repository_impl.dart';
+import 'package:barz/features/bars/domain/repositories/abstract_bar_repository.dart';
+import 'package:barz/features/bars/domain/usecases/bar_usecase.dart';
+import 'package:barz/features/bars/presentation/bloc/bar_bloc.dart';
+import 'package:barz/features/promotions/data/datasources/promotions_datasource.dart';
+import 'package:barz/features/promotions/data/repositories/promotions_repository_impl.dart';
+import 'package:barz/features/promotions/domain/repositories/promotions_repository.dart';
+import 'package:barz/features/promotions/domain/usecases/promotions_usecase.dart';
+import 'package:barz/features/promotions/presentation/bloc/promotions_bloc.dart';
 
 final getIt = GetIt.instance;
 
-/// Initialize all dependencies for the app
-/// 
-/// This follows Clean Architecture principles:
-/// 1. Register services first (storage, network, etc.)
-/// 2. Register repositories (depend on services)
-/// 3. Register use cases (depend on repositories)
-/// 4. Register blocs/controllers (depend on use cases)
-void initDependencies({bool useMock = false}) {
-  // --- CORE SERVICES ---
+/// Set to true to use mock data instead of real API
+const bool _useMockData = true;
+
+Future<void> initDependencies({bool useMock = _useMockData}) async {
+  initRootLogger();
+  DioNetwork.initDio();
+  
+  await _registerSharedPrefs();
   _registerCoreServices();
-  
-  // --- STORAGE ---
   _registerStorageServices();
-  
-  // --- VERSION MIGRATION ---
   _registerMigrationServices();
   
-  // --- APIs ---
   if (useMock) {
-    _registerMockApis();
+    _registerMockRepositories();
   } else {
     _registerApis();
+    _registerRepositories();
   }
   
-  // --- REPOSITORIES ---
-  _registerRepositories();
-  
-  // --- USE CASES ---
   _registerUseCases();
-  
-  // --- BLOCS ---
   _registerBlocs();
+}
+
+Future<void> _registerSharedPrefs() async {
+  final prefs = await SharedPreferences.getInstance();
+  getIt.registerSingleton<SharedPreferences>(prefs);
 }
 
 void _registerCoreServices() {
@@ -65,35 +74,50 @@ void _registerMigrationServices() {
   );
 }
 
-void _registerMockApis() {
-  // Register mock implementations for testing
-  // getIt.registerLazySingleton<AbstractAuthApi>(() => AuthApiMock());
+void _registerMockRepositories() {
+  // Use mock data for testing when backend is unavailable
+  getIt.registerLazySingleton<AbstractBarRepository>(
+    () => MockBarRepository(),
+  );
+  getIt.registerLazySingleton<PromotionsRepository>(
+    () => MockPromotionsRepository(),
+  );
 }
 
 void _registerApis() {
-  // Register real API implementations
-  // getIt.registerLazySingleton<AbstractAuthApi>(() => AuthApi(getIt<ApiClient>()));
+  getIt.registerLazySingleton<BarNetworkDataSource>(
+    () => BarNetworkDataSource(dio: DioNetwork.appAPI),
+  );
+  getIt.registerLazySingleton<PromotionsDatasource>(
+    () => PromotionsNetworkDatasource(dio: DioNetwork.appAPI),
+  );
 }
 
 void _registerRepositories() {
-  // Register repositories
-  // getIt.registerLazySingleton<AuthRepository>(
-  //   () => AuthRepositoryImpl(getIt<AbstractAuthApi>()),
-  // );
+  getIt.registerLazySingleton<AbstractBarRepository>(
+    () => BarRepositoryImpl(networkDataSource: getIt<BarNetworkDataSource>()),
+  );
+  getIt.registerLazySingleton<PromotionsRepository>(
+    () => PromotionsRepositoryImpl(getIt<PromotionsDatasource>()),
+  );
 }
 
 void _registerUseCases() {
-  // Register use cases
-  // getIt.registerLazySingleton<LoginUseCase>(
-  //   () => LoginUseCase(getIt<AuthRepository>()),
-  // );
+  getIt.registerLazySingleton<BarUsecase>(
+    () => BarUsecase(repository: getIt<AbstractBarRepository>()),
+  );
+  getIt.registerLazySingleton<PromotionsUsecase>(
+    () => PromotionsUsecase(getIt<PromotionsRepository>()),
+  );
 }
 
 void _registerBlocs() {
-  // Register blocs as factories (new instance each time)
-  // getIt.registerFactory(
-  //   () => LoginBloc(loginUseCase: getIt<LoginUseCase>()),
-  // );
+  getIt.registerFactory<BarBloc>(
+    () => BarBloc(barUsecase: getIt<BarUsecase>()),
+  );
+  getIt.registerFactory<PromotionsBloc>(
+    () => PromotionsBloc(getIt<PromotionsUsecase>()),
+  );
 }
 
 /// Reset all dependencies (useful for testing)
