@@ -11,6 +11,7 @@ from .bars_and_restaurants.routes.bars import bars_router
 from .bars_and_restaurants.routes.menus import menus_router
 from .bars_and_restaurants.routes.orders import orders_router
 from .bars_and_restaurants.routes.cart import cart_router
+from .bars_and_restaurants.routes.promotions import promotions_router
 from .bars_and_restaurants.services.connection_manager import ws_router
 from .bars_and_restaurants.routes.bar_owners import bar_owners_router
 from .bars_and_restaurants.routes.wallet import wallet_router
@@ -84,6 +85,7 @@ app.include_router(bars_router)
 app.include_router(menus_router)
 app.include_router(orders_router)
 app.include_router(cart_router)
+app.include_router(promotions_router)
 app.include_router(ws_router)
 app.include_router(bar_owners_router)
 app.include_router(payment_router)

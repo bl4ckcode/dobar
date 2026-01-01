@@ -184,13 +184,13 @@ async def get_bars(
     bar_ids = await find_bars_near_location(latitude, longitude, max_distance)
     
     if not bar_ids:
-        raise APIError.partner_not_found("No bars found within the specified distance")
+        return []  # Return empty array for Flutter - no bars nearby is a valid state
     
     # Fetch bar details from PostgreSQL using the bar IDs
     bars = await get_bars_by_ids(bar_ids)
     
     if not bars:
-        raise APIError.partner_not_found("No bars found")
+        return []  # Return empty array for Flutter
 
     return bars
 
