@@ -10,8 +10,17 @@ class MenuItem(BaseModel):
 
 class MenuCreate(BaseModel):
     bar_id: int
-    items: List[MenuItem]
+    name: Optional[str] = "Menu Principal"
+    description: Optional[str] = None
+    is_active: Optional[bool] = True
+    items: Optional[List[MenuItem]] = []  # Make items optional with default empty list
 
 class Menu(BaseModel):
-    menu_id: int
+    id: int
     bar_id: int
+    name: Optional[str] = None
+    description: Optional[str] = None
+    is_active: Optional[bool] = True
+    
+    class Config:
+        from_attributes = True

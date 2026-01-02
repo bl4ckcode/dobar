@@ -46,31 +46,38 @@ async def create_menu(menu: MenuCreate):
     if not bar:
         raise APIError.partner_not_found("Bar not found")
     
-    # Create the menu in PostgreSQL
-    menu_postgres_data = {key: value for key, value in menu.dict().items() if key != "items"}
+    # Create the menu in PostgreSQL (exclude items - those go to MongoDB)
+    menu_postgres_data = {
+        "bar_id": menu.bar_id,
+        "name": menu.name,
+        "description": menu.description,
+        "is_active": menu.is_active
+    }
     query = MenuModel.__table__.insert().values(**menu_postgres_data)
     menu_id = await database.execute(query)
     
     # Insert the menu into MongoDB (for the items and other menu-related data)
-    mongo_menu_data = {
-        "menu_id": menu_id,
-        "bar_id": menu.bar_id,
-        "items": menu.items
-    }
-    await create_new_menu_in_mongo(mongo_menu_data)
+    if menu.items:
+        mongo_menu_data = {
+            "menu_id": menu_id,
+            "bar_id": menu.bar_id,
+            "items": [item.dict() for item in menu.items]
+        }
+        await create_new_menu_in_mongo(mongo_menu_data)
     
     return await database.fetch_one(MenuModel.__table__.select().where(MenuModel.id == menu_id))
 
-# Route to fetch a menu by bar ID
+# Route to fetch menus by bar ID
 @menus_router.get("/{bar_id}", response_model=list[Menu])
 async def read_menus_by_bar_id(bar_id: int):
-    menu = await get_menu_by_bar_id(bar_id)
-    if not menu:
-        raise APIError.not_found("Menu not found for this bar")
-    items = await get_menu_items_from_mongo(menu.menu_id)
-    if items is None:
-        items = []
-    return Menu(**menu.dict(), items=items)
+    # Get all menus for this bar
+    query = MenuModel.__table__.select().where(MenuModel.bar_id == bar_id)
+    menus = await database.fetch_all(query)
+    
+    if not menus:
+        return []  # Return empty array instead of 404 (Flutter-friendly)
+    
+    return menus
 
 # Route to fetch menu items from MongoDB
 @menus_router.get("/items/{menu_id}")

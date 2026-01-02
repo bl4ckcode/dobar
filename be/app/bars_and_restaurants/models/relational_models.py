@@ -33,6 +33,9 @@ class Menu(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     bar_id = Column(Integer, ForeignKey("bars.id"), index=True)
+    name = Column(String, nullable=True, default="Menu Principal")
+    description = Column(String, nullable=True)
+    is_active = Column(Boolean, nullable=True, default=True)
 
     # Relationship with bars
     bar = relationship("Bar", back_populates="menus")
