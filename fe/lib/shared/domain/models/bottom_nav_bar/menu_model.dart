@@ -1,85 +1,94 @@
 import 'package:barz/features/home/presentation/pages/drinks/drinks_home_page.dart';
 import 'package:barz/features/home/presentation/pages/profile/profile_home_page.dart';
 import 'package:barz/features/home/presentation/pages/search/search_home_page.dart';
-import 'package:barz/shared/domain/models/bottom_nav_bar/rive_model.dart';
+import 'package:barz/shared/domain/models/bottom_nav_bar/nav_item_model.dart';
+import 'package:flutter/material.dart';
 
-class Menu<T, RiveModel> {
+class Menu<T> {
   String? pageTitle;
   final T page;
-  final RiveModel rive;
+  final NavItemModel navItem;
 
-  Menu(this.page, this.rive, [this.pageTitle = '']);
+  Menu(this.page, this.navItem, [this.pageTitle = '']);
 }
 
 List<Menu> homeBottomNavItems = [
   Menu(
     const DrinksHomePage(),
-    RiveModel(
-        src: "assets/RiveAssets/icons.riv",
-        artboard: "HOME",
-        stateMachineName: "HOME_interactivity"),
+    const NavItemModel(
+      title: 'Home',
+      icon: Icons.home_outlined,
+      activeIcon: Icons.home,
+    ),
   ),
   Menu(
     const SearchHomePage(),
-    RiveModel(
-        src: "assets/RiveAssets/icons.riv",
-        artboard: "SEARCH",
-        stateMachineName: "SEARCH_Interactivity"),
+    const NavItemModel(
+      title: 'Search',
+      icon: Icons.search_outlined,
+      activeIcon: Icons.search,
+    ),
   ),
   Menu(
     const ProfileHomePage(),
-    RiveModel(
-        src: "assets/RiveAssets/icons.riv",
-        artboard: "USER",
-        stateMachineName: "USER_Interactivity"),
+    const NavItemModel(
+      title: 'Profile',
+      icon: Icons.person_outline,
+      activeIcon: Icons.person,
+    ),
   ),
 ];
-
 
 List<Menu> sidebarMenus = [
   Menu(
     "Home",
-    RiveModel(
-        src: "assets/RiveAssets/icons.riv",
-        artboard: "HOME",
-        stateMachineName: "HOME_interactivity"),
+    const NavItemModel(
+      title: 'Home',
+      icon: Icons.home_outlined,
+      activeIcon: Icons.home,
+    ),
   ),
   Menu(
     "Search",
-    RiveModel(
-        src: "assets/RiveAssets/icons.riv",
-        artboard: "SEARCH",
-        stateMachineName: "SEARCH_Interactivity"),
+    const NavItemModel(
+      title: 'Search',
+      icon: Icons.search_outlined,
+      activeIcon: Icons.search,
+    ),
   ),
   Menu(
     "Favorites",
-    RiveModel(
-        src: "assets/RiveAssets/icons.riv",
-        artboard: "LIKE/STAR",
-        stateMachineName: "STAR_Interactivity"),
+    const NavItemModel(
+      title: 'Favorites',
+      icon: Icons.star_outline,
+      activeIcon: Icons.star,
+    ),
   ),
   Menu(
     "Help",
-    RiveModel(
-        src: "assets/RiveAssets/icons.riv",
-        artboard: "CHAT",
-        stateMachineName: "CHAT_Interactivity"),
+    const NavItemModel(
+      title: 'Help',
+      icon: Icons.chat_bubble_outline,
+      activeIcon: Icons.chat_bubble,
+    ),
   ),
 ];
 
 List<Menu> sidebarMenus2 = [
   Menu(
     "History",
-    RiveModel(
-        src: "assets/RiveAssets/icons.riv",
-        artboard: "TIMER",
-        stateMachineName: "TIMER_Interactivity"),
+    const NavItemModel(
+      title: 'History',
+      icon: Icons.history_outlined,
+      activeIcon: Icons.history,
+    ),
   ),
   Menu(
     "Notifications",
-    RiveModel(
-        src: "assets/RiveAssets/icons.riv",
-        artboard: "BELL",
-        stateMachineName: "BELL_Interactivity"),
+    const NavItemModel(
+      title: 'Notifications',
+      icon: Icons.notifications_outlined,
+      activeIcon: Icons.notifications,
+    ),
   ),
 ];

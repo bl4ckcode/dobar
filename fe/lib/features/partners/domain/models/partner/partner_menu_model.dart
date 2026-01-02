@@ -5,7 +5,7 @@ part 'partner_menu_model.freezed.dart';
 part 'partner_menu_model.g.dart';
 
 @freezed
-class PartnerMenu with _$PartnerMenu {
+abstract class PartnerMenu with _$PartnerMenu {
   const factory PartnerMenu({
     required String partnerId,
     List<Product>? items,

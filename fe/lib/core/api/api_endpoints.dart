@@ -9,8 +9,11 @@ class ApiEndpoints {
   static const String bars = '/bars/';
   static String bar(int id) => '/bars/$id';
 
+  // Menus
+  static const String menusCreate = '/menus/';
   static String menus(int barId) => '/menus/$barId';
   static String menuItems(int menuId) => '/menus/items/$menuId';
+  static String updateMenuItem(int menuId, String itemName) => '/menus/$menuId/items/$itemName';
 
   static const String cart = '/cart/';
   static const String cartItems = '/cart/items';

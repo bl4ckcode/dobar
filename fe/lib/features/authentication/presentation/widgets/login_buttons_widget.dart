@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -16,23 +17,74 @@ class LoginButtonsWidget extends StatefulWidget {
 }
 
 class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
-  final GoogleSignIn _googleSignIn = GoogleSignIn();
+  GoogleSignInAccount? _currentUser;
+  StreamSubscription<GoogleSignInAuthenticationEvent>? _authSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _initGoogleSignIn();
+  }
+
+  Future<void> _initGoogleSignIn() async {
+    final signIn = GoogleSignIn.instance;
+    
+    // Listen to authentication events
+    _authSubscription = signIn.authenticationEvents.listen((event) async {
+      switch (event) {
+        case GoogleSignInAuthenticationEventSignIn():
+          _currentUser = event.user;
+          await _handleGoogleSignInSuccess(event.user);
+        case GoogleSignInAuthenticationEventSignOut():
+          _currentUser = null;
+      }
+    });
+
+    // Initialize (no clientId needed for mobile platforms)
+    try {
+      await signIn.initialize();
+      // Try lightweight auth first
+      await signIn.attemptLightweightAuthentication();
+    } catch (e) {
+      debugPrint("Error initializing Google Sign-In: $e");
+    }
+  }
+
+  Future<void> _handleGoogleSignInSuccess(GoogleSignInAccount user) async {
+    try {
+      // Get authorization for basic scopes
+      final authorization = await user.authorizationClient.authorizationForScopes([
+        'email',
+        'profile',
+      ]);
+      
+      if (authorization != null) {
+        debugPrint("Google User Token: ${authorization.accessToken}");
+        widget.loginBloc.add(LoginEvent.googleLoginPressed(
+          key: user.email,
+          token: authorization.accessToken,
+        ));
+      }
+    } catch (e) {
+      debugPrint("Error getting Google auth: $e");
+    }
+  }
 
   Future<void> _signInWithGoogle() async {
     try {
-      final googleUser = await _googleSignIn.signIn();
-      if (googleUser == null) return;
-
-      final googleAuth = await googleUser.authentication;
-      debugPrint("Google User Token: ${googleAuth.accessToken}");
-
-      widget.loginBloc.add(LoginEvent.googleLoginPressed(
-        key: googleUser.email,
-        token: googleAuth.accessToken!,
-      ));
+      final signIn = GoogleSignIn.instance;
+      if (signIn.supportsAuthenticate()) {
+        await signIn.authenticate();
+      }
     } catch (e) {
       debugPrint("Error signing in with Google: $e");
     }
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
   }
 
   Future<void> _signInWithApple() async {

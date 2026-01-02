@@ -4,7 +4,7 @@ import 'package:barz/features/location/domain/models/location_model.dart';
 part 'location_event.freezed.dart';
 
 @freezed
-class LocationEvent with _$LocationEvent {
+sealed class LocationEvent with _$LocationEvent {
   const factory LocationEvent.requestPermission() = RequestLocationPermission;
   const factory LocationEvent.checkPermission() = CheckLocationPermission;
   const factory LocationEvent.getCurrentLocation() = GetCurrentLocation;

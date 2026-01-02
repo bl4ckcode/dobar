@@ -5,7 +5,7 @@ part 'partners_params.freezed.dart';
 part 'partners_params.g.dart';
 
 @freezed
-class PartnersParams with _$PartnersParams {
+abstract class PartnersParams with _$PartnersParams {
   const factory PartnersParams({
     double? latitude,
     double? longitude,

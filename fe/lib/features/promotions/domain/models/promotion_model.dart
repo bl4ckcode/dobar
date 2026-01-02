@@ -1,11 +1,11 @@
-enum DiscountType { percentage, fixed, bogo }
+enum PromoDiscountType { percentage, fixed, bogo }
 
 class PromotionModel {
   final int id;
   final int barId;
   final String title;
   final String? description;
-  final DiscountType discountType;
+  final PromoDiscountType discountType;
   final double discountValue;
   final String? startTime;
   final String? endTime;
@@ -55,9 +55,9 @@ class PromotionModel {
       barId: json['bar_id'],
       title: json['title'],
       description: json['description'],
-      discountType: DiscountType.values.firstWhere(
+      discountType: PromoDiscountType.values.firstWhere(
           (e) => e.name == json['discount_type'],
-          orElse: () => DiscountType.percentage),
+          orElse: () => PromoDiscountType.percentage),
       discountValue: (json['discount_value'] as num?)?.toDouble() ?? 0.0,
       startTime: json['start_time'],
       endTime: json['end_time'],
@@ -101,11 +101,11 @@ class PromotionModel {
   /// Formatted discount string for display
   String get discountText {
     switch (discountType) {
-      case DiscountType.percentage:
+      case PromoDiscountType.percentage:
         return '${discountValue.toInt()}% OFF';
-      case DiscountType.fixed:
+      case PromoDiscountType.fixed:
         return 'R\$${discountValue.toStringAsFixed(0)} OFF';
-      case DiscountType.bogo:
+      case PromoDiscountType.bogo:
         return 'COMPRE 1 LEVE 2';
     }
   }

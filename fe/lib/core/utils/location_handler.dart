@@ -1,4 +1,3 @@
-import 'package:location/location.dart';
 import 'package:permission_handler/permission_handler.dart' as perm;
 
 Future<bool> requestLocationPermission() async {

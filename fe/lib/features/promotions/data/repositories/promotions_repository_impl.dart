@@ -22,7 +22,7 @@ class PromotionsRepositoryImpl implements PromotionsRepository {
   }
 
   @override
-  Future<Either<Failure, List<PromotionModel>>> getPromotionsByDiscountType(DiscountType type) async {
+  Future<Either<Failure, List<PromotionModel>>> getPromotionsByDiscountType(PromoDiscountType type) async {
     try {
       final result = await _datasource.getPromotionsByDiscountType(type);
       return Right(result);
@@ -108,9 +108,6 @@ class PromotionsRepositoryImpl implements PromotionsRepository {
       return Right(result);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message, e.statusCode));
-    }
-  }
-});
     }
   }
 }

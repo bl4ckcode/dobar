@@ -4,7 +4,7 @@ part 'partner_photos_model.freezed.dart';
 part 'partner_photos_model.g.dart';
 
 @freezed
-class PartnerPhotos with _$PartnerPhotos {
+abstract class PartnerPhotos with _$PartnerPhotos {
   const factory PartnerPhotos({
     List<String>? images,
   }) = _PartnerPhotos;

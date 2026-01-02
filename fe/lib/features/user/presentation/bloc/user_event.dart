@@ -5,7 +5,7 @@ import 'package:barz/features/user/domain/models/user_document.dart';
 part 'user_event.freezed.dart';
 
 @freezed
-class UserEvent with _$UserEvent {
+sealed class UserEvent with _$UserEvent {
   const factory UserEvent.loadCurrentUser() = LoadCurrentUser;
   const factory UserEvent.updateProfile({
     String? displayName,

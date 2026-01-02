@@ -5,7 +5,7 @@ import 'package:barz/features/promotions/domain/models/offer_model.dart';
 
 abstract class PromotionsRepository {
   Future<Either<Failure, List<PromotionModel>>> getPromotions({bool activeOnly = true});
-  Future<Either<Failure, List<PromotionModel>>> getPromotionsByDiscountType(DiscountType type);
+  Future<Either<Failure, List<PromotionModel>>> getPromotionsByDiscountType(PromoDiscountType type);
   Future<Either<Failure, List<PromotionModel>>> getPromotionsByBar(int barId, {bool activeOnly = true});
   Future<Either<Failure, List<PromotionModel>>> getNearbyPromotions({
     required double latitude,

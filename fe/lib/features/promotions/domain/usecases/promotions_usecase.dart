@@ -13,7 +13,7 @@ class PromotionsUsecase {
     return _repository.getPromotions(activeOnly: activeOnly);
   }
 
-  Future<Either<Failure, List<PromotionModel>>> getPromotionsByDiscountType(DiscountType type) {
+  Future<Either<Failure, List<PromotionModel>>> getPromotionsByDiscountType(PromoDiscountType type) {
     return _repository.getPromotionsByDiscountType(type);
   }
 

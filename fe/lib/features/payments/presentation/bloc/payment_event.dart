@@ -5,7 +5,7 @@ import 'package:barz/features/payments/domain/models/payment_model.dart';
 part 'payment_event.freezed.dart';
 
 @freezed
-class PaymentEvent with _$PaymentEvent {
+sealed class PaymentEvent with _$PaymentEvent {
   const factory PaymentEvent.loadPaymentMethods() = LoadPaymentMethods;
   const factory PaymentEvent.addPaymentMethod(PaymentMethod method, {String? cardToken}) = AddPaymentMethod;
   const factory PaymentEvent.setDefaultPaymentMethod(int methodId) = SetDefaultPaymentMethod;

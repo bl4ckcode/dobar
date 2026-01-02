@@ -6,7 +6,7 @@ import 'package:barz/features/payments/domain/models/payment_model.dart';
 part 'payment_state.freezed.dart';
 
 @freezed
-class PaymentState with _$PaymentState {
+abstract class PaymentState with _$PaymentState {
   const factory PaymentState({
     @Default([]) List<PaymentMethod> paymentMethods,
     @Default([]) List<Transaction> transactions,

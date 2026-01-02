@@ -5,7 +5,7 @@ part 'personal_data_model.freezed.dart';
 part 'personal_data_model.g.dart';
 
 @freezed
-class PersonalData with _$PersonalData {
+abstract class PersonalData with _$PersonalData {
   const factory PersonalData({
     String? id,
     String? completeAddress,

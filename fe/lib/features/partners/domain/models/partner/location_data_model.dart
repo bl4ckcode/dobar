@@ -4,7 +4,7 @@ part 'location_data_model.freezed.dart';
 part 'location_data_model.g.dart';
 
 @freezed
-class LocationData with _$LocationData {
+abstract class LocationData with _$LocationData {
   const factory LocationData({
     double? latitude,
     double? longitude,

@@ -5,7 +5,7 @@ import 'package:barz/features/user/domain/repositories/abstract_user_repository.
 part 'user_state.freezed.dart';
 
 @freezed
-class UserState with _$UserState {
+abstract class UserState with _$UserState {
   const factory UserState({
     UserModel? user,
     @Default(false) bool isLoading,

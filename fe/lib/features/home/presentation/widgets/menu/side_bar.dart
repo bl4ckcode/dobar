@@ -1,8 +1,6 @@
-import 'package:barz/core/utils/rive/rive_utils.dart';
 import 'package:barz/shared/domain/models/bottom_nav_bar/menu_model.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:rive/rive.dart';
 
 class SideBar extends StatefulWidget {
   const SideBar({super.key});
@@ -45,14 +43,9 @@ class _SideBarState extends State<SideBar> {
                   menu: menu,
                   selectedMenu: selectedSideMenu,
                   press: () {
-                    RiveUtils.chnageSMIBoolState(menu.rive.status!);
                     setState(() {
                       selectedSideMenu = menu;
                     });
-                  },
-                  riveOnInit: (artboard) {
-                    menu.rive.status = RiveUtils.getRiveInput(artboard,
-                        stateMachineName: menu.rive.stateMachineName);
                   },
                 ),
               ),
@@ -71,14 +64,9 @@ class _SideBarState extends State<SideBar> {
                   menu: menu,
                   selectedMenu: selectedSideMenu,
                   press: () {
-                    RiveUtils.chnageSMIBoolState(menu.rive.status!);
                     setState(() {
                       selectedSideMenu = menu;
                     });
-                  },
-                  riveOnInit: (artboard) {
-                    menu.rive.status = RiveUtils.getRiveInput(artboard,
-                        stateMachineName: menu.rive.stateMachineName);
                   },
                 ),
               ),
@@ -122,20 +110,22 @@ class InfoCard extends StatelessWidget {
 }
 
 class SideMenu extends StatelessWidget {
-  const SideMenu(
-      {super.key,
-      required this.menu,
-      required this.press,
-      required this.riveOnInit,
-      required this.selectedMenu});
+  const SideMenu({
+    super.key,
+    required this.menu,
+    required this.press,
+    required this.selectedMenu,
+  });
 
   final Menu menu;
   final VoidCallback press;
-  final ValueChanged<Artboard> riveOnInit;
   final Menu selectedMenu;
 
   @override
   Widget build(BuildContext context) {
+    final isSelected = selectedMenu == menu;
+    final navItem = menu.navItem;
+    
     return Column(
       children: [
         const Padding(
@@ -147,7 +137,7 @@ class SideMenu extends StatelessWidget {
             AnimatedPositioned(
               duration: const Duration(milliseconds: 300),
               curve: Curves.fastOutSlowIn,
-              width: selectedMenu == menu ? 288 : 0,
+              width: isSelected ? 288 : 0,
               height: 56,
               left: 0,
               child: Container(
@@ -162,10 +152,10 @@ class SideMenu extends StatelessWidget {
               leading: SizedBox(
                 height: 36,
                 width: 36,
-                child: RiveAnimation.asset(
-                  menu.rive.src,
-                  artboard: menu.rive.artboard,
-                  onInit: riveOnInit,
+                child: Icon(
+                  isSelected ? navItem.displayIcon : navItem.icon,
+                  color: Colors.white,
+                  size: 28,
                 ),
               ),
               title: Text(

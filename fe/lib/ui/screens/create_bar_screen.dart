@@ -8,6 +8,7 @@ import 'package:barz/ui/primitives/barz_app_bar.dart';
 import 'package:barz/ui/primitives/barz_card.dart';
 import 'package:barz/ui/primitives/barz_button.dart';
 
+/// Screen to seed test data into the backend for development
 class CreateBarScreen extends StatefulWidget {
   const CreateBarScreen({super.key});
 
@@ -17,8 +18,13 @@ class CreateBarScreen extends StatefulWidget {
 
 class _CreateBarScreenState extends State<CreateBarScreen> {
   bool _loading = false;
-  String? _message;
-  int _barCount = 0;
+  final List<String> _logs = [];
+
+  void _log(String message) {
+    setState(() => _logs.add(message));
+  }
+
+  // ============ TEST DATA ============
 
   final List<Map<String, dynamic>> _testBars = [
     {
@@ -45,23 +51,44 @@ class _CreateBarScreenState extends State<CreateBarScreen> {
       'latitude': -23.5620,
       'longitude': -46.6720,
     },
+  ];
+
+  final List<Map<String, dynamic>> _testMenuItems = [
+    {'name': 'Brahma Chopp', 'description': 'Chopp gelado 300ml', 'price': 8.90, 'category': 'Cervejas'},
+    {'name': 'Heineken', 'description': 'Long neck 330ml', 'price': 12.90, 'category': 'Cervejas'},
+    {'name': 'Caipirinha', 'description': 'Limão, cachaça e açúcar', 'price': 18.00, 'category': 'Drinks'},
+    {'name': 'Batata Frita', 'description': 'Porção 400g com cheddar e bacon', 'price': 32.00, 'category': 'Petiscos'},
+    {'name': 'Picanha na Chapa', 'description': 'Com farofa e vinagrete', 'price': 65.00, 'category': 'Petiscos'},
+  ];
+
+  final List<Map<String, dynamic>> _testPromotions = [
     {
-      'name': 'Rooftop Lounge',
-      'address': 'Al. Santos, 800, São Paulo, SP',
-      'phone_number': '+5511955554444',
-      'email': 'contato@rooftop.com.br',
-      'latitude': -23.5650,
-      'longitude': -46.6510,
+      'title': 'Happy Hour 2x1',
+      'description': 'Compre um chopp, leve dois! Válido de segunda a quinta das 17h às 20h.',
+      'discount_type': 'bogo',
+      'discount_value': 100.0,
+      'start_time': '17:00',
+      'end_time': '20:00',
+      'recurring': true,
+      'recurring_days': 'monday,tuesday,wednesday,thursday',
+      'terms': 'Válido apenas para chopp',
+      'is_active': true,
     },
     {
-      'name': 'Pub Irlandês',
-      'address': 'Rua Haddock Lobo, 300, São Paulo, SP',
-      'phone_number': '+5511944443333',
-      'email': 'contato@pubirl.com.br',
-      'latitude': -23.5580,
-      'longitude': -46.6630,
+      'title': '20% OFF Caipirinha',
+      'description': 'Desconto especial em todas as caipirinhas aos fins de semana.',
+      'discount_type': 'percentage',
+      'discount_value': 20.0,
+      'start_time': '12:00',
+      'end_time': '23:00',
+      'recurring': true,
+      'recurring_days': 'saturday,sunday',
+      'terms': 'Não acumulativo',
+      'is_active': true,
     },
   ];
+
+  // ============ API CALLS ============
 
   Future<void> _ensureOwnerExists() async {
     try {
@@ -74,18 +101,14 @@ class _CreateBarScreenState extends State<CreateBarScreen> {
           'email': 'owner@barz.com',
         },
       );
-    } catch (e) {}
+      _log('✓ Owner created');
+    } catch (e) {
+      _log('→ Owner already exists or skipped');
+    }
   }
 
-  Future<void> _createBar(Map<String, dynamic> barData) async {
-    setState(() {
-      _loading = true;
-      _message = 'Creating ${barData['name']}...';
-    });
-
+  Future<int?> _createBar(Map<String, dynamic> barData) async {
     try {
-      await _ensureOwnerExists();
-
       final formData = FormData.fromMap({
         ...barData,
         'owner_id': 1,
@@ -96,31 +119,126 @@ class _CreateBarScreenState extends State<CreateBarScreen> {
         ),
       });
 
-      await DioNetwork.appAPI.post(
+      final response = await DioNetwork.appAPI.post(
         '${ApiEndpoints.baseUrl}${ApiEndpoints.bars}',
         data: formData,
       );
 
-      setState(() {
-        _barCount++;
-        _message = '✓ ${barData['name']} created! ($_barCount total)';
-      });
+      final barId = response.data['id'] as int;
+      _log('✓ Bar "${barData['name']}" created (id: $barId)');
+      return barId;
     } catch (e) {
-      setState(() {
-        final errStr = e.toString();
-        _message = '✗ Failed: ${errStr.length > 100 ? errStr.substring(0, 100) : errStr}';
-      });
-    } finally {
-      setState(() => _loading = false);
+      _log('✗ Bar "${barData['name']}" failed: ${_shortError(e)}');
+      return null;
     }
   }
 
-  Future<void> _createAllBars() async {
-    for (final bar in _testBars) {
-      await _createBar(bar);
-      await Future.delayed(const Duration(milliseconds: 500));
+  Future<int?> _createMenu(int barId, String menuName) async {
+    try {
+      final response = await DioNetwork.appAPI.post(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.menusCreate}',
+        data: {
+          'bar_id': barId,
+          'name': menuName,
+          'description': 'Menu principal do bar',
+          'is_active': true,
+        },
+      );
+
+      final menuId = response.data['id'] as int;
+      _log('  ✓ Menu "$menuName" created (id: $menuId)');
+      return menuId;
+    } catch (e) {
+      _log('  ✗ Menu creation failed: ${_shortError(e)}');
+      return null;
     }
-    setState(() => _message = 'Done! Created $_barCount bars. Go back to see them.');
+  }
+
+  Future<void> _addMenuItem(int menuId, Map<String, dynamic> item) async {
+    try {
+      await DioNetwork.appAPI.post(
+        '${ApiEndpoints.baseUrl}/menus/$menuId/items/',
+        data: {
+          'name': item['name'],
+          'description': item['description'],
+          'price': item['price'],
+          'category': item['category'],
+          'is_available': true,
+        },
+      );
+      _log('    ✓ Item "${item['name']}" added');
+    } catch (e) {
+      _log('    ✗ Item "${item['name']}" failed: ${_shortError(e)}');
+    }
+  }
+
+  Future<void> _createPromotion(int barId, Map<String, dynamic> promo) async {
+    try {
+      final formData = FormData.fromMap({
+        'bar_id': barId,
+        ...promo,
+      });
+
+      await DioNetwork.appAPI.post(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.promotions}',
+        data: formData,
+      );
+      _log('  ✓ Promotion "${promo['title']}" created');
+    } catch (e) {
+      _log('  ✗ Promotion "${promo['title']}" failed: ${_shortError(e)}');
+    }
+  }
+
+  Future<void> _seedAllData() async {
+    setState(() {
+      _loading = true;
+      _logs.clear();
+    });
+
+    _log('🚀 Starting data seeding...\n');
+
+    // 1. Create owner
+    await _ensureOwnerExists();
+    _log('');
+
+    // 2. Create bars with menus, items, and promotions
+    for (int i = 0; i < _testBars.length; i++) {
+      final bar = _testBars[i];
+      _log('📍 Creating bar ${i + 1}/${_testBars.length}: ${bar['name']}');
+
+      final barId = await _createBar(bar);
+      if (barId == null) continue;
+
+      // Create menu for this bar
+      final menuId = await _createMenu(barId, 'Cardápio Principal');
+      if (menuId != null) {
+        // Add menu items
+        for (final item in _testMenuItems) {
+          await _addMenuItem(menuId, item);
+          await Future.delayed(const Duration(milliseconds: 100));
+        }
+      }
+
+      // Create promotions for first 2 bars only
+      if (i < 2) {
+        _log('  📢 Adding promotions...');
+        for (final promo in _testPromotions) {
+          await _createPromotion(barId, promo);
+          await Future.delayed(const Duration(milliseconds: 100));
+        }
+      }
+
+      _log('');
+      await Future.delayed(const Duration(milliseconds: 300));
+    }
+
+    _log('✅ Seeding complete! Go back to Home to see your bars.');
+    setState(() => _loading = false);
+  }
+
+  String _shortError(dynamic e) {
+    final str = e.toString();
+    return str.length > 60 ? '${str.substring(0, 60)}...' : str;
   }
 
   List<int> _generatePlaceholderImage() {
@@ -137,83 +255,106 @@ class _CreateBarScreenState extends State<CreateBarScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const BarzAppBar(title: 'Create Bars'),
+      appBar: const BarzAppBar(title: 'Seed Test Data'),
       body: Container(
         decoration: const BoxDecoration(gradient: yellowBackgroundGradient),
-        child: ListView(
-          padding: const EdgeInsets.all(20),
+        child: Column(
           children: [
-            BarzCard(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Seed Test Bars',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: textPrimary,
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: BarzCard(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.storage, color: barzYellowDark),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Seed Development Data',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: textPrimary,
+                            ),
+                          ),
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Creates 5 test bars in São Paulo for development.',
-                      style: TextStyle(color: textSecondary),
-                    ),
-                    const SizedBox(height: 16),
-                    if (_message != null) ...[
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: barzBlack.withValues(alpha: 0.05),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(_message!, style: TextStyle(color: textPrimary)),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Creates ${_testBars.length} bars with menus (${_testMenuItems.length} items each) and ${_testPromotions.length} promotions.',
+                        style: TextStyle(color: textSecondary),
                       ),
                       const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: BarzButton(
+                              text: _loading ? 'Seeding...' : 'Seed All Data',
+                              onPressed: _loading ? null : _seedAllData,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          IconButton(
+                            onPressed: () => context.go('/'),
+                            icon: Icon(Icons.home, color: barzBlack),
+                            tooltip: 'Back to Home',
+                          ),
+                        ],
+                      ),
                     ],
-                    BarzButton(
-                      text: _loading ? 'Creating...' : 'Create All Bars',
-                      onPressed: _loading ? null : _createAllBars,
-                    ),
-                  ],
+                  ),
                 ),
               ),
             ),
-            const SizedBox(height: 16),
-            ...List.generate(_testBars.length, (i) {
-              final bar = _testBars[i];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: BarzCard(
-                  child: ListTile(
-                    leading: Container(
-                      width: 48,
-                      height: 48,
-                      decoration: BoxDecoration(
-                        color: barzYellowSoft,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Icon(Icons.store, color: barzYellowDark),
-                    ),
-                    title: Text(bar['name'], style: TextStyle(fontWeight: FontWeight.w600)),
-                    subtitle: Text(bar['address'], maxLines: 1, overflow: TextOverflow.ellipsis),
-                    trailing: IconButton(
-                      icon: Icon(Icons.add_circle, color: barzYellowDark),
-                      onPressed: _loading ? null : () => _createBar(bar),
-                    ),
-                  ),
+
+            // Logs
+            Expanded(
+              child: Container(
+                margin: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: barzBlack,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-              );
-            }),
-            const SizedBox(height: 24),
-            Center(
-              child: TextButton.icon(
-                onPressed: () => context.go('/'),
-                icon: const Icon(Icons.arrow_back),
-                label: const Text('Back to Home'),
+                child: _logs.isEmpty
+                    ? Center(
+                        child: Text(
+                          'Press "Seed All Data" to start',
+                          style: TextStyle(color: Colors.white54),
+                        ),
+                      )
+                    : ListView.builder(
+                        itemCount: _logs.length,
+                        itemBuilder: (context, index) {
+                          final log = _logs[index];
+                          Color color = Colors.white70;
+                          if (log.startsWith('✓')) color = Colors.greenAccent;
+                          if (log.startsWith('✗')) color = Colors.redAccent;
+                          if (log.startsWith('→')) color = Colors.amber;
+                          if (log.startsWith('🚀') || log.startsWith('✅')) {
+                            color = barzYellow;
+                          }
+                          if (log.startsWith('📍') || log.startsWith('📢')) {
+                            color = Colors.white;
+                          }
+
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 2),
+                            child: Text(
+                              log,
+                              style: TextStyle(
+                                fontFamily: 'monospace',
+                                fontSize: 12,
+                                color: color,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
               ),
             ),
           ],

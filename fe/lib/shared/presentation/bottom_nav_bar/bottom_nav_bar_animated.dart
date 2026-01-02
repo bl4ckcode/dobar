@@ -1,10 +1,8 @@
 import 'package:barz/core/utils/constant/colors.dart';
 import 'package:barz/shared/domain/models/bottom_nav_bar/menu_model.dart';
-import 'package:barz/shared/domain/models/bottom_nav_bar/rive_model.dart';
 import 'package:barz/shared/presentation/widget/bottom_nav_bar/highlight_nav_bar_animated_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:rive/rive.dart';
 
 class ContainerBottomNavBarAnimated extends StatefulWidget {
   const ContainerBottomNavBarAnimated({required this.pageItems, super.key});
@@ -20,40 +18,7 @@ class _ContainerBottomNavBarAnimatedState
     extends State<ContainerBottomNavBarAnimated> {
   Color bottonNavBgColor = bottomNavigationBarColor;
 
-  List<SMIBool?> riveIconInputs = [];
-  List<StateMachineController?> controllers = [];
   int selctedNavIndex = 0;
-
-  void riveInit(Artboard artboard, {required String stateMachineName}) {
-    StateMachineController? stateMachineController =
-        StateMachineController.fromArtboard(artboard, stateMachineName);
-
-    if (stateMachineController != null) {
-      artboard.addController(stateMachineController);
-      controllers.add(stateMachineController);
-
-      SMIBool? active = stateMachineController.findInput<bool>('active') as SMIBool?;
-      riveIconInputs.add(active);
-    }
-  }
-
-  void animateTheIcon(int index) {
-    riveIconInputs[index]?.change(true);
-    Future.delayed(
-      const Duration(seconds: 1),
-      () {
-        riveIconInputs[index]?.change(false);
-      },
-    );
-  }
-
-  @override
-  void dispose() {
-    for (var controller in controllers) {
-      controller?.dispose();
-    }
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -78,40 +43,32 @@ class _ContainerBottomNavBarAnimatedState
             children: List.generate(
               widget.pageItems.length,
               (index) {
-                final riveIcon = widget.pageItems[index].rive as RiveModel;
+                final navItem = widget.pageItems[index].navItem;
+                final isSelected = selctedNavIndex == index;
                 return GestureDetector(
                   onTap: () {
-                    animateTheIcon(index);
-                    setState(
-                      () {
-                        selctedNavIndex = index;
-                      },
-                    );
+                    setState(() {
+                      selctedNavIndex = index;
+                    });
                   },
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      HighlightAnimatedBar(isActive: selctedNavIndex == index),
+                      HighlightAnimatedBar(isActive: isSelected),
                       SizedBox(
                         height: 32.h,
                         width: 32.w,
-                        child: Opacity(
-                          opacity: selctedNavIndex == index ? 1 : 0.54,
-                          child: RiveAnimation.asset(
-                            riveIcon.src,
-                            artboard: riveIcon.artboard,
-                            onInit: (artboard) {
-                              riveInit(artboard,
-                                  stateMachineName: riveIcon.stateMachineName);
-                            },
-                          ),
+                        child: Icon(
+                          isSelected ? navItem.displayIcon : navItem.icon,
+                          size: 28.sp,
+                          color: isSelected ? Colors.black : Colors.black54,
                         ),
                       ),
                       Text(
-                        'Pedidos',
+                        navItem.title,
                         style: TextStyle(
                           fontSize: 11.sp,
-                          color: selctedNavIndex == index ? Colors.black : Colors.black54,
+                          color: isSelected ? Colors.black : Colors.black54,
                         ),
                       ),
                     ],

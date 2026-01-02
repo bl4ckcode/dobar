@@ -6,7 +6,7 @@ import 'package:dio/dio.dart';
 
 abstract class PromotionsDatasource {
   Future<List<PromotionModel>> getPromotions({bool activeOnly = true});
-  Future<List<PromotionModel>> getPromotionsByDiscountType(DiscountType type);
+  Future<List<PromotionModel>> getPromotionsByDiscountType(PromoDiscountType type);
   Future<List<PromotionModel>> getPromotionsByBar(int barId, {bool activeOnly = true});
   Future<List<PromotionModel>> getNearbyPromotions({
     required double latitude,
@@ -40,7 +40,7 @@ class PromotionsNetworkDatasource implements PromotionsDatasource {
   }
 
   @override
-  Future<List<PromotionModel>> getPromotionsByDiscountType(DiscountType type) async {
+  Future<List<PromotionModel>> getPromotionsByDiscountType(PromoDiscountType type) async {
     try {
       final response = await dio.get(
         '${ApiEndpoints.baseUrl}${ApiEndpoints.promotions}',

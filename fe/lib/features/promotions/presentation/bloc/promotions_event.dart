@@ -4,9 +4,9 @@ import 'package:barz/features/promotions/domain/models/promotion_model.dart';
 part 'promotions_event.freezed.dart';
 
 @freezed
-class PromotionsEvent with _$PromotionsEvent {
+sealed class PromotionsEvent with _$PromotionsEvent {
   const factory PromotionsEvent.loadPromotions({@Default(true) bool activeOnly}) = LoadPromotions;
-  const factory PromotionsEvent.loadPromotionsByDiscountType(DiscountType type) = LoadPromotionsByDiscountType;
+  const factory PromotionsEvent.loadPromotionsByDiscountType(PromoDiscountType type) = LoadPromotionsByDiscountType;
   const factory PromotionsEvent.loadPromotionsByBar(int barId, {@Default(true) bool activeOnly}) = LoadPromotionsByBar;
   const factory PromotionsEvent.loadNearbyPromotions({
     required double latitude,

@@ -2,13 +2,10 @@ import 'package:barz/core/utils/constant/colors.dart';
 import 'package:barz/features/home/presentation/widgets/menu/btm_nav_item.dart';
 import 'package:barz/features/home/presentation/widgets/menu/menu_btn.dart';
 import 'package:barz/shared/domain/models/bottom_nav_bar/menu_model.dart';
-import 'package:barz/shared/domain/models/bottom_nav_bar/rive_model.dart';
+import 'package:barz/shared/domain/models/bottom_nav_bar/nav_item_model.dart';
 import 'package:flutter/material.dart';
 import 'dart:math';
 
-import 'package:rive/rive.dart';
-
-import '../../../../core/utils/rive/rive_utils.dart';
 import '../widgets/menu/side_bar.dart';
 
 class HomePage extends StatefulWidget {
@@ -20,8 +17,6 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage>
     with SingleTickerProviderStateMixin {
-  late SMIBool isMenuOpenInput;
-
   late AnimationController _drawerSlideController;
   late Animation<double> animation;
   late Animation<double> scalAnimation;
@@ -109,9 +104,8 @@ class _HomePageState extends State<HomePage>
             left: isSideBarOpen ? 220 : 0,
             top: 16,
             child: MenuBtn(
+              isOpen: isSideBarOpen,
               press: () {
-                isMenuOpenInput.value = !isMenuOpenInput.value;
-
                 if (_drawerSlideController.value == 0) {
                   _drawerSlideController.forward();
                 } else {
@@ -123,15 +117,6 @@ class _HomePageState extends State<HomePage>
                     isSideBarOpen = !isSideBarOpen;
                   },
                 );
-              },
-              riveOnInit: (artboard) {
-                final controller = StateMachineController.fromArtboard(
-                    artboard, "State Machine");
-                artboard.addController(controller!);
-
-                isMenuOpenInput =
-                    controller.findInput<bool>("isOpen") as SMIBool;
-                isMenuOpenInput.value = true;
               },
             ),
           ),
@@ -161,18 +146,14 @@ class _HomePageState extends State<HomePage>
               ...List.generate(
                 homeBottomNavItems.length,
                 (index) {
-                  RiveModel navBar = homeBottomNavItems[index].rive;
+                  NavItemModel navItem = homeBottomNavItems[index].navItem;
+                  bool isSelected = selectedBottonNav == homeBottomNavItems[index];
                   return BtmNavItem(
-                    navBar: navBar,
+                    navItem: navItem,
+                    isSelected: isSelected,
                     press: () {
-                      RiveUtils.chnageSMIBoolState(navBar.status!);
                       updateSelectedBtmNav(homeBottomNavItems[index]);
                     },
-                    riveOnInit: (artboard) {
-                      navBar.status = RiveUtils.getRiveInput(artboard,
-                          stateMachineName: navBar.stateMachineName);
-                    },
-                    selectedNav: selectedBottonNav.rive,
                   );
                 },
               )
