@@ -9,6 +9,13 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
+# Minimum file size in bytes (1KB) - prevents empty/corrupted uploads
+MIN_IMAGE_SIZE = 1024
+# Maximum file size in bytes (10MB)
+MAX_IMAGE_SIZE = 10 * 1024 * 1024
+# Allowed image content types
+ALLOWED_CONTENT_TYPES = {"image/png", "image/jpeg", "image/jpg", "image/webp", "image/gif"}
+
 # Initialize S3 client
 s3_client = boto3.client(
     "s3",
@@ -22,14 +29,36 @@ async def upload_image_to_s3(upload_obj, filename: str):
     Uploads an image to AWS S3 and returns the image URL.
     
     'upload_obj' can be either an UploadFile instance or a file object.
+    
+    Validates:
+    - File size >= 1KB (prevents empty/corrupted uploads)
+    - File size <= 10MB (prevents oversized uploads)
+    - Content type is a valid image type
     """
+    # Check if upload_obj has a "file" attribute; if not, assume it's already a file-like object.
+    file_obj = upload_obj.file if hasattr(upload_obj, "file") else upload_obj
+    
+    # Get file size by seeking to end and back
+    file_obj.seek(0, 2)  # Seek to end
+    file_size = file_obj.tell()
+    file_obj.seek(0)  # Seek back to start
+    
+    # Validate file size
+    if file_size < MIN_IMAGE_SIZE:
+        raise ValueError(f"Image too small ({file_size} bytes). Minimum size is {MIN_IMAGE_SIZE} bytes (1KB). This may indicate a corrupted or empty file.")
+    
+    if file_size > MAX_IMAGE_SIZE:
+        raise ValueError(f"Image too large ({file_size / 1024 / 1024:.1f}MB). Maximum size is 10MB.")
+    
+    # Validate content type
+    content_type = getattr(upload_obj, "content_type", "application/octet-stream")
+    if content_type not in ALLOWED_CONTENT_TYPES:
+        raise ValueError(f"Invalid image type '{content_type}'. Allowed types: {', '.join(ALLOWED_CONTENT_TYPES)}")
+    
     unique_filename = f"{uuid.uuid4()}-{filename}"  # Generate a unique filename
     bucket_name = os.getenv('AWS_S3_BUCKET')
     region = os.getenv('AWS_REGION')
     loop = asyncio.get_running_loop()
-
-    # Check if upload_obj has a "file" attribute; if not, assume it's already a file-like object.
-    file_obj = upload_obj.file if hasattr(upload_obj, "file") else upload_obj
 
     try:
         await loop.run_in_executor(
@@ -39,10 +68,10 @@ async def upload_image_to_s3(upload_obj, filename: str):
                 file_obj,
                 bucket_name,
                 unique_filename,
-                ExtraArgs={"ACL": "private", "ContentType": getattr(upload_obj, "content_type", "application/octet-stream")}
+                ExtraArgs={"ACL": "private", "ContentType": content_type}
             )
         )
-        print(f"Uploaded file successfully: {unique_filename} to bucket {bucket_name}")
+        print(f"Uploaded file successfully: {unique_filename} ({file_size} bytes) to bucket {bucket_name}")
     except Exception as e:
         print(f"Error uploading file: {e}")
         raise e

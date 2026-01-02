@@ -1,14 +1,16 @@
-from fastapi import WebSocket, APIRouter, WebSocketDisconnect, Query, status
+from fastapi import WebSocket, APIRouter, WebSocketDisconnect, Query, status, HTTPException
 from bson.json_util import dumps
 from datetime import datetime, timezone
 import json
 from jose import jwt, JWTError
 import os
+import asyncio
+from typing import Dict, Set
 
 from app.errors import APIError
 from ..models.nosql_models import menus_collection, orders_collection
 from app.database import database
-from app.bars_and_restaurants.models.relational_models import Order
+from app.bars_and_restaurants.models.relational_models import Order, Bar, BarOwner
 
 ws_router = APIRouter(tags=["WebSocket"])
 
@@ -16,68 +18,106 @@ ws_router = APIRouter(tags=["WebSocket"])
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here")
 ALGORITHM = "HS256"
 
+
 class ConnectionManager:
+    """
+    Manages WebSocket connections for different contexts:
+    - User order tracking: individual order status updates
+    - Bar owner dashboard: all orders for their bar(s)
+    """
+    
     def __init__(self):
+        # General connections (legacy)
         self.active_connections: list[WebSocket] = []
+        # Bar-specific connections: {bar_id: set of websockets}
+        self.bar_connections: Dict[int, Set[WebSocket]] = {}
+        # Order-specific connections: {order_id: set of websockets}
+        self.order_connections: Dict[int, Set[WebSocket]] = {}
 
     async def connect(self, websocket: WebSocket):
+        """Legacy: Accept and store a general connection."""
         await websocket.accept()
         self.active_connections.append(websocket)
 
     def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
+        """Legacy: Remove a general connection."""
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
+
+    async def connect_to_bar(self, websocket: WebSocket, bar_id: int):
+        """Connect a bar owner to receive updates for their bar."""
+        await websocket.accept()
+        if bar_id not in self.bar_connections:
+            self.bar_connections[bar_id] = set()
+        self.bar_connections[bar_id].add(websocket)
+
+    def disconnect_from_bar(self, websocket: WebSocket, bar_id: int):
+        """Disconnect a bar owner from their bar's updates."""
+        if bar_id in self.bar_connections:
+            self.bar_connections[bar_id].discard(websocket)
+            if not self.bar_connections[bar_id]:
+                del self.bar_connections[bar_id]
+
+    async def connect_to_order(self, websocket: WebSocket, order_id: int):
+        """Connect a user to receive updates for a specific order."""
+        await websocket.accept()
+        if order_id not in self.order_connections:
+            self.order_connections[order_id] = set()
+        self.order_connections[order_id].add(websocket)
+
+    def disconnect_from_order(self, websocket: WebSocket, order_id: int):
+        """Disconnect a user from order updates."""
+        if order_id in self.order_connections:
+            self.order_connections[order_id].discard(websocket)
+            if not self.order_connections[order_id]:
+                del self.order_connections[order_id]
 
     async def send_json_message(self, message: str):
+        """Legacy: Broadcast to all general connections."""
         for connection in self.active_connections:
             await connection.send_text(message)
 
+    async def notify_bar(self, bar_id: int, message: dict):
+        """Send a message to all connections watching a specific bar."""
+        if bar_id in self.bar_connections:
+            disconnected = []
+            for websocket in self.bar_connections[bar_id]:
+                try:
+                    await websocket.send_json(message)
+                except Exception:
+                    disconnected.append(websocket)
+            # Cleanup disconnected sockets
+            for ws in disconnected:
+                self.bar_connections[bar_id].discard(ws)
+
+    async def notify_order(self, order_id: int, message: dict):
+        """Send a message to all connections watching a specific order."""
+        if order_id in self.order_connections:
+            disconnected = []
+            for websocket in self.order_connections[order_id]:
+                try:
+                    await websocket.send_json(message)
+                except Exception:
+                    disconnected.append(websocket)
+            # Cleanup disconnected sockets
+            for ws in disconnected:
+                self.order_connections[order_id].discard(ws)
+
+    def get_bar_connection_count(self, bar_id: int) -> int:
+        """Get number of active connections for a bar."""
+        return len(self.bar_connections.get(bar_id, set()))
+
+    def get_order_connection_count(self, order_id: int) -> int:
+        """Get number of active connections for an order."""
+        return len(self.order_connections.get(order_id, set()))
+
+
 manager = ConnectionManager()
 
-@ws_router.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    await manager.connect(websocket)
-    try:
-        while True:
-            data = await websocket.receive_text()
-            await manager.broadcast(f"Message: {data}")
-    except WebSocketDisconnect:
-        manager.disconnect(websocket)
 
-@ws_router.websocket("/ws/orders")
-async def websocket_order_updates(websocket: WebSocket):
-    # When a client connects, register the connection
-    await manager.connect(websocket)
-
-    try:
-        # Listen for changes in the MongoDB collection related to orders
-        pipeline = []  # Customize the pipeline as needed
-        async with orders_collection.watch(pipeline) as change_stream:
-            async for change in change_stream:
-                # Convert BSON to JSON and send to all connected clients
-                change_json = dumps(change)
-                await manager.send_json_message(change_json)
-    except WebSocketDisconnect:
-        # Handle the disconnection of the WebSocket client
-        manager.disconnect(websocket)
-
-
-@ws_router.websocket("/ws/menus")
-async def websocket_menu_updates(websocket: WebSocket):
-    # When a client connects, register the connection
-    await manager.connect(websocket)
-
-    try:
-        # Listen for changes in the MongoDB collection related to menus
-        pipeline = []  # Can customize the pipeline if needed
-        async with menus_collection.watch(pipeline) as change_stream:
-            async for change in change_stream:
-                # Convert BSON to JSON and send it to all connected clients
-                change_json = dumps(change)
-                await manager.send_json_message(change_json)
-    except WebSocketDisconnect:
-        # Handle the disconnection of the WebSocket client
-        manager.disconnect(websocket)
-
+# =============================================================================
+# HELPER FUNCTIONS
+# =============================================================================
 
 async def verify_token_and_get_user_id(token: str) -> int:
     """Verify JWT token and extract user_id."""
@@ -91,6 +131,289 @@ async def verify_token_and_get_user_id(token: str) -> int:
         raise APIError.invalid_token()
 
 
+async def verify_bar_owner(token: str, bar_id: int) -> dict:
+    """
+    Verify that the token belongs to an owner of the specified bar.
+    Returns owner info if valid.
+    """
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        owner_id = payload.get("owner_id") or payload.get("user_id")
+        
+        if owner_id is None:
+            return None
+        
+        # Check if this owner owns the bar
+        query = Bar.__table__.select().where(Bar.id == bar_id)
+        bar = await database.fetch_one(query)
+        
+        if not bar:
+            return None
+        
+        if bar["owner_id"] != owner_id:
+            return None
+        
+        return {"owner_id": owner_id, "bar_id": bar_id, "bar_name": bar["name"]}
+    except JWTError:
+        return None
+
+
+def get_status_message(status: str) -> str:
+    """Get user-friendly message for order status."""
+    messages = {
+        "pending": "Your order has been received and is awaiting confirmation",
+        "confirmed": "Your order has been confirmed and will be prepared soon",
+        "preparing": "Your order is being prepared",
+        "ready": "Your order is ready for pickup/delivery",
+        "completed": "Your order has been completed",
+        "cancelled": "Your order has been cancelled"
+    }
+    return messages.get(status, f"Order status: {status}")
+
+
+def get_bar_status_message(status: str) -> str:
+    """Get bar-owner-friendly message for order status."""
+    messages = {
+        "pending": "New order received! Awaiting your confirmation",
+        "confirmed": "Order confirmed, ready to prepare",
+        "preparing": "Order is being prepared",
+        "ready": "Order is ready for customer",
+        "completed": "Order completed",
+        "cancelled": "Order was cancelled"
+    }
+    return messages.get(status, f"Order status: {status}")
+
+
+# =============================================================================
+# WEBSOCKET ENDPOINTS
+# =============================================================================
+
+@ws_router.websocket("/ws/bar/{bar_id}/orders")
+async def websocket_bar_owner_dashboard(
+    websocket: WebSocket,
+    bar_id: int,
+    token: str = Query(..., description="JWT authentication token for bar owner")
+):
+    """
+    🍺 BAR OWNER DASHBOARD - Real-time order notifications
+    
+    Connect: ws://host/ws/bar/{bar_id}/orders?token={jwt_token}
+    
+    Events sent to bar owner:
+    
+    1. Connection established:
+    {
+        "type": "connected",
+        "bar_id": 12,
+        "bar_name": "Bar do Zé",
+        "timestamp": "2026-01-02T12:00:00Z",
+        "message": "Connected to Bar do Zé order updates",
+        "pending_orders_count": 3
+    }
+    
+    2. New order received:
+    {
+        "type": "new_order",
+        "order_id": 456,
+        "bar_id": 12,
+        "status": "pending",
+        "total_price": 45.90,
+        "items_count": 3,
+        "timestamp": "2026-01-02T12:05:00Z",
+        "message": "New order received! Awaiting your confirmation"
+    }
+    
+    3. Order status changed:
+    {
+        "type": "order_update",
+        "order_id": 456,
+        "bar_id": 12,
+        "status": "preparing",
+        "timestamp": "2026-01-02T12:10:00Z",
+        "message": "Order is being prepared"
+    }
+    
+    Bar owner can send commands:
+    - {"action": "confirm", "order_id": 456}
+    - {"action": "ready", "order_id": 456}
+    - {"action": "complete", "order_id": 456}
+    - {"action": "cancel", "order_id": 456, "reason": "Out of stock"}
+    """
+    # Verify bar owner authentication
+    owner_info = await verify_bar_owner(token, bar_id)
+    
+    if not owner_info:
+        await websocket.close(
+            code=status.WS_1008_POLICY_VIOLATION, 
+            reason="Not authorized to access this bar's orders"
+        )
+        return
+    
+    # Connect to bar-specific channel
+    await manager.connect_to_bar(websocket, bar_id)
+    
+    try:
+        # Get count of pending orders
+        pending_query = Order.__table__.select().where(
+            (Order.bar_id == bar_id) & (Order.status == "pending")
+        )
+        pending_orders = await database.fetch_all(pending_query)
+        
+        # Send connection confirmation with pending orders count
+        welcome_message = {
+            "type": "connected",
+            "bar_id": bar_id,
+            "bar_name": owner_info["bar_name"],
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "message": f"Connected to {owner_info['bar_name']} order updates",
+            "pending_orders_count": len(pending_orders),
+            "active_connections": manager.get_bar_connection_count(bar_id)
+        }
+        await websocket.send_json(welcome_message)
+        
+        # Send list of current pending orders
+        if pending_orders:
+            for order in pending_orders:
+                order_notification = {
+                    "type": "pending_order",
+                    "order_id": order["id"],
+                    "bar_id": bar_id,
+                    "status": order["status"],
+                    "total_price": float(order["total_price"]) if order.get("total_price") else 0,
+                    "created_at": order["created_at"].isoformat() if order.get("created_at") else None,
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "message": "Pending order awaiting confirmation"
+                }
+                await websocket.send_json(order_notification)
+        
+        # Listen for incoming commands from bar owner AND watch for new orders
+        while True:
+            try:
+                # Wait for commands from bar owner (with timeout for heartbeat)
+                data = await asyncio.wait_for(
+                    websocket.receive_text(), 
+                    timeout=30.0  # 30 second timeout for heartbeat
+                )
+                
+                # Parse command
+                try:
+                    command = json.loads(data)
+                    action = command.get("action")
+                    order_id = command.get("order_id")
+                    
+                    if action and order_id:
+                        result = await handle_bar_owner_command(
+                            bar_id=bar_id,
+                            order_id=order_id,
+                            action=action,
+                            reason=command.get("reason"),
+                            websocket=websocket
+                        )
+                        await websocket.send_json(result)
+                    else:
+                        await websocket.send_json({
+                            "type": "error",
+                            "message": "Invalid command. Required: action, order_id"
+                        })
+                        
+                except json.JSONDecodeError:
+                    await websocket.send_json({
+                        "type": "error",
+                        "message": "Invalid JSON format"
+                    })
+                    
+            except asyncio.TimeoutError:
+                # Send heartbeat to keep connection alive
+                await websocket.send_json({
+                    "type": "heartbeat",
+                    "timestamp": datetime.now(timezone.utc).isoformat()
+                })
+                
+    except WebSocketDisconnect:
+        pass
+    finally:
+        manager.disconnect_from_bar(websocket, bar_id)
+
+
+async def handle_bar_owner_command(
+    bar_id: int, 
+    order_id: int, 
+    action: str, 
+    reason: str = None,
+    websocket: WebSocket = None
+) -> dict:
+    """
+    Handle commands from bar owner to update order status.
+    """
+    # Verify order belongs to this bar
+    query = Order.__table__.select().where(Order.id == order_id)
+    order = await database.fetch_one(query)
+    
+    if not order:
+        return {"type": "error", "message": f"Order {order_id} not found"}
+    
+    if order["bar_id"] != bar_id:
+        return {"type": "error", "message": "Order does not belong to this bar"}
+    
+    # Map actions to statuses
+    action_status_map = {
+        "confirm": "confirmed",
+        "prepare": "preparing",
+        "ready": "ready",
+        "complete": "completed",
+        "cancel": "cancelled"
+    }
+    
+    new_status = action_status_map.get(action)
+    if not new_status:
+        return {"type": "error", "message": f"Unknown action: {action}"}
+    
+    # Update order status in database
+    update_data = {
+        "status": new_status,
+        "updated_at": datetime.now(timezone.utc)
+    }
+    
+    if new_status == "completed":
+        update_data["completed_at"] = datetime.now(timezone.utc)
+    
+    update_query = Order.__table__.update().where(Order.id == order_id).values(**update_data)
+    await database.execute(update_query)
+    
+    # Prepare notification for user tracking this order
+    user_notification = {
+        "type": "status_update",
+        "order_id": order_id,
+        "status": new_status,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "message": get_status_message(new_status)
+    }
+    
+    # Notify user watching this order
+    await manager.notify_order(order_id, user_notification)
+    
+    # Notify other bar owner connections (if multiple devices)
+    bar_notification = {
+        "type": "order_update",
+        "order_id": order_id,
+        "bar_id": bar_id,
+        "status": new_status,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "message": get_bar_status_message(new_status),
+        "updated_by": "bar_owner"
+    }
+    await manager.notify_bar(bar_id, bar_notification)
+    
+    return {
+        "type": "command_success",
+        "action": action,
+        "order_id": order_id,
+        "new_status": new_status,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "message": f"Order {order_id} status updated to {new_status}"
+    }
+
+
 @ws_router.websocket("/ws/orders/{order_id}/status")
 async def websocket_order_status_tracking(
     websocket: WebSocket,
@@ -98,17 +421,17 @@ async def websocket_order_status_tracking(
     token: str = Query(..., description="JWT authentication token")
 ):
     """
-    WebSocket endpoint for authenticated real-time order status tracking.
+    📱 USER ORDER TRACKING - Real-time order status updates
     
-    Clients connect with: ws://host/ws/orders/{order_id}/status?token={jwt_token}
+    Connect: ws://host/ws/orders/{order_id}/status?token={jwt_token}
     
-    Sends structured events:
+    Events sent to user:
     {
         "type": "status_update",
         "order_id": 123,
         "status": "preparing",
-        "timestamp": "2025-10-14T12:34:56Z",
-        "estimated_ready_time": "2025-10-14T13:04:56Z",
+        "timestamp": "2026-01-02T12:34:56Z",
+        "estimated_ready_time": "2026-01-02T13:04:56Z",
         "message": "Your order is being prepared"
     }
     """
@@ -128,8 +451,8 @@ async def websocket_order_status_tracking(
             await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Not authorized to track this order")
             return
         
-        # Accept the WebSocket connection
-        await websocket.accept()
+        # Connect to order-specific channel
+        await manager.connect_to_order(websocket, order_id)
         
         # Send initial order status
         initial_message = {
@@ -142,63 +465,76 @@ async def websocket_order_status_tracking(
         }
         await websocket.send_json(initial_message)
         
-        # Listen for changes in MongoDB orders collection for this specific order
-        pipeline = [
-            {"$match": {"fullDocument.order_id": order_id}}
-        ]
-        
-        try:
-            async with orders_collection.watch(pipeline) as change_stream:
-                async for change in change_stream:
-                    operation_type = change.get("operationType")
-                    
-                    if operation_type in ["update", "replace"]:
-                        # Fetch latest order data from PostgreSQL
-                        updated_order = await database.fetch_one(
-                            Order.__table__.select().where(Order.id == order_id)
-                        )
-                        
-                        if updated_order:
-                            # Send structured status update
-                            status_message = {
-                                "type": "status_update",
-                                "order_id": order_id,
-                                "status": updated_order["status"],
-                                "timestamp": datetime.now(timezone.utc).isoformat(),
-                                "estimated_ready_time": updated_order["estimated_ready_time"].isoformat() if updated_order.get("estimated_ready_time") else None,
-                                "completed_at": updated_order["completed_at"].isoformat() if updated_order.get("completed_at") else None,
-                                "message": get_status_message(updated_order["status"])
-                            }
-                            await websocket.send_json(status_message)
-                    
-                    elif operation_type == "delete":
-                        # Order was deleted
-                        delete_message = {
-                            "type": "order_deleted",
-                            "order_id": order_id,
-                            "timestamp": datetime.now(timezone.utc).isoformat(),
-                            "message": "Order has been deleted"
-                        }
-                        await websocket.send_json(delete_message)
-                        break
-        
-        except WebSocketDisconnect:
-            pass  # Client disconnected, cleanup handled below
-            
-    except HTTPException as e:
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason=e.detail)
+        # Keep connection alive with heartbeat
+        while True:
+            try:
+                # Wait for client ping or timeout
+                await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
+            except asyncio.TimeoutError:
+                # Send heartbeat
+                await websocket.send_json({
+                    "type": "heartbeat",
+                    "timestamp": datetime.now(timezone.utc).isoformat()
+                })
+                
+    except WebSocketDisconnect:
+        pass
     except Exception as e:
         await websocket.close(code=status.WS_1011_INTERNAL_ERROR, reason=f"Internal error: {str(e)}")
+    finally:
+        manager.disconnect_from_order(websocket, order_id)
 
 
-def get_status_message(status: str) -> str:
-    """Get user-friendly message for order status."""
-    messages = {
-        "pending": "Your order has been received and is awaiting confirmation",
-        "confirmed": "Your order has been confirmed and will be prepared soon",
-        "preparing": "Your order is being prepared",
-        "ready": "Your order is ready for pickup/delivery",
-        "completed": "Your order has been completed",
-        "cancelled": "Your order has been cancelled"
+# =============================================================================
+# HELPER FUNCTION TO NOTIFY FROM OTHER PARTS OF THE APP
+# =============================================================================
+
+async def notify_new_order(bar_id: int, order: dict):
+    """
+    Call this when a new order is created to notify the bar owner.
+    
+    Usage from orders.py:
+        from app.bars_and_restaurants.services.connection_manager import notify_new_order
+        await notify_new_order(bar_id, order_dict)
+    """
+    notification = {
+        "type": "new_order",
+        "order_id": order.get("id"),
+        "bar_id": bar_id,
+        "status": order.get("status", "pending"),
+        "total_price": float(order.get("total_price", 0)),
+        "items_count": order.get("items_count", 0),
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "message": "🔔 New order received! Awaiting your confirmation"
     }
-    return messages.get(status, f"Order status: {status}")
+    await manager.notify_bar(bar_id, notification)
+
+
+async def notify_order_status_change(order_id: int, bar_id: int, new_status: str):
+    """
+    Call this when order status changes to notify both user and bar owner.
+    
+    Usage:
+        from app.bars_and_restaurants.services.connection_manager import notify_order_status_change
+        await notify_order_status_change(order_id, bar_id, "preparing")
+    """
+    # Notify user
+    user_msg = {
+        "type": "status_update",
+        "order_id": order_id,
+        "status": new_status,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "message": get_status_message(new_status)
+    }
+    await manager.notify_order(order_id, user_msg)
+    
+    # Notify bar
+    bar_msg = {
+        "type": "order_update",
+        "order_id": order_id,
+        "bar_id": bar_id,
+        "status": new_status,
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "message": get_bar_status_message(new_status)
+    }
+    await manager.notify_bar(bar_id, bar_msg)
