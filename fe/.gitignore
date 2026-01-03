@@ -97,3 +97,5 @@ firebase.json
 lib/l10n/app_localizations.dart
 lib/l10n/app_localizations_*.dart
 FE_BE_COMMUNICATION.md
+android/android/FakeDependency.jar
+android/jdks/CACHEDIR.TAG

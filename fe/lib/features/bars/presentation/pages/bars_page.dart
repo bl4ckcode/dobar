@@ -2,6 +2,7 @@ import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/bars/presentation/bloc/bar_bloc.dart';
 import 'package:barz/features/bars/presentation/bloc/bar_event.dart';
 import 'package:barz/features/bars/presentation/bloc/bar_state.dart';
+import 'package:barz/shared/presentation/widget/safe_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 
@@ -40,10 +41,11 @@ class BarsPage extends StatelessWidget {
                 itemBuilder: (context, index) {
                   final bar = bars[index];
                   return ListTile(
-                    leading: bar.imageUrl != null
-                        ? CircleAvatar(
-                            backgroundImage: NetworkImage(bar.imageUrl!))
-                        : const CircleAvatar(child: Icon(Icons.local_bar)),
+                    leading: SafeNetworkAvatar(
+                      imageUrl: bar.imageUrl,
+                      radius: 24,
+                      fallbackIcon: const Icon(Icons.local_bar),
+                    ),
                     title: Text(bar.name),
                     subtitle: Text(bar.address),
                     trailing: bar.approximateLocation != null

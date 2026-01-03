@@ -1,4 +1,5 @@
 {
+  "@@locale": "en",
   "app_title": "BARZ",
   "@app_title": {
     "description": "Barz app title, your drink instantly on your table! Choose an item from your restaurants menu and enjoy it."
@@ -30,5 +31,130 @@
   "want_a_specific_drink": "Thirst for that specific drink? Select it and find where to go!",
   "@want_a_specific_drink": {
     "description": "Thirst for that specific drink question label"
-  }
+  },
+
+  "orders_title": "My Orders",
+  "orders_empty": "No orders yet",
+  "orders_empty_hint": "Place your first order at a bar near you!",
+  "order_number": "Order #{orderNumber}",
+  "@order_number": {
+    "placeholders": {
+      "orderNumber": {
+        "type": "int"
+      }
+    }
+  },
+  "order_status_pending": "Waiting for confirmation",
+  "order_status_confirmed": "Confirmed",
+  "order_status_preparing": "Being prepared",
+  "order_status_ready": "Ready!",
+  "order_status_completed": "Delivered",
+  "order_status_cancelled": "Cancelled",
+  "order_tracking": "Track your order",
+  "order_total": "Total",
+  "order_placed_at": "Placed at {time}",
+  "@order_placed_at": {
+    "placeholders": {
+      "time": {
+        "type": "String"
+      }
+    }
+  },
+  "order_cancel": "Cancel Order",
+  "order_cancel_confirm": "Are you sure you want to cancel this order?",
+  "order_items_count": "{count, plural, =1{1 item} other{{count} items}}",
+  "@order_items_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+
+  "cart_title": "Your Cart",
+  "cart_empty": "Your cart is empty",
+  "cart_add_items": "Add some delicious items!",
+  "cart_item_remove": "Remove",
+  "cart_subtotal": "Subtotal",
+  "cart_total": "Total",
+  "cart_checkout": "Proceed to Checkout",
+  "cart_clear": "Clear Cart",
+  "cart_clear_confirm": "Remove all items from cart?",
+  "cart_add_notes": "Add special instructions",
+  "cart_table_number": "Table number (optional)",
+  "cart_quantity": "Qty: {quantity}",
+  "@cart_quantity": {
+    "placeholders": {
+      "quantity": {
+        "type": "int"
+      }
+    }
+  },
+
+  "menu_title": "Menu",
+  "menu_search": "Search menu...",
+  "menu_categories": "Categories",
+  "menu_all_items": "All Items",
+  "menu_item_add": "Add to cart",
+  "menu_item_added": "Added to cart!",
+  "menu_item_price": "${price}",
+  "@menu_item_price": {
+    "placeholders": {
+      "price": {
+        "type": "String"
+      }
+    }
+  },
+  "menu_item_unavailable": "Currently unavailable",
+
+  "payment_title": "Payment",
+  "payment_method": "Payment Method",
+  "payment_method_card": "Credit/Debit Card",
+  "payment_method_pix": "PIX",
+  "payment_method_cash": "Cash at bar",
+  "payment_processing": "Processing payment...",
+  "payment_success": "Payment successful!",
+  "payment_failed": "Payment failed",
+  "payment_retry": "Try again",
+  "payment_secure": "Secure payment powered by Stripe",
+
+  "checkin_title": "Check-in",
+  "checkin_at_bar": "You're at {barName}!",
+  "@checkin_at_bar": {
+    "placeholders": {
+      "barName": {
+        "type": "String"
+      }
+    }
+  },
+  "checkin_confirm": "Check in now",
+  "checkin_success": "Checked in successfully!",
+  "checkin_browse_menu": "Browse Menu",
+  "checkin_scan_qr": "Scan QR Code",
+  "checkin_scan_hint": "Point your camera at the table QR code",
+
+  "notification_order_ready": "Your order is ready!",
+  "notification_order_confirmed": "Your order has been confirmed",
+  "notification_order_preparing": "Your order is being prepared",
+  "notification_new_promotion": "New promotion nearby!",
+  "notification_payment_complete": "Payment completed successfully",
+
+  "loading": "Loading...",
+  "error_generic": "Something went wrong",
+  "error_network": "Network error. Please check your connection.",
+  "error_retry": "Retry",
+  "success": "Success!",
+  "cancel": "Cancel",
+  "confirm": "Confirm",
+  "close": "Close",
+  "save": "Save",
+  "delete": "Delete",
+  "edit": "Edit",
+  "done": "Done",
+  "next": "Next",
+  "back": "Back",
+  "see_all": "See all",
+  "no_results": "No results found",
+  "connection_lost": "Connection lost",
+  "reconnecting": "Reconnecting..."
 }

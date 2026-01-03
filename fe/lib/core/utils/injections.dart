@@ -1,4 +1,6 @@
 import 'package:barz/core/network/dio_network.dart';
+import 'package:barz/core/services/image_refresh_service.dart';
+import 'package:barz/core/services/notifications/notification_service.dart';
 import 'package:barz/core/utils/log/app_logger.dart';
 import 'package:barz/features/authentication/auth_injection.dart';
 import 'package:barz/features/bars/bars_injection.dart';
@@ -20,6 +22,7 @@ Future<void> initInjections() async {
   await initSharedPrefsInjections();
   await initAppInjections();
   await initDioInjections();
+  await initNotificationInjections();
   await initLoginInjections();
   await initHomeInjections();
   await initPartnersInjection();
@@ -42,5 +45,19 @@ initSharedPrefsInjections() async {
 Future<void> initDioInjections() async {
   initRootLogger();
   DioNetwork.initDio();
+  
+  // Register ImageRefreshService
+  getItInjector.registerLazySingleton<ImageRefreshService>(
+    () => ImageRefreshService(DioNetwork.appAPI),
+  );
+}
+
+Future<void> initNotificationInjections() async {
+  // Register NotificationService singleton
+  final notificationService = NotificationService();
+  getItInjector.registerSingleton<NotificationService>(notificationService);
+  
+  // Initialize notifications (requests permissions, gets token, etc.)
+  await notificationService.initialize();
 }
 

@@ -142,19 +142,106 @@ class _HomeConnectedView extends StatelessWidget {
         if (state.promotions.isEmpty) {
           return _buildEmptyCard('No promotions available', Icons.local_offer);
         }
-        return Column(
-          children: state.promotions.take(3).map((promo) {
-            return BarzCard(
-              child: _buildCardContent(
-                icon: Icons.local_offer,
-                title: promo.title,
-                subtitle: promo.description ?? '',
-                onTap: () {},
-              ),
-            ).animate().fadeIn(delay: 100.ms).slideX(begin: -0.1, end: 0);
-          }).toList(),
+        // Horizontal carousel for promotions
+        return SizedBox(
+          height: 160,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: state.promotions.length > 10 ? 10 : state.promotions.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              final promo = state.promotions[index];
+              return _buildPromotionCard(context, promo, index);
+            },
+          ),
         );
       },
+    );
+  }
+
+  Widget _buildPromotionCard(BuildContext context, dynamic promo, int index) {
+    // Build discount label
+    String discountLabel;
+    switch (promo.discountType?.toString().split('.').last ?? 'other') {
+      case 'percentage':
+        discountLabel = '${promo.discountValue?.toInt() ?? 0}% OFF';
+        break;
+      case 'fixed':
+        discountLabel = 'R\$ ${promo.discountValue?.toStringAsFixed(0) ?? '0'} OFF';
+        break;
+      case 'bogo':
+        discountLabel = 'BOGO';
+        break;
+      default:
+        discountLabel = 'DEAL';
+    }
+    
+    return GestureDetector(
+      onTap: () => context.push('/promotion/${promo.id}'),
+      child: Container(
+        width: 180,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: barzBlack,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Discount badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: barzYellow,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                discountLabel,
+                style: const TextStyle(
+                  color: barzBlack,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            // Title
+            Expanded(
+              child: Text(
+                promo.title ?? 'Promotion',
+                style: const TextStyle(
+                  color: barzYellow,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            // Time indicator
+            Row(
+              children: [
+                const Icon(Icons.access_time, color: Colors.white54, size: 14),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    '${promo.startTime ?? '00:00'} - ${promo.endTime ?? '23:59'}',
+                    style: const TextStyle(color: Colors.white54, fontSize: 11),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ).animate().fadeIn(delay: (50 * (index % 5)).ms).slideX(begin: 0.1, end: 0),
     );
   }
 

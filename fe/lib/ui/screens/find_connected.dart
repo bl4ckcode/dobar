@@ -10,14 +10,25 @@ import 'package:barz/features/bars/presentation/bloc/bar_bloc.dart';
 import 'package:barz/features/bars/presentation/bloc/bar_event.dart';
 import 'package:barz/features/bars/presentation/bloc/bar_state.dart';
 import 'package:barz/features/bars/domain/models/bar_model.dart';
+import 'package:barz/features/promotions/presentation/bloc/promotions_bloc.dart';
+import 'package:barz/features/promotions/presentation/bloc/promotions_event.dart';
+import 'package:barz/features/promotions/presentation/bloc/promotions_state.dart';
+import 'package:barz/shared/presentation/widget/bar_image.dart';
 
 class FindConnected extends StatelessWidget {
   const FindConnected({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => getItInjector<BarBloc>()..add(const LoadNearbyBars(lat: -23.5505, lng: -46.6333)),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (_) => getItInjector<BarBloc>()..add(const LoadNearbyBars(lat: -23.5505, lng: -46.6333)),
+        ),
+        BlocProvider(
+          create: (_) => getItInjector<PromotionsBloc>()..add(LoadPromotions()),
+        ),
+      ],
       child: const _FindConnectedView(),
     );
   }
@@ -151,40 +162,52 @@ class _FindConnectedViewState extends State<_FindConnectedView> {
   }
 
   Widget _buildBarsList() {
-    return BlocBuilder<BarBloc, BarState>(
-      builder: (context, state) {
-        if (state is BarLoading) {
-          return const Center(child: CircularProgressIndicator(color: barzYellow));
+    return BlocBuilder<PromotionsBloc, PromotionsState>(
+      builder: (context, promoState) {
+        // Build a set of bar IDs that have promotions
+        final barsWithPromos = <int>{};
+        for (final promo in promoState.promotions) {
+          barsWithPromos.add(promo.barId);
         }
-        if (state is BarError) {
-          return _buildErrorState(state.message, () {
-            context.read<BarBloc>().add(const LoadNearbyBars(lat: -23.5505, lng: -46.6333));
-          });
-        }
-        if (state is BarsLoaded) {
-          if (state.bars.isEmpty) {
-            return _buildEmptyState();
-          }
-          return RefreshIndicator(
-            onRefresh: () async {
-              context.read<BarBloc>().add(const LoadNearbyBars(lat: -23.5505, lng: -46.6333));
-            },
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: state.bars.length,
-              itemBuilder: (context, index) {
-                final bar = state.bars[index];
-                return _buildBarCard(bar, index);
-              },
-            ),
-          );
-        }
-        return const SizedBox.shrink();
+        
+        return BlocBuilder<BarBloc, BarState>(
+          builder: (context, state) {
+            if (state is BarLoading) {
+              return const Center(child: CircularProgressIndicator(color: barzYellow));
+            }
+            if (state is BarError) {
+              return _buildErrorState(state.message, () {
+                context.read<BarBloc>().add(const LoadNearbyBars(lat: -23.5505, lng: -46.6333));
+              });
+            }
+            if (state is BarsLoaded) {
+              if (state.bars.isEmpty) {
+                return _buildEmptyState();
+              }
+              return RefreshIndicator(
+                onRefresh: () async {
+                  context.read<BarBloc>().add(const LoadNearbyBars(lat: -23.5505, lng: -46.6333));
+                  context.read<PromotionsBloc>().add(LoadPromotions());
+                },
+                child: ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: state.bars.length,
+                  itemBuilder: (context, index) {
+                    final bar = state.bars[index];
+                    final hasPromo = barsWithPromos.contains(bar.id);
+                    return _buildBarCard(bar, index, hasPromo: hasPromo);
+                  },
+                ),
+              );
+            }
+            return const SizedBox.shrink();
+          },
+        );
       },
     );
   }
 
-  Widget _buildBarCard(BarModel bar, int index) {
+  Widget _buildBarCard(BarModel bar, int index, {bool hasPromo = false}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: BarzCard(
@@ -194,37 +217,86 @@ class _FindConnectedViewState extends State<_FindConnectedView> {
             padding: const EdgeInsets.all(4),
             child: Row(
               children: [
-                Container(
-                  width: 64,
-                  height: 64,
-                  decoration: BoxDecoration(
-                    color: barzYellowSoft,
-                    borderRadius: BorderRadius.circular(12),
-                    image: bar.imageUrl != null
-                        ? DecorationImage(
-                            image: NetworkImage(bar.imageUrl!),
-                            fit: BoxFit.cover,
-                          )
-                        : null,
-                  ),
-                  child: bar.imageUrl == null
-                      ? Icon(Icons.store, color: barzYellowDark, size: 32)
-                      : null,
+                // Image with optional promo badge and auto URL refresh
+                Stack(
+                  children: [
+                    BarImage(
+                      barId: bar.id,
+                      imageUrl: bar.imageUrl,
+                      imageUrlExpiration: bar.imageUrlExpiration,
+                      width: 64,
+                      height: 64,
+                      fit: BoxFit.cover,
+                      borderRadius: BorderRadius.circular(12),
+                      errorWidget: Container(
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: barzYellowSoft,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(Icons.store, color: barzYellowDark, size: 32),
+                      ),
+                    ),
+                    if (hasPromo)
+                      Positioned(
+                        top: 0,
+                        right: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: barzBlack,
+                            borderRadius: BorderRadius.only(
+                              topRight: Radius.circular(12),
+                              bottomLeft: Radius.circular(8),
+                            ),
+                          ),
+                          child: const Icon(
+                            Icons.local_offer,
+                            size: 14,
+                            color: barzYellow,
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        bar.name,
-                        style: TextStyle(
-                          color: textPrimary,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              bar.name,
+                              style: TextStyle(
+                                color: textPrimary,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          if (hasPromo)
+                            Container(
+                              margin: const EdgeInsets.only(left: 8),
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: barzYellow,
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text(
+                                'PROMO',
+                                style: TextStyle(
+                                  color: barzBlack,
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                        ],
                       ),
                       const SizedBox(height: 4),
                       Text(
