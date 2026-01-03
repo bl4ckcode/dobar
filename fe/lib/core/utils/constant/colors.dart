@@ -21,6 +21,9 @@ const Color barzYellowDark = Color(0xFFFFB300); // Darker shade for accents
 /// Main black with slight warmth for better readability
 const Color barzBlack = Color(0xFF1A1A2E); // Softer dark with slight blue undertone
 
+/// Cream background - warm and soft for main app background
+const Color barzCream = Color(0xFFFFF8E1); // Soft cream, same as backgroundYellow
+
 // =============================================================================
 // SEMANTIC COLORS
 // =============================================================================

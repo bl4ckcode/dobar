@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:barz/ui/shell/wireframe_shell.dart';
+import 'package:barz/ui/shell/app_shell.dart';
 import 'package:barz/ui/screens/create_bar_screen.dart';
 import 'package:barz/features/bars/presentation/pages/bar_detail_page.dart';
 import 'package:barz/features/promotions/presentation/pages/promotion_detail_page.dart';
 import 'package:barz/features/orders/presentation/pages/order_tracking_page.dart';
 import 'package:barz/features/orders/presentation/pages/orders_page.dart';
+import 'package:barz/features/checkin/presentation/pages/checkin_page.dart';
+import 'package:barz/features/cart/presentation/pages/cart_page.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -15,7 +17,7 @@ final appRouter = GoRouter(
   routes: [
     GoRoute(
       path: '/',
-      builder: (context, state) => const WireframeShell(),
+      builder: (context, state) => const AppShell(),
     ),
     GoRoute(
       path: '/bar/:barId',
@@ -45,6 +47,14 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/create-bar',
       builder: (context, state) => const CreateBarScreen(),
+    ),
+    GoRoute(
+      path: '/checkin',
+      builder: (context, state) => const CheckinPage(),
+    ),
+    GoRoute(
+      path: '/cart',
+      builder: (context, state) => const CartPage(),
     ),
   ],
 );

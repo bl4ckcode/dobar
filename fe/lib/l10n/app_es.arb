@@ -61,6 +61,7 @@
   "cart_clear_confirm": "¿Quitar todos los artículos del carrito?",
   "cart_add_notes": "Añadir instrucciones especiales",
   "cart_table_number": "Número de mesa (opcional)",
+  "cart_items": "{count, plural, =1{1 artículo} other{{count} artículos}}",
   "cart_quantity": "Cant: {quantity}",
 
   "menu_title": "Menú",
@@ -77,11 +78,25 @@
   "payment_method_card": "Tarjeta de Crédito/Débito",
   "payment_method_pix": "PIX",
   "payment_method_cash": "Efectivo en el bar",
+  "payment_credit_card": "Tarjeta de Crédito",
+  "payment_pix": "PIX",
+  "payment_cash": "Efectivo",
   "payment_processing": "Procesando pago...",
   "payment_success": "¡Pago realizado!",
   "payment_failed": "Error en el pago",
   "payment_retry": "Intentar de nuevo",
   "payment_secure": "Pago seguro con Stripe",
+
+  "checkout_order_details": "Detalles del Pedido",
+  "checkout_order_type": "Tipo de Pedido",
+  "checkout_dine_in": "Comer Aquí",
+  "checkout_takeaway": "Para Llevar",
+  "checkout_payment_method": "Método de Pago",
+  "checkout_place_order": "Hacer Pedido",
+  "checkout_success": "¡Pedido Realizado!",
+  "checkout_order_placed": "Tu pedido ha sido realizado con éxito.",
+
+  "cart_special_instructions": "Instrucciones Especiales",
 
   "checkin_title": "Check-in",
   "checkin_at_bar": "¡Estás en {barName}!",

@@ -53,9 +53,16 @@ class ClearCart extends CartEvent {}
 class Checkout extends CartEvent {
   final String orderType;
   final String paymentMethod;
+  final String? tableNumber;
+  final String? specialInstructions;
 
-  const Checkout({required this.orderType, required this.paymentMethod});
+  const Checkout({
+    required this.orderType,
+    required this.paymentMethod,
+    this.tableNumber,
+    this.specialInstructions,
+  });
 
   @override
-  List<Object?> get props => [orderType, paymentMethod];
+  List<Object?> get props => [orderType, paymentMethod, tableNumber, specialInstructions];
 }

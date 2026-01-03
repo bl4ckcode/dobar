@@ -51,5 +51,14 @@ class ApiEndpoints {
   static String togglePromotion(int id) => '/promotions/$id/toggle-active';
   
   static const String offers = '/offers';
+
+  // RBAC / Session Management
+  static const String myBars = '/me/bars';
+  static const String acceptInvitation = '/me/bars/accept-invitation';
+  
+  // Staff Management
+  static String barStaff(int barId) => '/bars/$barId/staff';
+  static String inviteStaff(int barId) => '/bars/$barId/staff/invite';
+  static String removeStaff(int barId, int staffId) => '/bars/$barId/staff/$staffId';
 }
 

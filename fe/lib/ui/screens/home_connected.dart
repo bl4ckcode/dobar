@@ -40,6 +40,7 @@ class _HomeConnectedView extends StatelessWidget {
     return Scaffold(
       appBar: const BarzAppBar(title: 'Home'),
       floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'home_create_bar_fab',
         onPressed: () => context.push('/create-bar'),
         backgroundColor: barzBlack,
         icon: const Icon(Icons.add, color: barzYellow),

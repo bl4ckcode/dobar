@@ -82,6 +82,14 @@
   "cart_clear_confirm": "Remove all items from cart?",
   "cart_add_notes": "Add special instructions",
   "cart_table_number": "Table number (optional)",
+  "cart_items": "{count, plural, =1{1 item} other{{count} items}}",
+  "@cart_items": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "cart_quantity": "Qty: {quantity}",
   "@cart_quantity": {
     "placeholders": {
@@ -112,11 +120,25 @@
   "payment_method_card": "Credit/Debit Card",
   "payment_method_pix": "PIX",
   "payment_method_cash": "Cash at bar",
+  "payment_credit_card": "Credit Card",
+  "payment_pix": "PIX",
+  "payment_cash": "Cash",
   "payment_processing": "Processing payment...",
   "payment_success": "Payment successful!",
   "payment_failed": "Payment failed",
   "payment_retry": "Try again",
   "payment_secure": "Secure payment powered by Stripe",
+
+  "checkout_order_details": "Order Details",
+  "checkout_order_type": "Order Type",
+  "checkout_dine_in": "Dine In",
+  "checkout_takeaway": "Takeaway",
+  "checkout_payment_method": "Payment Method",
+  "checkout_place_order": "Place Order",
+  "checkout_success": "Order Placed!",
+  "checkout_order_placed": "Your order has been placed successfully.",
+
+  "cart_special_instructions": "Special Instructions",
 
   "checkin_title": "Check-in",
   "checkin_at_bar": "You're at {barName}!",

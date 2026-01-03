@@ -5,12 +5,14 @@ import 'package:barz/core/utils/log/app_logger.dart';
 import 'package:barz/features/authentication/auth_injection.dart';
 import 'package:barz/features/bars/bars_injection.dart';
 import 'package:barz/features/cart/cart_injection.dart';
+import 'package:barz/features/checkin/checkin_injection.dart';
 import 'package:barz/features/home/home_injection.dart';
 import 'package:barz/features/location/location_injection.dart';
 import 'package:barz/features/orders/orders_injection.dart';
 import 'package:barz/features/partners/partners_injection.dart';
 import 'package:barz/features/payments/payments_injection.dart';
 import 'package:barz/features/promotions/promotions_injection.dart';
+import 'package:barz/features/session/session_injection.dart';
 import 'package:barz/features/user/user_injection.dart';
 import 'package:barz/shared/app_injections.dart';
 import 'package:get_it/get_it.dart';
@@ -29,10 +31,12 @@ Future<void> initInjections() async {
   await initBarsInjection();
   await initCartInjection();
   await initOrdersInjection();
+  await initCheckinInjection();
   initUserInjection();
   initPaymentsInjection();
   initPromotionsInjection();
   initLocationInjection();
+  await initSessionInjection();
 }
 
 initSharedPrefsInjections() async {
