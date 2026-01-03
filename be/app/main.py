@@ -15,6 +15,7 @@ from .bars_and_restaurants.routes.promotions import promotions_router
 from .bars_and_restaurants.services.connection_manager import ws_router
 from .bars_and_restaurants.routes.bar_owners import bar_owners_router
 from .bars_and_restaurants.routes.wallet import wallet_router
+from .bars_and_restaurants.routes.staff import staff_router, my_bars_router
 from fastapi.openapi.utils import get_openapi
 from contextlib import asynccontextmanager
 from firebase_admin import initialize_app, credentials
@@ -98,6 +99,8 @@ app.include_router(ws_router)
 app.include_router(bar_owners_router)
 app.include_router(payment_router)
 app.include_router(wallet_router)
+app.include_router(staff_router)
+app.include_router(my_bars_router)
 
 def custom_openapi():
     if app.openapi_schema:
