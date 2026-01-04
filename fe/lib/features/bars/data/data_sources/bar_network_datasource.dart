@@ -58,4 +58,39 @@ class BarNetworkDataSource {
           e.response?.statusCode);
     }
   }
+
+  /// Fetch items for a specific menu
+  Future<List<MenuItemModel>> getMenuItems(int menuId) async {
+    try {
+      final response = await dio
+          .get('${ApiEndpoints.baseUrl}${ApiEndpoints.menuItems(menuId)}');
+      if (response.data is List) {
+        return (response.data as List)
+            .map((e) => MenuItemModel.fromJson(e))
+            .toList();
+      }
+      return [];
+    } on DioException catch (e) {
+      throw ServerException(
+          e.response?.data?['detail'] ?? 'Failed to fetch menu items',
+          e.response?.statusCode);
+    }
+  }
+
+  /// Fetch menus with their items (combines both calls)
+  Future<List<MenuModel>> getBarMenusWithItems(int barId) async {
+    final menus = await getBarMenus(barId);
+    final menusWithItems = <MenuModel>[];
+    
+    for (final menu in menus) {
+      final items = await getMenuItems(menu.id);
+      menusWithItems.add(MenuModel(
+        id: menu.id,
+        barId: menu.barId,
+        items: items,
+      ));
+    }
+    
+    return menusWithItems;
+  }
 }

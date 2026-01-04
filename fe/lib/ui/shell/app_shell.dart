@@ -9,46 +9,48 @@ import 'wireframe_shell.dart';
 
 /// The main app shell that switches between client and business views.
 /// 
-/// This is the root widget for authenticated users. It:
-/// 1. Initializes the session on mount
-/// 2. Shows loading while session is being fetched
-/// 3. Switches between [WireframeShell] (client) and [BusinessShell] (business)
-///    based on the user's bar access
-class AppShell extends StatelessWidget {
+/// This widget is only shown for authenticated users (router handles auth guard).
+/// It initializes the user session and determines which shell to show:
+/// - [WireframeShell] for clients (no bar access)
+/// - [BusinessShell] for bar owners/staff (has bar access)
+class AppShell extends StatefulWidget {
   const AppShell({super.key});
 
   @override
+  State<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends State<AppShell> {
+  late final SessionBloc _sessionBloc;
+
+  @override
+  void initState() {
+    super.initState();
+    _sessionBloc = getItInjector<SessionBloc>();
+    // Initialize session - we know user is authenticated (router guards this)
+    _sessionBloc.add(const SessionEvent.initialize());
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return BlocProvider<SessionBloc>(
-      create: (context) {
-        final bloc = getItInjector<SessionBloc>();
-        // Initialize session on creation
-        bloc.add(const SessionEvent.initialize());
-        return bloc;
-      },
+    return BlocProvider<SessionBloc>.value(
+      value: _sessionBloc,
       child: BlocBuilder<SessionBloc, SessionState>(
         builder: (context, state) {
           return state.when(
             initial: () => const _LoadingView(),
             loading: () => const _LoadingView(),
             ready: (session, forceClientMode) {
-              // Determine which shell to show
+              // Determine which shell to show based on bar access and role
               if (forceClientMode || session.barAccess.isEmpty) {
                 return const WireframeShell();
               } else {
                 return const BusinessShell();
               }
             },
-            error: (message) => _ErrorView(
-              message: message,
-              onRetry: () {
-                context.read<SessionBloc>().add(const SessionEvent.initialize());
-              },
-            ),
-            loggedOut: () {
-              // TODO: Navigate to login screen
-              return const _LoadingView();
-            },
+            // On error, show client view with error message option
+            error: (message) => const WireframeShell(),
+            loggedOut: () => const WireframeShell(),
           );
         },
       ),
@@ -69,49 +71,6 @@ class _LoadingView extends StatelessWidget {
             CircularProgressIndicator(),
             SizedBox(height: 16),
             Text('Loading...'),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ErrorView extends StatelessWidget {
-  final String message;
-  final VoidCallback onRetry;
-
-  const _ErrorView({
-    required this.message,
-    required this.onRetry,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline, size: 64, color: Colors.red),
-            const SizedBox(height: 16),
-            Text(
-              'Something went wrong',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Text(
-                message,
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey[600]),
-              ),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: onRetry,
-              child: const Text('Retry'),
-            ),
           ],
         ),
       ),

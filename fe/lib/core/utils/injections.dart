@@ -1,6 +1,7 @@
 import 'package:barz/core/network/dio_network.dart';
 import 'package:barz/core/services/image_refresh_service.dart';
 import 'package:barz/core/services/notifications/notification_service.dart';
+import 'package:barz/core/services/token_storage_service.dart';
 import 'package:barz/core/utils/log/app_logger.dart';
 import 'package:barz/features/authentication/auth_injection.dart';
 import 'package:barz/features/bars/bars_injection.dart';
@@ -48,7 +49,10 @@ initSharedPrefsInjections() async {
 
 Future<void> initDioInjections() async {
   initRootLogger();
-  DioNetwork.initDio();
+  DioNetwork.initDio(tokenStorage: getItInjector<TokenStorageService>());
+  
+  // Load any existing token from storage
+  await DioNetwork.loadTokenFromStorage();
   
   // Register ImageRefreshService
   getItInjector.registerLazySingleton<ImageRefreshService>(

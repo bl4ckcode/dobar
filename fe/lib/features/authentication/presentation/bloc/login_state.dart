@@ -7,7 +7,13 @@ sealed class LoginState with _$LoginState {
   const factory LoginState.initial() = Initial;
   const factory LoginState.loading() = Loading;
   const factory LoginState.codeSent({required String verificationId, required String phoneNumber}) = CodeSent;
-  const factory LoginState.success() = Success;
+  const factory LoginState.success({
+    /// Whether user profile is complete (has name, email, accepted terms)
+    @Default(false) bool isProfileComplete,
+    /// Pre-filled data from social auth
+    String? email,
+    String? displayName,
+  }) = Success;
   const factory LoginState.failure({required String error}) = Failure;
 }
 

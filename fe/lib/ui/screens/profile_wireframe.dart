@@ -1,12 +1,53 @@
+import 'package:barz/core/network/dio_network.dart';
+import 'package:barz/core/utils/injections.dart';
+import 'package:barz/features/authentication/domain/usecases/login_usecase.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
 import '../primitives/barz_app_bar.dart';
 import '../primitives/barz_card.dart';
 import '../../core/utils/constant/styles.dart';
 import '../../core/utils/constant/colors.dart';
 
-class ProfileWireframe extends StatelessWidget {
+class ProfileWireframe extends StatefulWidget {
   const ProfileWireframe({super.key});
+
+  @override
+  State<ProfileWireframe> createState() => _ProfileWireframeState();
+}
+
+class _ProfileWireframeState extends State<ProfileWireframe> {
+  Future<void> _handleLogout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: errorColor),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      // Clear token from storage and network client
+      await getItInjector<LoginUsecase>().logout();
+      await DioNetwork.clearAuthToken();
+      
+      if (mounted) {
+        // Navigate to login page (router will handle auth guard)
+        context.go('/login');
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,6 +66,7 @@ class ProfileWireframe extends StatelessWidget {
               end: const Offset(1, 1),
             ),
             const SizedBox(height: 24),
+            
             _buildSectionTitle('Activity'),
             const SizedBox(height: 12),
             BarzCard(
@@ -60,15 +102,19 @@ class ProfileWireframe extends StatelessWidget {
               ),
             ).animate().fadeIn(delay: 250.ms).slideX(begin: -0.1, end: 0),
             const SizedBox(height: 24),
+            
             // Logout button
-            BarzCard(
-              child: _buildMenuItem(
-                icon: Icons.logout,
-                title: 'Logout',
-                subtitle: 'Sign out of your account',
-                isDestructive: true,
-              ),
-            ).animate().fadeIn(delay: 300.ms).slideX(begin: -0.1, end: 0),
+            GestureDetector(
+              onTap: _handleLogout,
+              child: BarzCard(
+                child: _buildMenuItem(
+                  icon: Icons.logout,
+                  title: 'Logout',
+                  subtitle: 'Sign out of your account',
+                    isDestructive: true,
+                  ),
+                ),
+              ).animate().fadeIn(delay: 300.ms).slideX(begin: -0.1, end: 0),
           ],
         ),
       ),

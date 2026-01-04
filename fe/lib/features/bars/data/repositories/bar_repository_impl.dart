@@ -36,7 +36,8 @@ class BarRepositoryImpl extends AbstractBarRepository {
   @override
   Future<Either<Failure, List<MenuModel>>> getBarMenus(int barId) async {
     try {
-      final result = await networkDataSource.getBarMenus(barId);
+      // Use the method that fetches menus with their items
+      final result = await networkDataSource.getBarMenusWithItems(barId);
       return Right(result);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message, e.statusCode));

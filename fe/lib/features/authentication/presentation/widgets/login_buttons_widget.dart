@@ -1,11 +1,15 @@
 import 'dart:async';
-import 'dart:io' show Platform;
+import 'package:barz/core/design/design_system.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:flutter_facebook_auth/flutter_facebook_auth.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:barz/features/authentication/presentation/bloc/login_bloc.dart';
 import 'package:barz/features/authentication/presentation/bloc/login_event.dart';
+
+// Conditional import for Platform
+import 'login_buttons_platform.dart'
+    if (dart.library.io) 'login_buttons_platform_io.dart';
 
 class LoginButtonsWidget extends StatefulWidget {
   final LoginBloc loginBloc;
@@ -107,65 +111,63 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
     }
   }
 
-  Future<void> _signInWithFacebook() async {
-    try {
-      final result = await FacebookAuth.instance.login();
-      if (result.status != LoginStatus.success) return;
-
-      final userEmail =
-          await FacebookAuth.instance.getUserData(fields: "email");
-      final accessToken = result.accessToken!;
-      debugPrint("Facebook User Token: ${accessToken.tokenString}");
-
-      if (userEmail.containsKey("email")) {
-        widget.loginBloc.add(LoginEvent.googleLoginPressed(
-          key: userEmail['email'],
-          token: accessToken.tokenString,
-        ));
-      }
-    } catch (e) {
-      debugPrint("Error signing in with Facebook: $e");
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+    return Column(
       children: [
-        if (Platform.isAndroid)
-          IconButton(
-            padding: EdgeInsets.zero,
+        // On web: show both Google and Apple
+        // On Android: show Google only
+        // On iOS: show Apple only
+        if (kIsWeb || isAndroidPlatform())
+          _buildSocialButton(
             onPressed: _signInWithGoogle,
-            icon: Image.asset(
-              "assets/icons/google.png",
-              height: 64,
-              width: 64,
-              color: Colors.white,
-            ),
+            icon: 'assets/icons/google.png',
+            label: 'Continue with Google',
           ),
-        if (Platform.isIOS)
-          IconButton(
-            padding: EdgeInsets.zero,
+        if (kIsWeb) const SizedBox(height: BarzSpacing.md),
+        if (kIsWeb || isIOSPlatform())
+          _buildSocialButton(
             onPressed: _signInWithApple,
-            icon: Image.asset(
-              "assets/icons/apple.png",
-              height: 64,
-              width: 64,
-              color: Colors.white,
-            ),
+            icon: 'assets/icons/apple.png',
+            label: 'Continue with Apple',
           ),
-        IconButton(
-          padding: const EdgeInsets.only(left: 32),
-          onPressed: _signInWithFacebook,
-          icon: Image.asset(
-            "assets/icons/facebook.png",
-            height: 64,
-            width: 64,
-            color: Colors.white,
+      ],
+    );
+  }
+
+  Widget _buildSocialButton({
+    required VoidCallback onPressed,
+    required String icon,
+    required String label,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      height: TouchTargets.minimum,
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(
+            vertical: ButtonSpacing.paddingVertical,
+            horizontal: ButtonSpacing.paddingHorizontal,
+          ),
+          side: const BorderSide(color: barzDark, width: 2),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(BarzRadii.md),
           ),
         ),
-      ],
+        icon: Image.asset(
+          icon,
+          height: 24,
+          width: 24,
+        ),
+        label: Text(
+          label,
+          style: barzTextTheme.labelLarge?.copyWith(
+            color: barzDark,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
     );
   }
 }

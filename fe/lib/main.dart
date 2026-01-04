@@ -6,8 +6,9 @@ import 'package:flutter_web_plugins/url_strategy.dart';
 import 'firebase_options.dart';
 import 'core/utils/injections.dart';
 import 'core/services/app_initializer.dart';
-import 'core/theme/app_theme.dart';
+import 'core/design/design_system.dart';
 import 'core/router/app_router.dart';
+import 'l10n/app_localizations.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -65,9 +66,11 @@ class BarzAppState extends State<BarzApp> with WidgetsBindingObserver {
       routerConfig: appRouter,
       debugShowCheckedModeBanner: false,
       title: 'Barz',
-      theme: getLightTheme(),
-      darkTheme: getDarkTheme(),
+      theme: getBarzLightTheme(),
+      darkTheme: getBarzDarkTheme(),
       themeMode: ThemeMode.light,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
     );
   }
 }

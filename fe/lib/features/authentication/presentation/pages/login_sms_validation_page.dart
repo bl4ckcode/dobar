@@ -1,11 +1,10 @@
-import 'package:barz/core/utils/constant/colors.dart';
-import 'package:barz/shared/presentation/widget/barz_black_elevated_button.dart';
+import 'package:barz/core/design/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:barz/features/authentication/presentation/bloc/login_bloc.dart';
 import 'package:barz/features/authentication/presentation/bloc/login_event.dart';
 import 'package:barz/features/authentication/presentation/bloc/login_state.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:pinput/pinput.dart';
 import 'package:sms_autofill/sms_autofill.dart';
 
@@ -71,46 +70,53 @@ class _LoginValidatePhoneNumberPageState
 
   @override
   Widget build(BuildContext context) {
-    // Define the pin themes using your color palette.
+    // Define the pin themes using design system colors
     final defaultPinTheme = PinTheme(
       width: 56,
       height: 56,
-      textStyle: const TextStyle(
-        fontSize: 20,
-        color: backgroundColorLight,
+      textStyle: barzTextTheme.titleLarge?.copyWith(
+        color: barzDark,
         fontWeight: FontWeight.w600,
       ),
       decoration: BoxDecoration(
-        border: Border.all(color: shadowColorLight),
-        borderRadius: BorderRadius.circular(20),
+        color: surfaceWhite,
+        border: Border.all(color: barzDark.withValues(alpha: 0.3)),
+        borderRadius: BorderRadius.circular(BarzRadii.md),
       ),
     );
 
     final focusedPinTheme = defaultPinTheme.copyDecorationWith(
-      border: Border.all(color: mainColor),
-      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: barzGold, width: 2),
+      borderRadius: BorderRadius.circular(BarzRadii.md),
     );
 
     final submittedPinTheme = defaultPinTheme.copyWith(
       decoration: defaultPinTheme.decoration?.copyWith(
-        color: mainColor,
+        color: barzGold.withValues(alpha: 0.2),
+        border: Border.all(color: barzGold, width: 2),
       ),
     );
 
     return Scaffold(
-      backgroundColor: backgroundColor2, // dark background for consistency
+      backgroundColor: barzGoldSoft,
       appBar: AppBar(
-        backgroundColor: mainColor,
-        iconTheme: const IconThemeData(
-          color: Colors.blueGrey,  // Set the color of the back button
-        ),
+        backgroundColor: barzGoldSoft,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: barzDark),
       ),
       body: BlocListener<LoginBloc, LoginState>(
         bloc: widget.loginBloc,
         listener: (context, state) {
           if (state is Success) {
-            Navigator.pushNamedAndRemoveUntil(
-                context, '/home', (Route<dynamic> route) => false);
+            // Check if profile is complete
+            if (state.isProfileComplete) {
+              context.go('/');
+            } else {
+              context.go('/complete-registration', extra: {
+                'email': state.email,
+                'name': state.displayName,
+              });
+            }
           } else if (state is Failure) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(state.error)),
@@ -118,7 +124,7 @@ class _LoginValidatePhoneNumberPageState
           }
         },
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(BarzSpacing.xl),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -136,26 +142,26 @@ class _LoginValidatePhoneNumberPageState
                   _handleCodeVerification();
                 },
               ),
-              const SizedBox(height: 16),
-              // Using a custom elevated button styled for your app
-              BarzBlackElevatedButton(
-                onPressed: _handleCodeVerification,
-                text: "Verify Code",
-                isEnabled: _smsCodeController.text.trim().length == 6,
+              const SizedBox(height: BarzSpacing.lg),
+              // Using the design system button
+              BarzButton.primary(
+                onPressed: _smsCodeController.text.trim().length == 6 
+                    ? _handleCodeVerification 
+                    : null,
+                label: "Verify Code",
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: BarzSpacing.lg),
               Center(
                 child: Column(
                   children: [
                     Text(
-                      'Didn’t receive code?',
+                      "Didn't receive code?",
                       textAlign: TextAlign.center,
-                      style: GoogleFonts.poppins(
-                        fontSize: 16,
-                        color: backgroundColorLight,
+                      style: barzTextTheme.bodyMedium?.copyWith(
+                        color: textSecondary,
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: BarzSpacing.md),
                     GestureDetector(
                       onTap: () {
                         // Handle resend code functionality here.
@@ -163,10 +169,10 @@ class _LoginValidatePhoneNumberPageState
                       child: Text(
                         'Resend',
                         textAlign: TextAlign.center,
-                        style: GoogleFonts.poppins(
-                          fontSize: 16,
+                        style: barzTextTheme.bodyMedium?.copyWith(
                           decoration: TextDecoration.underline,
-                          color: Colors.green,
+                          color: successGreen,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
@@ -196,29 +202,27 @@ class OtpHeader extends StatelessWidget {
       children: [
         Text(
           'Confirm your phone number',
-          style: GoogleFonts.inter(
-            fontSize: 24,
+          style: barzTextTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w700,
-            color: backgroundColorLight,
+            color: barzDark,
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: BarzSpacing.xl),
         Text(
           'Enter the code sent to the number',
-          style: GoogleFonts.inter(
-            fontSize: 16,
-            color: const Color.fromRGBO(133, 153, 170, 1),
+          style: barzTextTheme.bodyLarge?.copyWith(
+            color: textSecondary,
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: BarzSpacing.md),
         Text(
           phoneNumber,
-          style: GoogleFonts.inter(
-            fontSize: 16,
-            color: backgroundColorLight,
+          style: barzTextTheme.bodyLarge?.copyWith(
+            color: barzDark,
+            fontWeight: FontWeight.w600,
           ),
         ),
-        const SizedBox(height: 64),
+        const SizedBox(height: BarzSpacing.xxl),
       ],
     );
   }

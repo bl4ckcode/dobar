@@ -1,6 +1,5 @@
+import 'package:barz/core/network/dio_network.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-import '../../../../../core/network/api_config.dart';
 
 class LoginLocalDataSource {
   final SharedPreferences sharedPreferences;
@@ -9,6 +8,8 @@ class LoginLocalDataSource {
 
   Future<void> cacheUserToken(String token) async {
     await sharedPreferences.setString('user_token', token);
+    // Also set the token in DioNetwork for immediate API calls
+    DioNetwork.setAuthToken(token);
   }
 
   Future<String?> getCachedUserToken() async {
@@ -17,6 +18,6 @@ class LoginLocalDataSource {
 
   Future<void> clearCachedUserToken() async {
     await sharedPreferences.remove('user_token');
-    setAuthToken("");
+    await DioNetwork.clearAuthToken();
   }
 }

@@ -24,11 +24,6 @@ sealed class LoginEvent with _$LoginEvent {
     required String token,
   }) = AppleLoginPressed;
 
-  const factory LoginEvent.facebookLoginPressed({
-    required String key,
-    required String token,
-  }) = FacebookLoginPressed;
-
   const factory LoginEvent.autoVerifyCompleted(
     PhoneAuthCredential credential,
   ) = LoginAutoVerifyCompleted;

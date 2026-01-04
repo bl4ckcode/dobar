@@ -1,9 +1,10 @@
 import 'dart:async';
+import 'package:barz/core/network/dio_network.dart';
 import 'package:dio/dio.dart';
 import 'package:barz/core/network/api_response.dart';
 import 'package:barz/core/network/exceptions.dart';
 import 'package:barz/features/authentication/domain/models/login_params.dart';
-import 'package:barz/core/network/api_config.dart';
+import 'package:barz/core/api/api_endpoints.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class LoginNetworkDataSource {
@@ -20,16 +21,19 @@ class LoginNetworkDataSource {
     try {
       // Call back-end API to complete the login process
       final response = await dio.post(
-        '${baseUrl}auth/google',
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.authGoogle}',
         data: {
           "email": params.email,
           "google_id": params.googleId,
         },
-        options: Options(headers: getHeaders()),
       );
 
       if (response.statusCode == 200) {
-        return ApiResponse.success(response.data['access_token']);
+        final token = response.data['access_token'] as String?;
+        if (token != null) {
+          DioNetwork.setAuthToken(token);
+        }
+        return ApiResponse.success(token);
       } else {
         throw ServerException('Failed to login: ${response.statusCode}', null);
       }
@@ -44,16 +48,19 @@ class LoginNetworkDataSource {
     try {
       // Call back-end API to complete the login process
       final response = await dio.post(
-        '${baseUrl}auth/apple',
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.authApple}',
         data: {
           "email": params.email,
           "apple_id": params.appleId,
         },
-        options: Options(headers: getHeaders()),
       );
 
       if (response.statusCode == 200) {
-        return ApiResponse.success(response.data['access_token']);
+        final token = response.data['access_token'] as String?;
+        if (token != null) {
+          DioNetwork.setAuthToken(token);
+        }
+        return ApiResponse.success(token);
       } else {
         throw ServerException('Failed to login: ${response.statusCode}', null);
       }
@@ -68,16 +75,19 @@ class LoginNetworkDataSource {
     try {
       // Call back-end API to complete the login process
       final response = await dio.post(
-        '${baseUrl}auth/facebook',
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.authFacebook}',
         data: {
           "email": params.email,
           "facebook_id": params.facebookId,
         },
-        options: Options(headers: getHeaders()),
       );
 
       if (response.statusCode == 200) {
-        return ApiResponse.success(response.data['access_token']);
+        final token = response.data['access_token'] as String?;
+        if (token != null) {
+          DioNetwork.setAuthToken(token);
+        }
+        return ApiResponse.success(token);
       } else {
         throw ServerException('Failed to login: ${response.statusCode}', null);
       }
@@ -103,10 +113,10 @@ class LoginNetworkDataSource {
           await _firebaseAuth.signInWithCredential(credential);
 
       // Call back-end API to complete the login process
-      await completeLoginWithBackend(userCredential.user);
+      final result = await completeLoginWithBackend(userCredential.user);
 
-      // Return the Firebase UID
-      return ApiResponse.success(userCredential.user?.uid);
+      // Return the backend token
+      return ApiResponse.success(result.result);
     } on FirebaseAuthException catch (e) {
       throw ServerException(e.message ?? "Firebase verification failed", null);
     } catch (e) {
@@ -116,19 +126,26 @@ class LoginNetworkDataSource {
 
   Future<ApiResponse<String>> completeLoginWithBackend(User? user) async {
     if (user == null) throw ServerException("No user", null);
+    
     // Get Firebase ID token
     final idToken = await user.getIdToken();
-    // Set token globally
-    setAuthToken(idToken ?? "");
-    // Call the backend login route using shared headers
+    
+    // Temporarily set Firebase token for the backend call
+    if (idToken != null) {
+      DioNetwork.setAuthToken(idToken);
+    }
+    
+    // Call the backend login route
     final response = await dio.post(
-      '${baseUrl}auth/phone',
-      options: Options(
-        headers: getHeaders(),
-      ),
+      '${ApiEndpoints.baseUrl}${ApiEndpoints.authPhone}',
     );
-    // Extract token from response and return
+    
+    // Extract backend token from response
     final token = response.data['access_token'] as String;
+    
+    // Set the backend token (this persists it)
+    DioNetwork.setAuthToken(token);
+    
     return ApiResponse.success(token);
   }
 }

@@ -35,7 +35,9 @@
 
   "orders_title": "My Orders",
   "orders_empty": "No orders yet",
+  "orders_empty_subtitle": "Place your first order at a bar near you!",
   "orders_empty_hint": "Place your first order at a bar near you!",
+  "order_number_prefix": "Order #",
   "order_number": "Order #{orderNumber}",
   "@order_number": {
     "placeholders": {
@@ -44,6 +46,11 @@
       }
     }
   },
+  "order_dine_in": "Dine In",
+  "order_takeout": "Takeout",
+  "item": "item",
+  "items": "items",
+  "retry": "Try Again",
   "order_status_pending": "Waiting for confirmation",
   "order_status_confirmed": "Confirmed",
   "order_status_preparing": "Being prepared",

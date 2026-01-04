@@ -94,6 +94,12 @@ class LoginRepositoryImpl extends AbstractLoginRepository {
         verificationId: verificationId,
         smsCode: smsCode,
       );
+      
+      // Cache the token locally
+      if (result.result != null) {
+        await localDataSource.cacheUserToken(result.result!);
+      }
+      
       return Right(result.result);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message, e.statusCode));

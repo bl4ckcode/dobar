@@ -1,13 +1,17 @@
 import 'dart:convert';
 import 'package:barz/core/api/api_endpoints.dart';
+import 'package:barz/core/services/token_storage_service.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
 
 class DioNetwork {
   static late Dio appAPI;
   static String? _authToken;
+  static TokenStorageService? _tokenStorage;
 
-  static void initDio() {
+  static void initDio({TokenStorageService? tokenStorage}) {
+    _tokenStorage = tokenStorage;
+    
     appAPI = Dio(BaseOptions(
       baseUrl: ApiEndpoints.baseUrl,
       validateStatus: (s) => s != null && s < 300,
@@ -16,15 +20,29 @@ class DioNetwork {
       receiveTimeout: const Duration(seconds: 30),
     ));
 
-    // Auth interceptor
+    // Auth interceptor with async token loading
     appAPI.interceptors.add(InterceptorsWrapper(
-      onRequest: (options, handler) {
-        if (_authToken != null) {
-          options.headers['Authorization'] = 'Bearer $_authToken';
+      onRequest: (options, handler) async {
+        // Try to get token from memory first, then from storage
+        String? token = _authToken;
+        if (token == null && _tokenStorage != null) {
+          token = await _tokenStorage!.getAccessToken();
+          if (token != null) {
+            _authToken = token; // Cache it in memory
+          }
+        }
+        
+        if (token != null) {
+          options.headers['Authorization'] = 'Bearer $token';
         }
         return handler.next(options);
       },
-      onError: (error, handler) {
+      onError: (error, handler) async {
+        // Handle 401 Unauthorized - clear token and let caller handle
+        if (error.response?.statusCode == 401) {
+          await clearAuthToken();
+        }
+        
         // Extract error message from response
         final errorMessage = _extractErrorMessage(error);
         if (errorMessage != null) {
@@ -103,14 +121,17 @@ class DioNetwork {
 
   static void setAuthToken(String token) {
     _authToken = token;
+    // Also persist to storage
+    _tokenStorage?.saveAccessToken(token);
     if (kDebugMode) {
       // ignore: avoid_print
       print('[AUTH] Token set: ${token.substring(0, 20.clamp(0, token.length))}...');
     }
   }
 
-  static void clearAuthToken() {
+  static Future<void> clearAuthToken() async {
     _authToken = null;
+    await _tokenStorage?.clearAll();
     if (kDebugMode) {
       // ignore: avoid_print
       print('[AUTH] Token cleared');
@@ -118,5 +139,26 @@ class DioNetwork {
   }
 
   static String? get authToken => _authToken;
+  
+  /// Load token from storage into memory (call on app start)
+  static Future<void> loadTokenFromStorage() async {
+    if (_tokenStorage != null) {
+      _authToken = await _tokenStorage!.getAccessToken();
+      if (kDebugMode && _authToken != null) {
+        // ignore: avoid_print
+        print('[AUTH] Token loaded from storage');
+      }
+    }
+  }
+  
+  /// Check if user is authenticated
+  static Future<bool> isAuthenticated() async {
+    if (_authToken != null) return true;
+    if (_tokenStorage != null) {
+      final token = await _tokenStorage!.getAccessToken();
+      return token != null && token.isNotEmpty;
+    }
+    return false;
+  }
 }
 

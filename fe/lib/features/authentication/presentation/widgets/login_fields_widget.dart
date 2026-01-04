@@ -1,5 +1,4 @@
-import 'package:barz/core/utils/constant/colors.dart';
-import 'package:barz/shared/presentation/widget/barz_black_elevated_button.dart';
+import 'package:barz/core/design/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:phone_form_field/phone_form_field.dart';
 
@@ -22,29 +21,46 @@ class _LoginFieldsWidgetState extends State<LoginFieldsWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      child: Column(
-        children: [
-          PhoneFormField(
+    return Column(
+      children: [
+        // Phone input field
+        Container(
+          decoration: BoxDecoration(
+            color: surfaceWhite,
+            borderRadius: BorderRadius.circular(BarzRadii.md),
+            boxShadow: [
+              BoxShadow(
+                color: barzDark.withValues(alpha: 0.1),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: PhoneFormField(
             initialValue: PhoneNumber.parse('+55'),
             decoration: InputDecoration(
               hintText: 'Enter your phone number',
-              hintStyle: const TextStyle(color: Colors.white),
-              border: const OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.white),
+              hintStyle: TextStyle(color: barzDark.withValues(alpha: 0.5)),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(BarzRadii.md),
+                borderSide: BorderSide.none,
               ),
-              focusedBorder: const OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.white),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(BarzRadii.md),
+                borderSide: const BorderSide(color: barzDark, width: 2),
               ),
               enabledBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: mainColor),
+                borderRadius: BorderRadius.circular(BarzRadii.md),
+                borderSide: BorderSide.none,
               ),
-              contentPadding: const EdgeInsets.all(16),
-              counterStyle: const TextStyle(color: Colors.white),
-              focusedErrorBorder: const OutlineInputBorder(
-                borderSide: BorderSide(color: Colors.blueGrey),
-              ),
+              contentPadding: const EdgeInsets.all(InputSpacing.paddingHorizontal),
+              counterStyle: TextStyle(color: barzDark.withValues(alpha: 0.6)),
+              filled: true,
+              fillColor: surfaceWhite,
+            ),
+            style: const TextStyle(
+              color: barzDark,
+              fontSize: 16,
             ),
             onChanged: (phone) {
               setState(() {
@@ -52,25 +68,24 @@ class _LoginFieldsWidgetState extends State<LoginFieldsWidget> {
                 isPhoneNumberValid = phone.isValid();
               });
             },
-            // Custom validator (you can tweak this logic as needed)
             validator: (phone) {
               if (phone == null || !phone.isValid()) {
-                return " "; // Return an empty error so that error text isn't shown immediately
+                return " ";
               }
               return null;
             },
           ),
-          Container(
-            padding: const EdgeInsets.only(top: 24),
-            width: MediaQuery.of(context).size.width,
-            child: BarzBlackElevatedButton(
-              onPressed: _onLoginButtonPressed,
-              text: "Continue",
-              isEnabled: isPhoneNumberValid,
-            ),
+        ),
+        const SizedBox(height: BarzSpacing.lg),
+        // Continue button
+        SizedBox(
+          width: double.infinity,
+          child: BarzButton.primary(
+            onPressed: isPhoneNumberValid ? _onLoginButtonPressed : null,
+            label: "Continue",
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
