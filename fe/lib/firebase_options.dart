@@ -63,6 +63,6 @@ class DefaultFirebaseOptions {
     messagingSenderId: '505844682559',
     projectId: 'barz777',
     storageBucket: 'barz777.firebasestorage.app',
-    iosBundleId: 'com.barz.ios',
+    iosBundleId: 'com.dobar.app',
   );
 }

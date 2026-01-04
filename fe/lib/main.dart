@@ -24,7 +24,7 @@ void main() async {
   await initInjections();
   await getItInjector<AppInitializer>().run();
 
-  runApp(const BarzApp());
+  runApp(const DobarApp());
 
   if (!kIsWeb) {
     SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
@@ -37,14 +37,14 @@ void main() async {
   }
 }
 
-class BarzApp extends StatefulWidget {
-  const BarzApp({super.key});
+class DobarApp extends StatefulWidget {
+  const DobarApp({super.key});
 
   @override
-  BarzAppState createState() => BarzAppState();
+  DobarAppState createState() => DobarAppState();
 }
 
-class BarzAppState extends State<BarzApp> with WidgetsBindingObserver {
+class DobarAppState extends State<DobarApp> with WidgetsBindingObserver {
   final GlobalKey<ScaffoldMessengerState> snackBarKey =
       GlobalKey<ScaffoldMessengerState>();
 
@@ -65,7 +65,7 @@ class BarzAppState extends State<BarzApp> with WidgetsBindingObserver {
     return MaterialApp.router(
       routerConfig: appRouter,
       debugShowCheckedModeBanner: false,
-      title: 'Barz',
+      title: 'Dobar',
       theme: getBarzLightTheme(),
       darkTheme: getBarzDarkTheme(),
       themeMode: ThemeMode.light,

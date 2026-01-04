@@ -1,4 +1,4 @@
-package com.barz.barz
+package com.dobar.app
 
 import io.flutter.embedding.android.FlutterActivity
 
