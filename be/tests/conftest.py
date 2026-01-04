@@ -83,6 +83,8 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
     import app.database as db_module
     import app.auth.routes as auth_routes
     import app.auth.middleware as auth_middleware
+    import app.auth.profile as profile_routes
+    import app.auth.rbac_middleware as rbac_middleware
     import app.bars_and_restaurants.routes.bars as bars_routes
     import app.bars_and_restaurants.routes.bar_owners as bar_owners_routes
     import app.bars_and_restaurants.routes.orders as orders_routes
@@ -95,6 +97,8 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
     db_module.database = test_database
     auth_routes.database = test_database
     auth_middleware.database = test_database
+    profile_routes.database = test_database
+    rbac_middleware.database = test_database
     bars_routes.database = test_database
     bar_owners_routes.database = test_database
     orders_routes.database = test_database
@@ -109,6 +113,8 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
     db_module.database = original_db
     auth_routes.database = original_db
     auth_middleware.database = original_db
+    profile_routes.database = original_db
+    rbac_middleware.database = original_db
     bars_routes.database = original_db
     bar_owners_routes.database = original_db
     orders_routes.database = original_db
@@ -256,28 +262,19 @@ async def test_completed_order_in_db(test_user_in_db, test_bar_in_db):
 
 @pytest.fixture
 def sample_google_login():
-    """Sample Google login data for testing."""
     return {
+        "id_token": "mock_google_id_token_123",
         "email": "google@test.com",
-        "google_id": "google_test_id_123"
+        "display_name": "Google User"
     }
 
 
 @pytest.fixture
 def sample_apple_login():
-    """Sample Apple login data for testing."""
     return {
+        "id_token": "mock_apple_id_token_123",
         "email": "apple@test.com",
-        "apple_id": "apple_test_id_123"
-    }
-
-
-@pytest.fixture
-def sample_facebook_login():
-    """Sample Facebook login data for testing."""
-    return {
-        "email": "facebook@test.com",
-        "facebook_id": "facebook_test_id_123"
+        "display_name": "Apple User"
     }
 
 

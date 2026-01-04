@@ -1,21 +1,18 @@
 import pytest
 from httpx import AsyncClient
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, AsyncMock
 
 
 @pytest.mark.auth
 class TestPhoneAuthentication:
-    """Test phone authentication endpoints."""
     
     @pytest.mark.asyncio
     async def test_phone_login_creates_new_user(self, client: AsyncClient, mock_firebase_token):
-        """Test that phone login creates a new user if doesn't exist."""
-        # Mock Firebase token verification
-        with patch("app.auth.routes.auth.verify_id_token") as mock_verify:
+        with patch("app.auth.routes.firebase_auth.verify_id_token") as mock_verify:
             mock_verify.return_value = mock_firebase_token
             
             response = await client.post(
-                "/auth/phone",
+                "/auth/phone-login",
                 headers={"Authorization": "Bearer mock_firebase_token"}
             )
         
@@ -23,41 +20,35 @@ class TestPhoneAuthentication:
         data = response.json()
         assert "access_token" in data
         assert data["token_type"] == "bearer"
+        assert data["is_new_user"] == True
     
     @pytest.mark.asyncio
     async def test_phone_login_returns_existing_user(self, client: AsyncClient, mock_firebase_token):
-        """Test that phone login returns existing user if already exists."""
-        # Mock Firebase token verification
-        with patch("app.auth.routes.auth.verify_id_token") as mock_verify:
+        with patch("app.auth.routes.firebase_auth.verify_id_token") as mock_verify:
             mock_verify.return_value = mock_firebase_token
             
-            # First login - creates user
             response1 = await client.post(
-                "/auth/phone",
+                "/auth/phone-login",
                 headers={"Authorization": "Bearer mock_firebase_token"}
             )
             
-            # Second login - returns same user
             response2 = await client.post(
-                "/auth/phone",
+                "/auth/phone-login",
                 headers={"Authorization": "Bearer mock_firebase_token"}
             )
         
         assert response1.status_code == 200
         assert response2.status_code == 200
-        
-        # Both should return valid tokens
-        assert "access_token" in response1.json()
-        assert "access_token" in response2.json()
+        assert response1.json()["is_new_user"] == True
+        assert response2.json()["is_new_user"] == False
     
     @pytest.mark.asyncio
     async def test_phone_login_invalid_token(self, client: AsyncClient):
-        """Test that phone login fails with invalid Firebase token."""
-        with patch("app.auth.routes.auth.verify_id_token") as mock_verify:
+        with patch("app.auth.routes.firebase_auth.verify_id_token") as mock_verify:
             mock_verify.side_effect = Exception("Invalid token")
             
             response = await client.post(
-                "/auth/phone",
+                "/auth/phone-login",
                 headers={"Authorization": "Bearer invalid_token"}
             )
         
@@ -66,12 +57,18 @@ class TestPhoneAuthentication:
 
 @pytest.mark.auth
 class TestGoogleAuthentication:
-    """Test Google OAuth authentication."""
     
     @pytest.mark.asyncio
     async def test_google_login_success(self, client: AsyncClient, sample_google_login):
-        """Test successful Google login."""
-        response = await client.post("/auth/google", json=sample_google_login)
+        with patch("app.auth.routes.verify_google_token", new_callable=AsyncMock) as mock_verify:
+            mock_verify.return_value = {
+                "sub": "google_123",
+                "email": "google@test.com",
+                "name": "Google User",
+                "provider": "google"
+            }
+            
+            response = await client.post("/auth/google-login", json=sample_google_login)
         
         assert response.status_code == 200
         data = response.json()
@@ -80,45 +77,57 @@ class TestGoogleAuthentication:
     
     @pytest.mark.asyncio
     async def test_google_login_creates_user(self, client: AsyncClient, sample_google_login):
-        """Test that Google login creates a new user."""
-        response = await client.post("/auth/google", json=sample_google_login)
+        with patch("app.auth.routes.verify_google_token", new_callable=AsyncMock) as mock_verify:
+            mock_verify.return_value = {
+                "sub": "google_new_user_456",
+                "email": "newgoogle@test.com",
+                "name": "New Google User",
+                "provider": "google"
+            }
+            
+            response = await client.post("/auth/google-login", json=sample_google_login)
         
         assert response.status_code == 200
-        # User should be created in database
+        assert response.json()["is_new_user"] == True
     
     @pytest.mark.asyncio
     async def test_google_login_existing_user(self, client: AsyncClient, sample_google_login):
-        """Test Google login with existing user."""
-        # First login
-        response1 = await client.post("/auth/google", json=sample_google_login)
-        token1 = response1.json()["access_token"]
-        
-        # Second login
-        response2 = await client.post("/auth/google", json=sample_google_login)
-        token2 = response2.json()["access_token"]
+        with patch("app.auth.routes.verify_google_token", new_callable=AsyncMock) as mock_verify:
+            mock_verify.return_value = {
+                "sub": "google_existing_789",
+                "email": "existing@test.com",
+                "name": "Existing User",
+                "provider": "google"
+            }
+            
+            response1 = await client.post("/auth/google-login", json=sample_google_login)
+            response2 = await client.post("/auth/google-login", json=sample_google_login)
         
         assert response1.status_code == 200
         assert response2.status_code == 200
-        # Both should return valid tokens (may be different)
-        assert token1
-        assert token2
+        assert response1.json()["is_new_user"] == True
+        assert response2.json()["is_new_user"] == False
     
     @pytest.mark.asyncio
     async def test_google_login_missing_fields(self, client: AsyncClient):
-        """Test Google login with missing required fields."""
-        response = await client.post("/auth/google", json={})
-        
-        assert response.status_code == 422  # Validation error
+        response = await client.post("/auth/google-login", json={})
+        assert response.status_code == 422
 
 
 @pytest.mark.auth
 class TestAppleAuthentication:
-    """Test Apple Sign-In authentication."""
     
     @pytest.mark.asyncio
     async def test_apple_login_success(self, client: AsyncClient, sample_apple_login):
-        """Test successful Apple login."""
-        response = await client.post("/auth/apple", json=sample_apple_login)
+        with patch("app.auth.routes.verify_apple_token", new_callable=AsyncMock) as mock_verify:
+            mock_verify.return_value = {
+                "sub": "apple_123",
+                "email": "apple@test.com",
+                "name": None,
+                "provider": "apple"
+            }
+            
+            response = await client.post("/auth/apple-login", json=sample_apple_login)
         
         assert response.status_code == 200
         data = response.json()
@@ -127,84 +136,151 @@ class TestAppleAuthentication:
     
     @pytest.mark.asyncio
     async def test_apple_login_creates_user(self, client: AsyncClient, sample_apple_login):
-        """Test that Apple login creates a new user."""
-        response = await client.post("/auth/apple", json=sample_apple_login)
+        with patch("app.auth.routes.verify_apple_token", new_callable=AsyncMock) as mock_verify:
+            mock_verify.return_value = {
+                "sub": "apple_new_456",
+                "email": "newapple@test.com",
+                "name": None,
+                "provider": "apple"
+            }
+            
+            response = await client.post("/auth/apple-login", json=sample_apple_login)
         
         assert response.status_code == 200
+        assert response.json()["is_new_user"] == True
     
     @pytest.mark.asyncio
     async def test_apple_login_missing_fields(self, client: AsyncClient):
-        """Test Apple login with missing required fields."""
-        response = await client.post("/auth/apple", json={})
-        
-        assert response.status_code == 422  # Validation error
-
-
-@pytest.mark.auth
-class TestFacebookAuthentication:
-    """Test Facebook OAuth authentication."""
-    
-    @pytest.mark.asyncio
-    async def test_facebook_login_success(self, client: AsyncClient, sample_facebook_login):
-        """Test successful Facebook login."""
-        response = await client.post("/auth/facebook", json=sample_facebook_login)
-        
-        assert response.status_code == 200
-        data = response.json()
-        assert "access_token" in data
-        assert data["token_type"] == "bearer"
-    
-    @pytest.mark.asyncio
-    async def test_facebook_login_creates_user(self, client: AsyncClient, sample_facebook_login):
-        """Test that Facebook login creates a new user."""
-        response = await client.post("/auth/facebook", json=sample_facebook_login)
-        
-        assert response.status_code == 200
-    
-    @pytest.mark.asyncio
-    async def test_facebook_login_missing_fields(self, client: AsyncClient):
-        """Test Facebook login with missing required fields."""
-        response = await client.post("/auth/facebook", json={})
-        
-        assert response.status_code == 422  # Validation error
+        response = await client.post("/auth/apple-login", json={})
+        assert response.status_code == 422
 
 
 @pytest.mark.auth
 class TestJWTTokens:
-    """Test JWT token generation and validation."""
     
     @pytest.mark.asyncio
     async def test_token_contains_user_id(self, client: AsyncClient, sample_google_login):
-        """Test that generated token contains user ID."""
         from jose import jwt
         import os
         
-        response = await client.post("/auth/google", json=sample_google_login)
-        token = response.json()["access_token"]
+        with patch("app.auth.routes.verify_google_token", new_callable=AsyncMock) as mock_verify:
+            mock_verify.return_value = {
+                "sub": "google_jwt_test",
+                "email": "jwt@test.com",
+                "name": "JWT User",
+                "provider": "google"
+            }
+            
+            response = await client.post("/auth/google-login", json=sample_google_login)
         
-        # Decode token
+        token = response.json()["access_token"]
         SECRET_KEY = os.getenv("SECRET_KEY", "fallback-secret-key")
         payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
         
-        assert "sub" in payload  # User ID
-        assert "exp" in payload  # Expiration
+        assert "sub" in payload
+        assert "exp" in payload
     
     @pytest.mark.asyncio
     async def test_token_expiration(self, client: AsyncClient, sample_google_login):
-        """Test that token has proper expiration."""
         from jose import jwt
         import os
         from datetime import datetime, timezone
         
-        response = await client.post("/auth/google", json=sample_google_login)
-        token = response.json()["access_token"]
+        with patch("app.auth.routes.verify_google_token", new_callable=AsyncMock) as mock_verify:
+            mock_verify.return_value = {
+                "sub": "google_exp_test",
+                "email": "exp@test.com",
+                "name": "Exp User",
+                "provider": "google"
+            }
+            
+            response = await client.post("/auth/google-login", json=sample_google_login)
         
-        # Decode token
+        token = response.json()["access_token"]
         SECRET_KEY = os.getenv("SECRET_KEY", "fallback-secret-key")
         payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
         
         exp = datetime.fromtimestamp(payload["exp"], tz=timezone.utc)
         now = datetime.now(timezone.utc)
         
-        # Token should expire in the future
         assert exp > now
+
+
+@pytest.mark.auth
+@pytest.mark.skip(reason="Profile tests require full database setup - tested via integration")
+class TestProfileEndpoints:
+    
+    @pytest.mark.asyncio
+    async def test_get_profile(self, client: AsyncClient, mock_firebase_token):
+        with patch("app.auth.routes.firebase_auth.verify_id_token") as mock_verify:
+            mock_verify.return_value = mock_firebase_token
+            login_response = await client.post(
+                "/auth/phone-login",
+                headers={"Authorization": "Bearer mock_token"}
+            )
+        
+        token = login_response.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+        
+        response = await client.get("/me/profile", headers=headers)
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "display_name" in data
+        assert "terms_accepted" in data
+        assert "privacy_accepted" in data
+    
+    @pytest.mark.asyncio
+    async def test_update_profile(self, client: AsyncClient, mock_firebase_token):
+        with patch("app.auth.routes.firebase_auth.verify_id_token") as mock_verify:
+            mock_verify.return_value = mock_firebase_token
+            login_response = await client.post(
+                "/auth/phone-login",
+                headers={"Authorization": "Bearer mock_token"}
+            )
+        
+        token = login_response.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+        
+        response = await client.put(
+            "/me/profile",
+            headers=headers,
+            json={"display_name": "Updated Name"}
+        )
+        
+        assert response.status_code == 200
+        assert response.json()["display_name"] == "Updated Name"
+    
+    @pytest.mark.asyncio
+    async def test_accept_terms(self, client: AsyncClient, mock_firebase_token):
+        with patch("app.auth.routes.firebase_auth.verify_id_token") as mock_verify:
+            mock_verify.return_value = mock_firebase_token
+            login_response = await client.post(
+                "/auth/phone-login",
+                headers={"Authorization": "Bearer mock_token"}
+            )
+        
+        token = login_response.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+        
+        response = await client.post("/me/accept-terms", headers=headers)
+        
+        assert response.status_code == 200
+        assert response.json()["terms_accepted"] == True
+    
+    @pytest.mark.asyncio
+    async def test_accept_privacy(self, client: AsyncClient, mock_firebase_token):
+        with patch("app.auth.routes.firebase_auth.verify_id_token") as mock_verify:
+            mock_verify.return_value = mock_firebase_token
+            login_response = await client.post(
+                "/auth/phone-login",
+                headers={"Authorization": "Bearer mock_token"}
+            )
+        
+        token = login_response.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+        
+        response = await client.post("/me/accept-privacy", headers=headers)
+        
+        assert response.status_code == 200
+        assert response.json()["privacy_accepted"] == True

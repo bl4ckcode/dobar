@@ -133,37 +133,32 @@ ROLE_PERMISSIONS = {
 # =============================================================================
 
 class UserProfile(Base):
-    """
-    Extended user profile with additional info.
-    Linked 1:1 with User model.
-    """
     __tablename__ = "user_profiles"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), unique=True, index=True)
     
-    # Profile info
     display_name = Column(String(100), nullable=True)
     avatar_url = Column(String(500), nullable=True)
     
-    # User type (for quick filtering)
     user_type = Column(String(20), default=UserType.CLIENT.value, index=True)
     
-    # Business profile (if user_type == BUSINESS)
-    business_name = Column(String(200), nullable=True)  # For bar owners
+    business_name = Column(String(200), nullable=True)
     business_email = Column(String(255), nullable=True)
     business_phone = Column(String(20), nullable=True)
-    tax_id = Column(String(20), nullable=True)  # CPF/CNPJ
+    tax_id = Column(String(20), nullable=True)
     
-    # Preferences
     preferred_language = Column(String(5), default="pt-BR")
     notification_enabled = Column(Boolean, default=True)
     
-    # FCM tokens for push notifications
+    terms_accepted = Column(Boolean, default=False)
+    terms_accepted_at = Column(DateTime, nullable=True)
+    privacy_accepted = Column(Boolean, default=False)
+    privacy_accepted_at = Column(DateTime, nullable=True)
+    
     fcm_token = Column(String(500), nullable=True)
     fcm_token_updated_at = Column(DateTime, nullable=True)
     
-    # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
