@@ -6,6 +6,6 @@ class HomeSharedPrefs {
   HomeSharedPrefs(this._preferences);
 
   Future<bool> clearAllLocalData() async {
-    return true;
+    return _preferences.clear();
   }
 }

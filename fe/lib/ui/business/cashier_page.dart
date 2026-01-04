@@ -161,7 +161,8 @@ class _CashierPageState extends State<CashierPage> with SingleTickerProviderStat
     );
   }
 
-  // This will be used to build order cards once we have real data
+  // TODO(cashier): Use this method when order backend is integrated
+  // ignore: unused_element
   Widget _buildOrderCard({
     required int orderId,
     required String status,

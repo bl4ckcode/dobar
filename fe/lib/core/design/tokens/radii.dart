@@ -2,6 +2,7 @@
 /// 
 /// Consistent corner radii create visual unity across the app.
 /// Uses a geometric progression for harmonious scaling.
+library;
 
 // =============================================================================
 // BORDER RADIUS TOKENS

@@ -436,26 +436,28 @@ class _CartContentView extends StatelessWidget {
                         style: theme.textTheme.titleMedium,
                       ),
                       const SizedBox(height: 8),
-                      _PaymentMethodRadio(
-                        value: 'credit_card',
+                      RadioGroup<String>(
                         groupValue: selectedPaymentMethod,
-                        onChanged: onPaymentMethodChanged,
-                        icon: Icons.credit_card,
-                        label: l10n.payment_credit_card,
-                      ),
-                      _PaymentMethodRadio(
-                        value: 'pix',
-                        groupValue: selectedPaymentMethod,
-                        onChanged: onPaymentMethodChanged,
-                        icon: Icons.qr_code,
-                        label: l10n.payment_pix,
-                      ),
-                      _PaymentMethodRadio(
-                        value: 'cash',
-                        groupValue: selectedPaymentMethod,
-                        onChanged: onPaymentMethodChanged,
-                        icon: Icons.money,
-                        label: l10n.payment_cash,
+                        onChanged: (value) => onPaymentMethodChanged(value ?? selectedPaymentMethod),
+                        child: Column(
+                          children: [
+                            _PaymentMethodRadio(
+                              value: 'credit_card',
+                              icon: Icons.credit_card,
+                              label: l10n.payment_credit_card,
+                            ),
+                            _PaymentMethodRadio(
+                              value: 'pix',
+                              icon: Icons.qr_code,
+                              label: l10n.payment_pix,
+                            ),
+                            _PaymentMethodRadio(
+                              value: 'cash',
+                              icon: Icons.money,
+                              label: l10n.payment_cash,
+                            ),
+                          ],
+                        ),
                       ),
                     ],
                   ),
@@ -556,27 +558,23 @@ class _CartItemTile extends StatelessWidget {
 /// Payment method radio tile
 class _PaymentMethodRadio extends StatelessWidget {
   final String value;
-  final String groupValue;
-  final ValueChanged<String> onChanged;
   final IconData icon;
   final String label;
 
   const _PaymentMethodRadio({
     required this.value,
-    required this.groupValue,
-    required this.onChanged,
     required this.icon,
     required this.label,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isSelected = value == groupValue;
+    final radioGroup = RadioGroup.maybeOf<String>(context);
+    final isSelected = radioGroup?.groupValue == value;
     return ListTile(
       leading: Radio<String>(
         value: value,
-        groupValue: groupValue,
-        onChanged: (v) => onChanged(v!),
+        groupRegistry: radioGroup,
       ),
       title: Row(
         children: [
@@ -585,7 +583,7 @@ class _PaymentMethodRadio extends StatelessWidget {
           Text(label),
         ],
       ),
-      onTap: () => onChanged(value),
+      onTap: () => radioGroup?.onChanged(value),
       contentPadding: EdgeInsets.zero,
       selected: isSelected,
     );

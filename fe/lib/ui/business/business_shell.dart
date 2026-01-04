@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:barz/core/rbac/rbac.dart';
 import 'package:barz/core/utils/constant/colors.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';

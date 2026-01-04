@@ -40,7 +40,7 @@ Future<void> initInjections() async {
   await initSessionInjection();
 }
 
-initSharedPrefsInjections() async {
+Future<void> initSharedPrefsInjections() async {
   getItInjector.registerSingletonAsync<SharedPreferences>(() async {
     return await SharedPreferences.getInstance();
   });

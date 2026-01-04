@@ -33,8 +33,11 @@ class AppRoutes {
 /// Routes that don't require authentication
 const _publicRoutes = {'/login'};
 
-/// Routes that require auth but not complete profile
+/// Routes that require auth but not complete profile (e.g., registration flow)
+// ignore: unused_element
 const _authOnlyRoutes = {'/complete-registration'};
+
+// TODO(router): Use _authOnlyRoutes in redirect when profile completion check is implemented
 
 final appRouter = GoRouter(
   navigatorKey: rootNavigatorKey,

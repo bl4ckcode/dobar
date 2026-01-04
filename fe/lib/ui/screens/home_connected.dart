@@ -149,7 +149,7 @@ class _HomeConnectedView extends StatelessWidget {
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: state.promotions.length > 10 ? 10 : state.promotions.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 12),
+            separatorBuilder: (_, _) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
               final promo = state.promotions[index];
               return _buildPromotionCard(context, promo, index);

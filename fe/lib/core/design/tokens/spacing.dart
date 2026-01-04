@@ -7,6 +7,7 @@
 /// - iOS Human Interface Guidelines (8pt grid)
 /// - Material Design (4dp increments, 8dp common)
 /// - Web accessibility (scales well at different zoom levels)
+library;
 
 // =============================================================================
 // BASE SPACING SCALE (8px grid)

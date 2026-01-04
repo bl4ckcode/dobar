@@ -224,7 +224,7 @@ class _InviteStaffSheetState extends State<_InviteStaffSheet> {
             const Text('Select Role'),
             const SizedBox(height: 8),
             DropdownButtonFormField<BarRole>(
-              value: _selectedRole,
+              initialValue: _selectedRole,
               decoration: const InputDecoration(
                 border: OutlineInputBorder(),
               ),

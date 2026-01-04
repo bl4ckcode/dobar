@@ -1,4 +1,5 @@
 /// Platform detection helpers for native (io) platforms
+library;
 
 import 'dart:io' show Platform;
 

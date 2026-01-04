@@ -149,7 +149,7 @@ class _MenuState extends State<Menu> with SingleTickerProviderStateMixin {
             style: ElevatedButton.styleFrom(
               shape: const StadiumBorder(),
               backgroundColor:
-                  mainColor.withOpacity(0.6),
+                  mainColor.withValues(alpha: 0.6),
               padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 14),
             ),
             onPressed: () {},
@@ -183,8 +183,8 @@ class _MenuState extends State<Menu> with SingleTickerProviderStateMixin {
             decoration: BoxDecoration(
               gradient: LinearGradient(
                 colors: [
-                  mainColor.withOpacity(.3),
-                  Colors.white.withOpacity(.3),
+                  mainColor.withValues(alpha: 0.3),
+                  Colors.white.withValues(alpha: 0.3),
                 ],
               ),
             ),

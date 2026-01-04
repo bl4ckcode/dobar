@@ -21,7 +21,6 @@ class LoginButtonsWidget extends StatefulWidget {
 }
 
 class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
-  GoogleSignInAccount? _currentUser;
   StreamSubscription<GoogleSignInAuthenticationEvent>? _authSubscription;
 
   @override
@@ -37,10 +36,10 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
     _authSubscription = signIn.authenticationEvents.listen((event) async {
       switch (event) {
         case GoogleSignInAuthenticationEventSignIn():
-          _currentUser = event.user;
           await _handleGoogleSignInSuccess(event.user);
         case GoogleSignInAuthenticationEventSignOut():
-          _currentUser = null;
+          // User signed out
+          break;
       }
     });
 

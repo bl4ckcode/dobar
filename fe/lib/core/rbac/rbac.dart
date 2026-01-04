@@ -7,7 +7,7 @@
 /// - [UserType]: Client vs Business user differentiation
 /// - [BarRole]: Hierarchical roles within a bar (owner > admin > manager > cashier > staff)
 /// - [Permission]: Granular permissions for access control
-library rbac;
+library;
 
 export 'user_type.dart';
 export 'bar_role.dart';

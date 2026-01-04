@@ -29,7 +29,7 @@ class ApiResponse<T> {
     );
   }
 
-  static fromJson<T>(Map<dynamic, dynamic> json) {
+  static ApiResponse<T> fromJson<T>(Map<dynamic, dynamic> json) {
     return ApiResponse<T>(
       statusCode: json['statusCode'],
       result: json['result'],
@@ -37,7 +37,7 @@ class ApiResponse<T> {
     );
   }
 
-  static fromJsonList<T>(Map<dynamic, dynamic> json, Function tFromJson) {
+  static ApiResponse<T> fromJsonList<T>(Map<dynamic, dynamic> json, Function tFromJson) {
     return ApiResponse<T>(
       statusCode: json['statusCode'],
       result: tFromJson(json['result']),
