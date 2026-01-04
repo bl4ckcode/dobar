@@ -100,3 +100,24 @@ async def update_menu_item(menu_id: int, item_name: str, new_data: dict):
     # Update the specific menu item
     await update_menu_item_in_mongo(menu_id, item_name, new_data)
     return {"detail": "Menu item updated successfully"}
+
+
+# Route to delete a menu
+@menus_router.delete("/{menu_id}")
+async def delete_menu(menu_id: int):
+    """Delete a menu and its items from both PostgreSQL and MongoDB."""
+    # Check if menu exists in PostgreSQL
+    query = MenuModel.__table__.select().where(MenuModel.id == menu_id)
+    menu = await database.fetch_one(query)
+    
+    if not menu:
+        raise APIError.not_found("Menu not found")
+    
+    # Delete from MongoDB first (items)
+    await menus_collection.delete_one({"menu_id": menu_id})
+    
+    # Delete from PostgreSQL (menu metadata)
+    delete_query = MenuModel.__table__.delete().where(MenuModel.id == menu_id)
+    await database.execute(delete_query)
+    
+    return {"message": "Menu deleted successfully", "id": menu_id}
