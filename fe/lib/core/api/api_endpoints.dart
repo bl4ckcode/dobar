@@ -1,10 +1,10 @@
 class ApiEndpoints {
   static const String baseUrl = 'https://barz-backend-bold-sun-5691.fly.dev';
 
-  static const String authPhone = '/auth/phone';
-  static const String authGoogle = '/auth/google';
-  static const String authApple = '/auth/apple';
-  static const String authFacebook = '/auth/facebook';
+  // Auth endpoints (updated to match backend)
+  static const String authPhone = '/auth/phone-login';
+  static const String authGoogle = '/auth/google-login';
+  static const String authApple = '/auth/apple-login';
 
   static const String bars = '/bars/';
   static String bar(int id) => '/bars/$id';
@@ -28,12 +28,18 @@ class ApiEndpoints {
   static String orderTimeline(int id) => '/orders/$id/timeline';
   static String cancelOrder(int id) => '/orders/$id/cancel';
 
+  // Profile endpoints (updated to /me prefix)
+  static const String profile = '/me/profile';
+  static const String acceptTerms = '/me/accept-terms';
+  static const String acceptPrivacy = '/me/accept-privacy';
+  
+  // Legacy user endpoints (for backwards compatibility)
   static const String users = '/users';
-  static const String userProfile = '/users/me';
+  static const String userProfile = '/me/profile';
   static const String userPreferences = '/users/me/preferences';
   static const String userDocuments = '/users/me/documents';
-  static const String userAcceptTerms = '/users/me/accept-terms';
-  static const String userAcceptPrivacy = '/users/me/accept-privacy';
+  static const String userAcceptTerms = '/me/accept-terms';
+  static const String userAcceptPrivacy = '/me/accept-privacy';
   static const String userWallet = '/users/me/wallet';
   static const String userCashback = '/users/me/cashback';
 

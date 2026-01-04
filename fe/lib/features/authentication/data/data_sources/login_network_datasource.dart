@@ -70,33 +70,6 @@ class LoginNetworkDataSource {
     }
   }
 
-  // Facebook Sign-In Authentication
-  Future<ApiResponse<String?>> loginWithFacebook(LoginParams params) async {
-    try {
-      // Call back-end API to complete the login process
-      final response = await dio.post(
-        '${ApiEndpoints.baseUrl}${ApiEndpoints.authFacebook}',
-        data: {
-          "email": params.email,
-          "facebook_id": params.facebookId,
-        },
-      );
-
-      if (response.statusCode == 200) {
-        final token = response.data['access_token'] as String?;
-        if (token != null) {
-          DioNetwork.setAuthToken(token);
-        }
-        return ApiResponse.success(token);
-      } else {
-        throw ServerException('Failed to login: ${response.statusCode}', null);
-      }
-    } on DioException catch (e) {
-      throw ServerException(
-          e.message ?? 'Dio error occurred', e.response?.statusCode);
-    }
-  }
-
   // Verify SMS code for phone authentication
   Future<ApiResponse<String?>> verifySmsCode({
     required String verificationId,

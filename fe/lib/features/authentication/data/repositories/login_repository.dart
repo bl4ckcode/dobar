@@ -68,23 +68,6 @@ class LoginRepositoryImpl extends AbstractLoginRepository {
   }
 
   @override
-  Future<Either<Failure, String?>> loginWithFacebook(LoginParams params) async {
-    try {
-      // Call the network data source for Facebook Sign-In
-      final result = await networkDataSource.loginWithFacebook(params);
-
-      // Cache the token locally
-      if (result.result != null) {
-        await localDataSource.cacheUserToken(result.result!);
-      }
-
-      return Right(result.result);
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message, e.statusCode));
-    }
-  }
-
-  @override
   Future<Either<Failure, String?>> verifySmsCode({
     required String verificationId,
     required String smsCode,

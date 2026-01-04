@@ -10,7 +10,6 @@ abstract class LoginParams with _$LoginParams {
     String? email,
     String? googleId,
     String? appleId,
-    String? facebookId,
     String? firebaseUid,
   }) = _LoginParams;
 

@@ -8,8 +8,6 @@ abstract class AbstractLoginRepository {
 
   Future<Either<Failure, String?>> loginWithApple(LoginParams params);
 
-  Future<Either<Failure, String?>> loginWithFacebook(LoginParams params);
-
   Future<Either<Failure, String?>> verifySmsCode({
     required String verificationId,
     required String smsCode,

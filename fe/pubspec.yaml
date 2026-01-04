@@ -82,7 +82,6 @@ dependencies:
 
   # --- SOCIAL LOGIN ---
   google_sign_in: ^7.2.0            # Updated
-  flutter_facebook_auth: ^7.1.2     # Updated
   sign_in_with_apple: ^7.0.1
 
   # --- PAYMENTS SPECIFIC ---

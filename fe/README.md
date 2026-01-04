@@ -17,7 +17,7 @@ lib/
 │   ├── storage/             # Local and secure storage
 │   └── utils/               # Constants, extensions, DI
 ├── features/                # Feature modules
-│   ├── authentication/      # Phone, Google, Apple, Facebook auth
+│   ├── authentication/      # Phone, Google, Apple auth
 │   ├── bars/                # Bar/venue browsing
 │   ├── cart/                # Shopping cart
 │   ├── home/                # Home feed

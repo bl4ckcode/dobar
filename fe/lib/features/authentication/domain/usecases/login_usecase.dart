@@ -24,11 +24,6 @@ class LoginUsecase {
     return await repository.loginWithApple(params);
   }
 
-  // Facebook Sign-In Authentication
-  Future<Either<Failure, String?>> loginWithFacebook(LoginParams params) async {
-    return await repository.loginWithFacebook(params);
-  }
-
   // Verify SMS Code
   Future<Either<Failure, String?>> verifySmsCode({
     required String verificationId,
