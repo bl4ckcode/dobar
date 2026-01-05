@@ -29,8 +29,8 @@ class TestAuthenticationMiddleware:
         }
         user_id = await database.execute(User.__table__.insert().values(**user_data))
         
-        # Generate token
-        token = await create_access_token(data={"sub": str(user_id)})
+        # Generate token using new signature (user_id instead of data dict)
+        token, expires_in = await create_access_token(user_id)
         
         # Create a protected endpoint to test (we'll test with orders later)
         # For now, just verify token decoding works
@@ -39,6 +39,7 @@ class TestAuthenticationMiddleware:
         
         assert payload.get("sub") == str(user_id)
         assert "exp" in payload
+        assert expires_in > 0
     
     @pytest.mark.asyncio
     async def test_get_current_user_with_invalid_token(self, client: AsyncClient):
