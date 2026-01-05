@@ -62,17 +62,19 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
       await firebaseAuth.verifyPhoneNumber(
         phoneNumber: event.phoneNumber,
         verificationCompleted: (credential) {
-          add(LoginEvent.autoVerifyCompleted(credential));
+          if (!isClosed) add(LoginEvent.autoVerifyCompleted(credential));
         },
         verificationFailed: (e) {
-          add(LoginEvent.verificationFailed(
-              e.message ?? 'Verification failed'));
+          if (!isClosed) {
+            add(LoginEvent.verificationFailed(
+                e.message ?? 'Verification failed'));
+          }
         },
         codeSent: (verificationId, _) {
-          add(LoginEvent.codeSent(verificationId, event.phoneNumber));
+          if (!isClosed) add(LoginEvent.codeSent(verificationId, event.phoneNumber));
         },
         codeAutoRetrievalTimeout: (verificationId) {
-          add(LoginEvent.verificationTimeout(verificationId));
+          if (!isClosed) add(LoginEvent.verificationTimeout(verificationId));
         },
       );
     } catch (e) {
@@ -115,7 +117,8 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
     try {
       final params = LoginParams(
         email: event.key,
-        googleId: event.token,
+        idToken: event.token,
+        tokenExpiration: event.tokenExpiration,
       );
       await loginUseCase.loginWithGoogle(params);
       final (isComplete, email, name) = await _checkProfileComplete();
@@ -136,7 +139,8 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
     try {
       final params = LoginParams(
         email: event.key,
-        appleId: event.token,
+        idToken: event.token,
+        tokenExpiration: event.tokenExpiration,
       );
       await loginUseCase.loginWithApple(params);
       final (isComplete, email, name) = await _checkProfileComplete();

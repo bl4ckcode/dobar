@@ -1,10 +1,12 @@
 class ApiEndpoints {
   static const String baseUrl = 'https://barz-backend-bold-sun-5691.fly.dev';
 
-  // Auth endpoints (updated to match backend)
+  // Auth endpoints
   static const String authPhone = '/auth/phone-login';
   static const String authGoogle = '/auth/google-login';
   static const String authApple = '/auth/apple-login';
+  static const String authRefresh = '/auth/refresh';
+  static const String authLogout = '/auth/logout';
 
   static const String bars = '/bars/';
   static String bar(int id) => '/bars/$id';

@@ -1,13 +1,14 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:barz/core/design/design_system.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:barz/features/authentication/presentation/bloc/login_bloc.dart';
 import 'package:barz/features/authentication/presentation/bloc/login_event.dart';
 
-// Conditional import for Platform
 import 'login_buttons_platform.dart'
     if (dart.library.io) 'login_buttons_platform_io.dart';
 
@@ -55,21 +56,51 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
 
   Future<void> _handleGoogleSignInSuccess(GoogleSignInAccount user) async {
     try {
-      // Get authorization for basic scopes
+      final idToken = user.authentication.idToken;
       final authorization = await user.authorizationClient.authorizationForScopes([
         'email',
         'profile',
       ]);
       
-      if (authorization != null) {
-        debugPrint("Google User Token: ${authorization.accessToken}");
-        widget.loginBloc.add(LoginEvent.googleLoginPressed(
-          key: user.email,
-          token: authorization.accessToken,
-        ));
+      if (idToken != null) {
+        final credential = GoogleAuthProvider.credential(
+          accessToken: authorization?.accessToken,
+          idToken: idToken,
+        );
+        
+        final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+        final firebaseIdToken = await userCredential.user?.getIdToken();
+        
+        if (firebaseIdToken != null) {
+          final tokenExpiration = _extractExpFromJwt(idToken);
+          debugPrint("Firebase ID Token: ${firebaseIdToken.substring(0, 50)}...");
+          widget.loginBloc.add(LoginEvent.googleLoginPressed(
+            key: user.email,
+            token: firebaseIdToken,
+            tokenExpiration: tokenExpiration,
+          ));
+        } else {
+          debugPrint("Error: Could not get Firebase ID token");
+        }
+      } else {
+        debugPrint("Error: Google authentication returned null idToken");
       }
     } catch (e) {
       debugPrint("Error getting Google auth: $e");
+    }
+  }
+
+  int? _extractExpFromJwt(String jwt) {
+    try {
+      final parts = jwt.split('.');
+      if (parts.length != 3) return null;
+      final payload = parts[1];
+      final normalized = base64Url.normalize(payload);
+      final decoded = utf8.decode(base64Url.decode(normalized));
+      final json = jsonDecode(decoded) as Map<String, dynamic>;
+      return json['exp'] as int?;
+    } catch (_) {
+      return null;
     }
   }
 
@@ -92,19 +123,36 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
 
   Future<void> _signInWithApple() async {
     try {
-      final credential = await SignInWithApple.getAppleIDCredential(
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
         scopes: [
           AppleIDAuthorizationScopes.email,
           AppleIDAuthorizationScopes.fullName,
         ],
       );
 
-      debugPrint("Apple Identity Token: ${credential.identityToken}");
+      debugPrint("Apple Identity Token: ${appleCredential.identityToken?.substring(0, 50)}...");
 
-      widget.loginBloc.add(LoginEvent.googleLoginPressed(
-        key: credential.email ?? 'apple_user',
-        token: credential.identityToken!,
-      ));
+      final oauthCredential = OAuthProvider('apple.com').credential(
+        idToken: appleCredential.identityToken,
+        accessToken: appleCredential.authorizationCode,
+      );
+
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(oauthCredential);
+      final firebaseIdToken = await userCredential.user?.getIdToken();
+
+      if (firebaseIdToken != null) {
+        final tokenExpiration = appleCredential.identityToken != null 
+            ? _extractExpFromJwt(appleCredential.identityToken!) 
+            : null;
+        debugPrint("Firebase ID Token from Apple: ${firebaseIdToken.substring(0, 50)}...");
+        widget.loginBloc.add(LoginEvent.appleLoginPressed(
+          key: appleCredential.email ?? userCredential.user?.email ?? 'apple_user',
+          token: firebaseIdToken,
+          tokenExpiration: tokenExpiration,
+        ));
+      } else {
+        debugPrint("Error: Could not get Firebase ID token from Apple sign-in");
+      }
     } catch (e) {
       debugPrint("Error signing in with Apple: $e");
     }

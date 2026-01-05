@@ -51,8 +51,8 @@ Future<void> initDioInjections() async {
   initRootLogger();
   DioNetwork.initDio(tokenStorage: getItInjector<TokenStorageService>());
   
-  // Load any existing token from storage
-  await DioNetwork.loadTokenFromStorage();
+  // Load any existing tokens from storage
+  await DioNetwork.loadTokensFromStorage();
   
   // Register ImageRefreshService
   getItInjector.registerLazySingleton<ImageRefreshService>(

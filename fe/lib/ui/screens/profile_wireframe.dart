@@ -40,7 +40,7 @@ class _ProfileWireframeState extends State<ProfileWireframe> {
     if (confirmed == true) {
       // Clear token from storage and network client
       await getItInjector<LoginUsecase>().logout();
-      await DioNetwork.clearAuthToken();
+      await DioNetwork.clearTokens();
       
       if (mounted) {
         // Navigate to login page (router will handle auth guard)

@@ -51,7 +51,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyDC8kxmbTWb33iTH6wgy0hAm7mbcMfGh-E',
-    appId: '1:505844682559:android:c822bad250c1acf92ccd8a',
+    appId: '1:505844682559:android:888a9ca556154c572ccd8a',
     messagingSenderId: '505844682559',
     projectId: 'barz777',
     storageBucket: 'barz777.firebasestorage.app',
@@ -59,10 +59,13 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyDDYCc0--xBEZrZdQfpt3Tk3mXQTt5RH2o',
-    appId: '1:505844682559:ios:3882f0d5cbbf8f9c2ccd8a',
+    appId: '1:505844682559:ios:94c091ebb8298a0b2ccd8a',
     messagingSenderId: '505844682559',
     projectId: 'barz777',
     storageBucket: 'barz777.firebasestorage.app',
+    androidClientId: '505844682559-7hq3os8bgvg7p6moqekvrrev5r2j2gk3.apps.googleusercontent.com',
+    iosClientId: '505844682559-5qciiqhmad3v412i2jlmivok1lk5ls08.apps.googleusercontent.com',
     iosBundleId: 'com.dobar.app',
   );
+
 }

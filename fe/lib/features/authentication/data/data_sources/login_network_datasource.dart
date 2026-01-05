@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:barz/core/network/auth_response.dart';
 import 'package:barz/core/network/dio_network.dart';
 import 'package:dio/dio.dart';
 import 'package:barz/core/network/api_response.dart';
@@ -16,109 +17,95 @@ class LoginNetworkDataSource {
     required FirebaseAuth firebaseAuth,
   }) : _firebaseAuth = firebaseAuth;
 
-  // Google Sign-In Authentication
-  Future<ApiResponse<String?>> loginWithGoogle(LoginParams params) async {
+  Future<ApiResponse<AuthResponse>> loginWithGoogle(LoginParams params) async {
     try {
-      // Call back-end API to complete the login process
       final response = await dio.post(
         '${ApiEndpoints.baseUrl}${ApiEndpoints.authGoogle}',
         data: {
-          "email": params.email,
-          "google_id": params.googleId,
+          'id_token': params.idToken,
+          if (params.email != null) 'email': params.email,
+          if (params.tokenExpiration != null) 'token_expiration': params.tokenExpiration,
         },
       );
 
       if (response.statusCode == 200) {
-        final token = response.data['access_token'] as String?;
-        if (token != null) {
-          DioNetwork.setAuthToken(token);
-        }
-        return ApiResponse.success(token);
-      } else {
-        throw ServerException('Failed to login: ${response.statusCode}', null);
+        final authResponse = AuthResponse.fromJson(response.data);
+        DioNetwork.setTokens(authResponse.accessToken, authResponse.refreshToken);
+        return ApiResponse.success(authResponse);
       }
+      throw ServerException('Failed to login: ${response.statusCode}', null);
     } on DioException catch (e) {
-      throw ServerException(
-          e.message ?? 'Dio error occurred', e.response?.statusCode);
+      throw ServerException(e.message ?? 'Login failed', e.response?.statusCode);
     }
   }
 
-  // Apple Sign-In Authentication
-  Future<ApiResponse<String?>> loginWithApple(LoginParams params) async {
+  Future<ApiResponse<AuthResponse>> loginWithApple(LoginParams params) async {
     try {
-      // Call back-end API to complete the login process
       final response = await dio.post(
         '${ApiEndpoints.baseUrl}${ApiEndpoints.authApple}',
         data: {
-          "email": params.email,
-          "apple_id": params.appleId,
+          'id_token': params.idToken,
+          if (params.email != null) 'email': params.email,
+          if (params.tokenExpiration != null) 'token_expiration': params.tokenExpiration,
         },
       );
 
       if (response.statusCode == 200) {
-        final token = response.data['access_token'] as String?;
-        if (token != null) {
-          DioNetwork.setAuthToken(token);
-        }
-        return ApiResponse.success(token);
-      } else {
-        throw ServerException('Failed to login: ${response.statusCode}', null);
+        final authResponse = AuthResponse.fromJson(response.data);
+        DioNetwork.setTokens(authResponse.accessToken, authResponse.refreshToken);
+        return ApiResponse.success(authResponse);
       }
+      throw ServerException('Failed to login: ${response.statusCode}', null);
     } on DioException catch (e) {
-      throw ServerException(
-          e.message ?? 'Dio error occurred', e.response?.statusCode);
+      throw ServerException(e.message ?? 'Login failed', e.response?.statusCode);
     }
   }
 
-  // Verify SMS code for phone authentication
-  Future<ApiResponse<String?>> verifySmsCode({
+  Future<ApiResponse<AuthResponse>> verifySmsCode({
     required String verificationId,
     required String smsCode,
   }) async {
     try {
-      final PhoneAuthCredential credential = PhoneAuthProvider.credential(
+      final credential = PhoneAuthProvider.credential(
         verificationId: verificationId,
         smsCode: smsCode,
       );
-
-      // Sign in with the credential
-      final UserCredential userCredential =
-          await _firebaseAuth.signInWithCredential(credential);
-
-      // Call back-end API to complete the login process
-      final result = await completeLoginWithBackend(userCredential.user);
-
-      // Return the backend token
-      return ApiResponse.success(result.result);
+      final userCredential = await _firebaseAuth.signInWithCredential(credential);
+      return await completeLoginWithBackend(userCredential.user);
     } on FirebaseAuthException catch (e) {
-      throw ServerException(e.message ?? "Firebase verification failed", null);
+      throw ServerException(e.message ?? 'Firebase verification failed', null);
     } catch (e) {
       throw ServerException(e.toString(), null);
     }
   }
 
-  Future<ApiResponse<String>> completeLoginWithBackend(User? user) async {
-    if (user == null) throw ServerException("No user", null);
+  Future<ApiResponse<AuthResponse>> completeLoginWithBackend(User? user) async {
+    if (user == null) throw ServerException('No user', null);
     
-    // Get Firebase ID token
     final idToken = await user.getIdToken();
+    if (idToken == null) throw ServerException('No ID token', null);
     
-    // Temporarily set Firebase token for the backend call
-    if (idToken != null) {
-      DioNetwork.setAuthToken(idToken);
-    }
-    
-    // Call the backend login route
     final response = await dio.post(
       '${ApiEndpoints.baseUrl}${ApiEndpoints.authPhone}',
+      options: Options(headers: {'Authorization': 'Bearer $idToken'}),
     );
     
-    // Extract backend token from response
-    final token = response.data['access_token'] as String;
-    
-    // Set the backend token (this persists it)
-    DioNetwork.setAuthToken(token);
-    
-    return ApiResponse.success(token);
+    final authResponse = AuthResponse.fromJson(response.data);
+    DioNetwork.setTokens(authResponse.accessToken, authResponse.refreshToken);
+    return ApiResponse.success(authResponse);
+  }
+
+  Future<void> logout() async {
+    try {
+      final refreshToken = DioNetwork.refreshToken;
+      if (refreshToken != null) {
+        await dio.post(
+          '${ApiEndpoints.baseUrl}${ApiEndpoints.authLogout}',
+          data: {'refresh_token': refreshToken},
+        );
+      }
+    } catch (_) {}
+    await DioNetwork.clearTokens();
+    await _firebaseAuth.signOut();
   }
 }

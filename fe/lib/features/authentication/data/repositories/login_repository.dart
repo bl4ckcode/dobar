@@ -1,3 +1,4 @@
+import 'package:barz/core/network/auth_response.dart';
 import 'package:barz/core/network/error/failures.dart';
 import 'package:barz/core/network/exceptions.dart';
 import 'package:barz/features/authentication/data/data_sources/local/login_local_datasource.dart';
@@ -17,16 +18,15 @@ class LoginRepositoryImpl extends AbstractLoginRepository {
   });
 
   @override
-  Future<Either<Failure, String?>> completeLoginWithBackend(User? user) async {
+  Future<Either<Failure, AuthResponse?>> completeLoginWithBackend(User? user) async {
     try {
-      // Call the network data source for phone authentication
       final result = await networkDataSource.completeLoginWithBackend(user);
-
-      // Cache the token locally
       if (result.result != null) {
-        await localDataSource.cacheUserToken(result.result!);
+        await localDataSource.cacheTokens(
+          result.result!.accessToken,
+          result.result!.refreshToken,
+        );
       }
-
       return Right(result.result);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message, e.statusCode));
@@ -34,16 +34,15 @@ class LoginRepositoryImpl extends AbstractLoginRepository {
   }
 
   @override
-  Future<Either<Failure, String?>> loginWithGoogle(LoginParams params) async {
+  Future<Either<Failure, AuthResponse?>> loginWithGoogle(LoginParams params) async {
     try {
-      // Call the network data source for Google Sign-In
       final result = await networkDataSource.loginWithGoogle(params);
-
-      // Cache the token locally
       if (result.result != null) {
-        await localDataSource.cacheUserToken(result.result!);
+        await localDataSource.cacheTokens(
+          result.result!.accessToken,
+          result.result!.refreshToken,
+        );
       }
-
       return Right(result.result);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message, e.statusCode));
@@ -51,16 +50,15 @@ class LoginRepositoryImpl extends AbstractLoginRepository {
   }
 
   @override
-  Future<Either<Failure, String?>> loginWithApple(LoginParams params) async {
+  Future<Either<Failure, AuthResponse?>> loginWithApple(LoginParams params) async {
     try {
-      // Call the network data source for Apple Sign-In
       final result = await networkDataSource.loginWithApple(params);
-
-      // Cache the token locally
       if (result.result != null) {
-        await localDataSource.cacheUserToken(result.result!);
+        await localDataSource.cacheTokens(
+          result.result!.accessToken,
+          result.result!.refreshToken,
+        );
       }
-
       return Right(result.result);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message, e.statusCode));
@@ -68,7 +66,7 @@ class LoginRepositoryImpl extends AbstractLoginRepository {
   }
 
   @override
-  Future<Either<Failure, String?>> verifySmsCode({
+  Future<Either<Failure, AuthResponse?>> verifySmsCode({
     required String verificationId,
     required String smsCode,
   }) async {
@@ -77,12 +75,12 @@ class LoginRepositoryImpl extends AbstractLoginRepository {
         verificationId: verificationId,
         smsCode: smsCode,
       );
-      
-      // Cache the token locally
       if (result.result != null) {
-        await localDataSource.cacheUserToken(result.result!);
+        await localDataSource.cacheTokens(
+          result.result!.accessToken,
+          result.result!.refreshToken,
+        );
       }
-      
       return Right(result.result);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message, e.statusCode));
@@ -102,7 +100,8 @@ class LoginRepositoryImpl extends AbstractLoginRepository {
   @override
   Future<Either<Failure, void>> logout() async {
     try {
-      await localDataSource.clearCachedUserToken();
+      await networkDataSource.logout();
+      await localDataSource.clearCachedTokens();
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure(e.toString(), 0));

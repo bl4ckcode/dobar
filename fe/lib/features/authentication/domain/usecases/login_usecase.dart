@@ -1,3 +1,4 @@
+import 'package:barz/core/network/auth_response.dart';
 import 'package:barz/core/network/error/failures.dart';
 import 'package:barz/features/authentication/domain/models/login_params.dart';
 import 'package:barz/features/authentication/domain/repositories/abstract_login_repository.dart';
@@ -9,23 +10,19 @@ class LoginUsecase {
 
   LoginUsecase({required this.repository});
 
-  // Phone Number Authentication
-  Future<Either<Failure, String?>> complete(User? user) async {
+  Future<Either<Failure, AuthResponse?>> complete(User? user) async {
     return await repository.completeLoginWithBackend(user);
   }
 
-  // Google Sign-In Authentication
-  Future<Either<Failure, String?>> loginWithGoogle(LoginParams params) async {
+  Future<Either<Failure, AuthResponse?>> loginWithGoogle(LoginParams params) async {
     return await repository.loginWithGoogle(params);
   }
 
-  // Apple Sign-In Authentication
-  Future<Either<Failure, String?>> loginWithApple(LoginParams params) async {
+  Future<Either<Failure, AuthResponse?>> loginWithApple(LoginParams params) async {
     return await repository.loginWithApple(params);
   }
 
-  // Verify SMS Code
-  Future<Either<Failure, String?>> verifySmsCode({
+  Future<Either<Failure, AuthResponse?>> verifySmsCode({
     required String verificationId,
     required String smsCode,
   }) async {
@@ -35,12 +32,10 @@ class LoginUsecase {
     );
   }
 
-  // Get Cached Token
   Future<Either<Failure, String?>> getCachedToken() async {
     return await repository.getCachedToken();
   }
 
-  // Logout
   Future<Either<Failure, void>> logout() async {
     return await repository.logout();
   }

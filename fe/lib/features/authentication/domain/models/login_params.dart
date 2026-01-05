@@ -8,9 +8,9 @@ abstract class LoginParams with _$LoginParams {
   const factory LoginParams({
     String? phoneNumber,
     String? email,
-    String? googleId,
-    String? appleId,
+    String? idToken,
     String? firebaseUid,
+    int? tokenExpiration,
   }) = _LoginParams;
 
   factory LoginParams.fromJson(Map<String, dynamic> json) =>

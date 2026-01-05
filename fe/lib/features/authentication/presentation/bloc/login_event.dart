@@ -17,11 +17,13 @@ sealed class LoginEvent with _$LoginEvent {
   const factory LoginEvent.googleLoginPressed({
     required String key,
     required String token,
+    int? tokenExpiration,
   }) = GoogleLoginPressed;
 
   const factory LoginEvent.appleLoginPressed({
     required String key,
     required String token,
+    int? tokenExpiration,
   }) = AppleLoginPressed;
 
   const factory LoginEvent.autoVerifyCompleted(
