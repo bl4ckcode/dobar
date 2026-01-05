@@ -170,8 +170,8 @@ async def get_current_user(
     
     return AuthUser(
         id=user_id,
-        email=user.get("email"),
-        phone_number=user.get("phone_number"),
+        email=user["email"],
+        phone_number=user["phone_number"],
         is_active=user["is_active"],
         user_type=profile["user_type"] if profile else UserType.CLIENT.value,
         display_name=profile["display_name"] if profile else None,
