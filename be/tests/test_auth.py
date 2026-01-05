@@ -19,6 +19,8 @@ class TestPhoneAuthentication:
         assert response.status_code == 200
         data = response.json()
         assert "access_token" in data
+        assert "refresh_token" in data
+        assert "expires_in" in data
         assert data["token_type"] == "bearer"
         assert data["is_new_user"] == True
     
@@ -73,6 +75,8 @@ class TestGoogleAuthentication:
         assert response.status_code == 200
         data = response.json()
         assert "access_token" in data
+        assert "refresh_token" in data
+        assert "expires_in" in data
         assert data["token_type"] == "bearer"
     
     @pytest.mark.asyncio
@@ -132,6 +136,8 @@ class TestAppleAuthentication:
         assert response.status_code == 200
         data = response.json()
         assert "access_token" in data
+        assert "refresh_token" in data
+        assert "expires_in" in data
         assert data["token_type"] == "bearer"
     
     @pytest.mark.asyncio
@@ -153,6 +159,114 @@ class TestAppleAuthentication:
     async def test_apple_login_missing_fields(self, client: AsyncClient):
         response = await client.post("/auth/apple-login", json={})
         assert response.status_code == 422
+
+
+@pytest.mark.auth
+class TestRefreshTokens:
+    
+    @pytest.mark.asyncio
+    async def test_refresh_token_success(self, client: AsyncClient, mock_firebase_token):
+        """Test refreshing an access token with a valid refresh token"""
+        with patch("app.auth.routes.firebase_auth.verify_id_token") as mock_verify:
+            mock_verify.return_value = mock_firebase_token
+            
+            # First login to get tokens
+            login_response = await client.post(
+                "/auth/phone-login",
+                headers={"Authorization": "Bearer mock_firebase_token"}
+            )
+        
+        assert login_response.status_code == 200
+        original_data = login_response.json()
+        refresh_token = original_data["refresh_token"]
+        
+        # Now use refresh token to get new access token
+        refresh_response = await client.post(
+            "/auth/refresh",
+            json={"refresh_token": refresh_token}
+        )
+        
+        assert refresh_response.status_code == 200
+        data = refresh_response.json()
+        assert "access_token" in data
+        assert "refresh_token" in data
+        assert "expires_in" in data
+        # Refresh token should be the same (not rotated)
+        assert data["refresh_token"] == refresh_token
+    
+    @pytest.mark.asyncio
+    async def test_refresh_token_invalid(self, client: AsyncClient):
+        """Test that invalid refresh token returns 401"""
+        response = await client.post(
+            "/auth/refresh",
+            json={"refresh_token": "invalid_token_123"}
+        )
+        
+        assert response.status_code == 401
+    
+    @pytest.mark.asyncio
+    async def test_logout_revokes_refresh_token(self, client: AsyncClient, mock_firebase_token):
+        """Test that logout revokes the refresh token"""
+        with patch("app.auth.routes.firebase_auth.verify_id_token") as mock_verify:
+            mock_verify.return_value = mock_firebase_token
+            
+            # First login
+            login_response = await client.post(
+                "/auth/phone-login",
+                headers={"Authorization": "Bearer mock_firebase_token"}
+            )
+        
+        refresh_token = login_response.json()["refresh_token"]
+        
+        # Logout with refresh token
+        logout_response = await client.post(
+            "/auth/logout",
+            json={"refresh_token": refresh_token}
+        )
+        
+        assert logout_response.status_code == 200
+        
+        # Try to use the revoked refresh token
+        refresh_response = await client.post(
+            "/auth/refresh",
+            json={"refresh_token": refresh_token}
+        )
+        
+        assert refresh_response.status_code == 401
+
+
+@pytest.mark.auth
+class TestTokenExpiration:
+    
+    @pytest.mark.asyncio
+    async def test_google_login_with_custom_expiration(self, client: AsyncClient):
+        """Test that FE can send token_expiration for longer sessions"""
+        import time
+        
+        # Set expiration to 60 days from now
+        custom_expiration = int(time.time()) + (60 * 24 * 60 * 60)
+        
+        with patch("app.auth.routes.verify_google_token", new_callable=AsyncMock) as mock_verify:
+            mock_verify.return_value = {
+                "sub": "google_custom_exp",
+                "email": "custom@test.com",
+                "name": "Custom Exp User",
+                "provider": "google"
+            }
+            
+            response = await client.post(
+                "/auth/google-login",
+                json={
+                    "id_token": "mock_google_token",
+                    "email": "custom@test.com",
+                    "token_expiration": custom_expiration
+                }
+            )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "access_token" in data
+        assert "refresh_token" in data
 
 
 @pytest.mark.auth

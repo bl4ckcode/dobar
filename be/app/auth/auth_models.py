@@ -1,6 +1,7 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from ..database import Base
+from datetime import datetime, timezone
 
 class User(Base):
     __tablename__ = "users"
@@ -17,11 +18,41 @@ class User(Base):
     # Wallet relationships
     wallet = relationship("UserWallet", back_populates="user", uselist=False, cascade="all, delete-orphan")
     cashback_transactions = relationship("CashbackLedger", back_populates="user", cascade="all, delete-orphan")
+    refresh_tokens = relationship("RefreshToken", back_populates="user", cascade="all, delete-orphan")
 
 class Token(Base):
+    """Legacy token table - kept for backwards compatibility"""
     __tablename__ = "tokens"
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id"), index=True)  # Foreign key to User
     token = Column(String, unique=True, index=True)  # Authentication token
     expiry_date = Column(Integer)  # Expiry date in timestamp format
+
+
+class RefreshToken(Base):
+    """
+    Refresh tokens for long-lived sessions.
+    - Access tokens are short-lived (configurable, default 1 hour)
+    - Refresh tokens are long-lived (30 days or matches provider token expiry)
+    - Refresh tokens can be revoked on logout
+    """
+    __tablename__ = "refresh_tokens"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    token = Column(String, unique=True, index=True, nullable=False)  # Unique refresh token
+    expires_at = Column(DateTime(timezone=True), nullable=False)  # When the refresh token expires
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    revoked_at = Column(DateTime(timezone=True), nullable=True)  # If revoked, when
+    device_info = Column(String, nullable=True)  # Optional: device identifier for multi-device support
+    provider = Column(String, nullable=True)  # "phone", "google", "apple" - which OAuth provider
+    
+    # Relationship
+    user = relationship("User", back_populates="refresh_tokens")
+    
+    @property
+    def is_valid(self) -> bool:
+        """Check if token is still valid (not expired and not revoked)"""
+        now = datetime.now(timezone.utc)
+        return self.revoked_at is None and self.expires_at > now
