@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:barz/core/network/error/failures.dart';
 import 'package:barz/features/authentication/domain/models/login_params.dart';
 import 'package:barz/features/authentication/domain/usecases/login_usecase.dart';
 import 'package:barz/features/user/domain/repositories/abstract_user_repository.dart';
@@ -31,15 +32,23 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
   /// Check if user profile is complete
   Future<(bool isComplete, String? email, String? name)> _checkProfileComplete() async {
     if (userRepository == null) {
-      return (true, null, null); // Assume complete if no repo available
+      return (true, null, null);
     }
     
     try {
       final result = await userRepository!.getCurrentUser();
       return result.fold(
-        (failure) => (false, null, null), // New user, needs registration
+        (failure) {
+          // 404 = new user needs registration
+          // 500+ = server error, assume complete to not block user
+          if (failure is ServerFailure && failure.statusCode != null) {
+            if (failure.statusCode! >= 500) {
+              return (true, null, null); // Don't block on server errors
+            }
+          }
+          return (false, null, null);
+        },
         (user) {
-          // Profile is complete if user has name, email, and accepted terms
           final isComplete = user.displayName != null && 
                             user.displayName!.isNotEmpty &&
                             user.email != null &&
@@ -50,7 +59,7 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
         },
       );
     } catch (_) {
-      return (false, null, null);
+      return (true, null, null); // Don't block on unexpected errors
     }
   }
 
