@@ -143,6 +143,10 @@ class UserProfile(Base):
     
     user_type = Column(String(20), default=UserType.CLIENT.value, index=True)
     
+    # Country/Region - derived from phone number or explicitly set
+    # ISO 3166-1 alpha-2 codes: BR, AR, US, etc.
+    country_code = Column(String(2), nullable=True, index=True)
+    
     business_name = Column(String(200), nullable=True)
     business_email = Column(String(255), nullable=True)
     business_phone = Column(String(20), nullable=True)

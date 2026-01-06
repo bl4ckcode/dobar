@@ -407,3 +407,132 @@ class TestProfileEndpoints:
         
         assert response.status_code == 200
         assert response.json()["privacy_accepted"] == True
+
+    @pytest.mark.asyncio
+    async def test_onboarding_client_brazil(self, client: AsyncClient, mock_firebase_token):
+        """Test onboarding as a client in Brazil."""
+        with patch("app.auth.routes.firebase_auth.verify_id_token") as mock_verify:
+            mock_verify.return_value = mock_firebase_token
+            login_response = await client.post(
+                "/auth/phone-login",
+                headers={"Authorization": "Bearer mock_token"}
+            )
+        
+        token = login_response.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+        
+        response = await client.post(
+            "/me/onboarding",
+            headers=headers,
+            json={"user_type": "client", "country_code": "BR"}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["user_type"] == "client"
+        assert data["country_code"] == "BR"
+    
+    @pytest.mark.asyncio
+    async def test_onboarding_business_argentina(self, client: AsyncClient, mock_firebase_token):
+        """Test onboarding as a business owner in Argentina."""
+        with patch("app.auth.routes.firebase_auth.verify_id_token") as mock_verify:
+            mock_verify.return_value = {
+                **mock_firebase_token,
+                "uid": "ar_business_owner_uid",
+                "phone_number": "+5491139865103"
+            }
+            login_response = await client.post(
+                "/auth/phone-login",
+                headers={"Authorization": "Bearer mock_token"}
+            )
+        
+        token = login_response.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+        
+        response = await client.post(
+            "/me/onboarding",
+            headers=headers,
+            json={"user_type": "business", "country_code": "AR"}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["user_type"] == "business"
+        assert data["country_code"] == "AR"
+    
+    @pytest.mark.asyncio
+    async def test_onboarding_business_usa(self, client: AsyncClient, mock_firebase_token):
+        """Test onboarding as a business owner in USA."""
+        with patch("app.auth.routes.firebase_auth.verify_id_token") as mock_verify:
+            mock_verify.return_value = {
+                **mock_firebase_token,
+                "uid": "us_business_owner_uid",
+                "phone_number": "+16143752923"
+            }
+            login_response = await client.post(
+                "/auth/phone-login",
+                headers={"Authorization": "Bearer mock_token"}
+            )
+        
+        token = login_response.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+        
+        response = await client.post(
+            "/me/onboarding",
+            headers=headers,
+            json={"user_type": "business", "country_code": "US"}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["user_type"] == "business"
+        assert data["country_code"] == "US"
+    
+    @pytest.mark.asyncio
+    async def test_onboarding_invalid_country(self, client: AsyncClient, mock_firebase_token):
+        """Test onboarding with unsupported country code."""
+        with patch("app.auth.routes.firebase_auth.verify_id_token") as mock_verify:
+            mock_verify.return_value = mock_firebase_token
+            login_response = await client.post(
+                "/auth/phone-login",
+                headers={"Authorization": "Bearer mock_token"}
+            )
+        
+        token = login_response.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+        
+        response = await client.post(
+            "/me/onboarding",
+            headers=headers,
+            json={"user_type": "client", "country_code": "ZZ"}
+        )
+        
+        assert response.status_code == 422  # Validation error
+    
+    @pytest.mark.asyncio
+    async def test_get_payment_gateway_brazil(self, client: AsyncClient, mock_firebase_token):
+        """Test getting payment gateway for Brazil user."""
+        with patch("app.auth.routes.firebase_auth.verify_id_token") as mock_verify:
+            mock_verify.return_value = mock_firebase_token
+            login_response = await client.post(
+                "/auth/phone-login",
+                headers={"Authorization": "Bearer mock_token"}
+            )
+        
+        token = login_response.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+        
+        # First set country
+        await client.post(
+            "/me/onboarding",
+            headers=headers,
+            json={"user_type": "client", "country_code": "BR"}
+        )
+        
+        response = await client.get("/me/payment-gateway", headers=headers)
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["gateway"] == "stone"
+        assert data["country_code"] == "BR"
+        assert "pix" in data["payment_methods"]
