@@ -40,6 +40,10 @@ with patch("firebase_admin.initialize_app", return_value=mock_firebase_app), \
     # Now it's safe to import app components
     from app.main import app
     from app.database import Base, database as app_database
+    
+    # Import all models to ensure their tables are registered with Base.metadata
+    from app.auth.auth_models import User, Token, RefreshToken
+    from app.auth.rbac_models import UserProfile, BarStaff, StaffInvitation
 
 # Test database URL (use SQLite for testing)
 TEST_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
@@ -308,9 +312,15 @@ def create_test_token(user_id: int) -> str:
     SECRET_KEY = os.getenv("SECRET_KEY", "test-secret-key")
     ALGORITHM = "HS256"
     
-    to_encode = {"sub": str(user_id)}
-    expire = datetime.now(timezone.utc) + timedelta(minutes=360)
-    to_encode.update({"exp": expire})
+    now = datetime.now(timezone.utc)
+    expire = now + timedelta(minutes=60)
+    
+    to_encode = {
+        "sub": str(user_id),
+        "exp": expire,
+        "iat": now,
+        "type": "access"
+    }
     encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
     return encoded_jwt
 

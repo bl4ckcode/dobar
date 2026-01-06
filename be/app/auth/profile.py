@@ -38,10 +38,10 @@ async def get_or_create_profile(user_id: int) -> dict:
 
 @profile_router.get("/profile", response_model=ProfileResponse)
 async def get_profile(current_user: AuthUser = Depends(get_current_user)):
-    profile = await get_or_create_profile(current_user.user_id)
+    profile = await get_or_create_profile(current_user.id)
     
     from .auth_models import User
-    user_query = User.__table__.select().where(User.id == current_user.user_id)
+    user_query = User.__table__.select().where(User.id == current_user.id)
     user = await database.fetch_one(user_query)
     
     return ProfileResponse(
@@ -59,12 +59,12 @@ async def update_profile(
     data: ProfileUpdate,
     current_user: AuthUser = Depends(get_current_user)
 ):
-    profile = await get_or_create_profile(current_user.user_id)
+    profile = await get_or_create_profile(current_user.id)
     
     if data.display_name is not None:
         update_query = (
             UserProfile.__table__.update()
-            .where(UserProfile.user_id == current_user.user_id)
+            .where(UserProfile.user_id == current_user.id)
             .values(display_name=data.display_name, updated_at=datetime.now(timezone.utc))
         )
         await database.execute(update_query)
@@ -72,7 +72,7 @@ async def update_profile(
     if data.email is not None:
         from .auth_models import User
         email_check = User.__table__.select().where(
-            (User.email == data.email) & (User.id != current_user.user_id)
+            (User.email == data.email) & (User.id != current_user.id)
         )
         existing = await database.fetch_one(email_check)
         if existing:
@@ -80,7 +80,7 @@ async def update_profile(
         
         user_update = (
             User.__table__.update()
-            .where(User.id == current_user.user_id)
+            .where(User.id == current_user.id)
             .values(email=data.email)
         )
         await database.execute(user_update)
@@ -90,11 +90,11 @@ async def update_profile(
 
 @profile_router.post("/accept-terms")
 async def accept_terms(current_user: AuthUser = Depends(get_current_user)):
-    await get_or_create_profile(current_user.user_id)
+    await get_or_create_profile(current_user.id)
     
     update_query = (
         UserProfile.__table__.update()
-        .where(UserProfile.user_id == current_user.user_id)
+        .where(UserProfile.user_id == current_user.id)
         .values(
             terms_accepted=True,
             terms_accepted_at=datetime.now(timezone.utc),
@@ -108,11 +108,11 @@ async def accept_terms(current_user: AuthUser = Depends(get_current_user)):
 
 @profile_router.post("/accept-privacy")
 async def accept_privacy(current_user: AuthUser = Depends(get_current_user)):
-    await get_or_create_profile(current_user.user_id)
+    await get_or_create_profile(current_user.id)
     
     update_query = (
         UserProfile.__table__.update()
-        .where(UserProfile.user_id == current_user.user_id)
+        .where(UserProfile.user_id == current_user.id)
         .values(
             privacy_accepted=True,
             privacy_accepted_at=datetime.now(timezone.utc),

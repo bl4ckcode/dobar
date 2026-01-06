@@ -321,11 +321,15 @@ class TestJWTTokens:
 
 
 @pytest.mark.auth
-@pytest.mark.skip(reason="Profile tests require full database setup - tested via integration")
 class TestProfileEndpoints:
+    """
+    Tests for /me/profile endpoints.
+    These tests verify that the profile CRUD operations work correctly.
+    """
     
     @pytest.mark.asyncio
     async def test_get_profile(self, client: AsyncClient, mock_firebase_token):
+        """Test getting user profile after login."""
         with patch("app.auth.routes.firebase_auth.verify_id_token") as mock_verify:
             mock_verify.return_value = mock_firebase_token
             login_response = await client.post(
@@ -333,6 +337,7 @@ class TestProfileEndpoints:
                 headers={"Authorization": "Bearer mock_token"}
             )
         
+        assert login_response.status_code == 200
         token = login_response.json()["access_token"]
         headers = {"Authorization": f"Bearer {token}"}
         
@@ -343,9 +348,11 @@ class TestProfileEndpoints:
         assert "display_name" in data
         assert "terms_accepted" in data
         assert "privacy_accepted" in data
+        assert "user_type" in data
     
     @pytest.mark.asyncio
     async def test_update_profile(self, client: AsyncClient, mock_firebase_token):
+        """Test updating user profile display name."""
         with patch("app.auth.routes.firebase_auth.verify_id_token") as mock_verify:
             mock_verify.return_value = mock_firebase_token
             login_response = await client.post(
@@ -367,6 +374,7 @@ class TestProfileEndpoints:
     
     @pytest.mark.asyncio
     async def test_accept_terms(self, client: AsyncClient, mock_firebase_token):
+        """Test accepting terms of service."""
         with patch("app.auth.routes.firebase_auth.verify_id_token") as mock_verify:
             mock_verify.return_value = mock_firebase_token
             login_response = await client.post(
@@ -384,6 +392,7 @@ class TestProfileEndpoints:
     
     @pytest.mark.asyncio
     async def test_accept_privacy(self, client: AsyncClient, mock_firebase_token):
+        """Test accepting privacy policy."""
         with patch("app.auth.routes.firebase_auth.verify_id_token") as mock_verify:
             mock_verify.return_value = mock_firebase_token
             login_response = await client.post(
