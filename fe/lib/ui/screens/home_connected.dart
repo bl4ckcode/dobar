@@ -12,6 +12,13 @@ import 'package:barz/features/bars/presentation/bloc/bar_state.dart';
 import 'package:barz/features/promotions/presentation/bloc/promotions_bloc.dart';
 import 'package:barz/features/promotions/presentation/bloc/promotions_event.dart';
 import 'package:barz/features/promotions/presentation/bloc/promotions_state.dart';
+import 'package:barz/features/location/presentation/bloc/location_bloc.dart';
+import 'package:barz/features/location/presentation/bloc/location_event.dart';
+import 'package:barz/features/location/presentation/bloc/location_state.dart';
+
+/// Default fallback coordinates (São Paulo city center)
+const double _defaultLat = -23.5505;
+const double _defaultLng = -46.6333;
 
 class HomeConnected extends StatelessWidget {
   const HomeConnected({super.key});
@@ -21,7 +28,10 @@ class HomeConnected extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(
-          create: (_) => getItInjector<BarBloc>()..add(const LoadNearbyBars(lat: -23.5505, lng: -46.6333)),
+          create: (_) => getItInjector<LocationBloc>()..add(GetCurrentLocation()),
+        ),
+        BlocProvider(
+          create: (_) => getItInjector<BarBloc>(),
         ),
         BlocProvider(
           create: (_) => getItInjector<PromotionsBloc>()..add(LoadPromotions()),
@@ -32,40 +42,75 @@ class HomeConnected extends StatelessWidget {
   }
 }
 
-class _HomeConnectedView extends StatelessWidget {
+class _HomeConnectedView extends StatefulWidget {
   const _HomeConnectedView();
 
   @override
+  State<_HomeConnectedView> createState() => _HomeConnectedViewState();
+}
+
+class _HomeConnectedViewState extends State<_HomeConnectedView> {
+  bool _barsLoaded = false;
+
+  void _loadBarsWithLocation(BuildContext context, LocationState locationState) {
+    if (_barsLoaded) return;
+    
+    final lat = locationState.currentLocation?.latitude ?? _defaultLat;
+    final lng = locationState.currentLocation?.longitude ?? _defaultLng;
+    
+    context.read<BarBloc>().add(LoadNearbyBars(lat: lat, lng: lng));
+    _barsLoaded = true;
+  }
+
+  void _refreshData(BuildContext context) {
+    final locationState = context.read<LocationBloc>().state;
+    final lat = locationState.currentLocation?.latitude ?? _defaultLat;
+    final lng = locationState.currentLocation?.longitude ?? _defaultLng;
+    
+    context.read<LocationBloc>().add(GetCurrentLocation());
+    context.read<BarBloc>().add(LoadNearbyBars(lat: lat, lng: lng));
+    context.read<PromotionsBloc>().add(LoadPromotions());
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: const BarzAppBar(title: 'Home'),
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'home_create_bar_fab',
-        onPressed: () => context.push('/create-bar'),
-        backgroundColor: barzBlack,
-        icon: const Icon(Icons.add, color: barzYellow),
-        label: const Text('Create Bar', style: TextStyle(color: barzYellow)),
-      ),
-      body: Container(
-        decoration: const BoxDecoration(gradient: yellowBackgroundGradient),
-        child: RefreshIndicator(
-          onRefresh: () async {
-            context.read<BarBloc>().add(const LoadNearbyBars(lat: -23.5505, lng: -46.6333));
-            context.read<PromotionsBloc>().add(LoadPromotions());
-          },
-          child: ListView(
-            padding: const EdgeInsets.all(20),
-            children: [
-              _buildWelcomeSection(),
-              const SizedBox(height: 24),
-              _buildSectionTitle('Promotions'),
-              const SizedBox(height: 12),
-              _buildPromotionsSection(context),
-              const SizedBox(height: 24),
-              _buildSectionTitle('Nearby Bars & Restaurants'),
-              const SizedBox(height: 12),
-              _buildBarsSection(context),
-            ],
+    return BlocListener<LocationBloc, LocationState>(
+      listener: (context, state) {
+        // When location is obtained (either success or after loading completes), load bars
+        if (!state.isLoading) {
+          _loadBarsWithLocation(context, state);
+        }
+      },
+      child: Scaffold(
+        appBar: const BarzAppBar(title: 'Home'),
+        floatingActionButton: FloatingActionButton.extended(
+          heroTag: 'home_create_bar_fab',
+          onPressed: () => context.push('/create-bar'),
+          backgroundColor: barzBlack,
+          icon: const Icon(Icons.add, color: barzYellow),
+          label: const Text('Create Bar', style: TextStyle(color: barzYellow)),
+        ),
+        body: Container(
+          decoration: const BoxDecoration(gradient: yellowBackgroundGradient),
+          child: RefreshIndicator(
+            onRefresh: () async {
+              _barsLoaded = false;
+              _refreshData(context);
+            },
+            child: ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                _buildWelcomeSection(),
+                const SizedBox(height: 24),
+                _buildSectionTitle('Promotions'),
+                const SizedBox(height: 12),
+                _buildPromotionsSection(context),
+                const SizedBox(height: 24),
+                _buildSectionTitle('Nearby Bars & Restaurants'),
+                const SizedBox(height: 12),
+                _buildBarsSection(context),
+              ],
+            ),
           ),
         ),
       ),
@@ -254,7 +299,8 @@ class _HomeConnectedView extends StatelessWidget {
         }
         if (state is BarError) {
           return _buildErrorCard(state.message, () {
-            context.read<BarBloc>().add(const LoadNearbyBars(lat: -23.5505, lng: -46.6333));
+            _barsLoaded = false;
+            _refreshData(context);
           });
         }
         if (state is BarsLoaded) {

@@ -13,7 +13,14 @@ import 'package:barz/features/bars/domain/models/bar_model.dart';
 import 'package:barz/features/promotions/presentation/bloc/promotions_bloc.dart';
 import 'package:barz/features/promotions/presentation/bloc/promotions_event.dart';
 import 'package:barz/features/promotions/presentation/bloc/promotions_state.dart';
+import 'package:barz/features/location/presentation/bloc/location_bloc.dart';
+import 'package:barz/features/location/presentation/bloc/location_event.dart';
+import 'package:barz/features/location/presentation/bloc/location_state.dart';
 import 'package:barz/shared/presentation/widget/bar_image.dart';
+
+/// Default fallback coordinates (São Paulo city center)
+const double _defaultLat = -23.5505;
+const double _defaultLng = -46.6333;
 
 class FindConnected extends StatelessWidget {
   const FindConnected({super.key});
@@ -23,7 +30,10 @@ class FindConnected extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(
-          create: (_) => getItInjector<BarBloc>()..add(const LoadNearbyBars(lat: -23.5505, lng: -46.6333)),
+          create: (_) => getItInjector<LocationBloc>()..add(GetCurrentLocation()),
+        ),
+        BlocProvider(
+          create: (_) => getItInjector<BarBloc>(),
         ),
         BlocProvider(
           create: (_) => getItInjector<PromotionsBloc>()..add(LoadPromotions()),
@@ -44,6 +54,7 @@ class _FindConnectedView extends StatefulWidget {
 class _FindConnectedViewState extends State<_FindConnectedView> {
   final TextEditingController _searchController = TextEditingController();
   bool _showMapView = false;
+  bool _barsLoaded = false;
 
   @override
   void dispose() {
@@ -51,18 +62,46 @@ class _FindConnectedViewState extends State<_FindConnectedView> {
     super.dispose();
   }
 
+  void _loadBarsWithLocation(BuildContext context, LocationState locationState) {
+    if (_barsLoaded) return;
+    
+    final lat = locationState.currentLocation?.latitude ?? _defaultLat;
+    final lng = locationState.currentLocation?.longitude ?? _defaultLng;
+    
+    context.read<BarBloc>().add(LoadNearbyBars(lat: lat, lng: lng));
+    _barsLoaded = true;
+  }
+
+  void _refreshData(BuildContext context) {
+    final locationState = context.read<LocationBloc>().state;
+    final lat = locationState.currentLocation?.latitude ?? _defaultLat;
+    final lng = locationState.currentLocation?.longitude ?? _defaultLng;
+    
+    context.read<LocationBloc>().add(GetCurrentLocation());
+    context.read<BarBloc>().add(LoadNearbyBars(lat: lat, lng: lng));
+    context.read<PromotionsBloc>().add(LoadPromotions());
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: const BarzAppBar(title: 'Find'),
-      body: Container(
-        decoration: const BoxDecoration(gradient: yellowBackgroundGradient),
-        child: Column(
-          children: [
-            _buildSearchBar(),
-            _buildViewToggle(),
-            Expanded(child: _showMapView ? _buildMapPlaceholder() : _buildBarsList()),
-          ],
+    return BlocListener<LocationBloc, LocationState>(
+      listener: (context, state) {
+        // When location is obtained (either success or after loading completes), load bars
+        if (!state.isLoading) {
+          _loadBarsWithLocation(context, state);
+        }
+      },
+      child: Scaffold(
+        appBar: const BarzAppBar(title: 'Find'),
+        body: Container(
+          decoration: const BoxDecoration(gradient: yellowBackgroundGradient),
+          child: Column(
+            children: [
+              _buildSearchBar(),
+              _buildViewToggle(),
+              Expanded(child: _showMapView ? _buildMapPlaceholder() : _buildBarsList()),
+            ],
+          ),
         ),
       ),
     );
@@ -177,7 +216,8 @@ class _FindConnectedViewState extends State<_FindConnectedView> {
             }
             if (state is BarError) {
               return _buildErrorState(state.message, () {
-                context.read<BarBloc>().add(const LoadNearbyBars(lat: -23.5505, lng: -46.6333));
+                _barsLoaded = false;
+                _refreshData(context);
               });
             }
             if (state is BarsLoaded) {
@@ -186,8 +226,8 @@ class _FindConnectedViewState extends State<_FindConnectedView> {
               }
               return RefreshIndicator(
                 onRefresh: () async {
-                  context.read<BarBloc>().add(const LoadNearbyBars(lat: -23.5505, lng: -46.6333));
-                  context.read<PromotionsBloc>().add(LoadPromotions());
+                  _barsLoaded = false;
+                  _refreshData(context);
                 },
                 child: ListView.builder(
                   padding: const EdgeInsets.all(16),

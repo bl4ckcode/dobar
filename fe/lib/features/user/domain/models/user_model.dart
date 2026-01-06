@@ -1,8 +1,9 @@
+import 'package:barz/core/rbac/user_type.dart';
 import 'user_document.dart';
 
 class UserModel {
-  final int id;
-  final String firebaseUid;
+  final int? id;
+  final String? firebaseUid;
   final String? phoneNumber;
   final String? email;
   final String? displayName;
@@ -17,18 +18,19 @@ class UserModel {
   final DateTime? privacyAcceptedAt;
   final bool isActive;
   final bool isPremium;
-  final DateTime createdAt;
-  final DateTime updatedAt;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+  final UserType userType;
 
   UserModel({
-    required this.id,
-    required this.firebaseUid,
+    this.id,
+    this.firebaseUid,
     this.phoneNumber,
     this.email,
     this.displayName,
     this.profilePictureUrl,
     this.documents = const [],
-    required this.preferences,
+    UserPreferences? preferences,
     this.walletBalance = 0.0,
     this.totalCashback = 0.0,
     this.termsAccepted = false,
@@ -37,18 +39,20 @@ class UserModel {
     this.privacyAcceptedAt,
     this.isActive = true,
     this.isPremium = false,
-    required this.createdAt,
-    required this.updatedAt,
-  });
+    this.createdAt,
+    this.updatedAt,
+    this.userType = UserType.client,
+  }) : preferences = preferences ?? UserPreferences();
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: json['id'],
-      firebaseUid: json['firebase_uid'],
-      phoneNumber: json['phone_number'],
-      email: json['email'],
-      displayName: json['display_name'],
-      profilePictureUrl: json['profile_picture_url'],
+      id: json['id'] as int?,
+      firebaseUid: json['firebase_uid'] as String?,
+      phoneNumber: json['phone_number'] as String?,
+      email: json['email'] as String?,
+      displayName: json['display_name'] as String?,
+      // Handle both 'profile_picture_url' and 'avatar_url' keys
+      profilePictureUrl: (json['profile_picture_url'] ?? json['avatar_url']) as String?,
       documents: (json['documents'] as List<dynamic>?)
               ?.map((e) => UserDocument.fromJson(e))
               .toList() ??
@@ -68,8 +72,13 @@ class UserModel {
           : null,
       isActive: json['is_active'] ?? true,
       isPremium: json['is_premium'] ?? false,
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
+          : null,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'])
+          : null,
+      userType: UserType.fromString(json['user_type'] as String?),
     );
   }
 
@@ -91,8 +100,9 @@ class UserModel {
       'privacy_accepted_at': privacyAcceptedAt?.toIso8601String(),
       'is_active': isActive,
       'is_premium': isPremium,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
+      'created_at': createdAt?.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
+      'user_type': userType.name,
     };
   }
 }
