@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, EmailStr
-from datetime import datetime, timezone
+from datetime import datetime
 from typing import Optional
 from .rbac_models import UserProfile
 from .rbac_middleware import get_current_user, AuthUser
@@ -65,7 +65,7 @@ async def update_profile(
         update_query = (
             UserProfile.__table__.update()
             .where(UserProfile.user_id == current_user.id)
-            .values(display_name=data.display_name, updated_at=datetime.now(timezone.utc))
+            .values(display_name=data.display_name, updated_at=datetime.utcnow())
         )
         await database.execute(update_query)
     
@@ -97,8 +97,8 @@ async def accept_terms(current_user: AuthUser = Depends(get_current_user)):
         .where(UserProfile.user_id == current_user.id)
         .values(
             terms_accepted=True,
-            terms_accepted_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc)
+            terms_accepted_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
         )
     )
     await database.execute(update_query)
@@ -115,8 +115,8 @@ async def accept_privacy(current_user: AuthUser = Depends(get_current_user)):
         .where(UserProfile.user_id == current_user.id)
         .values(
             privacy_accepted=True,
-            privacy_accepted_at=datetime.now(timezone.utc),
-            updated_at=datetime.now(timezone.utc)
+            privacy_accepted_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
         )
     )
     await database.execute(update_query)
