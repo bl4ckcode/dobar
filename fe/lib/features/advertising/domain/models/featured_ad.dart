@@ -6,7 +6,7 @@ part 'featured_ad.g.dart';
 /// Featured ad model for home screen carousel.
 /// Returned from GET /advertising/serve/featured
 @freezed
-class FeaturedAd with _$FeaturedAd {
+abstract class FeaturedAd with _$FeaturedAd {
   const factory FeaturedAd({
     @JsonKey(name: 'bar_id') required int barId,
     @JsonKey(name: 'bar_name') required String barName,

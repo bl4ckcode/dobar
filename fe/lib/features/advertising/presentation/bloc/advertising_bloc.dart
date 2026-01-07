@@ -8,7 +8,7 @@ import 'advertising_state.dart';
 class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
   final AdvertisingUsecase _usecase;
 
-  AdvertisingBloc(this._usecase) : super(AdvertisingState.initial()) {
+  AdvertisingBloc(this._usecase) : super(const AdvertisingState()) {
     // Ad serving events
     on<LoadFeaturedAds>(_onLoadFeaturedAds);
     on<LoadSearchAds>(_onLoadSearchAds);

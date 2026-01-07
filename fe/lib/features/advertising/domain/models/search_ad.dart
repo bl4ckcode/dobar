@@ -6,7 +6,7 @@ part 'search_ad.g.dart';
 /// Sponsored search result model.
 /// Returned from GET /advertising/serve/search
 @freezed
-class SearchAd with _$SearchAd {
+abstract class SearchAd with _$SearchAd {
   const factory SearchAd({
     @JsonKey(name: 'bar_id') required int barId,
     @JsonKey(name: 'bar_name') required String barName,

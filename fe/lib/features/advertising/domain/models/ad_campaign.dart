@@ -31,7 +31,7 @@ enum BudgetType {
 
 /// Campaign targeting options
 @freezed
-class CampaignTargeting with _$CampaignTargeting {
+abstract class CampaignTargeting with _$CampaignTargeting {
   const factory CampaignTargeting({
     @JsonKey(name: 'radius_km') double? radiusKm,
     @JsonKey(name: 'target_audience') List<String>? targetAudience,
@@ -43,7 +43,7 @@ class CampaignTargeting with _$CampaignTargeting {
 
 /// Campaign creative assets
 @freezed
-class CampaignCreative with _$CampaignCreative {
+abstract class CampaignCreative with _$CampaignCreative {
   const factory CampaignCreative({
     String? tagline,
     @JsonKey(name: 'image_url') String? imageUrl,
@@ -55,7 +55,7 @@ class CampaignCreative with _$CampaignCreative {
 
 /// Ad campaign model
 @freezed
-class AdCampaign with _$AdCampaign {
+abstract class AdCampaign with _$AdCampaign {
   const factory AdCampaign({
     required int id,
     @JsonKey(name: 'bar_id') required int barId,
@@ -82,7 +82,7 @@ class AdCampaign with _$AdCampaign {
 
 /// Create campaign request
 @freezed
-class CreateCampaignRequest with _$CreateCampaignRequest {
+abstract class CreateCampaignRequest with _$CreateCampaignRequest {
   const factory CreateCampaignRequest({
     @JsonKey(name: 'bar_id') required int barId,
     required String name,

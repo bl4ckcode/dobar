@@ -20,7 +20,7 @@ enum SubscriptionStatus {
 
 /// Subscription plan model (from GET /advertising/plans)
 @freezed
-class SubscriptionPlan with _$SubscriptionPlan {
+abstract class SubscriptionPlan with _$SubscriptionPlan {
   const factory SubscriptionPlan({
     required SubscriptionTier tier,
     required String name,
@@ -35,7 +35,7 @@ class SubscriptionPlan with _$SubscriptionPlan {
 
 /// Plans response with regional pricing
 @freezed
-class PlansResponse with _$PlansResponse {
+abstract class PlansResponse with _$PlansResponse {
   const factory PlansResponse({
     @JsonKey(name: 'region_code') required String regionCode,
     required String currency,
@@ -48,7 +48,7 @@ class PlansResponse with _$PlansResponse {
 
 /// Bar subscription model
 @freezed
-class AdSubscription with _$AdSubscription {
+abstract class AdSubscription with _$AdSubscription {
   const factory AdSubscription({
     required int id,
     @JsonKey(name: 'bar_id') required int barId,

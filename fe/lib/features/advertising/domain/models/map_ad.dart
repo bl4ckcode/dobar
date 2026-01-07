@@ -6,7 +6,7 @@ part 'map_ad.g.dart';
 /// Map spotlight ad model for highlighted pins on map.
 /// Returned from GET /advertising/serve/map
 @freezed
-class MapAd with _$MapAd {
+abstract class MapAd with _$MapAd {
   const factory MapAd({
     @JsonKey(name: 'bar_id') required int barId,
     @JsonKey(name: 'bar_name') required String barName,

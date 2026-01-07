@@ -5,11 +5,9 @@ part 'advertising_event.freezed.dart';
 
 /// Events for advertising BLoC.
 @freezed
-class AdvertisingEvent with _$AdvertisingEvent {
-  // ═══════════════════════════════════════════════════════════════════════════
+sealed class AdvertisingEvent with _$AdvertisingEvent {
   // AD SERVING EVENTS (Client App)
-  // ═══════════════════════════════════════════════════════════════════════════
-
+  
   /// Load featured ads for home carousel.
   const factory AdvertisingEvent.loadFeaturedAds({
     required double latitude,
@@ -50,9 +48,7 @@ class AdvertisingEvent with _$AdvertisingEvent {
     double? longitude,
   }) = TrackClick;
 
-  // ═══════════════════════════════════════════════════════════════════════════
   // BUSINESS EVENTS (Business App)
-  // ═══════════════════════════════════════════════════════════════════════════
 
   /// Load subscription plans.
   const factory AdvertisingEvent.loadPlans({

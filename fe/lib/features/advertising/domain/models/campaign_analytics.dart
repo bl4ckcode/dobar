@@ -5,7 +5,7 @@ part 'campaign_analytics.g.dart';
 
 /// Daily breakdown metrics
 @freezed
-class DailyMetrics with _$DailyMetrics {
+abstract class DailyMetrics with _$DailyMetrics {
   const factory DailyMetrics({
     required String date,
     required int impressions,
@@ -19,7 +19,7 @@ class DailyMetrics with _$DailyMetrics {
 
 /// Campaign metrics summary
 @freezed
-class CampaignMetrics with _$CampaignMetrics {
+abstract class CampaignMetrics with _$CampaignMetrics {
   const factory CampaignMetrics({
     required int impressions,
     required int clicks,
@@ -36,7 +36,7 @@ class CampaignMetrics with _$CampaignMetrics {
 
 /// Budget breakdown
 @freezed
-class BudgetBreakdown with _$BudgetBreakdown {
+abstract class BudgetBreakdown with _$BudgetBreakdown {
   const factory BudgetBreakdown({
     required double total,
     required double spent,
@@ -50,7 +50,7 @@ class BudgetBreakdown with _$BudgetBreakdown {
 
 /// Date range for analytics
 @freezed
-class DateRange with _$DateRange {
+abstract class DateRange with _$DateRange {
   const factory DateRange({
     required DateTime start,
     required DateTime end,
@@ -62,7 +62,7 @@ class DateRange with _$DateRange {
 
 /// Complete campaign analytics response
 @freezed
-class CampaignAnalytics with _$CampaignAnalytics {
+abstract class CampaignAnalytics with _$CampaignAnalytics {
   const factory CampaignAnalytics({
     @JsonKey(name: 'campaign_id') required int campaignId,
     @JsonKey(name: 'campaign_name') required String campaignName,
