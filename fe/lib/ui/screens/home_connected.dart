@@ -14,12 +14,13 @@ import 'package:barz/features/promotions/presentation/bloc/promotions_event.dart
 import 'package:barz/features/promotions/presentation/bloc/promotions_state.dart';
 import 'package:barz/features/location/presentation/bloc/location_bloc.dart';
 import 'package:barz/features/location/presentation/bloc/location_event.dart';
-import 'package:barz/features/location/presentation/bloc/location_state.dart';
 
 /// Default fallback coordinates (São Paulo city center)
 const double _defaultLat = -23.5505;
 const double _defaultLng = -46.6333;
 
+/// Standalone widget that creates its own BlocProviders
+/// Use this when navigating directly to home (e.g., from a deep link)
 class HomeConnected extends StatelessWidget {
   const HomeConnected({super.key});
 
@@ -37,35 +38,21 @@ class HomeConnected extends StatelessWidget {
           create: (_) => getItInjector<PromotionsBloc>(),
         ),
       ],
-      child: const _HomeConnectedView(),
+      child: const HomeConnectedView(),
     );
   }
 }
 
-class _HomeConnectedView extends StatefulWidget {
-  const _HomeConnectedView();
+/// View widget that expects BlocProviders from parent (shell)
+/// Use this in WireframeShell with IndexedStack for shared state
+class HomeConnectedView extends StatefulWidget {
+  const HomeConnectedView({super.key});
 
   @override
-  State<_HomeConnectedView> createState() => _HomeConnectedViewState();
+  State<HomeConnectedView> createState() => _HomeConnectedViewState();
 }
 
-class _HomeConnectedViewState extends State<_HomeConnectedView> {
-  bool _dataLoaded = false;
-
-  void _loadDataWithLocation(BuildContext context, LocationState locationState) {
-    if (_dataLoaded) return;
-    
-    final lat = locationState.currentLocation?.latitude ?? _defaultLat;
-    final lng = locationState.currentLocation?.longitude ?? _defaultLng;
-    
-    context.read<BarBloc>().add(LoadNearbyBars(lat: lat, lng: lng));
-    context.read<PromotionsBloc>().add(LoadPromotions(
-      latitude: lat,
-      longitude: lng,
-    ));
-    _dataLoaded = true;
-  }
-
+class _HomeConnectedViewState extends State<HomeConnectedView> {
   void _refreshData(BuildContext context) {
     final locationState = context.read<LocationBloc>().state;
     final lat = locationState.currentLocation?.latitude ?? _defaultLat;
@@ -81,43 +68,36 @@ class _HomeConnectedViewState extends State<_HomeConnectedView> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<LocationBloc, LocationState>(
-      listener: (context, state) {
-        // When location is obtained (either success or after loading completes), load data
-        if (!state.isLoading) {
-          _loadDataWithLocation(context, state);
-        }
-      },
-      child: Scaffold(
-        appBar: const BarzAppBar(title: 'Home'),
-        floatingActionButton: FloatingActionButton.extended(
-          heroTag: 'home_create_bar_fab',
-          onPressed: () => context.push('/create-bar'),
-          backgroundColor: barzBlack,
-          icon: const Icon(Icons.add, color: barzYellow),
-          label: const Text('Create Bar', style: TextStyle(color: barzYellow)),
-        ),
-        body: Container(
-          decoration: const BoxDecoration(gradient: yellowBackgroundGradient),
-          child: RefreshIndicator(
-            onRefresh: () async {
-              _dataLoaded = false;
-              _refreshData(context);
-            },
-            child: ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                _buildWelcomeSection(),
-                const SizedBox(height: 24),
-                _buildSectionTitle('Promotions'),
-                const SizedBox(height: 12),
-                _buildPromotionsSection(context),
-                const SizedBox(height: 24),
-                _buildSectionTitle('Nearby Bars & Restaurants'),
-                const SizedBox(height: 12),
-                _buildBarsSection(context),
-              ],
-            ),
+    // Data loading is handled by WireframeShell
+    // This view just displays the data from shared blocs
+    return Scaffold(
+      appBar: const BarzAppBar(title: 'Home'),
+      floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'home_create_bar_fab',
+        onPressed: () => context.push('/create-bar'),
+        backgroundColor: barzBlack,
+        icon: const Icon(Icons.add, color: barzYellow),
+        label: const Text('Create Bar', style: TextStyle(color: barzYellow)),
+      ),
+      body: Container(
+        decoration: const BoxDecoration(gradient: yellowBackgroundGradient),
+        child: RefreshIndicator(
+          onRefresh: () async {
+            _refreshData(context);
+          },
+          child: ListView(
+            padding: const EdgeInsets.all(20),
+            children: [
+              _buildWelcomeSection(),
+              const SizedBox(height: 24),
+              _buildSectionTitle('Promotions'),
+              const SizedBox(height: 12),
+              _buildPromotionsSection(context),
+              const SizedBox(height: 24),
+              _buildSectionTitle('Nearby Bars & Restaurants'),
+              const SizedBox(height: 12),
+              _buildBarsSection(context),
+            ],
           ),
         ),
       ),
@@ -312,7 +292,6 @@ class _HomeConnectedViewState extends State<_HomeConnectedView> {
         }
         if (state is BarError) {
           return _buildErrorCard(state.message, () {
-            _dataLoaded = false;
             _refreshData(context);
           });
         }

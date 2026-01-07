@@ -15,13 +15,14 @@ import 'package:barz/features/promotions/presentation/bloc/promotions_event.dart
 import 'package:barz/features/promotions/presentation/bloc/promotions_state.dart';
 import 'package:barz/features/location/presentation/bloc/location_bloc.dart';
 import 'package:barz/features/location/presentation/bloc/location_event.dart';
-import 'package:barz/features/location/presentation/bloc/location_state.dart';
 import 'package:barz/shared/presentation/widget/bar_image.dart';
 
 /// Default fallback coordinates (São Paulo city center)
 const double _defaultLat = -23.5505;
 const double _defaultLng = -46.6333;
 
+/// Standalone widget that creates its own BlocProviders
+/// Use this when navigating directly to find (e.g., from a deep link)
 class FindConnected extends StatelessWidget {
   const FindConnected({super.key});
 
@@ -39,41 +40,28 @@ class FindConnected extends StatelessWidget {
           create: (_) => getItInjector<PromotionsBloc>(),
         ),
       ],
-      child: const _FindConnectedView(),
+      child: const FindConnectedView(),
     );
   }
 }
 
-class _FindConnectedView extends StatefulWidget {
-  const _FindConnectedView();
+/// View widget that expects BlocProviders from parent (shell)
+/// Use this in WireframeShell with IndexedStack for shared state
+class FindConnectedView extends StatefulWidget {
+  const FindConnectedView({super.key});
 
   @override
-  State<_FindConnectedView> createState() => _FindConnectedViewState();
+  State<FindConnectedView> createState() => _FindConnectedViewState();
 }
 
-class _FindConnectedViewState extends State<_FindConnectedView> {
+class _FindConnectedViewState extends State<FindConnectedView> {
   final TextEditingController _searchController = TextEditingController();
   bool _showMapView = false;
-  bool _barsLoaded = false;
 
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
-  }
-
-  void _loadDataWithLocation(BuildContext context, LocationState locationState) {
-    if (_barsLoaded) return;
-    
-    final lat = locationState.currentLocation?.latitude ?? _defaultLat;
-    final lng = locationState.currentLocation?.longitude ?? _defaultLng;
-    
-    context.read<BarBloc>().add(LoadNearbyBars(lat: lat, lng: lng));
-    context.read<PromotionsBloc>().add(LoadPromotions(
-      latitude: lat,
-      longitude: lng,
-    ));
-    _barsLoaded = true;
   }
 
   void _refreshData(BuildContext context) {
@@ -91,24 +79,18 @@ class _FindConnectedViewState extends State<_FindConnectedView> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<LocationBloc, LocationState>(
-      listener: (context, state) {
-        // When location is obtained (either success or after loading completes), load data
-        if (!state.isLoading) {
-          _loadDataWithLocation(context, state);
-        }
-      },
-      child: Scaffold(
-        appBar: const BarzAppBar(title: 'Find'),
-        body: Container(
-          decoration: const BoxDecoration(gradient: yellowBackgroundGradient),
-          child: Column(
-            children: [
-              _buildSearchBar(),
-              _buildViewToggle(),
-              Expanded(child: _showMapView ? _buildMapPlaceholder() : _buildBarsList()),
-            ],
-          ),
+    // Data loading is handled by WireframeShell
+    // This view just displays the data from shared blocs
+    return Scaffold(
+      appBar: const BarzAppBar(title: 'Find'),
+      body: Container(
+        decoration: const BoxDecoration(gradient: yellowBackgroundGradient),
+        child: Column(
+          children: [
+            _buildSearchBar(),
+            _buildViewToggle(),
+            Expanded(child: _showMapView ? _buildMapPlaceholder() : _buildBarsList()),
+          ],
         ),
       ),
     );
@@ -223,7 +205,6 @@ class _FindConnectedViewState extends State<_FindConnectedView> {
             }
             if (state is BarError) {
               return _buildErrorState(state.message, () {
-                _barsLoaded = false;
                 _refreshData(context);
               });
             }
@@ -233,7 +214,6 @@ class _FindConnectedViewState extends State<_FindConnectedView> {
               }
               return RefreshIndicator(
                 onRefresh: () async {
-                  _barsLoaded = false;
                   _refreshData(context);
                 },
                 child: ListView.builder(
