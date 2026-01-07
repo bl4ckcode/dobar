@@ -27,6 +27,7 @@ class Bar(Base):
     menus = relationship("Menu", back_populates="bar")
     promotions = relationship("Promotion", back_populates="bar")
     cashback_transactions = relationship("CashbackLedger", back_populates="bar")
+    advertising_subscription = relationship("AdvertisingSubscription", back_populates="bar", uselist=False)
 
 class Menu(Base):
     __tablename__ = "menus"

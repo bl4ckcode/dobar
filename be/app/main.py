@@ -21,6 +21,7 @@ from fastapi.openapi.utils import get_openapi
 from contextlib import asynccontextmanager
 from firebase_admin import initialize_app, credentials
 from .payment.routes import payment_router
+from .advertising.routes import advertising_router
 
 def load_firebase_credentials():
     raw_json = os.getenv("FIREBASE_CREDENTIALS_JSON")
@@ -38,7 +39,8 @@ firebase_creds_dict = load_firebase_credentials()
 cred = credentials.Certificate(firebase_creds_dict)
 initialize_app(cred)
 
-Base.metadata.create_all(bind=engine)
+# Disabled: Using Alembic migrations instead
+# Base.metadata.create_all(bind=engine)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -103,6 +105,7 @@ app.include_router(wallet_router)
 app.include_router(staff_router)
 app.include_router(my_bars_router)
 app.include_router(profile_router)
+app.include_router(advertising_router)
 
 def custom_openapi():
     if app.openapi_schema:

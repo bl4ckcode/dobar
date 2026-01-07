@@ -39,4 +39,10 @@ barz_db.sql
 # Firebase credentials file
 fb-barz-admin.json
 flytoken
+
+# Official Documentation Files to Ignore
 FE_BE_COMMUNICATION.md
+MARKETING_RULES.md
+
+# Ignore seed script
+scripts/seed_via_curl.sh
