@@ -1,7 +1,7 @@
 """Add refresh_tokens table for long-lived sessions
 
 Revision ID: refresh_tokens_001
-Revises: rbac_tables
+Revises: profile001
 Create Date: 2026-01-05
 
 """
@@ -11,7 +11,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision = 'refresh_tokens_001'
-down_revision = 'rbac_tables'
+down_revision = 'profile001'
 branch_labels = None
 depends_on = None
 

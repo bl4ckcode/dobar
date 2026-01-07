@@ -501,6 +501,7 @@ class TestProfileEndpoints:
         token = login_response.json()["access_token"]
         headers = {"Authorization": f"Bearer {token}"}
         
+        # ZZ is not a valid country code
         response = await client.post(
             "/me/onboarding",
             headers=headers,
@@ -508,6 +509,18 @@ class TestProfileEndpoints:
         )
         
         assert response.status_code == 422  # Validation error
+    
+    @pytest.mark.asyncio
+    async def test_get_available_countries(self, client: AsyncClient):
+        """Test getting list of available countries (public endpoint)."""
+        response = await client.get("/me/available-countries")
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert "enabled_countries" in data
+        assert "countries" in data
+        assert "BR" in data["enabled_countries"]  # Brazil always enabled
+        assert len(data["countries"]) > 0
     
     @pytest.mark.asyncio
     async def test_get_payment_gateway_brazil(self, client: AsyncClient, mock_firebase_token):
