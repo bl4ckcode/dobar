@@ -5,15 +5,15 @@ part 'promotions_event.freezed.dart';
 
 @freezed
 sealed class PromotionsEvent with _$PromotionsEvent {
-  const factory PromotionsEvent.loadPromotions({@Default(true) bool activeOnly}) = LoadPromotions;
-  const factory PromotionsEvent.loadPromotionsByDiscountType(PromoDiscountType type) = LoadPromotionsByDiscountType;
-  const factory PromotionsEvent.loadPromotionsByBar(int barId, {@Default(true) bool activeOnly}) = LoadPromotionsByBar;
-  const factory PromotionsEvent.loadNearbyPromotions({
+  /// Load promotions near user's location (now required by backend)
+  const factory PromotionsEvent.loadPromotions({
     required double latitude,
     required double longitude,
     @Default(5000.0) double maxDistance,
     @Default(true) bool activeOnly,
-  }) = LoadNearbyPromotions;
+  }) = LoadPromotions;
+  const factory PromotionsEvent.loadPromotionsByDiscountType(PromoDiscountType type) = LoadPromotionsByDiscountType;
+  const factory PromotionsEvent.loadPromotionsByBar(int barId, {@Default(true) bool activeOnly}) = LoadPromotionsByBar;
   const factory PromotionsEvent.loadPromotionById(int id) = LoadPromotionById;
   const factory PromotionsEvent.loadOffers() = LoadOffers;
   const factory PromotionsEvent.loadOffersByPartnerId(int partnerId) = LoadOffersByPartnerId;

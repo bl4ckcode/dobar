@@ -34,7 +34,7 @@ class HomeConnected extends StatelessWidget {
           create: (_) => getItInjector<BarBloc>(),
         ),
         BlocProvider(
-          create: (_) => getItInjector<PromotionsBloc>()..add(LoadPromotions()),
+          create: (_) => getItInjector<PromotionsBloc>(),
         ),
       ],
       child: const _HomeConnectedView(),
@@ -50,16 +50,20 @@ class _HomeConnectedView extends StatefulWidget {
 }
 
 class _HomeConnectedViewState extends State<_HomeConnectedView> {
-  bool _barsLoaded = false;
+  bool _dataLoaded = false;
 
-  void _loadBarsWithLocation(BuildContext context, LocationState locationState) {
-    if (_barsLoaded) return;
+  void _loadDataWithLocation(BuildContext context, LocationState locationState) {
+    if (_dataLoaded) return;
     
     final lat = locationState.currentLocation?.latitude ?? _defaultLat;
     final lng = locationState.currentLocation?.longitude ?? _defaultLng;
     
     context.read<BarBloc>().add(LoadNearbyBars(lat: lat, lng: lng));
-    _barsLoaded = true;
+    context.read<PromotionsBloc>().add(LoadPromotions(
+      latitude: lat,
+      longitude: lng,
+    ));
+    _dataLoaded = true;
   }
 
   void _refreshData(BuildContext context) {
@@ -69,16 +73,19 @@ class _HomeConnectedViewState extends State<_HomeConnectedView> {
     
     context.read<LocationBloc>().add(GetCurrentLocation());
     context.read<BarBloc>().add(LoadNearbyBars(lat: lat, lng: lng));
-    context.read<PromotionsBloc>().add(LoadPromotions());
+    context.read<PromotionsBloc>().add(LoadPromotions(
+      latitude: lat,
+      longitude: lng,
+    ));
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocListener<LocationBloc, LocationState>(
       listener: (context, state) {
-        // When location is obtained (either success or after loading completes), load bars
+        // When location is obtained (either success or after loading completes), load data
         if (!state.isLoading) {
-          _loadBarsWithLocation(context, state);
+          _loadDataWithLocation(context, state);
         }
       },
       child: Scaffold(
@@ -94,7 +101,7 @@ class _HomeConnectedViewState extends State<_HomeConnectedView> {
           decoration: const BoxDecoration(gradient: yellowBackgroundGradient),
           child: RefreshIndicator(
             onRefresh: () async {
-              _barsLoaded = false;
+              _dataLoaded = false;
               _refreshData(context);
             },
             child: ListView(
@@ -182,7 +189,13 @@ class _HomeConnectedViewState extends State<_HomeConnectedView> {
         }
         if (state.error != null) {
           return _buildErrorCard(state.error!, () {
-            context.read<PromotionsBloc>().add(LoadPromotions());
+            final locationState = context.read<LocationBloc>().state;
+            final lat = locationState.currentLocation?.latitude ?? _defaultLat;
+            final lng = locationState.currentLocation?.longitude ?? _defaultLng;
+            context.read<PromotionsBloc>().add(LoadPromotions(
+              latitude: lat,
+              longitude: lng,
+            ));
           });
         }
         if (state.promotions.isEmpty) {
@@ -299,7 +312,7 @@ class _HomeConnectedViewState extends State<_HomeConnectedView> {
         }
         if (state is BarError) {
           return _buildErrorCard(state.message, () {
-            _barsLoaded = false;
+            _dataLoaded = false;
             _refreshData(context);
           });
         }

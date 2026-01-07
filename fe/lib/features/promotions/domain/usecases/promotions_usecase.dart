@@ -9,8 +9,19 @@ class PromotionsUsecase {
 
   PromotionsUsecase(this._repository);
 
-  Future<Either<Failure, List<PromotionModel>>> getPromotions({bool activeOnly = true}) {
-    return _repository.getPromotions(activeOnly: activeOnly);
+  /// Get promotions near user's location (location now required by backend)
+  Future<Either<Failure, List<PromotionModel>>> getPromotions({
+    required double latitude,
+    required double longitude,
+    double maxDistance = 5000,
+    bool activeOnly = true,
+  }) {
+    return _repository.getPromotions(
+      latitude: latitude,
+      longitude: longitude,
+      maxDistance: maxDistance,
+      activeOnly: activeOnly,
+    );
   }
 
   Future<Either<Failure, List<PromotionModel>>> getPromotionsByDiscountType(PromoDiscountType type) {
@@ -19,20 +30,6 @@ class PromotionsUsecase {
 
   Future<Either<Failure, List<PromotionModel>>> getPromotionsByBar(int barId, {bool activeOnly = true}) {
     return _repository.getPromotionsByBar(barId, activeOnly: activeOnly);
-  }
-
-  Future<Either<Failure, List<PromotionModel>>> getNearbyPromotions({
-    required double latitude,
-    required double longitude,
-    double maxDistance = 5000,
-    bool activeOnly = true,
-  }) {
-    return _repository.getNearbyPromotions(
-      latitude: latitude,
-      longitude: longitude,
-      maxDistance: maxDistance,
-      activeOnly: activeOnly,
-    );
   }
 
   Future<Either<Failure, PromotionModel>> getPromotionById(int id) {

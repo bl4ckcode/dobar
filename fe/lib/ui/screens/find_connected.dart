@@ -36,7 +36,7 @@ class FindConnected extends StatelessWidget {
           create: (_) => getItInjector<BarBloc>(),
         ),
         BlocProvider(
-          create: (_) => getItInjector<PromotionsBloc>()..add(LoadPromotions()),
+          create: (_) => getItInjector<PromotionsBloc>(),
         ),
       ],
       child: const _FindConnectedView(),
@@ -62,13 +62,17 @@ class _FindConnectedViewState extends State<_FindConnectedView> {
     super.dispose();
   }
 
-  void _loadBarsWithLocation(BuildContext context, LocationState locationState) {
+  void _loadDataWithLocation(BuildContext context, LocationState locationState) {
     if (_barsLoaded) return;
     
     final lat = locationState.currentLocation?.latitude ?? _defaultLat;
     final lng = locationState.currentLocation?.longitude ?? _defaultLng;
     
     context.read<BarBloc>().add(LoadNearbyBars(lat: lat, lng: lng));
+    context.read<PromotionsBloc>().add(LoadPromotions(
+      latitude: lat,
+      longitude: lng,
+    ));
     _barsLoaded = true;
   }
 
@@ -79,16 +83,19 @@ class _FindConnectedViewState extends State<_FindConnectedView> {
     
     context.read<LocationBloc>().add(GetCurrentLocation());
     context.read<BarBloc>().add(LoadNearbyBars(lat: lat, lng: lng));
-    context.read<PromotionsBloc>().add(LoadPromotions());
+    context.read<PromotionsBloc>().add(LoadPromotions(
+      latitude: lat,
+      longitude: lng,
+    ));
   }
 
   @override
   Widget build(BuildContext context) {
     return BlocListener<LocationBloc, LocationState>(
       listener: (context, state) {
-        // When location is obtained (either success or after loading completes), load bars
+        // When location is obtained (either success or after loading completes), load data
         if (!state.isLoading) {
-          _loadBarsWithLocation(context, state);
+          _loadDataWithLocation(context, state);
         }
       },
       child: Scaffold(

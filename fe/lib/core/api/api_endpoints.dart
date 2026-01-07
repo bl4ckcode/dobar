@@ -70,5 +70,23 @@ class ApiEndpoints {
   static String barStaff(int barId) => '/bars/$barId/staff';
   static String inviteStaff(int barId) => '/bars/$barId/staff/invite';
   static String removeStaff(int barId, int staffId) => '/bars/$barId/staff/$staffId';
+
+  // Advertising & Monetization
+  // Public endpoints (no auth) - ad serving
+  static const String adServeFeatured = '/advertising/serve/featured';
+  static const String adServeSearch = '/advertising/serve/search';
+  static const String adServeMap = '/advertising/serve/map';
+  static const String adTrack = '/advertising/track';
+  static const String adPlans = '/advertising/plans';
+  
+  // Authenticated endpoints - campaign/subscription management
+  static const String subscriptions = '/advertising/subscriptions';
+  static String subscription(int barId) => '/advertising/subscriptions/$barId';
+  static String cancelSubscription(int subscriptionId) => '/advertising/subscriptions/$subscriptionId/cancel';
+  static const String campaigns = '/advertising/campaigns';
+  static String campaign(int campaignId) => '/advertising/campaigns/$campaignId';
+  static String pauseCampaign(int campaignId) => '/advertising/campaigns/$campaignId/pause';
+  static String resumeCampaign(int campaignId) => '/advertising/campaigns/$campaignId/resume';
+  static String campaignAnalytics(int campaignId) => '/advertising/analytics/$campaignId';
 }
 

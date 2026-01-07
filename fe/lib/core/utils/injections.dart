@@ -4,6 +4,7 @@ import 'package:barz/core/services/image_refresh_service.dart';
 import 'package:barz/core/services/notifications/notification_service.dart';
 import 'package:barz/core/services/token_storage_service.dart';
 import 'package:barz/core/utils/log/app_logger.dart';
+import 'package:barz/features/advertising/advertising_injection.dart';
 import 'package:barz/features/authentication/auth_injection.dart';
 import 'package:barz/features/bars/bars_injection.dart';
 import 'package:barz/features/cart/cart_injection.dart';
@@ -40,6 +41,7 @@ Future<void> initInjections() async {
   initPromotionsInjection();
   initLocationInjection();
   initOnboardingInjection();
+  initAdvertisingInjection();
   await initSessionInjection();
 }
 
