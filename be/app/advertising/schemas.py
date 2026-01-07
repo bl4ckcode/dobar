@@ -245,7 +245,7 @@ class AdTrackEvent(BaseModel):
     """Track an ad interaction event"""
     campaign_id: int
     action: AdActionEnum
-    placement: str = Field(..., pattern="^(home|search|map|promo)$")
+    placement: Optional[str] = Field(default="unknown", pattern="^(home|search|map|promo|unknown)$")
     session_id: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None

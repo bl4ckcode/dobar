@@ -95,8 +95,16 @@ class AdvertisingSubscription(Base):
     bar_id = Column(Integer, ForeignKey("bars.id", ondelete="CASCADE"), unique=True, nullable=False, index=True)
     
     # Plan details
-    tier = Column(SQLEnum(SubscriptionTier), default=SubscriptionTier.REGULAR, nullable=False)
-    status = Column(SQLEnum(SubscriptionStatus), default=SubscriptionStatus.ACTIVE, nullable=False)
+    tier = Column(
+        SQLEnum(SubscriptionTier, values_callable=lambda x: [e.value for e in x], create_constraint=False, native_enum=True),
+        default=SubscriptionTier.REGULAR,
+        nullable=False
+    )
+    status = Column(
+        SQLEnum(SubscriptionStatus, values_callable=lambda x: [e.value for e in x], create_constraint=False, native_enum=True),
+        default=SubscriptionStatus.ACTIVE,
+        nullable=False
+    )
     
     # Pricing (region-specific, fetched from RegionPricing)
     region_code = Column(String(2), nullable=False, default="BR")  # ISO country code
@@ -147,11 +155,23 @@ class AdvertisingCampaign(Base):
     
     # Campaign details
     name = Column(String(100), nullable=False)
-    campaign_type = Column(SQLEnum(CampaignType), nullable=False)
-    status = Column(SQLEnum(CampaignStatus), default=CampaignStatus.DRAFT, nullable=False)
+    # Use create_constraint=False since the enum already exists in the database
+    # Use values_callable to use enum values (lowercase) instead of names (UPPERCASE)
+    campaign_type = Column(
+        SQLEnum(CampaignType, values_callable=lambda x: [e.value for e in x], create_constraint=False, native_enum=True),
+        nullable=False
+    )
+    status = Column(
+        SQLEnum(CampaignStatus, values_callable=lambda x: [e.value for e in x], create_constraint=False, native_enum=True),
+        default=CampaignStatus.DRAFT,
+        nullable=False
+    )
     
     # Budget
-    budget_type = Column(SQLEnum(BudgetType), nullable=False)
+    budget_type = Column(
+        SQLEnum(BudgetType, values_callable=lambda x: [e.value for e in x], create_constraint=False, native_enum=True),
+        nullable=False
+    )
     budget_amount = Column(Numeric(10, 2), nullable=False)
     budget_spent = Column(Numeric(10, 2), default=Decimal("0.00"))
     
@@ -221,24 +241,29 @@ class AdvertisingImpression(Base):
     """
     __tablename__ = "advertising_impressions"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id = Column(Integer, primary_key=True, autoincrement=True)
     campaign_id = Column(Integer, ForeignKey("advertising_campaigns.id", ondelete="CASCADE"), nullable=False, index=True)
     
     # Event type
-    action = Column(SQLEnum(AdAction), nullable=False, index=True)
+    action = Column(
+        SQLEnum(AdAction, values_callable=lambda x: [e.value for e in x], create_constraint=False, native_enum=True),
+        nullable=False,
+        index=True
+    )
     placement = Column(String(50), nullable=False)  # "home", "search", "map", "promo"
     
     # User context (nullable for anonymous users)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+    user_id = Column(String(100), nullable=True)  # User ID as string (for anonymous/logged-in users)
     session_id = Column(String(100), nullable=True)  # For anonymous tracking
     
     # Location at time of event
-    latitude = Column(Numeric(9, 6), nullable=True)
-    longitude = Column(Numeric(9, 6), nullable=True)
+    latitude = Column(Numeric(10, 6), nullable=True)
+    longitude = Column(Numeric(10, 6), nullable=True)
     
     # Metadata
+    ip_address = Column(String(45), nullable=True)  # IPv4/IPv6 address
     ip_hash = Column(String(64), nullable=True)  # Hashed IP for fraud detection
-    user_agent = Column(String(255), nullable=True)
+    user_agent = Column(String(500), nullable=True)
     
     # Timestamp
     timestamp = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), index=True)
@@ -279,7 +304,11 @@ class AdvertisingInvoice(Base):
     currency = Column(String(3), nullable=False, default="BRL")
     
     # Status
-    status = Column(SQLEnum(InvoiceStatus), default=InvoiceStatus.PENDING, nullable=False)
+    status = Column(
+        SQLEnum(InvoiceStatus, values_callable=lambda x: [e.value for e in x], create_constraint=False, native_enum=True),
+        default=InvoiceStatus.PENDING,
+        nullable=False
+    )
     
     # Payment info
     payment_gateway_ref = Column(String(100), nullable=True)

@@ -246,8 +246,8 @@ class CampaignService:
         # Note: In production, this would use MongoDB with geospatial index
         # For now, we fetch all active featured campaigns and filter
         query = AdvertisingCampaign.__table__.select().where(
-            AdvertisingCampaign.campaign_type == CampaignType.FEATURED.value,
-            AdvertisingCampaign.status == CampaignStatus.ACTIVE.value,
+            AdvertisingCampaign.campaign_type == "featured",
+            AdvertisingCampaign.status == "active",
             AdvertisingCampaign.budget_spent < AdvertisingCampaign.budget_amount
         ).limit(limit * 2)  # Fetch more to allow filtering
         
@@ -297,8 +297,8 @@ class CampaignService:
         now = datetime.now(timezone.utc)
         
         query = AdvertisingCampaign.__table__.select().where(
-            AdvertisingCampaign.campaign_type == CampaignType.SEARCH.value,
-            AdvertisingCampaign.status == CampaignStatus.ACTIVE.value,
+            AdvertisingCampaign.campaign_type == "search",
+            AdvertisingCampaign.status == "active",
             AdvertisingCampaign.budget_spent < AdvertisingCampaign.budget_amount
         ).limit(limit)
         
@@ -328,8 +328,8 @@ class CampaignService:
     ) -> List[MapSpotlight]:
         """Get map spotlight ads"""
         query = AdvertisingCampaign.__table__.select().where(
-            AdvertisingCampaign.campaign_type == CampaignType.MAP.value,
-            AdvertisingCampaign.status == CampaignStatus.ACTIVE.value,
+            AdvertisingCampaign.campaign_type == "map",
+            AdvertisingCampaign.status == "active",
             AdvertisingCampaign.budget_spent < AdvertisingCampaign.budget_amount
         ).limit(limit)
         
@@ -383,12 +383,13 @@ class CampaignService:
             campaign_id=campaign_id,
             action=action_value,
             placement=placement,
-            user_id=user_id,
+            user_id=str(user_id) if user_id else None,  # Convert to string for DB
             session_id=session_id,
             latitude=latitude,
             longitude=longitude,
+            ip_address=ip_address[:45] if ip_address else None,
             ip_hash=ip_hash,
-            user_agent=user_agent[:255] if user_agent else None,
+            user_agent=user_agent[:500] if user_agent else None,
             timestamp=now
         )
         

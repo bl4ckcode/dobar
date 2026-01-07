@@ -1,7 +1,7 @@
 """
 Authentication dependencies for protecting routes.
 """
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
 import os
@@ -11,6 +11,7 @@ from .auth_models import User
 from ..database import database
 
 security = HTTPBearer()
+optional_security = HTTPBearer(auto_error=False)
 
 # Load SECRET_KEY from environment variables
 SECRET_KEY = os.getenv("SECRET_KEY", "fallback-secret-key")
@@ -111,5 +112,45 @@ def verify_token(token: str) -> Optional[dict]:
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         return payload
+    except JWTError:
+        return None
+
+
+async def get_optional_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(optional_security)
+) -> Optional[User]:
+    """
+    Dependency to optionally get the current user from JWT token.
+    Returns None if no token provided or token is invalid.
+    Does NOT throw exceptions - for public endpoints that benefit from user context.
+    
+    Args:
+        credentials: Optional HTTP Bearer token credentials
+        
+    Returns:
+        User object if authenticated, None otherwise
+    """
+    if credentials is None:
+        return None
+    
+    try:
+        token = credentials.credentials
+        
+        # Decode JWT token
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        
+        if user_id is None:
+            return None
+        
+        # Fetch user from database
+        query = User.__table__.select().where(User.id == int(user_id))
+        user = await database.fetch_one(query)
+        
+        if user is None or not user.get("is_active", True):
+            return None
+        
+        return user
+        
     except JWTError:
         return None

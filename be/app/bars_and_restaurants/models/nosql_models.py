@@ -11,9 +11,12 @@ MONGO_URI = os.getenv("MONGO_URI")
 MONGO_DB = os.getenv("MONGO_DB")
 
 # Initialize the AsyncIOMotorClient (TLS/SSL is handled by the connection URI)
+# Use shorter timeout for local development
 client = AsyncIOMotorClient(
     MONGO_URI,
-    server_api=ServerApi('1')
+    server_api=ServerApi('1'),
+    serverSelectionTimeoutMS=5000,  # 5 seconds instead of 30
+    connectTimeoutMS=5000
 )
 db = client[MONGO_DB]
 

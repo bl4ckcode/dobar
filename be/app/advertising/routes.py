@@ -12,7 +12,7 @@ from sqlalchemy import select, and_, func
 from sqlalchemy.orm import Session
 
 from app.database import database, get_db
-from app.auth.dependencies import get_current_user
+from app.auth.dependencies import get_current_user, get_optional_user
 from app.errors import APIError
 
 from .models import (
@@ -267,14 +267,25 @@ async def serve_search_ads(
     return await CampaignService.serve_search(latitude, longitude, query, category, limit)
 
 
+@advertising_router.get("/serve/map", response_model=List[MapSpotlight], include_in_schema=False)
+async def serve_map_ads(
+    latitude: float = Query(..., ge=-90, le=90),
+    longitude: float = Query(..., ge=-180, le=180),
+    zoom_level: int = Query(default=15, ge=5, le=20),
+    limit: int = Query(default=5, ge=1, le=10)
+):
+    """Get map spotlight ads (highlighted pins)."""
+    return await CampaignService.serve_map(latitude, longitude, zoom_level, limit)
+
+
 @advertising_router.post("/track", include_in_schema=False)
 async def track_ad_event(
     event: AdTrackEvent,
     background_tasks: BackgroundTasks,
     request: Request,
-    current_user = Depends(get_current_user)
+    current_user = Depends(get_optional_user)
 ):
-    """Track impression, click, or conversion."""
+    """Track impression, click, or conversion. Auth optional."""
     user_id = current_user.get("id") if current_user else None
     ip_address = request.client.host if request.client else None
     user_agent = request.headers.get("user-agent")
