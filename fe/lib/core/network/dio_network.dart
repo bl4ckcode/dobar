@@ -9,8 +9,14 @@ class DioNetwork {
   static late Dio appAPI;
   static AuthInterceptor? _authInterceptor;
 
-  static void initDio({TokenStorageService? tokenStorage}) {
-    _authInterceptor = AuthInterceptor(tokenStorage: tokenStorage);
+  static void initDio({
+    TokenStorageService? tokenStorage, 
+    OnAuthExpiredCallback? onAuthExpired,
+  }) {
+    _authInterceptor = AuthInterceptor(
+      tokenStorage: tokenStorage,
+      onAuthExpired: onAuthExpired,
+    );
     
     appAPI = Dio(BaseOptions(
       baseUrl: ApiEndpoints.baseUrl,

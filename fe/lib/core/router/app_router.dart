@@ -12,6 +12,7 @@ import 'package:barz/features/checkin/presentation/pages/checkin_page.dart';
 import 'package:barz/features/cart/presentation/pages/cart_page.dart';
 import 'package:barz/features/authentication/presentation/pages/login_page.dart';
 import 'package:barz/features/authentication/presentation/pages/complete_registration_page.dart';
+import 'package:barz/features/onboarding/presentation/pages/onboarding_page.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -19,6 +20,7 @@ final rootNavigatorKey = GlobalKey<NavigatorState>();
 class AppRoutes {
   static const String home = '/';
   static const String login = '/login';
+  static const String onboarding = '/onboarding';
   static const String completeRegistration = '/complete-registration';
   static const String bar = '/bar/:barId';
   static const String promotion = '/promotion/:promotionId';
@@ -33,9 +35,8 @@ class AppRoutes {
 /// Routes that don't require authentication
 const _publicRoutes = {'/login'};
 
-/// Routes that require auth but not complete profile (e.g., registration flow)
-// ignore: unused_element
-const _authOnlyRoutes = {'/complete-registration'};
+/// Routes that require auth but not complete profile (e.g., registration/onboarding flow)
+const _authOnlyRoutes = {'/complete-registration', '/onboarding'};
 
 // TODO(router): Use _authOnlyRoutes in redirect when profile completion check is implemented
 
@@ -70,6 +71,16 @@ final appRouter = GoRouter(
       path: '/login',
       name: 'login',
       builder: (context, state) => const LoginPage(),
+    ),
+    GoRoute(
+      path: '/onboarding',
+      name: 'onboarding',
+      builder: (context, state) {
+        final extra = state.extra as Map<String, String?>?;
+        return OnboardingPage(
+          phoneNumber: extra?['phone'],
+        );
+      },
     ),
     GoRoute(
       path: '/complete-registration',

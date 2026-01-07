@@ -60,6 +60,7 @@ class _LoginValidatePhoneNumberPageState
       widget.loginBloc.add(VerifyCodeButtonPressed(
         verificationId: widget.verificationId,
         smsCode: smsCode,
+        phoneNumber: widget.phoneNumber,
       ));
     } else {
       ScaffoldMessenger.of(context).showSnackBar(

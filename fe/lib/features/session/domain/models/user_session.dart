@@ -5,10 +5,10 @@ import 'bar_access.dart';
 /// Represents the complete user session in the Barz app.
 /// 
 /// This is the central model for determining which UI experience to show:
-/// - If [barAccess] is empty → show client experience
-/// - If [barAccess] has entries → show business experience
+/// - User type is determined by `user.userType` from the backend profile
+/// - Business users have [barAccess] populated with their bar list
 /// 
-/// The session is initialized after login by calling GET /me/bars
+/// The session is initialized after login by calling GET /me/profile
 class UserSession {
   final UserModel user;
   final List<BarAccess> barAccess;
@@ -20,16 +20,17 @@ class UserSession {
     this.activeBar,
   });
 
-  /// Determine user type based on bar access
-  UserType get userType {
-    return barAccess.isEmpty ? UserType.client : UserType.business;
-  }
+  /// User type from the authenticated user profile
+  UserType get userType => user.userType;
 
-  /// Check if user is a client (no bar access)
+  /// Check if user is a client
   bool get isClient => userType.isClient;
 
-  /// Check if user is a business user (has bar access)
+  /// Check if user is a business user
   bool get isBusiness => userType.isBusiness;
+
+  /// Check if user is an admin
+  bool get isAdmin => userType.isAdmin;
 
   /// Check if user owns any bars
   bool get isBarOwner {

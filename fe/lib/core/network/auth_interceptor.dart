@@ -6,8 +6,12 @@ import 'package:barz/core/api/api_endpoints.dart';
 import 'package:barz/core/network/auth_response.dart';
 import 'package:barz/core/services/token_storage_service.dart';
 
+/// Callback invoked when authentication is expired and cannot be refreshed
+typedef OnAuthExpiredCallback = void Function();
+
 class AuthInterceptor extends QueuedInterceptor {
   final TokenStorageService? tokenStorage;
+  final OnAuthExpiredCallback? onAuthExpired;
   String? _accessToken;
   String? _refreshToken;
   bool _isRefreshing = false;
@@ -17,7 +21,7 @@ class AuthInterceptor extends QueuedInterceptor {
     receiveTimeout: const Duration(seconds: 30),
   ));
 
-  AuthInterceptor({this.tokenStorage});
+  AuthInterceptor({this.tokenStorage, this.onAuthExpired});
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
@@ -45,6 +49,9 @@ class AuthInterceptor extends QueuedInterceptor {
         }
       }
       await _clearTokens();
+      // Notify app that auth has expired - redirect to login
+      if (kDebugMode) print('[AUTH] Auth expired - triggering login redirect');
+      onAuthExpired?.call();
     }
 
     final message = _extractErrorMessage(err);

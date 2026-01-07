@@ -15,7 +15,7 @@ class LoadNearbyBars extends BarEvent {
   const LoadNearbyBars({
     required this.lat,
     required this.lng,
-    this.maxDistance = 5000,
+    this.maxDistance = 250000,
   });
 
   @override

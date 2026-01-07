@@ -65,7 +65,15 @@ class _LoginPageState extends State<LoginPage> {
                 Navigator.of(context).pop();
               }
               
-              // Check if profile is complete
+              // Priority 1: Check if user needs onboarding (role + country selection)
+              if (state.needsOnboarding) {
+                context.go('/onboarding', extra: {
+                  'phoneNumber': state.phoneNumber,
+                });
+                return;
+              }
+              
+              // Priority 2: Check if profile is complete
               if (state.isProfileComplete) {
                 // Navigate to home
                 context.go('/');

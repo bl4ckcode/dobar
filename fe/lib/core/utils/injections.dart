@@ -1,4 +1,5 @@
 import 'package:barz/core/network/dio_network.dart';
+import 'package:barz/core/router/app_router.dart';
 import 'package:barz/core/services/image_refresh_service.dart';
 import 'package:barz/core/services/notifications/notification_service.dart';
 import 'package:barz/core/services/token_storage_service.dart';
@@ -9,6 +10,7 @@ import 'package:barz/features/cart/cart_injection.dart';
 import 'package:barz/features/checkin/checkin_injection.dart';
 import 'package:barz/features/home/home_injection.dart';
 import 'package:barz/features/location/location_injection.dart';
+import 'package:barz/features/onboarding/onboarding_injection.dart';
 import 'package:barz/features/orders/orders_injection.dart';
 import 'package:barz/features/partners/partners_injection.dart';
 import 'package:barz/features/payments/payments_injection.dart';
@@ -37,6 +39,7 @@ Future<void> initInjections() async {
   initPaymentsInjection();
   initPromotionsInjection();
   initLocationInjection();
+  initOnboardingInjection();
   await initSessionInjection();
 }
 
@@ -49,7 +52,10 @@ Future<void> initSharedPrefsInjections() async {
 
 Future<void> initDioInjections() async {
   initRootLogger();
-  DioNetwork.initDio(tokenStorage: getItInjector<TokenStorageService>());
+  DioNetwork.initDio(
+    tokenStorage: getItInjector<TokenStorageService>(),
+    onAuthExpired: _handleAuthExpired,
+  );
   
   // Load any existing tokens from storage
   await DioNetwork.loadTokensFromStorage();
@@ -58,6 +64,18 @@ Future<void> initDioInjections() async {
   getItInjector.registerLazySingleton<ImageRefreshService>(
     () => ImageRefreshService(DioNetwork.appAPI),
   );
+}
+
+/// Handle auth expiration by navigating to login
+void _handleAuthExpired() {
+  // Use the global navigator key to navigate to login
+  // This runs after the widget tree is built
+  Future.microtask(() {
+    final context = rootNavigatorKey.currentContext;
+    if (context != null) {
+      appRouter.go('/login');
+    }
+  });
 }
 
 Future<void> initNotificationInjections() async {

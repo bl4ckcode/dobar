@@ -13,6 +13,9 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
   final LoginUsecase loginUseCase;
   final FirebaseAuth firebaseAuth;
   final UserRepository? userRepository;
+  
+  /// Track current phone number for onboarding country detection
+  String? _currentPhoneNumber;
 
   LoginBloc({
     required this.loginUseCase,
@@ -29,24 +32,25 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
     on<LoginVerificationTimeout>(_onLoginVerificationTimeout);
   }
 
-  /// Check if user profile is complete
-  Future<(bool isComplete, String? email, String? name)> _checkProfileComplete() async {
+  /// Check if user profile is complete and if onboarding is needed
+  Future<({bool isComplete, bool needsOnboarding, String? email, String? name})> _checkProfileComplete() async {
     if (userRepository == null) {
-      return (true, null, null);
+      return (isComplete: true, needsOnboarding: false, email: null, name: null);
     }
     
     try {
       final result = await userRepository!.getCurrentUser();
       return result.fold(
         (failure) {
-          // 404 = new user needs registration
+          // 404 = new user needs registration and onboarding
           // 500+ = server error, assume complete to not block user
           if (failure is ServerFailure && failure.statusCode != null) {
             if (failure.statusCode! >= 500) {
-              return (true, null, null); // Don't block on server errors
+              return (isComplete: true, needsOnboarding: false, email: null, name: null); // Don't block on server errors
             }
           }
-          return (false, null, null);
+          // New user - needs both profile completion and onboarding
+          return (isComplete: false, needsOnboarding: true, email: null, name: null);
         },
         (user) {
           final isComplete = user.displayName != null && 
@@ -55,17 +59,22 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
                             user.email!.isNotEmpty &&
                             user.termsAccepted &&
                             user.privacyAccepted;
-          return (isComplete, user.email, user.displayName);
+          // Check if user needs onboarding (no country_code set)
+          final needsOnboarding = !user.hasCompletedOnboarding;
+          return (isComplete: isComplete, needsOnboarding: needsOnboarding, email: user.email, name: user.displayName);
         },
       );
     } catch (_) {
-      return (true, null, null); // Don't block on unexpected errors
+      return (isComplete: true, needsOnboarding: false, email: null, name: null); // Don't block on unexpected errors
     }
   }
 
   Future<void> _onLoginButtonPressed(
       LoginButtonPressed event, Emitter<LoginState> emit) async {
     emit(const LoginState.loading());
+    
+    // Store phone number for country detection during onboarding
+    _currentPhoneNumber = event.phoneNumber;
 
     try {
       await firebaseAuth.verifyPhoneNumber(
@@ -106,11 +115,13 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
           emit(LoginState.failure(error: failure.errorMessage));
         },
         (firebaseUid) async {
-          final (isComplete, email, name) = await _checkProfileComplete();
+          final result = await _checkProfileComplete();
           emit(LoginState.success(
-            isProfileComplete: isComplete,
-            email: email,
-            displayName: name,
+            isProfileComplete: result.isComplete,
+            needsOnboarding: result.needsOnboarding,
+            phoneNumber: event.phoneNumber,
+            email: result.email,
+            displayName: result.name,
           ));
         },
       );
@@ -130,11 +141,12 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
         tokenExpiration: event.tokenExpiration,
       );
       await loginUseCase.loginWithGoogle(params);
-      final (isComplete, email, name) = await _checkProfileComplete();
+      final result = await _checkProfileComplete();
       emit(LoginState.success(
-        isProfileComplete: isComplete,
-        email: email ?? event.key,
-        displayName: name,
+        isProfileComplete: result.isComplete,
+        needsOnboarding: result.needsOnboarding,
+        email: result.email ?? event.key,
+        displayName: result.name,
       ));
     } catch (e) {
       emit(LoginState.failure(error: e.toString()));
@@ -152,11 +164,12 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
         tokenExpiration: event.tokenExpiration,
       );
       await loginUseCase.loginWithApple(params);
-      final (isComplete, email, name) = await _checkProfileComplete();
+      final result = await _checkProfileComplete();
       emit(LoginState.success(
-        isProfileComplete: isComplete,
-        email: email ?? event.key,
-        displayName: name,
+        isProfileComplete: result.isComplete,
+        needsOnboarding: result.needsOnboarding,
+        email: result.email ?? event.key,
+        displayName: result.name,
       ));
     } catch (e) {
       emit(LoginState.failure(error: e.toString()));
@@ -169,16 +182,18 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
   ) async {
     final userCredential =
         await firebaseAuth.signInWithCredential(event.credential);
-    final result = await loginUseCase.complete(userCredential.user);
+    final loginResult = await loginUseCase.complete(userCredential.user);
 
-    await result.fold(
+    await loginResult.fold(
       (failure) async => emit(LoginState.failure(error: failure.errorMessage)),
       (_) async {
-        final (isComplete, email, name) = await _checkProfileComplete();
+        final result = await _checkProfileComplete();
         emit(LoginState.success(
-          isProfileComplete: isComplete,
-          email: email,
-          displayName: name,
+          isProfileComplete: result.isComplete,
+          needsOnboarding: result.needsOnboarding,
+          phoneNumber: _currentPhoneNumber,
+          email: result.email,
+          displayName: result.name,
         ));
       },
     );

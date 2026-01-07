@@ -34,6 +34,8 @@ class ApiEndpoints {
   static const String profile = '/me/profile';
   static const String acceptTerms = '/me/accept-terms';
   static const String acceptPrivacy = '/me/accept-privacy';
+  static const String onboarding = '/me/onboarding';
+  static const String paymentGateway = '/me/payment-gateway';
   
   // Legacy user endpoints (for backwards compatibility)
   static const String users = '/users';

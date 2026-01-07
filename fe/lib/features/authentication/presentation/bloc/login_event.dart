@@ -12,6 +12,7 @@ sealed class LoginEvent with _$LoginEvent {
   const factory LoginEvent.verifyCodeButtonPressed({
     required String verificationId,
     required String smsCode,
+    String? phoneNumber,
   }) = VerifyCodeButtonPressed;
 
   const factory LoginEvent.googleLoginPressed({

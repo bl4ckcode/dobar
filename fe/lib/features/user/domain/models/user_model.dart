@@ -21,6 +21,10 @@ class UserModel {
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final UserType userType;
+  final String? countryCode;
+
+  /// Check if user has completed onboarding (has country set)
+  bool get hasCompletedOnboarding => countryCode != null;
 
   UserModel({
     this.id,
@@ -42,6 +46,7 @@ class UserModel {
     this.createdAt,
     this.updatedAt,
     this.userType = UserType.client,
+    this.countryCode,
   }) : preferences = preferences ?? UserPreferences();
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -79,6 +84,7 @@ class UserModel {
           ? DateTime.parse(json['updated_at'])
           : null,
       userType: UserType.fromString(json['user_type'] as String?),
+      countryCode: json['country_code'] as String?,
     );
   }
 
