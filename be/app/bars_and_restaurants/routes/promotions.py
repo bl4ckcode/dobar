@@ -36,18 +36,42 @@ def add_presigned_url(promo: dict) -> dict:
 # Routes
 @promotions_router.get("/", response_model=list[Promotion])
 async def get_promotions(
+    latitude: float = Query(..., description="Latitude of the location"),
+    longitude: float = Query(..., description="Longitude of the location"),
+    max_distance: float = Query(5000, description="Max distance in meters (default: 5000m)"),
     active_only: bool = Query(True, description="Only return active promotions"),
     limit: int = Query(50, ge=1, le=100, description="Maximum number of promotions to return")
 ):
-    """Get all promotions. By default, only active promotions are returned."""
+    """Get promotions from bars near a location. By default, only active promotions are returned."""
+    # Find bars near the location using MongoDB geospatial query
+    geo_query = {
+        "location": {
+            "$near": {
+                "$geometry": {"type": "Point", "coordinates": [longitude, latitude]},
+                "$maxDistance": max_distance
+            }
+        }
+    }
+    
+    bars_nearby = await bars_collection.find(geo_query).to_list(None)
+    
+    if not bars_nearby:
+        return []  # No bars nearby = no promotions to show
+    
+    bar_ids = [bar["bar_id"] for bar in bars_nearby]
+    
+    # Get promotions for these bars only
     if active_only:
         query = PromotionModel.__table__.select().where(
-            PromotionModel.is_active == True
+            and_(
+                PromotionModel.bar_id.in_(bar_ids),
+                PromotionModel.is_active == True
+            )
         ).order_by(PromotionModel.created_at.desc()).limit(limit)
     else:
-        query = PromotionModel.__table__.select().order_by(
-            PromotionModel.created_at.desc()
-        ).limit(limit)
+        query = PromotionModel.__table__.select().where(
+            PromotionModel.bar_id.in_(bar_ids)
+        ).order_by(PromotionModel.created_at.desc()).limit(limit)
     
     promotions = await database.fetch_all(query)
     
@@ -58,7 +82,7 @@ async def get_promotions(
         add_presigned_url(promo_dict)
         result.append(promo_dict)
     
-    return result  # Returns empty list if no promotions - Flutter friendly!
+    return result  # Returns empty list if no promotions nearby - Flutter friendly!
 
 
 @promotions_router.get("/bar/{bar_id}", response_model=list[Promotion])
