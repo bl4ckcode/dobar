@@ -37,9 +37,33 @@ class Menu(Base):
     name = Column(String, nullable=True, default="Menu Principal")
     description = Column(String, nullable=True)
     is_active = Column(Boolean, nullable=True, default=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relationship with bars
+    # Relationships
     bar = relationship("Bar", back_populates="menus")
+    items = relationship("MenuItem", back_populates="menu", cascade="all, delete-orphan")
+
+
+class MenuItem(Base):
+    """Menu item stored in PostgreSQL for referential integrity with orders."""
+    __tablename__ = "menu_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    menu_id = Column(Integer, ForeignKey("menus.id", ondelete="CASCADE"), index=True, nullable=False)
+    name = Column(String(200), nullable=False)
+    price = Column(Float, nullable=False)
+    description = Column(String(500), nullable=True)
+    category = Column(String(100), nullable=True, index=True)  # drinks, food, appetizers, etc.
+    picture = Column(String, nullable=True)
+    available = Column(Boolean, default=True, index=True)
+    display_order = Column(Integer, default=0)  # For sorting items in menu
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    menu = relationship("Menu", back_populates="items")
+
 
 class Order(Base):
     __tablename__ = "orders"
