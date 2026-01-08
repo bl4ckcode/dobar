@@ -1,5 +1,3 @@
-import 'dart:ffi';
-
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'drinks_home_event.freezed.dart';
@@ -12,7 +10,7 @@ sealed class DrinksHomeEvent with _$DrinksHomeEvent {
     double? maxDistance,
   }) = DrinksHomeLoadPartners;
   const factory DrinksHomeEvent.cardClicked({
-    required Int64 partnerIdentifier,
+    required int partnerIdentifier,
   }) = DrinksHomeCardClicked;
 }
 

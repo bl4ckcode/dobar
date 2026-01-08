@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:io';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
+import 'notification_platform.dart'
+    if (dart.library.io) 'notification_platform_io.dart';
 
 /// Top-level handler for background messages (required by Firebase)
 @pragma('vm:entry-point')
@@ -212,8 +214,8 @@ class NotificationService {
       },
     );
 
-    // Create notification channel for Android
-    if (Platform.isAndroid) {
+    // Create notification channel for Android (skip on web)
+    if (isAndroidPlatform()) {
       const channel = AndroidNotificationChannel(
         'barz_orders',
         'Pedidos',

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:barz/core/rbac/rbac.dart';
-import 'package:barz/core/utils/constant/colors.dart';
+import 'package:barz/core/design/design_system.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
 import 'package:barz/features/session/presentation/bloc/session_event.dart';
@@ -11,15 +11,24 @@ import 'business_dashboard_page.dart';
 import 'cashier_page.dart';
 import 'menu_management_page.dart';
 import 'staff_management_page.dart';
+import 'widgets/business_onboarding_view.dart';
+import 'widgets/business_side_menu.dart';
+
+/// Responsive breakpoint for switching between mobile and web layouts
+const double kBusinessWebBreakpoint = 768.0;
 
 /// Main shell for business users (bar owners/staff).
+/// 
+/// Responsive design:
+/// - Mobile (< 768px): Bottom navigation bar
+/// - Web/Tablet (≥ 768px): Side navigation menu
 /// 
 /// Provides navigation between:
 /// - Dashboard: Overview and analytics
 /// - Cashier: Order management (main view for cashiers)
 /// - Menu: Menu and item management
+/// - Ads: Campaign management (Master+ plans)
 /// - Staff: Staff management (owners/admins only)
-/// - Settings: Bar settings
 class BusinessShell extends StatefulWidget {
   const BusinessShell({super.key});
 
@@ -43,64 +52,130 @@ class _BusinessShellState extends State<BusinessShell> {
         final session = state.session;
         final activeBar = session.activeBar;
 
-        if (activeBar == null) {
-          return _buildNoBarSelected(context);
+        // New business user with no bars - show onboarding
+        if (session.barAccess.isEmpty) {
+          return const BusinessOnboardingView();
         }
 
-        final pages = _buildPages(activeBar);
-        final navItems = _buildNavItems(activeBar);
+        // Has bars but none selected - auto-select first or show selector
+        if (activeBar == null && session.barAccess.isNotEmpty) {
+          // Auto-select first bar
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            context.read<SessionBloc>().add(
+              SessionEvent.switchActiveBar(barId: session.barAccess.first.barId),
+            );
+          });
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
 
-        return Scaffold(
-          appBar: AppBar(
-            backgroundColor: barzBlack,
-            foregroundColor: Colors.white,
-            title: _buildBarSelector(context, session.barAccess, activeBar),
-            actions: [
-              // Switch to client mode button
-              IconButton(
-                icon: const Icon(Icons.person_outline),
-                tooltip: 'Switch to Client Mode',
-                onPressed: () {
-                  context.read<SessionBloc>().add(const SessionEvent.switchToClientMode());
-                },
-              ),
-            ],
-          ),
-          body: IndexedStack(
-            index: _selectedIndex,
-            children: pages,
-          ),
-          bottomNavigationBar: BottomNavigationBar(
-            currentIndex: _selectedIndex,
-            onTap: (index) => setState(() => _selectedIndex = index),
-            type: BottomNavigationBarType.fixed,
-            backgroundColor: barzBlack,
-            selectedItemColor: barzYellow,
-            unselectedItemColor: Colors.white60,
-            items: navItems,
-          ),
+        if (activeBar == null) {
+          return const BusinessOnboardingView();
+        }
+
+        // Build navigation items based on permissions
+        final navItems = _buildNavItems(activeBar);
+        
+        // Ensure selected index is valid
+        if (_selectedIndex >= navItems.length) {
+          _selectedIndex = 0;
+        }
+
+        // Responsive: Use side menu for web, bottom nav for mobile
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final isWebLayout = constraints.maxWidth >= kBusinessWebBreakpoint;
+            
+            if (isWebLayout) {
+              return _buildWebLayout(context, session.barAccess, activeBar, navItems);
+            } else {
+              return _buildMobileLayout(context, session.barAccess, activeBar, navItems);
+            }
+          },
         );
       },
     );
   }
 
-  Widget _buildNoBarSelected(BuildContext context) {
+  /// Mobile layout with bottom navigation bar
+  Widget _buildMobileLayout(
+    BuildContext context,
+    List<BarAccess> bars,
+    BarAccess activeBar,
+    List<BusinessNavItem> navItems,
+  ) {
     return Scaffold(
-      backgroundColor: barzCream,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.store, size: 64, color: Colors.grey[400]),
-            const SizedBox(height: 16),
-            const Text(
-              'No bar selected',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            const Text('Select a bar from the menu to continue'),
-          ],
-        ),
+      appBar: AppBar(
+        backgroundColor: barzBlack,
+        foregroundColor: Colors.white,
+        title: _buildBarSelector(context, bars, activeBar),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person_outline),
+            tooltip: 'Switch to Client Mode',
+            onPressed: () {
+              context.read<SessionBloc>().add(const SessionEvent.switchToClientMode());
+            },
+          ),
+        ],
+      ),
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: navItems.map((item) => item.page).toList(),
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: (index) => setState(() => _selectedIndex = index),
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: barzBlack,
+        selectedItemColor: barzYellow,
+        unselectedItemColor: Colors.white60,
+        items: navItems.map((item) => BottomNavigationBarItem(
+          icon: Icon(item.icon),
+          label: item.label,
+        )).toList(),
+      ),
+    );
+  }
+
+  /// Web/tablet layout with side navigation menu
+  Widget _buildWebLayout(
+    BuildContext context,
+    List<BarAccess> bars,
+    BarAccess activeBar,
+    List<BusinessNavItem> navItems,
+  ) {
+    return Scaffold(
+      body: Row(
+        children: [
+          // Side navigation menu
+          BusinessSideMenu(
+            bars: bars,
+            activeBar: activeBar,
+            navItems: navItems,
+            selectedIndex: _selectedIndex,
+            onNavItemSelected: (index) => setState(() => _selectedIndex = index),
+            onBarSelected: (barId) {
+              context.read<SessionBloc>().add(
+                SessionEvent.switchActiveBar(barId: barId),
+              );
+              setState(() => _selectedIndex = 0);
+            },
+            onSwitchToClientMode: () {
+              context.read<SessionBloc>().add(const SessionEvent.switchToClientMode());
+            },
+          ),
+          // Vertical divider
+          Container(
+            width: 1,
+            color: Colors.grey[300],
+          ),
+          // Main content area
+          Expanded(
+            child: navItems[_selectedIndex].page,
+          ),
+        ],
       ),
     );
   }
@@ -145,7 +220,7 @@ class _BusinessShellState extends State<BusinessShell> {
           value: bar.barId,
           child: ListTile(
             leading: bar.barId == activeBar.barId
-                ? const Icon(Icons.check, color: barzYellow)
+                ? Icon(Icons.check, color: barzYellow)
                 : const SizedBox(width: 24),
             title: Text(bar.barName),
             subtitle: Text(bar.role.displayName),
@@ -159,60 +234,57 @@ class _BusinessShellState extends State<BusinessShell> {
     );
   }
 
-  List<Widget> _buildPages(BarAccess activeBar) {
-    final pages = <Widget>[
-      const BusinessDashboardPage(),
-      const CashierPage(),
-    ];
-
-    if (activeBar.canEditMenu) {
-      pages.add(const MenuManagementPage());
-    }
-
-    if (activeBar.canManageAds) {
-      pages.add(const CampaignsPage());
-    }
-
-    if (activeBar.canManageStaff) {
-      pages.add(const StaffManagementPage());
-    }
-
-    return pages;
-  }
-
-  List<BottomNavigationBarItem> _buildNavItems(BarAccess activeBar) {
-    final items = <BottomNavigationBarItem>[
-      const BottomNavigationBarItem(
-        icon: Icon(Icons.dashboard),
+  List<BusinessNavItem> _buildNavItems(BarAccess activeBar) {
+    final items = <BusinessNavItem>[
+      BusinessNavItem(
+        icon: Icons.dashboard,
         label: 'Dashboard',
+        page: const BusinessDashboardPage(),
       ),
-      const BottomNavigationBarItem(
-        icon: Icon(Icons.point_of_sale),
-        label: 'Cashier',
+      BusinessNavItem(
+        icon: Icons.point_of_sale,
+        label: 'Orders',
+        page: const CashierPage(),
       ),
     ];
 
     if (activeBar.canEditMenu) {
-      items.add(const BottomNavigationBarItem(
-        icon: Icon(Icons.restaurant_menu),
+      items.add(BusinessNavItem(
+        icon: Icons.restaurant_menu,
         label: 'Menu',
+        page: const MenuManagementPage(),
       ));
     }
 
     if (activeBar.canManageAds) {
-      items.add(const BottomNavigationBarItem(
-        icon: Icon(Icons.campaign),
+      items.add(BusinessNavItem(
+        icon: Icons.campaign,
         label: 'Ads',
+        page: const CampaignsPage(),
       ));
     }
 
     if (activeBar.canManageStaff) {
-      items.add(const BottomNavigationBarItem(
-        icon: Icon(Icons.people),
+      items.add(BusinessNavItem(
+        icon: Icons.people,
         label: 'Staff',
+        page: const StaffManagementPage(),
       ));
     }
 
     return items;
   }
+}
+
+/// Navigation item for business shell
+class BusinessNavItem {
+  final IconData icon;
+  final String label;
+  final Widget page;
+
+  const BusinessNavItem({
+    required this.icon,
+    required this.label,
+    required this.page,
+  });
 }
