@@ -20,13 +20,14 @@ RUN update-ca-certificates
 # Copy application code
 COPY . .
 
-# Install dependencies with GitHub token for private repos
-# The token is passed as a build secret and never stored in the image
+# Install Python dependencies
 COPY requirements.txt .
-RUN --mount=type=secret,id=GITHUB_TOKEN \
-    GITHUB_TOKEN=$(cat /run/secrets/GITHUB_TOKEN) && \
-    pip install --no-cache-dir -r requirements.txt && \
-    pip install --no-cache-dir "dobar-payment-engine @ git+https://${GITHUB_TOKEN}@github.com/bl4ckcode/dobar-payment-engine.git@main"
+RUN pip install --no-cache-dir -r requirements.txt
+
+# TODO: When dobar-payment-engine is ready, uncomment below:
+# RUN --mount=type=secret,id=GITHUB_TOKEN \
+#     GITHUB_TOKEN=$(cat /run/secrets/GITHUB_TOKEN) && \
+#     pip install --no-cache-dir "dobar-payment-engine @ git+https://${GITHUB_TOKEN}@github.com/bl4ckcode/dobar-payment-engine.git@main"
 
 # Expose port
 EXPOSE 8080

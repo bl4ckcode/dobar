@@ -214,16 +214,28 @@ async def update_bar_image(bar_id: int, image: UploadFile = File(...)):
     
     return {"message": "Image updated successfully", "image_url": image_url}
 
-@bars_router.get("/bars/{bar_id}/refresh-image")
+@bars_router.get("/{bar_id}/refresh-image")
 async def refresh_image_url(bar_id: int):
-    # Fetch bar data from your database (MongoDB or PostgreSQL)
+    """
+    Refresh the presigned S3 URL for a bar's image.
+    The image_url is stored in MongoDB, not PostgreSQL.
+    """
+    # First check if bar exists in PostgreSQL
     bar = await database.fetch_one(BarModel.__table__.select().where(BarModel.id == bar_id))
+    if not bar:
+        raise APIError.partner_not_found("Bar not found")
     
-    if not bar or not bar.get("image_url"):
-        return {"error": "Bar not found or no image available"}
+    # Fetch image_url from MongoDB (where it's actually stored)
+    mongo_bar = await bars_collection.find_one({"bar_id": bar_id})
     
-    new_url = generate_presigned_url(bar["image_url"])
+    if not mongo_bar or not mongo_bar.get("image_url"):
+        raise APIError.not_found("No image available for this bar")
+    
+    # Generate fresh presigned URL from the S3 key
+    s3_key = extract_s3_key(mongo_bar["image_url"])
+    new_url = generate_presigned_url(s3_key)
+    
     return {
         "image_url": new_url,
-        "image_url_expiration": int(time.time()) + 3600  # New expiration timestamp
+        "image_url_expiration": int(time.time()) + 3600  # Expires in 1 hour
     }
