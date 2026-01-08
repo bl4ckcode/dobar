@@ -86,4 +86,4 @@ yarl==1.22.0
 apimatic-core==0.2.19
 apimatic-core-interfaces==0.1.6
 apimatic-requests-client-adapter==0.1.7
-# dobar-payment-engine installed separately in Dockerfile with authhttpx==0.27.2
+httpx==0.27.2
