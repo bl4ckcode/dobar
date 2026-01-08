@@ -2,6 +2,7 @@ import json
 import os
 from dotenv import load_dotenv
 from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
 from app.bars_and_restaurants.models.nosql_models import create_geo_index
 from app.errors import APIError, ErrorResponse, ErrorCode
 from .database import engine, Base, database
@@ -58,6 +59,15 @@ async def lifespan(app: FastAPI):
     await database.disconnect()
 
 app = FastAPI(lifespan=lifespan)
+
+# CORS middleware - allow all origins for now (Flutter web, mobile, etc.)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, restrict to specific domains
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all methods including OPTIONS
+    allow_headers=["*"],  # Allow all headers including Authorization
+)
 
 
 # 🏥 Health check endpoint for Fly.io (responds fast, no database calls)
