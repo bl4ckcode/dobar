@@ -13,7 +13,7 @@ from ..models.relational_models import Menu as MenuModel, MenuItem as MenuItemMo
 from ..models.nosql_models import menus_collection  # Legacy - for migration only
 from ..schemas.menus import (
     MenuCreate, MenuUpdate, Menu, MenuWithItems,
-    MenuItemCreate, MenuItemUpdate, MenuItem,
+    MenuItemCreate, MenuItemCreateViaURL, MenuItemUpdate, MenuItem,
     LegacyMenuItem
 )
 from app.database import database
@@ -168,19 +168,16 @@ async def get_menu_items(
 
 
 @menus_router.post("/{menu_id}/items", response_model=MenuItem)
-async def create_menu_item(menu_id: int, item: MenuItemCreate):
+async def create_menu_item(menu_id: int, item: MenuItemCreateViaURL):
     """Add a new item to a menu."""
     # Verify menu exists
     menu = await get_menu_by_id(menu_id)
     if not menu:
         raise APIError.not_found("Menu not found")
     
-    # Ensure menu_id matches
-    if item.menu_id != menu_id:
-        raise APIError.validation_error("menu_id in body must match URL parameter")
-    
     now = datetime.utcnow()
     item_data = item.dict()
+    item_data["menu_id"] = menu_id  # Use URL parameter
     item_data["created_at"] = now
     item_data["updated_at"] = now
     
@@ -267,6 +264,90 @@ async def toggle_item_availability(menu_id: int, item_id: int, available: bool):
     await database.execute(update_query)
     
     return {"item_id": item_id, "available": available}
+
+
+# =============================================================================
+# POPULAR/TRENDING ITEMS ROUTES (for "Most Desired Drinks" FE feature)
+# =============================================================================
+
+@menus_router.get("/trending/drinks", response_model=List[MenuItem])
+async def get_trending_drinks(
+    limit: int = Query(default=20, le=50, description="Maximum items to return"),
+    categories: Optional[str] = Query(
+        default="drinks_trending,cachaça_cocktails,drinks_classicos",
+        description="Comma-separated list of drink categories to include"
+    )
+):
+    """
+    Get trending/popular drinks across all bars.
+    Used for "Most Desired Drinks" feature in FE.
+    
+    Categories available:
+    - drinks_trending: Moscow Mule, Aperol Spritz, Espresso Martini, Negroni
+    - cachaça_cocktails: Caipirinha, Rabo de Galo, Batidas
+    - drinks_classicos: Mojito, Margarita, Piña Colada, Cuba Libre
+    - batidas: Batida de Coco, Maracujá, Amendoim
+    - cervejas: All beers (chopp, long necks, craft)
+    - destilados: Shots and spirits
+    """
+    category_list = [c.strip() for c in categories.split(",") if c.strip()]
+    
+    # Get items from specified categories across all menus
+    from sqlalchemy import or_
+    
+    conditions = [MenuItemModel.category == cat for cat in category_list]
+    query = MenuItemModel.__table__.select().where(
+        and_(
+            MenuItemModel.available == True,
+            or_(*conditions) if conditions else True
+        )
+    ).order_by(
+        MenuItemModel.display_order, 
+        MenuItemModel.name
+    ).limit(limit)
+    
+    items = await database.fetch_all(query)
+    return items if items else []
+
+
+@menus_router.get("/trending/categories", response_model=dict)
+async def get_drink_categories():
+    """
+    Get available drink categories with counts.
+    Useful for building category filters in FE.
+    """
+    from sqlalchemy import func
+    
+    # Get category counts - using raw SQL for simplicity
+    query = """
+        SELECT category, COUNT(*) as count 
+        FROM menu_items 
+        WHERE available = true AND category IS NOT NULL
+        GROUP BY category 
+        ORDER BY count DESC
+    """
+    results = await database.fetch_all(query)
+    
+    categories = {
+        "drink_categories": [
+            {"category": "drinks_trending", "label": "🔥 Em Alta", "description": "Moscow Mule, Aperol Spritz, Espresso Martini"},
+            {"category": "cachaça_cocktails", "label": "🇧🇷 Drinks Brasileiros", "description": "Caipirinha, Rabo de Galo, Batidas"},
+            {"category": "drinks_classicos", "label": "🍸 Clássicos", "description": "Mojito, Margarita, Piña Colada"},
+            {"category": "batidas", "label": "🥤 Batidas", "description": "Coco, Maracujá, Amendoim"},
+            {"category": "cervejas", "label": "🍺 Cervejas", "description": "Chopp, Long Necks, Artesanais"},
+            {"category": "destilados", "label": "🥃 Destilados", "description": "Shots, Cachaça, Rum, Tequila"},
+        ],
+        "food_categories": [
+            {"category": "petiscos_fritos", "label": "🍟 Fritos", "description": "Batata, Bolinho, Coxinha"},
+            {"category": "petiscos_grelhados", "label": "🔥 Grelhados", "description": "Calabresa, Espetinhos, Carnes"},
+            {"category": "tabuas", "label": "🧀 Tábuas", "description": "Frios, Carnes, Mistas"},
+            {"category": "porcoes", "label": "🍽️ Porções", "description": "Escondidinho, Feijão Tropeiro"},
+            {"category": "especiais", "label": "⭐ Especiais", "description": "Caldinhos, Combos"},
+        ],
+        "category_counts": {r["category"]: r["count"] for r in results}
+    }
+    
+    return categories
 
 
 # =============================================================================

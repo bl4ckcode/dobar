@@ -18,8 +18,17 @@ class MenuItemBase(BaseModel):
 
 
 class MenuItemCreate(MenuItemBase):
-    """Schema for creating a menu item."""
-    menu_id: int = Field(..., description="Menu this item belongs to")
+    """Schema for creating a menu item.
+    menu_id is optional in body - can be provided via URL parameter.
+    """
+    menu_id: Optional[int] = Field(None, description="Menu this item belongs to (optional if in URL)")
+
+
+class MenuItemCreateViaURL(MenuItemBase):
+    """Schema for creating menu item via /menus/{menu_id}/items endpoint.
+    menu_id is taken from URL, not body.
+    """
+    pass
 
 
 class MenuItemUpdate(BaseModel):
