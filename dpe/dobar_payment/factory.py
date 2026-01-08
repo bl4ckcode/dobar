@@ -167,21 +167,23 @@ class GatewayRegistry:
     
     def health_check_all(self) -> Dict[str, Dict[str, Any]]:
         """Run health checks on all configured gateways."""
-        results = {}
-        for name in self.GATEWAY_CLASSES:
+        import asyncio
+        
+        async def _check(name: str) -> tuple:
             try:
                 gateway = self.get_gateway(name)
                 start = time.monotonic()
-                health = gateway.health_check()
+                health = await gateway.health_check()
                 health["latency_ms"] = (time.monotonic() - start) * 1000
-                results[name] = health
+                return name, health
             except Exception as e:
-                results[name] = {
-                    "healthy": False,
-                    "gateway": name,
-                    "error": str(e),
-                }
-        return results
+                return name, {"healthy": False, "gateway": name, "error": str(e)}
+        
+        async def _check_all():
+            tasks = [_check(name) for name in self.GATEWAY_CLASSES]
+            return dict(await asyncio.gather(*tasks))
+        
+        return asyncio.run(_check_all())
     
     def list_available(self) -> List[str]:
         """List all available (healthy) gateways."""
@@ -345,7 +347,7 @@ class PaymentEngine:
         else:
             circuit.record_failure()
     
-    def charge(
+    async def charge(
         self,
         amount: float,
         currency: str,
@@ -395,7 +397,7 @@ class PaymentEngine:
                 extra=ctx.to_dict()
             )
             
-            result = self.gateway.create_charge(
+            result = await self.gateway.create_charge(
                 amount=amount,
                 currency=currency,
                 customer=customer,
@@ -430,7 +432,7 @@ class PaymentEngine:
                 "request_id": ctx.request_id,
             }
     
-    def refund(
+    async def refund(
         self,
         charge_id: Optional[str] = None,
         payment_intent_id: Optional[str] = None,
@@ -467,7 +469,7 @@ class PaymentEngine:
             self._check_circuit_breaker()
             self._check_rate_limit()
             
-            result = self.gateway.refund_charge(
+            result = await self.gateway.refund_charge(
                 charge_id=charge_id,
                 payment_intent_id=payment_intent_id,
                 amount=amount,
@@ -496,7 +498,7 @@ class PaymentEngine:
                 "request_id": ctx.request_id,
             }
     
-    def capture(
+    async def capture(
         self,
         payment_intent_id: str,
         amount: Optional[float] = None,
@@ -531,7 +533,7 @@ class PaymentEngine:
             self._check_circuit_breaker()
             self._check_rate_limit()
             
-            result = self.gateway.capture_charge(
+            result = await self.gateway.capture_charge(
                 payment_intent_id=payment_intent_id,
                 amount=amount,
                 idempotency_key=idempotency_key,
@@ -559,9 +561,9 @@ class PaymentEngine:
                 "request_id": ctx.request_id,
             }
     
-    def health_check(self) -> Dict[str, Any]:
+    async def health_check(self) -> Dict[str, Any]:
         """Check gateway health."""
-        return self.gateway.health_check()
+        return await self.gateway.health_check()
 
 
 # ============================================================================
