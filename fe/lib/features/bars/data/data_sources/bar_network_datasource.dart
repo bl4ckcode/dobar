@@ -42,10 +42,11 @@ class BarNetworkDataSource {
     }
   }
 
+  /// Fetch all menus for a bar
   Future<List<MenuModel>> getBarMenus(int barId) async {
     try {
       final response =
-          await dio.get('${ApiEndpoints.baseUrl}${ApiEndpoints.menus(barId)}');
+          await dio.get('${ApiEndpoints.baseUrl}${ApiEndpoints.menusForBar(barId)}');
       if (response.data is List) {
         return (response.data as List)
             .map((e) => MenuModel.fromJson(e))
@@ -59,13 +60,21 @@ class BarNetworkDataSource {
     }
   }
 
-  /// Fetch items for a specific menu
+  /// Fetch items for a specific menu using new endpoint structure
+  /// GET /menus/{menu_id}/items - returns list of items directly
   Future<List<MenuItemModel>> getMenuItems(int menuId) async {
     try {
       final response = await dio
           .get('${ApiEndpoints.baseUrl}${ApiEndpoints.menuItems(menuId)}');
+      // New endpoint returns direct list of items
       if (response.data is List) {
         return (response.data as List)
+            .map((e) => MenuItemModel.fromJson(e))
+            .toList();
+      }
+      // Legacy endpoint returns {"items": [...]} object
+      if (response.data is Map && response.data['items'] is List) {
+        return (response.data['items'] as List)
             .map((e) => MenuItemModel.fromJson(e))
             .toList();
       }

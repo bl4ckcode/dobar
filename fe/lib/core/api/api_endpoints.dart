@@ -16,8 +16,18 @@ class ApiEndpoints {
   // Menus
   static const String menusCreate = '/menus/';
   static String menus(int barId) => '/menus/$barId';
-  static String menuItems(int menuId) => '/menus/items/$menuId';
-  static String updateMenuItem(int menuId, String itemName) => '/menus/$menuId/items/$itemName';
+  static String menusForBar(int barId) => '/menus/bar/$barId';
+  static String menuFull(int menuId) => '/menus/$menuId/full';
+  /// New endpoint structure: /menus/{menu_id}/items (replaces deprecated /menus/items/{menu_id})
+  static String menuItems(int menuId) => '/menus/$menuId/items';
+  static String menuItem(int menuId, int itemId) => '/menus/$menuId/items/$itemId';
+  static String menuItemAvailability(int menuId, int itemId) => '/menus/$menuId/items/$itemId/availability';
+  /// @deprecated Use menuItems(menuId) instead
+  static String menuItemsLegacy(int menuId) => '/menus/items/$menuId';
+
+  // Trending Drinks & Categories (discovery feature)
+  static const String trendingDrinks = '/menus/trending/drinks';
+  static const String trendingCategories = '/menus/trending/categories';
 
   static const String cart = '/cart/';
   static const String cartItems = '/cart/items';

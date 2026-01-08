@@ -17,6 +17,7 @@ import 'package:barz/features/partners/partners_injection.dart';
 import 'package:barz/features/payments/payments_injection.dart';
 import 'package:barz/features/promotions/promotions_injection.dart';
 import 'package:barz/features/session/session_injection.dart';
+import 'package:barz/features/trending/trending_injection.dart';
 import 'package:barz/features/user/user_injection.dart';
 import 'package:barz/shared/app_injections.dart';
 import 'package:get_it/get_it.dart';
@@ -42,6 +43,7 @@ Future<void> initInjections() async {
   initLocationInjection();
   initOnboardingInjection();
   initAdvertisingInjection();
+  registerTrendingFeature(getItInjector);
   await initSessionInjection();
 }
 

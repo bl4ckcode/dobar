@@ -96,6 +96,7 @@ dependencies:
   app_links: ^6.4.0                 # Added for deep links
   firebase_messaging: ^16.1.0
   flutter_local_notifications: ^19.5.0
+  cached_network_image: ^3.4.1
 
 dev_dependencies:
   flutter_test:

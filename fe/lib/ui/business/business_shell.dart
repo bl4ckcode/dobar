@@ -6,6 +6,7 @@ import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
 import 'package:barz/features/session/presentation/bloc/session_event.dart';
 import 'package:barz/features/session/domain/models/bar_access.dart';
+import 'package:barz/features/advertising/presentation/pages/campaigns_page.dart';
 import 'business_dashboard_page.dart';
 import 'cashier_page.dart';
 import 'menu_management_page.dart';
@@ -168,6 +169,10 @@ class _BusinessShellState extends State<BusinessShell> {
       pages.add(const MenuManagementPage());
     }
 
+    if (activeBar.canManageAds) {
+      pages.add(const CampaignsPage());
+    }
+
     if (activeBar.canManageStaff) {
       pages.add(const StaffManagementPage());
     }
@@ -191,6 +196,13 @@ class _BusinessShellState extends State<BusinessShell> {
       items.add(const BottomNavigationBarItem(
         icon: Icon(Icons.restaurant_menu),
         label: 'Menu',
+      ));
+    }
+
+    if (activeBar.canManageAds) {
+      items.add(const BottomNavigationBarItem(
+        icon: Icon(Icons.campaign),
+        label: 'Ads',
       ));
     }
 

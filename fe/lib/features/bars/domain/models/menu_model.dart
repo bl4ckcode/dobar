@@ -1,35 +1,53 @@
 class MenuItemModel {
   final int? id;
+  final int? menuId;
   final String itemName;
   final double price;
   final String? description;
   final String? category;
+  final bool available;
+  final String? picture;
+  final int displayOrder;
 
   MenuItemModel({
     this.id,
+    this.menuId,
     required this.itemName,
     required this.price,
     this.description,
     this.category,
+    this.available = true,
+    this.picture,
+    this.displayOrder = 0,
   });
 
   factory MenuItemModel.fromJson(Map<String, dynamic> json) {
     return MenuItemModel(
       id: json['id'],
-      itemName: json['item_name'],
-      price: (json['price'] as num).toDouble(),
+      menuId: json['menu_id'],
+      // Use 'name' (new format) with fallback to 'item_name' (legacy)
+      itemName: json['name'] ?? json['item_name'] ?? 'Unknown Item',
+      price: (json['price'] as num?)?.toDouble() ?? 0.0,
       description: json['description'],
       category: json['category'],
+      available: json['available'] ?? true,
+      picture: json['picture'],
+      displayOrder: json['display_order'] ?? 0,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'item_name': itemName,
+      'menu_id': menuId,
+      'name': itemName,
+      'item_name': itemName, // Legacy field for backward compatibility
       'price': price,
       'description': description,
       'category': category,
+      'available': available,
+      'picture': picture,
+      'display_order': displayOrder,
     };
   }
 }
