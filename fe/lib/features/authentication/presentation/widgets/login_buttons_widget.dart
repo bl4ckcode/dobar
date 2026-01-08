@@ -34,23 +34,32 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
     final signIn = GoogleSignIn.instance;
     
     // Listen to authentication events
-    _authSubscription = signIn.authenticationEvents.listen((event) async {
-      switch (event) {
-        case GoogleSignInAuthenticationEventSignIn():
-          await _handleGoogleSignInSuccess(event.user);
-        case GoogleSignInAuthenticationEventSignOut():
-          // User signed out
-          break;
-      }
-    });
+    _authSubscription = signIn.authenticationEvents.listen(
+      (event) async {
+        switch (event) {
+          case GoogleSignInAuthenticationEventSignIn():
+            await _handleGoogleSignInSuccess(event.user);
+          case GoogleSignInAuthenticationEventSignOut():
+            // User signed out
+            break;
+        }
+      },
+      onError: (error) {
+        // Handle errors gracefully - FedCM can timeout on web if user is idle
+        debugPrint("Google Sign-In stream error (non-fatal): $error");
+      },
+    );
 
     // Initialize (no clientId needed for mobile platforms)
     try {
       await signIn.initialize();
-      // Try lightweight auth first
+      // Try lightweight auth first - this can fail on web with FedCM timeout
+      // That's okay, user can still click the button to sign in
       await signIn.attemptLightweightAuthentication();
     } catch (e) {
-      debugPrint("Error initializing Google Sign-In: $e");
+      // This is expected on web when FedCM times out or user dismisses
+      // Also happens when user hasn't signed in before
+      debugPrint("Google Sign-In init (non-fatal): $e");
     }
   }
 

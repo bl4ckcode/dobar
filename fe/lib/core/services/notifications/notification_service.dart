@@ -118,29 +118,70 @@ class NotificationService {
   /// Whether the service is initialized
   bool get isInitialized => _initialized;
 
-  /// Initialize the notification service
-  Future<void> initialize() async {
+  /// Initialize notifications in background without blocking the app
+  /// This is the preferred method for startup - doesn't wait for permission
+  void initializeInBackground() {
+    // Fire and forget - don't block the app startup
+    _initializeAsync().catchError((e) {
+      debugPrint('[FCM] Background initialization error (non-fatal): $e');
+    });
+  }
+
+  Future<void> _initializeAsync() async {
     if (_initialized) return;
 
-    // Request permissions
-    final settings = await _fcm.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-      provisional: false,
-      announcement: false,
-      carPlay: false,
-      criticalAlert: false,
-    );
-
-    debugPrint('[FCM] Permission status: ${settings.authorizationStatus}');
-
-    if (settings.authorizationStatus != AuthorizationStatus.authorized &&
-        settings.authorizationStatus != AuthorizationStatus.provisional) {
-      debugPrint('[FCM] Notifications not authorized');
-      return;
+    try {
+      // Check current permission status first (doesn't prompt)
+      final currentSettings = await _fcm.getNotificationSettings();
+      
+      if (currentSettings.authorizationStatus == AuthorizationStatus.authorized ||
+          currentSettings.authorizationStatus == AuthorizationStatus.provisional) {
+        // Already authorized, proceed with full setup
+        await _setupNotifications();
+      } else if (currentSettings.authorizationStatus == AuthorizationStatus.notDetermined) {
+        // Not yet asked - we'll request later when appropriate
+        debugPrint('[FCM] Permission not yet requested, will ask later');
+        _initialized = true; // Mark as "initialized" so we don't block
+      } else {
+        // Denied - don't bother
+        debugPrint('[FCM] Permission denied, notifications disabled');
+        _initialized = true;
+      }
+    } catch (e) {
+      debugPrint('[FCM] Initialization error: $e');
+      _initialized = true; // Don't block the app
     }
+  }
 
+  /// Request permission and initialize - call this when user needs notifications
+  /// e.g., after login, or when they enable a notification-dependent feature
+  Future<bool> requestPermissionAndInitialize() async {
+    try {
+      final settings = await _fcm.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+        provisional: false,
+        announcement: false,
+        carPlay: false,
+        criticalAlert: false,
+      );
+
+      debugPrint('[FCM] Permission status: ${settings.authorizationStatus}');
+
+      if (settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional) {
+        await _setupNotifications();
+        return true;
+      }
+      return false;
+    } catch (e) {
+      debugPrint('[FCM] Permission request error: $e');
+      return false;
+    }
+  }
+
+  Future<void> _setupNotifications() async {
     // Get FCM token
     _fcmToken = await _fcm.getToken();
     if (_fcmToken != null) {
@@ -175,6 +216,13 @@ class NotificationService {
 
     _initialized = true;
     debugPrint('[FCM] Initialized successfully');
+  }
+
+  /// Initialize the notification service (legacy - blocks on permission)
+  /// Prefer initializeInBackground() for startup
+  Future<void> initialize() async {
+    if (_initialized) return;
+    await requestPermissionAndInitialize();
   }
 
   Future<void> _initLocalNotifications() async {

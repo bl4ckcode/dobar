@@ -87,7 +87,8 @@ Future<void> initNotificationInjections() async {
   final notificationService = NotificationService();
   getItInjector.registerSingleton<NotificationService>(notificationService);
   
-  // Initialize notifications (requests permissions, gets token, etc.)
-  await notificationService.initialize();
+  // Initialize notifications in background - don't block app startup
+  // Permission will be requested lazily, and if denied, app still works
+  notificationService.initializeInBackground();
 }
 

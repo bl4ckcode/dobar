@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_event.dart';
+import 'package:barz/l10n/app_localizations.dart';
 
 /// Onboarding view shown to business users who don't have any bars yet.
 /// 
@@ -28,7 +29,7 @@ class BusinessOnboardingView extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _buildHeader()
+                  _buildHeader(context)
                       .animate()
                       .fadeIn(duration: 400.ms)
                       .slideY(begin: -0.2, end: 0),
@@ -43,7 +44,7 @@ class BusinessOnboardingView extends StatelessWidget {
                       .fadeIn(duration: 400.ms)
                       .slideX(begin: 0.1, end: 0),
                   const SizedBox(height: 32),
-                  _buildDivider()
+                  _buildDivider(context)
                       .animate(delay: 400.ms)
                       .fadeIn(duration: 400.ms),
                   const SizedBox(height: 24),
@@ -60,7 +61,8 @@ class BusinessOnboardingView extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
         Container(
@@ -85,7 +87,7 @@ class BusinessOnboardingView extends StatelessWidget {
         ),
         const SizedBox(height: 32),
         Text(
-          'Welcome, Bar Owner! 🎉',
+          l10n.business_welcome_title,
           style: barzTextTheme.headlineMedium?.copyWith(
             fontWeight: FontWeight.bold,
             color: barzBlack,
@@ -94,7 +96,7 @@ class BusinessOnboardingView extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         Text(
-          "Let's get your bar set up on Dobar",
+          l10n.business_welcome_subtitle,
           style: barzTextTheme.bodyLarge?.copyWith(
             color: textSecondary,
           ),
@@ -105,17 +107,18 @@ class BusinessOnboardingView extends StatelessWidget {
   }
 
   Widget _buildCreateBarCard(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return _ActionCard(
       icon: Icons.add_business_rounded,
       iconColor: barzYellow,
       backgroundColor: barzBlack,
-      title: 'Create New Bar',
-      subtitle: 'Register your establishment and start receiving orders',
+      title: l10n.business_create_bar,
+      subtitle: l10n.business_create_bar_subtitle,
       onTap: () {
         // TODO: Navigate to create bar flow
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Create bar flow coming soon!'),
+            content: Text(l10n.business_coming_soon),
             backgroundColor: barzBlack,
           ),
         );
@@ -124,13 +127,14 @@ class BusinessOnboardingView extends StatelessWidget {
   }
 
   Widget _buildAcceptInvitationCard(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return _ActionCard(
       icon: Icons.mail_outline_rounded,
       iconColor: barzBlack,
       backgroundColor: surfaceWhite,
       textColor: barzBlack,
-      title: 'Accept Invitation',
-      subtitle: "Join an existing bar's team as staff",
+      title: l10n.business_accept_invitation,
+      subtitle: l10n.business_accept_invitation_subtitle,
       onTap: () {
         _showInvitationDialog(context);
       },
@@ -138,14 +142,15 @@ class BusinessOnboardingView extends StatelessWidget {
     );
   }
 
-  Widget _buildDivider() {
+  Widget _buildDivider(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       children: [
         Expanded(child: Divider(color: Colors.grey[300])),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
-            'or explore as',
+            l10n.business_or_explore_as,
             style: TextStyle(
               color: Colors.grey[500],
               fontSize: 14,
@@ -158,13 +163,14 @@ class BusinessOnboardingView extends StatelessWidget {
   }
 
   Widget _buildSwitchToClientButton(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return TextButton.icon(
       onPressed: () {
         context.read<SessionBloc>().add(const SessionEvent.switchToClientMode());
       },
       icon: Icon(Icons.person_outline, color: barzBlack),
       label: Text(
-        'Switch to Client Mode',
+        l10n.business_switch_to_client,
         style: barzTextTheme.bodyLarge?.copyWith(
           color: barzBlack,
           fontWeight: FontWeight.w500,
@@ -178,30 +184,44 @@ class BusinessOnboardingView extends StatelessWidget {
 
   void _showInvitationDialog(BuildContext context) {
     final controller = TextEditingController();
+    final l10n = AppLocalizations.of(context)!;
     
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Enter Invitation Code'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            hintText: 'Paste your invitation code',
-            border: OutlineInputBorder(),
-          ),
-          autofocus: true,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(l10n.business_enter_code),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: controller,
+              decoration: InputDecoration(
+                hintText: l10n.business_enter_code_hint,
+                border: const OutlineInputBorder(),
+              ),
+              autofocus: true,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              l10n.business_code_instructions,
+              style: TextStyle(
+                color: Colors.grey[600],
+                fontSize: 12,
+              ),
+            ),
+          ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+            onPressed: () => Navigator.pop(dialogContext),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () {
-              Navigator.pop(context);
+              Navigator.pop(dialogContext);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: const Text('Invitation acceptance coming soon!'),
+                  content: Text(l10n.business_coming_soon),
                   backgroundColor: barzBlack,
                 ),
               );
@@ -210,7 +230,7 @@ class BusinessOnboardingView extends StatelessWidget {
               backgroundColor: barzYellow,
               foregroundColor: barzBlack,
             ),
-            child: const Text('Accept'),
+            child: Text(l10n.business_join_team),
           ),
         ],
       ),

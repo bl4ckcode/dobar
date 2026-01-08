@@ -7,6 +7,7 @@ import 'package:barz/features/session/presentation/bloc/session_state.dart';
 import 'package:barz/features/session/presentation/bloc/session_event.dart';
 import 'package:barz/features/session/domain/models/bar_access.dart';
 import 'package:barz/features/advertising/presentation/pages/campaigns_page.dart';
+import 'package:barz/l10n/app_localizations.dart';
 import 'business_dashboard_page.dart';
 import 'cashier_page.dart';
 import 'menu_management_page.dart';
@@ -75,7 +76,7 @@ class _BusinessShellState extends State<BusinessShell> {
         }
 
         // Build navigation items based on permissions
-        final navItems = _buildNavItems(activeBar);
+        final navItems = _buildNavItems(context, activeBar);
         
         // Ensure selected index is valid
         if (_selectedIndex >= navItems.length) {
@@ -113,7 +114,7 @@ class _BusinessShellState extends State<BusinessShell> {
         actions: [
           IconButton(
             icon: const Icon(Icons.person_outline),
-            tooltip: 'Switch to Client Mode',
+            tooltip: AppLocalizations.of(context)!.business_client_mode,
             onPressed: () {
               context.read<SessionBloc>().add(const SessionEvent.switchToClientMode());
             },
@@ -234,16 +235,17 @@ class _BusinessShellState extends State<BusinessShell> {
     );
   }
 
-  List<BusinessNavItem> _buildNavItems(BarAccess activeBar) {
+  List<BusinessNavItem> _buildNavItems(BuildContext context, BarAccess activeBar) {
+    final l10n = AppLocalizations.of(context)!;
     final items = <BusinessNavItem>[
       BusinessNavItem(
         icon: Icons.dashboard,
-        label: 'Dashboard',
+        label: l10n.business_dashboard,
         page: const BusinessDashboardPage(),
       ),
       BusinessNavItem(
         icon: Icons.point_of_sale,
-        label: 'Orders',
+        label: l10n.business_orders,
         page: const CashierPage(),
       ),
     ];
@@ -251,7 +253,7 @@ class _BusinessShellState extends State<BusinessShell> {
     if (activeBar.canEditMenu) {
       items.add(BusinessNavItem(
         icon: Icons.restaurant_menu,
-        label: 'Menu',
+        label: l10n.business_menu,
         page: const MenuManagementPage(),
       ));
     }
@@ -259,7 +261,7 @@ class _BusinessShellState extends State<BusinessShell> {
     if (activeBar.canManageAds) {
       items.add(BusinessNavItem(
         icon: Icons.campaign,
-        label: 'Ads',
+        label: l10n.business_promotions,
         page: const CampaignsPage(),
       ));
     }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/core/rbac/rbac.dart';
 import 'package:barz/features/session/domain/models/bar_access.dart';
+import 'package:barz/l10n/app_localizations.dart';
 import '../business_shell.dart';
 
 /// Side navigation menu for web/tablet layout of BusinessShell.
@@ -56,7 +57,7 @@ class BusinessSideMenu extends StatelessWidget {
           ),
           const Divider(color: Colors.white12, height: 1),
           // Switch to client mode
-          _buildSwitchToClientButton(),
+          _buildSwitchToClientButton(context),
           const SizedBox(height: 8),
         ],
       ),
@@ -250,7 +251,8 @@ class BusinessSideMenu extends StatelessWidget {
     );
   }
 
-  Widget _buildSwitchToClientButton() {
+  Widget _buildSwitchToClientButton(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       margin: const EdgeInsets.all(12),
       child: Material(
@@ -276,7 +278,7 @@ class BusinessSideMenu extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Client Mode',
+                  l10n.business_client_mode,
                   style: TextStyle(
                     color: Colors.grey[300],
                     fontSize: 14,
