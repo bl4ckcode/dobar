@@ -58,21 +58,21 @@
 **Priority:** 🔴 Critical | **Timeline:** 1 week
 
 **Tasks:**
-- [ ] Convert all gateway methods to async
-- [ ] Add Redis Streams for job queue
-- [ ] Implement background workers
-- [ ] Add job status tracking
-- [ ] WebSocket notifications on completion
+- [x] Convert all gateway methods to async
+- [x] Add Redis Streams for job queue
+- [x] Implement background workers
+- [x] Add job status tracking
+- [x] WebSocket notifications on completion
 
 ### 1.2 PIX Direct Integration
 **Priority:** 🔴 Critical | **Timeline:** 2 weeks
 
 **Tasks:**
-- [ ] Create PixDirectGateway class
+- [x] Create PixDirectGateway class
 - [ ] Implement DICT lookup (CPF/CNPJ/Phone/Email → PIX key)
-- [ ] Generate PIX Copia e Cola (EMV QR code)
-- [ ] Handle instant notifications (webhook from bank)
-- [ ] Implement reconciliation system
+- [x] Generate PIX Copia e Cola (EMV QR code)
+- [x] Handle instant notifications (webhook from bank)
+- [x] Implement reconciliation system
 
 ### 1.3 Offline Transaction Queue
 **Priority:** 🟡 High | **Timeline:** 1 week
