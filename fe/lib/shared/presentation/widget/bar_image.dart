@@ -41,6 +41,7 @@ class _BarImageState extends State<BarImage> {
   String? _currentUrl;
   bool _isLoading = true;
   bool _hasError = false;
+  bool _refreshAttempted = false; // Prevent multiple refresh attempts on error
 
   @override
   void initState() {
@@ -65,6 +66,7 @@ class _BarImageState extends State<BarImage> {
     setState(() {
       _isLoading = true;
       _hasError = false;
+      _refreshAttempted = false; // Reset on new load
     });
 
     try {
@@ -169,12 +171,21 @@ class _BarImageState extends State<BarImage> {
       },
       errorBuilder: (context, error, stackTrace) {
         debugPrint('[BarImage] Error loading image for bar ${widget.barId}: $error');
-        // Try to refresh on error (might be expired URL)
-        _imageRefreshService.forceRefresh(widget.barId).then((newUrl) {
-          if (newUrl != null && mounted) {
-            setState(() => _currentUrl = newUrl);
-          }
-        });
+        // Try to refresh on error (might be expired URL) - but only once
+        // Don't call refresh synchronously in build - use post-frame callback
+        if (!_refreshAttempted && !_imageRefreshService.isInCooldown(widget.barId)) {
+          _refreshAttempted = true;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _imageRefreshService.forceRefresh(widget.barId).then((newUrl) {
+              if (newUrl != null && mounted) {
+                setState(() => _currentUrl = newUrl);
+              } else if (mounted) {
+                // Refresh failed or returned null, show error state
+                setState(() => _hasError = true);
+              }
+            });
+          });
+        }
         return widget.errorWidget ?? defaultError;
       },
     );
@@ -217,6 +228,7 @@ class _BarImageAvatarState extends State<BarImageAvatar> {
   late ImageRefreshService _imageRefreshService;
   String? _currentUrl;
   bool _isLoading = true;
+  bool _refreshAttempted = false; // Prevent multiple refresh attempts on error
 
   @override
   void initState() {
@@ -237,7 +249,10 @@ class _BarImageAvatarState extends State<BarImageAvatar> {
   Future<void> _loadValidUrl() async {
     if (!mounted) return;
     
-    setState(() => _isLoading = true);
+    setState(() {
+      _isLoading = true;
+      _refreshAttempted = false; // Reset on new load
+    });
 
     try {
       final validUrl = await _imageRefreshService.getValidImageUrl(
@@ -300,8 +315,15 @@ class _BarImageAvatarState extends State<BarImageAvatar> {
       backgroundImage: NetworkImage(_currentUrl!),
       onBackgroundImageError: (exception, stackTrace) {
         debugPrint('[BarImageAvatar] Error loading image: $exception');
-        // Try to refresh on error
-        _imageRefreshService.forceRefresh(widget.barId);
+        // Try to refresh on error - but only once and with cooldown check
+        if (!_refreshAttempted && !_imageRefreshService.isInCooldown(widget.barId)) {
+          _refreshAttempted = true;
+          _imageRefreshService.forceRefresh(widget.barId).then((newUrl) {
+            if (newUrl != null && mounted) {
+              setState(() => _currentUrl = newUrl);
+            }
+          });
+        }
       },
       child: null,
     );
