@@ -227,9 +227,19 @@ class _OnboardingView extends StatelessWidget {
             items: countries.map((country) {
               return DropdownMenuItem(
                 value: country,
-                child: Text(country.displayName),
+                // Only show name here since flag is already shown as prefix
+                child: Text('${country.flag} ${country.name}'),
               );
             }).toList(),
+            selectedItemBuilder: (context) {
+              // When selected, only show name since flag is shown in prefixIcon
+              return countries.map((country) {
+                return Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(country.name),
+                );
+              }).toList();
+            },
             onChanged: (country) {
               if (country != null) {
                 context.read<OnboardingBloc>().add(

@@ -41,12 +41,19 @@ class _AppShellState extends State<AppShell> {
             initial: () => const _LoadingView(),
             loading: () => const _LoadingView(),
             ready: (session, forceClientMode) {
-              // Determine which shell to show based on bar access and role
-              if (forceClientMode || session.barAccess.isEmpty) {
+              // Determine which shell to show based on user type and bar access
+              // Business users should always see BusinessShell (even with no bars)
+              // so they can create their first bar
+              if (forceClientMode) {
                 return const WireframeShell();
-              } else {
+              }
+              
+              // Show BusinessShell for business users OR users with bar access
+              if (session.isBusiness || session.barAccess.isNotEmpty) {
                 return const BusinessShell();
               }
+              
+              return const WireframeShell();
             },
             // On error, show client view with error message option
             error: (message) => const WireframeShell(),
