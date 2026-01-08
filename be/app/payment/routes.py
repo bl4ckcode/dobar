@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query
 
 from app.errors import APIError, map_gateway_error
 from .schemas import PaymentRequest, RefundRequest
-from dobar_payment import get_payment_gateway, PaymentGateway
+from . import get_payment_gateway, PaymentGateway
 
 payment_router = APIRouter(prefix="/payments", tags=["Payments"])
 
