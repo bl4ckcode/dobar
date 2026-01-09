@@ -147,6 +147,15 @@ If you are not writing the prompt in a file, you should always wrap the prompt i
 
 Remember that todo lists must always be written in markdown format and must always be wrapped in triple backticks.
 
+# Barz-backend terminal command lines execution
+Remember that syntax commands through terminal such as:
+
+fly postgres connect -a barzdb -d barz_db -c "SELECT id, firebase_uid, phone_number, email, google_id FROM users WHERE email LIKE '%carlos%' OR phone_number LIKE '%55%' ORDER BY id;"
+
+Doesn't work, you must add the following approach where you select the exact value you want:
+
+sql -d barz_db -c "DELETE FROM menu_items;" && psql -d barz_db -c "DELETE FROM menus;" && psql -d barz_db -c "SELECT setval('menus_id_seq', 1, false);" && psql -d barz_db -c "SELECT setval('menu_items_id_seq', 1, false);"
+
 # Git 
 If the user tells you to stage and commit, you may do so. 
 

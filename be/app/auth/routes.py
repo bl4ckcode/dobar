@@ -153,7 +153,8 @@ async def verify_google_token(id_token: str) -> dict:
     try:
         decoded = firebase_auth.verify_id_token(id_token)
         return {
-            "sub": decoded.get("uid"),
+            "sub": decoded.get("uid"),  # Firebase UID
+            "firebase_uid": decoded.get("uid"),  # Also return as firebase_uid for linking
             "email": decoded.get("email"),
             "name": decoded.get("name"),
             "provider": "google"
@@ -167,7 +168,8 @@ async def verify_google_token(id_token: str) -> dict:
             raise APIError.invalid_token("Invalid Google token")
         data = response.json()
         return {
-            "sub": data.get("sub"),
+            "sub": data.get("sub"),  # Google ID (no Firebase UID in this case)
+            "firebase_uid": None,
             "email": data.get("email"),
             "name": data.get("name"),
             "provider": "google"
@@ -178,7 +180,8 @@ async def verify_apple_token(id_token: str) -> dict:
     try:
         decoded = firebase_auth.verify_id_token(id_token)
         return {
-            "sub": decoded.get("uid"),
+            "sub": decoded.get("uid"),  # Firebase UID
+            "firebase_uid": decoded.get("uid"),  # Also return as firebase_uid for linking
             "email": decoded.get("email"),
             "name": decoded.get("name"),
             "provider": "apple"
@@ -190,7 +193,8 @@ async def verify_apple_token(id_token: str) -> dict:
         from jose import jwt as jose_jwt
         unverified = jose_jwt.get_unverified_claims(id_token)
         return {
-            "sub": unverified.get("sub"),
+            "sub": unverified.get("sub"),  # Apple ID (no Firebase UID in this case)
+            "firebase_uid": None,
             "email": unverified.get("email"),
             "name": None,
             "provider": "apple"
@@ -245,12 +249,26 @@ async def phone_login(firebase_user=Depends(verify_firebase_token)):
 async def google_login(login_data: GoogleLogin):
     token_info = await verify_google_token(login_data.id_token)
     google_id = token_info["sub"]
+    firebase_uid = token_info.get("firebase_uid")  # Firebase UID if verified via Firebase
     email = token_info.get("email") or login_data.email
     display_name = token_info.get("name") or login_data.display_name
     
     user = await get_user_by_google_id(google_id)
     is_new = False
     
+    # If not found by google_id, try firebase_uid (links phone + Google accounts)
+    if not user and firebase_uid:
+        user = await get_user_by_firebase_uid(firebase_uid)
+        if user:
+            # Link Google ID to existing user (found by Firebase UID)
+            await database.execute(
+                User.__table__.update().where(User.id == user["id"]).values(
+                    google_id=google_id,
+                    email=email or user["email"]  # Also update email if not set
+                )
+            )
+    
+    # If still not found, try by email
     if not user and email:
         user = await get_user_by_email(email)
         if user:
@@ -261,6 +279,8 @@ async def google_login(login_data: GoogleLogin):
     if not user:
         is_new = True
         user_data = {"google_id": google_id, "email": email, "is_active": True}
+        if firebase_uid:
+            user_data["firebase_uid"] = firebase_uid
         user_id = await database.execute(User.__table__.insert().values(**user_data))
         user = await database.fetch_one(User.__table__.select().where(User.id == user_id))
         
@@ -288,12 +308,26 @@ async def google_login(login_data: GoogleLogin):
 async def apple_login(login_data: AppleLogin):
     token_info = await verify_apple_token(login_data.id_token)
     apple_id = token_info["sub"]
+    firebase_uid = token_info.get("firebase_uid")  # Firebase UID if verified via Firebase
     email = token_info.get("email") or login_data.email
     display_name = login_data.display_name
     
     user = await get_user_by_apple_id(apple_id)
     is_new = False
     
+    # If not found by apple_id, try firebase_uid (links phone + Apple accounts)
+    if not user and firebase_uid:
+        user = await get_user_by_firebase_uid(firebase_uid)
+        if user:
+            # Link Apple ID to existing user (found by Firebase UID)
+            await database.execute(
+                User.__table__.update().where(User.id == user["id"]).values(
+                    apple_id=apple_id,
+                    email=email or user["email"]  # Also update email if not set
+                )
+            )
+    
+    # If still not found, try by email
     if not user and email:
         user = await get_user_by_email(email)
         if user:
@@ -304,6 +338,8 @@ async def apple_login(login_data: AppleLogin):
     if not user:
         is_new = True
         user_data = {"apple_id": apple_id, "email": email, "is_active": True}
+        if firebase_uid:
+            user_data["firebase_uid"] = firebase_uid
         user_id = await database.execute(User.__table__.insert().values(**user_data))
         user = await database.fetch_one(User.__table__.select().where(User.id == user_id))
         
