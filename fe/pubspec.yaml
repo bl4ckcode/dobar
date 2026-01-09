@@ -82,6 +82,7 @@ dependencies:
 
   # --- SOCIAL LOGIN ---
   google_sign_in: ^7.2.0            # Updated
+  google_sign_in_web: ^1.1.0        # Explicit import for web-only renderButton()
   sign_in_with_apple: ^7.0.1
 
   # --- PAYMENTS SPECIFIC ---

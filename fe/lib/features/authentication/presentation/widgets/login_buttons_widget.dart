@@ -11,6 +11,7 @@ import 'package:barz/features/authentication/presentation/bloc/login_event.dart'
 
 import 'login_buttons_platform.dart'
     if (dart.library.io) 'login_buttons_platform_io.dart';
+import 'google_button.dart' as web;
 
 class LoginButtonsWidget extends StatefulWidget {
   final LoginBloc loginBloc;
@@ -114,13 +115,27 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
   }
 
   Future<void> _signInWithGoogle() async {
+    // This method is only called on mobile platforms
+    // On web, we use renderButton() which handles its own sign-in flow
     try {
       final signIn = GoogleSignIn.instance;
+      debugPrint("[Google Sign-In] Button clicked (mobile)");
+      
       if (signIn.supportsAuthenticate()) {
+        debugPrint("[Google Sign-In] Calling authenticate()...");
         await signIn.authenticate();
+        debugPrint("[Google Sign-In] authenticate() completed");
+      } else {
+        debugPrint("[Google Sign-In] authenticate() not supported - this shouldn't happen on mobile");
       }
-    } catch (e) {
-      debugPrint("Error signing in with Google: $e");
+    } catch (e, stack) {
+      debugPrint("[Google Sign-In] Error: $e");
+      debugPrint("[Google Sign-In] Stack: $stack");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Google Sign-In failed: ${e.toString().split(':').last}')),
+        );
+      }
     }
   }
 
@@ -171,16 +186,18 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // On web: show both Google and Apple
-        // On Android: show Google only
-        // On iOS: show Apple only
-        if (kIsWeb || isAndroidPlatform())
+        // On web: use Google's native renderButton() (required by GIS SDK)
+        // On Android: use custom button with authenticate()
+        if (kIsWeb)
+          _buildGoogleButtonWeb()
+        else if (isAndroidPlatform())
           _buildSocialButton(
             onPressed: _signInWithGoogle,
             icon: 'assets/icons/google.png',
             label: 'Continue with Google',
           ),
         if (kIsWeb) const SizedBox(height: BarzSpacing.md),
+        // Apple sign-in: web and iOS
         if (kIsWeb || isIOSPlatform())
           _buildSocialButton(
             onPressed: _signInWithApple,
@@ -188,6 +205,19 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
             label: 'Continue with Apple',
           ),
       ],
+    );
+  }
+
+  /// Builds the Google Sign-In button for web using Google's native SDK button
+  Widget _buildGoogleButtonWeb() {
+    return Container(
+      width: double.infinity,
+      height: TouchTargets.minimum,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(BarzRadii.md),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: web.renderButton(),
     );
   }
 
