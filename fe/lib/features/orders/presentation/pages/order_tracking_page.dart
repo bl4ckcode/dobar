@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:barz/core/services/email_prompt_service.dart';
 import 'package:barz/core/services/websocket/order_tracking_service.dart';
 import 'package:barz/core/services/websocket/websocket_service.dart';
 import 'package:barz/core/services/token_storage_service.dart';
@@ -6,7 +7,10 @@ import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/orders/presentation/bloc/order_bloc.dart';
 import 'package:barz/features/orders/presentation/bloc/order_event.dart';
 import 'package:barz/features/orders/presentation/bloc/order_state.dart';
+import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
+import 'package:barz/features/user/domain/usecases/user_usecase.dart';
 import 'package:barz/l10n/app_localizations.dart';
+import 'package:barz/shared/presentation/widget/email_prompt_modal.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -31,6 +35,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage>
   OrderStatus _currentStatus = OrderStatus.pending;
   bool _isConnected = false;
   bool _isReconnecting = false;
+  bool _hasShownEmailPrompt = false;
 
   @override
   void initState() {
@@ -96,6 +101,10 @@ class _OrderTrackingPageState extends State<OrderTrackingPage>
       case OrderStatus.ready:
         message = l10n.notification_order_ready;
         break;
+      case OrderStatus.completed:
+        message = l10n.order_status_completed;
+        _maybeShowEmailPrompt();
+        break;
       default:
         message = update.message ?? update.status.displayName;
     }
@@ -112,6 +121,40 @@ class _OrderTrackingPageState extends State<OrderTrackingPage>
         duration: const Duration(seconds: 3),
         behavior: SnackBarBehavior.floating,
       ),
+    );
+  }
+
+  Future<void> _maybeShowEmailPrompt() async {
+    if (_hasShownEmailPrompt) return;
+
+    final sessionState = context.read<SessionBloc>().state;
+    final user = sessionState.currentSession?.user;
+    if (user == null) return;
+
+    final emailPromptService = getItInjector<EmailPromptService>();
+    final hasEmail = user.email != null && user.email!.isNotEmpty;
+    
+    if (!emailPromptService.shouldShowPrompt(hasEmail: hasEmail)) return;
+
+    _hasShownEmailPrompt = true;
+
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (!mounted) return;
+
+    final userUsecase = getItInjector<UserUsecase>();
+
+    await EmailPromptModal.show(
+      context,
+      onSubmit: (email) async {
+        final result = await userUsecase.updateProfile(email: email);
+        result.fold(
+          (failure) => throw Exception(failure.errorMessage),
+          (_) async => await emailPromptService.clearDismissed(),
+        );
+      },
+      onDismiss: () async {
+        await emailPromptService.markDismissed();
+      },
     );
   }
 

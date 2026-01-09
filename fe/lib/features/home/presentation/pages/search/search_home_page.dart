@@ -1,8 +1,16 @@
 import 'dart:async';
 
+import 'package:barz/core/utils/injections.dart';
+import 'package:barz/features/advertising/domain/models/map_ad.dart';
+import 'package:barz/features/advertising/presentation/bloc/advertising_bloc.dart';
+import 'package:barz/features/advertising/presentation/bloc/advertising_event.dart';
+import 'package:barz/features/advertising/presentation/bloc/advertising_state.dart';
+import 'package:barz/features/advertising/presentation/widgets/ad_tracking_service.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:location/location.dart';
 
@@ -17,19 +25,39 @@ class _SearchHomePageState extends State<SearchHomePage> {
   static const brasiliaLatLng = LatLng(-15.793889, -47.882778);
 
   final Completer<GoogleMapController> _controller = Completer();
+  late AdvertisingBloc _advertisingBloc;
+  late AdTrackingService _adTrackingService;
 
   List<LatLng> polylineCoordinates = [];
   LocationData? currentLocation;
+  Set<Marker> _adMarkers = {};
 
   BitmapDescriptor currentLocationIcon = BitmapDescriptor.defaultMarker;
+  BitmapDescriptor? _sponsoredMarkerIcon;
+
+  @override
+  void initState() {
+    super.initState();
+    _advertisingBloc = getItInjector<AdvertisingBloc>();
+    _adTrackingService = AdTrackingService();
+    _loadSponsoredMarkerIcon();
+    getCurrentLocation();
+  }
+
+  Future<void> _loadSponsoredMarkerIcon() async {
+    _sponsoredMarkerIcon = BitmapDescriptor.defaultMarkerWithHue(
+      BitmapDescriptor.hueYellow,
+    );
+  }
 
   void getCurrentLocation() async {
     Location location = Location();
     GoogleMapController googleMapController = await _controller.future;
 
     location.getLocation().then(
-      (location) {
-        currentLocation = location;
+      (loc) {
+        currentLocation = loc;
+        _loadMapAds();
       },
     );
 
@@ -58,6 +86,50 @@ class _SearchHomePageState extends State<SearchHomePage> {
         }
       },
     );
+  }
+
+  void _loadMapAds() {
+    final lat = currentLocation?.latitude;
+    final lng = currentLocation?.longitude;
+    if (lat != null && lng != null) {
+      _advertisingBloc.add(
+        AdvertisingEvent.loadMapAds(
+          latitude: lat,
+          longitude: lng,
+          limit: 10,
+        ),
+      );
+    }
+  }
+
+  void _buildAdMarkers(List<MapAd> mapAds) {
+    _adMarkers = mapAds.map((ad) {
+      return Marker(
+        markerId: MarkerId('ad_${ad.campaignId}'),
+        position: LatLng(ad.latitude, ad.longitude),
+        icon: _sponsoredMarkerIcon ?? BitmapDescriptor.defaultMarker,
+        infoWindow: InfoWindow(
+          title: '⭐ ${ad.barName}',
+          onTap: () {
+            _adTrackingService.trackClick(
+              ad.campaignId,
+              AdPlacement.map,
+              latitude: currentLocation?.latitude,
+              longitude: currentLocation?.longitude,
+            );
+            context.push('/bar/${ad.barId}');
+          },
+        ),
+        onTap: () {
+          _adTrackingService.trackImpression(
+            ad.campaignId,
+            AdPlacement.map,
+            latitude: currentLocation?.latitude,
+            longitude: currentLocation?.longitude,
+          );
+        },
+      );
+    }).toSet();
   }
 
   //API Key AIzaSyBPLRryzGP6sIZSn3LTjEw9BpIVESOdXSA
@@ -106,13 +178,6 @@ class _SearchHomePageState extends State<SearchHomePage> {
   }
 
   @override
-  void initState() {
-    getCurrentLocation();
-    //getPolypoints();
-    super.initState();
-  }
-
-  @override
   void dispose() {
     _controller.future.then((controller) => controller.dispose());
     super.dispose();
@@ -125,14 +190,20 @@ class _SearchHomePageState extends State<SearchHomePage> {
         bottom: false,
         child: Padding(
           padding: const EdgeInsets.only(bottom: 120),
-          child: googleMapWidget(),
+          child: BlocBuilder<AdvertisingBloc, AdvertisingState>(
+            bloc: _advertisingBloc,
+            builder: (context, adState) {
+              _buildAdMarkers(adState.mapAds);
+              return googleMapWidget();
+            },
+          ),
         ),
       ),
     );
   }
 
   Widget googleMapWidget() {
-    GoogleMap googleMapWidget = GoogleMap(
+    return GoogleMap(
       mapType: MapType.normal,
       myLocationEnabled: true,
       myLocationButtonEnabled: true,
@@ -143,42 +214,14 @@ class _SearchHomePageState extends State<SearchHomePage> {
         ),
         zoom: getProperZoom(),
       ),
-      // polylines: {
-      //   Polyline(
-      //     polylineId: const PolylineId("route"),
-      //     points: polylineCoordinates,
-      //     color: mainColor,
-      //     width: 6,
-      //   ),
-      // },
-      markers: const {
-        // Marker(
-        //   markerId: const MarkerId("currentLocation"),
-        //   position: LatLng(
-        //     currentLocation?.latitude ?? 0,
-        //     currentLocation?.longitude ?? 0,
-        //   ),
-        // ),
-        // const Marker(
-        //   markerId: MarkerId("source"),
-        //   position: sourceLocation,
-        // ),
-        // const Marker(
-        //   markerId: MarkerId("destination"),
-        //   position: destination,
-        // ),
-      },
-      onMapCreated: (mapContrtoller) {
-        _controller.complete(mapContrtoller);
+      markers: _adMarkers,
+      onMapCreated: (mapController) {
+        _controller.complete(mapController);
       },
       gestureRecognizers: {
         Factory<OneSequenceGestureRecognizer>(
-            () => PanGestureRecognizer()..onEnd = (drag) {
-
-            })
+            () => PanGestureRecognizer()..onEnd = (drag) {})
       },
     );
-
-    return googleMapWidget;
   }
 }

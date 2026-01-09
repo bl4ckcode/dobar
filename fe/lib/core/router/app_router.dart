@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:barz/core/network/dio_network.dart';
 import 'package:barz/ui/shell/app_shell.dart';
 import 'package:barz/ui/screens/create_bar_screen.dart';
+import 'package:barz/features/advertising/presentation/pages/campaign_analytics_page.dart';
+import 'package:barz/features/advertising/presentation/pages/subscription_plans_page.dart';
 import 'package:barz/features/bars/presentation/pages/bar_detail_page.dart';
 import 'package:barz/features/promotions/presentation/pages/promotion_detail_page.dart';
 import 'package:barz/features/orders/presentation/pages/order_tracking_page.dart';
@@ -145,6 +147,19 @@ final appRouter = GoRouter(
       path: '/cart',
       name: 'cart',
       builder: (context, state) => const CartPage(),
+    ),
+    GoRoute(
+      path: '/business/campaign/:campaignId/analytics',
+      name: 'campaignAnalytics',
+      builder: (context, state) {
+        final campaignId = int.parse(state.pathParameters['campaignId']!);
+        return CampaignAnalyticsPage(campaignId: campaignId);
+      },
+    ),
+    GoRoute(
+      path: '/business/subscription-plans',
+      name: 'subscriptionPlans',
+      builder: (context, state) => const SubscriptionPlansPage(),
     ),
   ],
 );

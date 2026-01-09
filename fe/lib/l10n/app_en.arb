@@ -208,5 +208,55 @@
   "business_settings": "Settings",
   "business_client_mode": "Client Mode",
   "business_select_bar": "Select bar",
-  "business_no_bar_selected": "No bar selected"
+  "business_no_bar_selected": "No bar selected",
+
+  "email_prompt_title": "Want your receipt?",
+  "email_prompt_benefits": "Add your email to get:",
+  "email_benefit_receipts": "Digital receipts",
+  "email_benefit_history": "Order history access",
+  "email_benefit_recovery": "Account recovery if you lose your phone",
+  "email_prompt_add": "Add Email",
+  "email_prompt_skip": "Maybe Later",
+  "email_invalid": "Please enter a valid email",
+  "email_already_in_use": "This email is already linked to another account",
+  "email_update_failed": "Failed to update email. Please try again.",
+  "email_added_success": "Email added successfully!",
+
+  "featured": "Featured",
+  "sponsored": "Sponsored",
+  "ad_distance_away": "{distance} km away",
+  "@ad_distance_away": {
+    "placeholders": {
+      "distance": {
+        "type": "String"
+      }
+    }
+  },
+
+  "analytics": "Analytics",
+  "performance": "Performance",
+  "impressions": "Impressions",
+  "clicks": "Clicks",
+  "conversions": "Conversions",
+  "cost_per_click": "Cost per Click",
+  "conversion_rate": "Conversion Rate",
+  "budget": "Budget",
+  "remaining": "Remaining",
+  "daily_average": "Daily Avg",
+  "daily_breakdown": "Daily Breakdown",
+  "no_data_available": "No data available",
+
+  "subscription_plans": "Subscription Plans",
+  "choose_your_plan": "Choose Your Plan",
+  "boost_your_bar_visibility": "Boost your bar's visibility and reach more customers",
+  "no_plans_available": "No plans available at the moment",
+  "current_plan": "Current Plan",
+  "valid_until": "Valid until",
+  "choose_plan": "Choose Plan",
+  "most_popular": "Most Popular",
+  "commission": "Commission",
+  "subscribe_to": "Subscribe to",
+  "confirm_subscription_message": "Do you want to subscribe to",
+  "subscription_created": "Subscription created successfully!",
+  "select_bar_first": "Please select a bar first"
 }

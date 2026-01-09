@@ -1,5 +1,6 @@
 import 'package:barz/core/network/dio_network.dart';
 import 'package:barz/core/router/app_router.dart';
+import 'package:barz/core/services/email_prompt_service.dart';
 import 'package:barz/core/services/image_refresh_service.dart';
 import 'package:barz/core/services/notifications/notification_service.dart';
 import 'package:barz/core/services/token_storage_service.dart';
@@ -52,6 +53,10 @@ Future<void> initSharedPrefsInjections() async {
     return await SharedPreferences.getInstance();
   });
   await getItInjector.isReady<SharedPreferences>();
+
+  getItInjector.registerLazySingleton<EmailPromptService>(
+    () => EmailPromptService(getItInjector<SharedPreferences>()),
+  );
 }
 
 Future<void> initDioInjections() async {

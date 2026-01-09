@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
@@ -169,18 +170,26 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
   }
 
   void _showCreateCampaignDialog(BuildContext context) {
+    final sessionState = context.read<SessionBloc>().state;
+    if (sessionState is! SessionReady || sessionState.session.activeBar == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecione um bar primeiro')),
+      );
+      return;
+    }
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      builder: (context) => const _CreateCampaignSheet(),
+      builder: (ctx) => _CreateCampaignSheet(
+        barId: sessionState.session.activeBar!.barId,
+        bloc: context.read<AdvertisingBloc>(),
+      ),
     );
   }
 
   void _showCampaignDetails(BuildContext context, AdCampaign campaign) {
-    // TODO: Navigate to campaign details/analytics page
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Detalhes: ${campaign.name}')),
-    );
+    context.push('/business/campaign/${campaign.id}/analytics');
   }
 
   void _toggleCampaignStatus(AdCampaign campaign) {
@@ -397,7 +406,10 @@ class _CampaignCard extends StatelessWidget {
 }
 
 class _CreateCampaignSheet extends StatefulWidget {
-  const _CreateCampaignSheet();
+  final int barId;
+  final AdvertisingBloc bloc;
+
+  const _CreateCampaignSheet({required this.barId, required this.bloc});
 
   @override
   State<_CreateCampaignSheet> createState() => _CreateCampaignSheetState();
@@ -405,12 +417,15 @@ class _CreateCampaignSheet extends StatefulWidget {
 
 class _CreateCampaignSheetState extends State<_CreateCampaignSheet> {
   final _nameController = TextEditingController();
-  String _selectedType = 'featured';
+  final _taglineController = TextEditingController();
+  CampaignType _selectedType = CampaignType.featured;
   double _budget = 500;
+  bool _isCreating = false;
 
   @override
   void dispose() {
     _nameController.dispose();
+    _taglineController.dispose();
     super.dispose();
   }
 
@@ -427,7 +442,6 @@ class _CreateCampaignSheetState extends State<_CreateCampaignSheet> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Handle
           Center(
             child: Container(
               width: 40,
@@ -444,7 +458,6 @@ class _CreateCampaignSheetState extends State<_CreateCampaignSheet> {
             style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 24),
-          // Name
           TextField(
             controller: _nameController,
             decoration: const InputDecoration(
@@ -453,19 +466,27 @@ class _CreateCampaignSheetState extends State<_CreateCampaignSheet> {
             ),
           ),
           const SizedBox(height: 16),
-          // Type selector
+          TextField(
+            controller: _taglineController,
+            decoration: const InputDecoration(
+              labelText: 'Tagline (opcional)',
+              hintText: 'Ex: Os melhores drinks da cidade!',
+              border: OutlineInputBorder(),
+            ),
+            maxLength: 60,
+          ),
+          const SizedBox(height: 16),
           const Text('Tipo de campanha', style: TextStyle(fontWeight: FontWeight.w600)),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
             children: [
-              _buildTypeChip('featured', 'Destaque', Icons.star),
-              _buildTypeChip('search', 'Busca', Icons.search),
-              _buildTypeChip('map', 'Mapa', Icons.map),
+              _buildTypeChip(CampaignType.featured, 'Destaque', Icons.star),
+              _buildTypeChip(CampaignType.search, 'Busca', Icons.search),
+              _buildTypeChip(CampaignType.map, 'Mapa', Icons.map),
             ],
           ),
           const SizedBox(height: 16),
-          // Budget
           Text('Orçamento: R\$ ${_budget.toInt()}', style: const TextStyle(fontWeight: FontWeight.w600)),
           Slider(
             value: _budget,
@@ -476,17 +497,22 @@ class _CreateCampaignSheetState extends State<_CreateCampaignSheet> {
             onChanged: (v) => setState(() => _budget = v),
           ),
           const SizedBox(height: 24),
-          // Create button
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: _createCampaign,
+              onPressed: _isCreating ? null : _createCampaign,
               style: FilledButton.styleFrom(
                 backgroundColor: barzDark,
                 foregroundColor: barzGold,
                 padding: const EdgeInsets.all(16),
               ),
-              child: const Text('Criar Campanha'),
+              child: _isCreating
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2, color: barzGold),
+                    )
+                  : const Text('Criar Campanha'),
             ),
           ),
         ],
@@ -494,7 +520,7 @@ class _CreateCampaignSheetState extends State<_CreateCampaignSheet> {
     );
   }
 
-  Widget _buildTypeChip(String value, String label, IconData icon) {
+  Widget _buildTypeChip(CampaignType value, String label, IconData icon) {
     final isSelected = _selectedType == value;
     return ChoiceChip(
       label: Row(
@@ -518,8 +544,22 @@ class _CreateCampaignSheetState extends State<_CreateCampaignSheet> {
       );
       return;
     }
-    
-    // TODO: Implement campaign creation via bloc
+
+    setState(() => _isCreating = true);
+
+    final request = CreateCampaignRequest(
+      barId: widget.barId,
+      name: _nameController.text.trim(),
+      campaignType: _selectedType,
+      budgetType: BudgetType.cash,
+      budgetAmount: _budget,
+      startDate: DateTime.now(),
+      creative: _taglineController.text.isNotEmpty
+          ? CampaignCreative(tagline: _taglineController.text.trim())
+          : null,
+    );
+
+    widget.bloc.add(AdvertisingEvent.createCampaign(request: request));
     Navigator.pop(context);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Campanha "${_nameController.text}" criada!')),
