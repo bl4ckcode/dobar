@@ -55,7 +55,7 @@ class CountryFormConfig {
       addressFields: ['street', 'number', 'complement', 'neighborhood', 'city', 'state', 'cep'],
     ),
     'PT': CountryFormConfig(
-      code: CountryCode.PT,
+      code: CountryCode.pt,
       name: 'Portugal',
       phoneCode: '+351',
       currency: 'EUR',
@@ -67,7 +67,7 @@ class CountryFormConfig {
       addressFields: ['street', 'number', 'floor', 'postalCode', 'city', 'district'],
     ),
     'US': CountryFormConfig(
-      code: CountryCode.US,
+      code: CountryCode.us,
       name: 'United States',
       phoneCode: '+1',
       currency: 'USD',
@@ -79,7 +79,7 @@ class CountryFormConfig {
       addressFields: ['street', 'suite', 'city', 'state', 'zipCode'],
     ),
     'ES': CountryFormConfig(
-      code: CountryCode.ES,
+      code: CountryCode.es,
       name: 'España',
       phoneCode: '+34',
       currency: 'EUR',
@@ -91,7 +91,7 @@ class CountryFormConfig {
       addressFields: ['street', 'number', 'floor', 'postalCode', 'city', 'province'],
     ),
     'MX': CountryFormConfig(
-      code: CountryCode.MX,
+      code: CountryCode.mx,
       name: 'México',
       phoneCode: '+52',
       currency: 'MXN',
@@ -103,7 +103,7 @@ class CountryFormConfig {
       addressFields: ['street', 'extNumber', 'intNumber', 'neighborhood', 'city', 'state', 'postalCode'],
     ),
     'AR': CountryFormConfig(
-      code: CountryCode.AR,
+      code: CountryCode.ar,
       name: 'Argentina',
       phoneCode: '+54',
       currency: 'ARS',

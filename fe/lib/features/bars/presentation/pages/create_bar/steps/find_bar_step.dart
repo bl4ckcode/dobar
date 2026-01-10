@@ -20,8 +20,6 @@ class FindBarStep extends StatefulWidget {
 }
 
 class _FindBarStepState extends State<FindBarStep> {
-  bool _manualEntry = false;
-
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -206,7 +204,6 @@ class _FindBarStepState extends State<FindBarStep> {
           TextButton(
             onPressed: () {
               setState(() {
-                _manualEntry = true;
                 widget.formData.countryCode = 'BR';
               });
               widget.onNext();
