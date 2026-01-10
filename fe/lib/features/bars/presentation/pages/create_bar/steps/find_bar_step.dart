@@ -188,17 +188,18 @@ class _FindBarStepState extends State<FindBarStep> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: surfaceMuted,
+        color: surfaceWhite,
         borderRadius: BorderRadius.circular(BarzRadii.md),
+        border: Border.all(color: barzGoldMuted, width: 1),
       ),
       child: Row(
         children: [
-          Icon(Icons.edit_rounded, color: textSecondary, size: 20),
+          Icon(Icons.edit_rounded, color: barzDark.withValues(alpha: 0.5), size: 20),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               l10n.cant_find_bar,
-              style: TextStyle(color: textSecondary, fontSize: 14),
+              style: TextStyle(color: barzDark.withValues(alpha: 0.6), fontSize: 14),
             ),
           ),
           TextButton(
@@ -208,9 +209,14 @@ class _FindBarStepState extends State<FindBarStep> {
               });
               widget.onNext();
             },
+            style: TextButton.styleFrom(
+              backgroundColor: barzGoldMuted,
+              foregroundColor: barzDark,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            ),
             child: Text(
               l10n.enter_manually,
-              style: TextStyle(color: barzGold, fontWeight: FontWeight.w600),
+              style: const TextStyle(fontWeight: FontWeight.w600),
             ),
           ),
         ],

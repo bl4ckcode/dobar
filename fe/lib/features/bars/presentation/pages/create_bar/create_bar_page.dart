@@ -11,7 +11,7 @@ import 'steps/photos_step.dart';
 import 'steps/hours_step.dart';
 import 'steps/review_step.dart';
 
-const _googleApiKey = 'AIzaSyBpZfPgAJnXglNVxK8yLPRMvGe3LEVqVm0';
+const _googleApiKey = 'AIzaSyBYxRApMMfkA9dI6qHYUEYxHY8ZsZf6jOI';
 
 class CreateBarPage extends StatefulWidget {
   const CreateBarPage({super.key});

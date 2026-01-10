@@ -112,114 +112,117 @@ class _LoginPageState extends State<LoginPage> {
             }
           },
           child: SafeArea(
-            child: CustomScrollView(
-              slivers: <Widget>[
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        // Logo
-                        SizedBox(
-                          height: 120,
-                          child: Image.asset(
-                            'assets/login/barz_text_icon.png',
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                        
-                        // Phone login
-                        LoginFieldsWidget(onLoginPressed: _handleLogin),
-                        
-                        const SizedBox(height: 24),
-                        
-                        // Divider
-                        Row(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
+                    child: IntrinsicHeight(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                        child: Column(
                           children: [
-                            Expanded(child: Divider(color: barzDark.withValues(alpha: 0.3))),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              child: Text(
-                                "or continue with",
-                                style: TextStyle(
-                                  color: barzDark.withValues(alpha: 0.6),
-                                  fontWeight: FontWeight.w500,
-                                ),
+                            // Logo
+                            SizedBox(
+                              height: 100,
+                              child: Image.asset(
+                                'assets/login/barz_text_icon.png',
+                                fit: BoxFit.contain,
                               ),
                             ),
-                            Expanded(child: Divider(color: barzDark.withValues(alpha: 0.3))),
+                            const SizedBox(height: 24),
+                            
+                            // Phone login
+                            LoginFieldsWidget(onLoginPressed: _handleLogin),
+                            
+                            const SizedBox(height: 20),
+                            
+                            // Divider
+                            Row(
+                              children: [
+                                Expanded(child: Divider(color: barzDark.withValues(alpha: 0.3))),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  child: Text(
+                                    "or continue with",
+                                    style: TextStyle(
+                                      color: barzDark.withValues(alpha: 0.6),
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ),
+                                Expanded(child: Divider(color: barzDark.withValues(alpha: 0.3))),
+                              ],
+                            ),
+                            
+                            const SizedBox(height: 20),
+                            
+                            // Social login buttons
+                            LoginButtonsWidget(loginBloc: _loginBloc),
+                            
+                            const SizedBox(height: 24),
+                            
+                            // Terms text
+                            RichText(
+                              textAlign: TextAlign.center,
+                              text: TextSpan(
+                                text: 'By continuing, you agree to our ',
+                                style: TextStyle(
+                                  color: barzDark.withValues(alpha: 0.7),
+                                  fontSize: 13,
+                                ),
+                                children: <TextSpan>[
+                                  TextSpan(
+                                    text: 'Terms of Service',
+                                    style: const TextStyle(
+                                      color: barzDark,
+                                      fontWeight: FontWeight.bold,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                    recognizer: TapGestureRecognizer()
+                                      ..onTap = () {
+                                        // Handle Terms of Service tap
+                                      },
+                                  ),
+                                  TextSpan(
+                                    text: ' and ',
+                                    style: TextStyle(color: barzDark.withValues(alpha: 0.7)),
+                                  ),
+                                  TextSpan(
+                                    text: 'Privacy Policy',
+                                    style: const TextStyle(
+                                      color: barzDark,
+                                      fontWeight: FontWeight.bold,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                    recognizer: TapGestureRecognizer()
+                                      ..onTap = () {
+                                        // Handle Privacy Policy tap
+                                      },
+                                  ),
+                                ],
+                              ),
+                            ),
+                            
+                            // Spacer to push illustration to bottom
+                            const Spacer(),
+                            
+                            // Bottom illustration
+                            Image.asset(
+                              'assets/login/barz_cup_icon.png',
+                              width: MediaQuery.of(context).size.width * 0.5,
+                              fit: BoxFit.contain,
+                            ),
+                            const SizedBox(height: 16),
                           ],
                         ),
-                        
-                        const SizedBox(height: 24),
-                        
-                        // Social login buttons
-                        LoginButtonsWidget(loginBloc: _loginBloc),
-                        
-                        const SizedBox(height: 32),
-                        
-                        // Terms text
-                        RichText(
-                          textAlign: TextAlign.center,
-                          text: TextSpan(
-                            text: 'By continuing, you agree to our ',
-                            style: TextStyle(
-                              color: barzDark.withValues(alpha: 0.7),
-                              fontSize: 13,
-                            ),
-                            children: <TextSpan>[
-                              TextSpan(
-                                text: 'Terms of Service',
-                                style: const TextStyle(
-                                  color: barzDark,
-                                  fontWeight: FontWeight.bold,
-                                  decoration: TextDecoration.underline,
-                                ),
-                                recognizer: TapGestureRecognizer()
-                                  ..onTap = () {
-                                    // Handle Terms of Service tap
-                                  },
-                              ),
-                              TextSpan(
-                                text: ' and ',
-                                style: TextStyle(color: barzDark.withValues(alpha: 0.7)),
-                              ),
-                              TextSpan(
-                                text: 'Privacy Policy',
-                                style: const TextStyle(
-                                  color: barzDark,
-                                  fontWeight: FontWeight.bold,
-                                  decoration: TextDecoration.underline,
-                                ),
-                                recognizer: TapGestureRecognizer()
-                                  ..onTap = () {
-                                    // Handle Privacy Policy tap
-                                  },
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
-                ),
-                SliverFillRemaining(
-                  hasScrollBody: false,
-                  child: Column(
-                    children: [
-                      const Spacer(),
-                      // Bottom illustration
-                      Image.asset(
-                        'assets/login/barz_cup_icon.png',
-                        width: MediaQuery.of(context).size.width * 0.8,
-                        fit: BoxFit.contain,
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+                );
+              },
             ),
           ),
         ),
