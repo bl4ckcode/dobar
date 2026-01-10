@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:barz/core/network/dio_network.dart';
 import 'package:barz/ui/shell/app_shell.dart';
-import 'package:barz/ui/screens/create_bar_screen.dart';
+import 'package:barz/features/bars/presentation/pages/create_bar/create_bar_page.dart';
 import 'package:barz/features/advertising/presentation/pages/campaign_analytics_page.dart';
 import 'package:barz/features/advertising/presentation/pages/subscription_plans_page.dart';
 import 'package:barz/features/bars/presentation/pages/bar_detail_page.dart';
@@ -136,7 +136,7 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/create-bar',
       name: 'createBar',
-      builder: (context, state) => const CreateBarScreen(),
+      builder: (context, state) => const CreateBarPage(),
     ),
     GoRoute(
       path: '/checkin',

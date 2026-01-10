@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:go_router/go_router.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_event.dart';
@@ -115,13 +116,7 @@ class BusinessOnboardingView extends StatelessWidget {
       title: l10n.business_create_bar,
       subtitle: l10n.business_create_bar_subtitle,
       onTap: () {
-        // TODO: Navigate to create bar flow
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.business_coming_soon),
-            backgroundColor: barzBlack,
-          ),
-        );
+        context.push('/create-bar');
       },
     );
   }
