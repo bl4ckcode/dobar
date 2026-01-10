@@ -1,16 +1,39 @@
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Service for managing authentication tokens and user info
 /// This replaces the simpler SecureStorage for comprehensive token management
 class TokenStorageService {
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  late final FlutterSecureStorage _storage;
 
   static const String _accessTokenKey = 'access_token';
   static const String _refreshTokenKey = 'refresh_token';
   static const String _userIdKey = 'user_id';
   static const String _userEmailKey = 'user_email';
   static const String _userNameKey = 'user_name';
+
+  TokenStorageService() {
+    // Configure storage with platform-specific options
+    if (kIsWeb) {
+      // Web: Use localStorage with proper options
+      _storage = const FlutterSecureStorage(
+        webOptions: WebOptions(
+          dbName: 'barz_secure_storage',
+          publicKey: 'barz_public_key',
+        ),
+      );
+    } else {
+      // Mobile: Use default secure storage with accessibility options
+      _storage = const FlutterSecureStorage(
+        aOptions: AndroidOptions(
+          encryptedSharedPreferences: true,
+        ),
+        iOptions: IOSOptions(
+          accessibility: KeychainAccessibility.first_unlock,
+        ),
+      );
+    }
+  }
 
   void _log(String message) {
     if (kDebugMode) {

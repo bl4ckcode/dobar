@@ -101,6 +101,7 @@ class _FindBarStepState extends State<FindBarStep> {
           ],
         ),
         const SizedBox(height: BarzSpacing.sm),
+        // BarzAddressField now uses JS interop on web, HTTP on mobile
         BarzAddressField(
           googleApiKey: widget.googleApiKey,
           hintText: l10n.search_bar_hint,

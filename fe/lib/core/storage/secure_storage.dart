@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:flutter/foundation.dart' show kDebugMode, kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Consolidated secure storage service for all app secrets
@@ -15,7 +15,28 @@ class SecureStorage {
   static const String _userEmailKey = 'user_email';
   static const String _userNameKey = 'user_name';
   
-  final FlutterSecureStorage _storage = const FlutterSecureStorage();
+  late final FlutterSecureStorage _storage;
+
+  SecureStorage() {
+    // Configure storage with platform-specific options
+    if (kIsWeb) {
+      _storage = const FlutterSecureStorage(
+        webOptions: WebOptions(
+          dbName: 'barz_secure_storage',
+          publicKey: 'barz_public_key',
+        ),
+      );
+    } else {
+      _storage = const FlutterSecureStorage(
+        aOptions: AndroidOptions(
+          encryptedSharedPreferences: true,
+        ),
+        iOptions: IOSOptions(
+          accessibility: KeychainAccessibility.first_unlock,
+        ),
+      );
+    }
+  }
 
   void _log(String message) {
     if (kDebugMode) {
