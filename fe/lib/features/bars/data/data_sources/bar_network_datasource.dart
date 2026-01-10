@@ -102,4 +102,50 @@ class BarNetworkDataSource {
     
     return menusWithItems;
   }
+
+  /// Create a new bar using the wizard endpoint
+  /// POST /bars/wizard
+  Future<BarModel> createBar({
+    required String name,
+    required String address,
+    required double latitude,
+    required double longitude,
+    required String phoneNumber,
+    required String email,
+    required String countryCode,
+    String? businessId,
+    String? businessIdType,
+    String? stateRegistration,
+    String? logoUrl,
+    String? coverUrl,
+    List<String>? photoUrls,
+    Map<String, dynamic>? operatingHours,
+  }) async {
+    try {
+      final response = await dio.post(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.barsWizard}',
+        data: {
+          'name': name,
+          'address': address,
+          'latitude': latitude,
+          'longitude': longitude,
+          'phone_number': phoneNumber,
+          'email': email,
+          'country_code': countryCode,
+          if (businessId != null) 'business_id': businessId,
+          if (businessIdType != null) 'business_id_type': businessIdType,
+          if (stateRegistration != null) 'state_registration': stateRegistration,
+          if (logoUrl != null) 'logo_url': logoUrl,
+          if (coverUrl != null) 'cover_url': coverUrl,
+          if (photoUrls != null && photoUrls.isNotEmpty) 'photo_urls': photoUrls,
+          if (operatingHours != null) 'operating_hours': operatingHours,
+        },
+      );
+      return BarModel.fromJson(response.data);
+    } on DioException catch (e) {
+      throw ServerException(
+          e.response?.data?['detail'] ?? 'Failed to create bar',
+          e.response?.statusCode);
+    }
+  }
 }

@@ -183,6 +183,7 @@
 
   "create_bar": "Crear Bar",
   "bar_created_success": "¡Bar creado con éxito!",
+  "error_creating_bar": "Error al crear el bar. Por favor, inténtelo de nuevo.",
   "step_find_bar": "Buscar Bar",
   "step_basic_info": "Detalles",
   "step_location": "Ubicación",

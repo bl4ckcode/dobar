@@ -8,4 +8,20 @@ abstract class AbstractBarRepository {
       double lat, double lng, double maxDistance);
   Future<Either<Failure, BarModel>> getBar(int barId);
   Future<Either<Failure, List<MenuModel>>> getBarMenus(int barId);
+  Future<Either<Failure, BarModel>> createBar({
+    required String name,
+    required String address,
+    required double latitude,
+    required double longitude,
+    required String phoneNumber,
+    required String email,
+    required String countryCode,
+    String? businessId,
+    String? businessIdType,
+    String? stateRegistration,
+    String? logoUrl,
+    String? coverUrl,
+    List<String>? photoUrls,
+    Map<String, dynamic>? operatingHours,
+  });
 }

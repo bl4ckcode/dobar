@@ -9,6 +9,7 @@ class ApiEndpoints {
   static const String authLogout = '/auth/logout';
 
   static const String bars = '/bars/';
+  static const String barsWizard = '/bars/wizard';
   static String bar(int id) => '/bars/$id';
   static String barImage(int id) => '/bars/$id/image';
   static String refreshBarImage(int id) => '/bars/$id/refresh-image';

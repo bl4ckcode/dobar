@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:barz/core/design/design_system.dart';
+import 'package:barz/core/utils/injections.dart';
+import 'package:barz/features/bars/domain/usecases/bar_usecase.dart';
 import 'package:barz/l10n/app_localizations.dart';
 import 'steps/find_bar_step.dart';
 import 'steps/basic_info_step.dart';
@@ -22,6 +24,7 @@ class _CreateBarPageState extends State<CreateBarPage> {
   int _currentStep = 0;
   final _formData = CreateBarFormData();
   final _pageController = PageController();
+  bool _isSubmitting = false;
 
   static const _totalSteps = 5;
 
@@ -46,16 +49,65 @@ class _CreateBarPageState extends State<CreateBarPage> {
   }
 
   Future<void> _submit() async {
-    // TODO: Submit to backend
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.bar_created_success),
-          backgroundColor: successGreen,
-        ),
-      );
-      context.pop(true);
+    if (_isSubmitting) return;
+    
+    setState(() => _isSubmitting = true);
+    
+    final l10n = AppLocalizations.of(context)!;
+    final barUsecase = getItInjector<BarUsecase>();
+    
+    // Convert operating hours to API format
+    final operatingHoursMap = <String, dynamic>{};
+    for (final entry in _formData.operatingHours.entries) {
+      final hours = entry.value;
+      operatingHoursMap[entry.key] = {
+        'is_closed': !hours.isOpen,
+        if (hours.isOpen && hours.openTime != null)
+          'open': '${hours.openTime!.hour.toString().padLeft(2, '0')}:${hours.openTime!.minute.toString().padLeft(2, '0')}',
+        if (hours.isOpen && hours.closeTime != null)
+          'close': '${hours.closeTime!.hour.toString().padLeft(2, '0')}:${hours.closeTime!.minute.toString().padLeft(2, '0')}',
+      };
     }
+    
+    final result = await barUsecase.createBar(
+      name: _formData.name,
+      address: _formData.address,
+      latitude: _formData.latitude ?? 0,
+      longitude: _formData.longitude ?? 0,
+      phoneNumber: _formData.phone,
+      email: _formData.email,
+      countryCode: _formData.countryCode,
+      businessId: _formData.businessId.isNotEmpty ? _formData.businessId : null,
+      businessIdType: _formData.countryConfig.businessIdLabel,
+      logoUrl: _formData.logoPath,
+      coverUrl: _formData.coverPath,
+      photoUrls: _formData.photoPaths.isNotEmpty ? _formData.photoPaths : null,
+      operatingHours: operatingHoursMap.isNotEmpty ? operatingHoursMap : null,
+    );
+    
+    if (!mounted) return;
+    
+    setState(() => _isSubmitting = false);
+    
+    result.fold(
+      (failure) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(failure.errorMessage),
+            backgroundColor: errorRed,
+          ),
+        );
+      },
+      (bar) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.bar_created_success),
+            backgroundColor: successGreen,
+          ),
+        );
+        context.pop(true);
+      },
+    );
   }
 
   @override
@@ -111,6 +163,7 @@ class _CreateBarPageState extends State<CreateBarPage> {
                   formData: _formData,
                   onSubmit: _submit,
                   onBack: _previousStep,
+                  isLoading: _isSubmitting,
                 ),
               ],
             ),

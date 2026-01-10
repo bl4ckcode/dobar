@@ -262,6 +262,7 @@
 
   "create_bar": "Create Bar",
   "bar_created_success": "Bar created successfully!",
+  "error_creating_bar": "Failed to create bar. Please try again.",
   "step_find_bar": "Find Bar",
   "step_basic_info": "Details",
   "step_location": "Location",

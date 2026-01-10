@@ -43,4 +43,44 @@ class BarRepositoryImpl extends AbstractBarRepository {
       return Left(ServerFailure(e.message, e.statusCode));
     }
   }
+
+  @override
+  Future<Either<Failure, BarModel>> createBar({
+    required String name,
+    required String address,
+    required double latitude,
+    required double longitude,
+    required String phoneNumber,
+    required String email,
+    required String countryCode,
+    String? businessId,
+    String? businessIdType,
+    String? stateRegistration,
+    String? logoUrl,
+    String? coverUrl,
+    List<String>? photoUrls,
+    Map<String, dynamic>? operatingHours,
+  }) async {
+    try {
+      final result = await networkDataSource.createBar(
+        name: name,
+        address: address,
+        latitude: latitude,
+        longitude: longitude,
+        phoneNumber: phoneNumber,
+        email: email,
+        countryCode: countryCode,
+        businessId: businessId,
+        businessIdType: businessIdType,
+        stateRegistration: stateRegistration,
+        logoUrl: logoUrl,
+        coverUrl: coverUrl,
+        photoUrls: photoUrls,
+        operatingHours: operatingHours,
+      );
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message, e.statusCode));
+    }
+  }
 }
