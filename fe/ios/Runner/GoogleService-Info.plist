@@ -10,6 +10,8 @@
 	<string>505844682559-7hq3os8bgvg7p6moqekvrrev5r2j2gk3.apps.googleusercontent.com</string>
 	<key>API_KEY</key>
 	<string>AIzaSyDDYCc0--xBEZrZdQfpt3Tk3mXQTt5RH2o</string>
+	<key>GOOGLE_MAPS_API_KEY</key>
+	<string>AIzaSyBYxRApMMfkA9dI6qHYUEYxHY8ZsZf6jOI</string>
 	<key>GCM_SENDER_ID</key>
 	<string>505844682559</string>
 	<key>PLIST_VERSION</key>
