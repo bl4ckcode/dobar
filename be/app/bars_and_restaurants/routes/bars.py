@@ -1,19 +1,112 @@
 import math
 import time
-from fastapi import APIRouter, UploadFile, File, Form, Depends
+import re
+from fastapi import APIRouter, UploadFile, File, Form, Depends, Body
 from fastapi.params import Query
 from pydantic import EmailStr
 from sqlalchemy import and_
+from typing import Optional
 
 from app.bars_and_restaurants.services.image_upload import generate_presigned_url, upload_image_to_s3, extract_s3_key
 from app.errors import APIError
 from ..models.relational_models import Bar as BarModel, BarOwner
 from ..models.nosql_models import bars_collection
-from ..schemas.bars import Bar
+from ..schemas.bars import Bar, BarCreate, BarResponse
 from ..models.nosql_models import insert_bar_into_mongo  # Import from nosql models
 from app.database import database  # Use the async database connection
 
 bars_router = APIRouter(prefix="/bars", tags=["Bars"])
+
+
+# =============================================================================
+# BUSINESS ID VALIDATION
+# =============================================================================
+
+def validate_cnpj(cnpj: str) -> bool:
+    """Validate Brazilian CNPJ using modulo 11 algorithm."""
+    cnpj = re.sub(r'[^\d]', '', cnpj)
+    if len(cnpj) != 14:
+        return False
+    if cnpj == cnpj[0] * 14:  # All same digits
+        return False
+    
+    # First check digit
+    weights1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+    sum1 = sum(int(cnpj[i]) * weights1[i] for i in range(12))
+    d1 = 11 - (sum1 % 11)
+    d1 = 0 if d1 >= 10 else d1
+    
+    # Second check digit
+    weights2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]
+    sum2 = sum(int(cnpj[i]) * weights2[i] for i in range(13))
+    d2 = 11 - (sum2 % 11)
+    d2 = 0 if d2 >= 10 else d2
+    
+    return cnpj[-2:] == f"{d1}{d2}"
+
+
+def validate_cpf(cpf: str) -> bool:
+    """Validate Brazilian CPF using modulo 11 algorithm."""
+    cpf = re.sub(r'[^\d]', '', cpf)
+    if len(cpf) != 11:
+        return False
+    if cpf == cpf[0] * 11:  # All same digits
+        return False
+    
+    # First check digit
+    sum1 = sum(int(cpf[i]) * (10 - i) for i in range(9))
+    d1 = 11 - (sum1 % 11)
+    d1 = 0 if d1 >= 10 else d1
+    
+    # Second check digit
+    sum2 = sum(int(cpf[i]) * (11 - i) for i in range(10))
+    d2 = 11 - (sum2 % 11)
+    d2 = 0 if d2 >= 10 else d2
+    
+    return cpf[-2:] == f"{d1}{d2}"
+
+
+def validate_business_id(country_code: str, business_id: str, business_id_type: str) -> tuple[bool, str]:
+    """
+    Validate business ID based on country and type.
+    Returns (is_valid, error_message).
+    """
+    if not business_id:
+        return True, ""  # Optional field
+    
+    business_id_clean = re.sub(r'[^\dA-Za-z]', '', business_id)
+    
+    validators = {
+        "BR": {
+            "CNPJ": (lambda x: len(re.sub(r'[^\d]', '', x)) == 14 and validate_cnpj(x), "Invalid CNPJ format"),
+            "CPF": (lambda x: len(re.sub(r'[^\d]', '', x)) == 11 and validate_cpf(x), "Invalid CPF format"),
+        },
+        "PT": {
+            "NIF": (lambda x: len(re.sub(r'[^\d]', '', x)) == 9, "NIF must be 9 digits"),
+        },
+        "US": {
+            "EIN": (lambda x: len(re.sub(r'[^\d]', '', x)) == 9, "EIN must be 9 digits"),
+        },
+        "ES": {
+            "CIF": (lambda x: len(x) == 9 and x[0].isalpha(), "CIF must be letter + 8 digits"),
+        },
+        "MX": {
+            "RFC": (lambda x: 12 <= len(x) <= 13, "RFC must be 12-13 characters"),
+        },
+        "AR": {
+            "CUIT": (lambda x: len(re.sub(r'[^\d]', '', x)) == 11, "CUIT must be 11 digits"),
+        },
+    }
+    
+    country_validators = validators.get(country_code.upper(), {})
+    validator = country_validators.get(business_id_type.upper() if business_id_type else "", None)
+    
+    if validator:
+        is_valid, error = validator
+        if not is_valid(business_id):
+            return False, error
+    
+    return True, ""
 
 # Helper functions
 async def get_bar_owner_by_id(id: int):
@@ -42,13 +135,43 @@ async def create_new_bar(bar_data: dict):
     if existing_bar:
         raise APIError.conflict("A bar with this address already exists for this owner")
     
-    # Create the bar in PostgreSQL (exclude MongoDB-only fields)
-    bar_postgres_data = {key: value for key, value in bar_data.items() if key not in ["latitude", "longitude", "image_url"]}
+    # Check for duplicate business_id in the same country
+    if bar_data.get("business_id"):
+        existing_business = await database.fetch_one(
+            BarModel.__table__.select().where(
+                and_(
+                    BarModel.country_code == bar_data.get("country_code", "BR"),
+                    BarModel.business_id == bar_data["business_id"]
+                )
+            )
+        )
+        if existing_business:
+            raise APIError.conflict("A bar with this business ID already exists")
+    
+    # Validate business ID format
+    if bar_data.get("business_id"):
+        is_valid, error_msg = validate_business_id(
+            bar_data.get("country_code", "BR"),
+            bar_data["business_id"],
+            bar_data.get("business_id_type", "")
+        )
+        if not is_valid:
+            raise APIError.validation_error(error_msg)
+    
+    # Separate PostgreSQL and MongoDB fields
+    mongo_only_fields = {"latitude", "longitude", "image_url"}
+    bar_postgres_data = {
+        key: value for key, value in bar_data.items() 
+        if key not in mongo_only_fields and value is not None
+    }
+    
+    # Create the bar in PostgreSQL
     query = BarModel.__table__.insert().values(**bar_postgres_data)
     bar_id = await database.execute(query)
 
     # Insert bar into MongoDB for geospatial and menu
-    await insert_bar_into_mongo(bar_id, bar_data["latitude"], bar_data["longitude"], bar_data["image_url"])
+    image_url = bar_data.get("image_url") or bar_data.get("logo_url")
+    await insert_bar_into_mongo(bar_id, bar_data["latitude"], bar_data["longitude"], image_url)
 
     # Fetch the newly created bar from PostgreSQL
     return await database.fetch_one(BarModel.__table__.select().where(BarModel.id == bar_id))
@@ -162,6 +285,49 @@ async def create_bar(name: str = Form(...),
     
     # Create the bar in PostgreSQL and MongoDB
     return await create_new_bar(bar_data)
+
+
+@bars_router.post("/wizard", response_model=BarResponse, summary="Create Bar (Wizard Flow)")
+async def create_bar_wizard(bar_data: BarCreate):
+    """
+    Create a new bar using JSON body (for Create Bar Wizard flow).
+    
+    This endpoint accepts all fields from the 5-step wizard:
+    - Step 1: Google Places autocomplete (name, address, lat/lng, country_code)
+    - Step 2: Business details (business_id, business_id_type, state_registration)
+    - Step 3: Photos (logo_url, cover_url, photo_urls)
+    - Step 4: Operating hours
+    - Step 5: Review & Submit
+    
+    Returns the created bar with verification_status = "pending".
+    """
+    from datetime import datetime
+    
+    # Convert Pydantic model to dict
+    data = bar_data.model_dump(exclude_none=True)
+    
+    # Convert operating_hours to JSON-serializable format
+    if data.get("operating_hours"):
+        data["operating_hours"] = {
+            day: hours.model_dump() if hasattr(hours, 'model_dump') else hours
+            for day, hours in data["operating_hours"].items()
+            if hours is not None
+        }
+    
+    # Create the bar
+    created_bar = await create_new_bar(data)
+    
+    return BarResponse(
+        id=created_bar["id"],
+        name=created_bar["name"],
+        address=created_bar["address"],
+        country_code=created_bar["country_code"] or "BR",
+        business_id=created_bar["business_id"],
+        business_id_type=created_bar["business_id_type"],
+        verification_status=created_bar["verification_status"] or "pending",
+        created_at=created_bar["created_at"] or datetime.utcnow()
+    )
+
 
 @bars_router.get("/{bar_id}", response_model=Bar)
 async def read_bar(bar_id: int):

@@ -22,6 +22,25 @@ class Bar(Base):
     phone_number = Column(String, index=True, nullable=True)
     email = Column(String, index=True, nullable=True)
     owner_id = Column(BigInteger, ForeignKey("bar_owners.id"), index=True)
+    
+    # 🆕 Country & Business ID fields (for Create Bar Wizard)
+    country_code = Column(String(2), index=True, default="BR")  # ISO 3166-1 alpha-2
+    business_id = Column(String(50), index=True, nullable=True)  # CNPJ, NIF, EIN, etc.
+    business_id_type = Column(String(20), nullable=True)  # "CNPJ", "NIF", "EIN", "CIF", "RFC", "CUIT"
+    state_registration = Column(String(50), nullable=True)  # Brazil-specific (Inscrição Estadual)
+    verification_status = Column(String(20), default="pending", index=True)  # pending, under_review, verified, rejected
+    
+    # 🆕 Media fields
+    logo_url = Column(String, nullable=True)
+    cover_url = Column(String, nullable=True)
+    photo_urls = Column(JSON, nullable=True)  # Array of gallery image URLs
+    
+    # 🆕 Operating hours (stored as JSON for flexibility)
+    operating_hours = Column(JSON, nullable=True)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     owner = relationship("BarOwner", back_populates="bars")
     menus = relationship("Menu", back_populates="bar")
