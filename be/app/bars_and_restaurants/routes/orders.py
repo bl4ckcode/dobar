@@ -17,6 +17,7 @@ from ..schemas.orders import (
 from app.database import database
 from app.auth.middleware import get_current_active_user, get_optional_user
 from app.auth.auth_models import User
+from app.auth.admin import require_internal_or_admin
 
 orders_router = APIRouter(prefix="/orders", tags=["Orders"])
 
@@ -30,7 +31,10 @@ async def orders_websocket(websocket: WebSocket):
         print("Client disconnected")
 
 @orders_router.post("/", response_model=OrderSchema)
-async def create_order(order: OrderCreate):
+async def create_order(
+    order: OrderCreate,
+    _internal: bool = Depends(require_internal_or_admin)
+):
     from datetime import datetime, timezone
     order_data = order.model_dump()
     order_data["status"] = order_data.get("status", "pending")

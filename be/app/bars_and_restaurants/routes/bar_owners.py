@@ -1,8 +1,10 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from sqlalchemy import and_
-from app.database import database  # Use the async database connection
+from app.database import database
 from app.bars_and_restaurants.models.relational_models import BarOwner as BarOwnerModel
 from app.errors import APIError
+from app.auth.dependencies import get_current_user
+from app.auth.auth_models import User
 from ..schemas.bar_owners import BarOwnerCreate, BarOwner
 
 bar_owners_router = APIRouter(prefix="/barowners", tags=["Bar Owners"])
@@ -23,7 +25,10 @@ async def get_existing_bar_owner(owner_id: int):
     return await database.fetch_one(query)
 
 @bar_owners_router.post("/", response_model=BarOwner)
-async def create_bar_owner(owner: BarOwnerCreate):
+async def create_bar_owner(
+    owner: BarOwnerCreate,
+    current_user: User = Depends(get_current_user)
+):
     owner_data = {
         "id": owner.id,
         "name": owner.name,

@@ -1,6 +1,3 @@
-"""
-Wallet API Routes
-"""
 from fastapi import APIRouter, Depends, status, Query
 from sqlalchemy.orm import Session
 from typing import Optional
@@ -9,6 +6,7 @@ from decimal import Decimal
 from app.database import get_db
 from app.auth.middleware import get_current_user
 from app.auth.auth_models import User
+from app.auth.admin import require_internal_or_admin, verify_admin_api_key
 from app.errors import APIError
 from app.bars_and_restaurants.services.wallet_service import WalletService
 from app.bars_and_restaurants.schemas.wallet import (
@@ -74,19 +72,13 @@ async def get_wallet_history(
 @wallet_router.post("/earn", response_model=CashbackEarnedResponse)
 async def earn_cashback(
     request: EarnCashbackRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _internal: bool = Depends(require_internal_or_admin)
 ):
-    """
-    Internal endpoint to generate cashback after successful payment.
-    This should be called by the payment webhook handler.
-    
-    NOTE: In production, this should be secured with internal API key
-    or only accessible from trusted services.
-    """
     transaction, wallet = WalletService.earn_cashback(
         db=db,
         request=request,
-        auto_available=False  # Keep as PENDING until refund period passes
+        auto_available=False
     )
     
     status_message = (
@@ -177,14 +169,9 @@ async def redeem_cashback_for_order(
 @wallet_router.post("/admin/make-available/{transaction_id}")
 async def make_cashback_available(
     transaction_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _admin: bool = Depends(require_internal_or_admin)
 ):
-    """
-    Admin endpoint: Move cashback from PENDING to AVAILABLE.
-    Called after refund period expires.
-    
-    TODO: Add admin authentication
-    """
     from uuid import UUID
     
     try:
@@ -209,13 +196,9 @@ async def make_cashback_available(
 @wallet_router.post("/admin/expire/{transaction_id}")
 async def expire_cashback_transaction(
     transaction_id: str,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _admin: bool = Depends(require_internal_or_admin)
 ):
-    """
-    Admin endpoint: Manually expire a cashback transaction.
-    
-    TODO: Add admin authentication
-    """
     from uuid import UUID
     
     try:
@@ -239,14 +222,9 @@ async def expire_cashback_transaction(
 
 @wallet_router.post("/admin/process-expirations")
 async def process_expired_cashback(
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _admin: bool = Depends(require_internal_or_admin)
 ):
-    """
-    Admin endpoint: Process all expired cashback transactions.
-    Should be called by scheduled job (cron).
-    
-    TODO: Add admin authentication or internal API key
-    """
     count = WalletService.process_expirations(db)
     
     return {
@@ -261,14 +239,9 @@ async def adjust_wallet_balance(
     amount: Decimal,
     bar_id: int,
     reason: str = "Manual adjustment",
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    _admin: bool = Depends(verify_admin_api_key)
 ):
-    """
-    Admin endpoint: Manually adjust user's wallet balance.
-    Positive = credit, negative = debit.
-    
-    TODO: Add admin authentication
-    """
     transaction, wallet = WalletService.adjust_balance(
         db=db,
         user_id=user_id,

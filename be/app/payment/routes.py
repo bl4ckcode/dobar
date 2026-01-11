@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, Query
 
 from app.errors import APIError, map_gateway_error
+from app.auth.dependencies import get_current_user
+from app.auth.auth_models import User
 from .schemas import PaymentRequest, RefundRequest
 from . import get_payment_gateway, PaymentGateway
 
@@ -9,6 +11,7 @@ payment_router = APIRouter(prefix="/payments", tags=["Payments"])
 @payment_router.post("/charge")
 async def create_charge(
     payment_request: PaymentRequest,
+    current_user: User = Depends(get_current_user),
     gateway = Depends(get_payment_gateway)
 ):
     response = gateway.create_charge(
@@ -33,6 +36,7 @@ async def create_charge(
 @payment_router.post("/refund")
 async def refund_charge(
     refund_request: RefundRequest,
+    current_user: User = Depends(get_current_user),
     gateway: PaymentGateway = Depends(get_payment_gateway)
 ):
     data = refund_request.model_dump()
@@ -58,6 +62,7 @@ async def refund_charge(
 async def capture_charge(
     payment_intent_id: str,
     amount: float | None = None,
+    current_user: User = Depends(get_current_user),
     gateway: PaymentGateway = Depends(get_payment_gateway),
 ):
     response = gateway.capture_charge(payment_intent_id=payment_intent_id, amount=amount)
@@ -75,6 +80,7 @@ async def capture_charge(
 async def create_checkout(
     success_url: str = Query(..., description="URL to redirect after successful payment"),
     cancel_url: str = Query(..., description="URL to redirect after cancellation"),
+    current_user: User = Depends(get_current_user),
     gateway: PaymentGateway = Depends(get_payment_gateway)
 ):
     if not hasattr(gateway, "create_checkout_session"):
@@ -91,7 +97,11 @@ async def create_checkout(
     return response
 
 @payment_router.post("/setup")
-async def setup_payment_method(customer_id: str, gateway: PaymentGateway = Depends(get_payment_gateway)):
+async def setup_payment_method(
+    customer_id: str,
+    current_user: User = Depends(get_current_user),
+    gateway: PaymentGateway = Depends(get_payment_gateway)
+):
     response = gateway.create_setup_intent(customer_id)
     if response.get("status") == "error":
         raise APIError.payment_declined(

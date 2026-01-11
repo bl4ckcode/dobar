@@ -26,6 +26,9 @@ from firebase_admin import initialize_app, credentials
 from .payment.routes import payment_router
 from .advertising.routes import advertising_router
 
+IS_PRODUCTION = os.getenv("FLY_APP_NAME") is not None or os.getenv("ENVIRONMENT", "development") == "production"
+ENABLE_DOCS = os.getenv("ENABLE_DOCS", "false").lower() == "true" if IS_PRODUCTION else True
+
 def load_firebase_credentials():
     raw_json = os.getenv("FIREBASE_CREDENTIALS_JSON")
 
@@ -60,7 +63,12 @@ async def lifespan(app: FastAPI):
     yield
     await database.disconnect()
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    lifespan=lifespan,
+    docs_url="/docs" if ENABLE_DOCS else None,
+    redoc_url="/redoc" if ENABLE_DOCS else None,
+    openapi_url="/openapi.json" if ENABLE_DOCS else None,
+)
 
 # CORS middleware - allow all origins for now (Flutter web, mobile, etc.)
 app.add_middleware(
@@ -122,6 +130,8 @@ app.include_router(bank_accounts_router)
 app.include_router(advertising_router)
 
 def custom_openapi():
+    if not ENABLE_DOCS:
+        return None
     if app.openapi_schema:
         return app.openapi_schema
     openapi_schema = get_openapi(
@@ -133,4 +143,5 @@ def custom_openapi():
     app.openapi_schema = openapi_schema
     return app.openapi_schema
 
-app.openapi = custom_openapi
+if ENABLE_DOCS:
+    app.openapi = custom_openapi
