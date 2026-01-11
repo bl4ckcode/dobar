@@ -346,15 +346,19 @@ class BankAccountData {
   String accountHolderName = '';
   
   Map<String, dynamic> toJson(String countryCode) {
+    final base = {'country_code': countryCode.toUpperCase()};
+    
     switch (countryCode.toUpperCase()) {
       case 'BR':
         if (pixKey.isNotEmpty) {
           return {
+            ...base,
             'pix_key': pixKey,
             if (pixKeyType.isNotEmpty) 'pix_key_type': pixKeyType,
           };
         }
         return {
+          ...base,
           'bank_code': bankCode,
           'branch_code': branchCode,
           'account_number': accountNumber,
@@ -362,22 +366,26 @@ class BankAccountData {
         };
       case 'MX':
         return {
+          ...base,
           'clabe': clabe,
           if (accountHolderName.isNotEmpty) 'account_holder_name': accountHolderName,
         };
       case 'AR':
         return {
+          ...base,
           'cbu': cbu,
           if (accountHolderName.isNotEmpty) 'account_holder_name': accountHolderName,
         };
       case 'US':
         return {
+          ...base,
           'routing_number': routingNumber,
           'account_number': accountNumber,
           if (accountType.isNotEmpty) 'account_type': accountType,
         };
       default:
         return {
+          ...base,
           'account_number': accountNumber,
           if (accountHolderName.isNotEmpty) 'account_holder_name': accountHolderName,
         };

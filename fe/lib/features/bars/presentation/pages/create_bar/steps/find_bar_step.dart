@@ -5,6 +5,7 @@ import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
 import 'package:barz/l10n/app_localizations.dart';
 import '../create_bar_page.dart';
+import '../widgets/wizard_footer.dart';
 
 class FindBarStep extends StatefulWidget {
   final CreateBarFormData formData;
@@ -44,7 +45,11 @@ class _FindBarStepState extends State<FindBarStep> {
             ),
           ),
         ),
-        _buildBottomButton(l10n),
+        WizardFooter(
+          onNext: widget.onNext,
+          nextLabel: l10n.continue_with_bar,
+          isNextEnabled: widget.formData.address.isNotEmpty,
+        ),
       ],
     );
   }
@@ -241,46 +246,6 @@ class _FindBarStepState extends State<FindBarStep> {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildBottomButton(AppLocalizations l10n) {
-    final isValid = widget.formData.address.isNotEmpty;
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: surfaceWhite,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: FilledButton(
-        onPressed: isValid ? widget.onNext : null,
-        style: FilledButton.styleFrom(
-          backgroundColor: successGreen,
-          foregroundColor: textOnDark,
-          disabledBackgroundColor: surfaceDim,
-          disabledForegroundColor: textTertiary,
-          padding: const EdgeInsets.all(16),
-          minimumSize: const Size(double.infinity, 56),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Text(
-              l10n.continue_with_bar,
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-            ),
-            const SizedBox(width: 8),
-            const Icon(Icons.arrow_forward, size: 20),
-          ],
-        ),
       ),
     );
   }

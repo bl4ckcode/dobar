@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/l10n/app_localizations.dart';
 import '../create_bar_page.dart';
+import '../widgets/wizard_footer.dart';
 
 /// Bank account collection step for bar creation wizard.
 /// 
@@ -69,7 +70,10 @@ class _BankAccountStepState extends State<BankAccountStep> {
             ),
           ),
         ),
-        _buildBottomButtons(l10n),
+        WizardFooter(
+          onBack: widget.onBack,
+          onNext: _validateAndProceed,
+        ),
       ],
     );
   }
@@ -550,62 +554,6 @@ class _BankAccountStepState extends State<BankAccountStep> {
         borderSide: const BorderSide(color: barzGold, width: 2),
       ),
       contentPadding: const EdgeInsets.all(16),
-    );
-  }
-
-  Widget _buildBottomButtons(AppLocalizations l10n) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: surfaceWhite,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: OutlinedButton(
-              onPressed: widget.onBack,
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.all(16),
-                side: const BorderSide(color: barzDark),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.arrow_back, size: 20),
-                  const SizedBox(width: 8),
-                  Text(l10n.back),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: FilledButton(
-              onPressed: _validateAndProceed,
-              style: FilledButton.styleFrom(
-                backgroundColor: successGreen,
-                foregroundColor: textOnDark,
-                padding: const EdgeInsets.all(16),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(l10n.next),
-                  const SizedBox(width: 8),
-                  const Icon(Icons.arrow_forward, size: 20),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/l10n/app_localizations.dart';
 import '../create_bar_page.dart';
+import '../widgets/wizard_footer.dart';
 
 class ReviewStep extends StatelessWidget {
   final CreateBarFormData formData;
@@ -71,7 +72,14 @@ class ReviewStep extends StatelessWidget {
             ),
           ),
         ),
-        _buildBottomButtons(context, l10n),
+        WizardFooter(
+          onBack: onBack,
+          onNext: onSubmit,
+          nextLabel: l10n.create_bar,
+          isLoading: isLoading,
+          isPrimaryAction: true,
+          nextFlex: 2,
+        ),
       ],
     );
   }
@@ -311,74 +319,8 @@ class ReviewStep extends StatelessWidget {
     return widgets;
   }
 
-  /// Masks sensitive data - shows only last 4 characters
   String _maskSensitive(String value) {
     if (value.length <= 4) return '****';
     return '****${value.substring(value.length - 4)}';
-  }
-
-  Widget _buildBottomButtons(BuildContext context, AppLocalizations l10n) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: surfaceWhite,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: OutlinedButton(
-              onPressed: isLoading ? null : onBack,
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.all(16),
-                side: const BorderSide(color: barzDark),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.arrow_back, size: 20),
-                  const SizedBox(width: 8),
-                  Text(l10n.back),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            flex: 2,
-            child: FilledButton(
-              onPressed: isLoading ? null : onSubmit,
-              style: FilledButton.styleFrom(
-                backgroundColor: successGreen,
-                foregroundColor: textOnDark,
-                disabledBackgroundColor: surfaceDim,
-                disabledForegroundColor: textTertiary,
-                padding: const EdgeInsets.all(16),
-              ),
-              child: isLoading
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.check_rounded, size: 20),
-                        const SizedBox(width: 8),
-                        Text(l10n.create_bar),
-                      ],
-                    ),
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }

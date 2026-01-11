@@ -145,9 +145,38 @@ class BarNetworkDataSource {
       );
       return BarModel.fromJson(response.data);
     } on DioException catch (e) {
-      throw ServerException(
-          e.response?.data?['detail'] ?? 'Failed to create bar',
-          e.response?.statusCode);
+      final data = e.response?.data;
+      String errorMessage = 'Failed to create bar';
+      
+      if (data is Map<String, dynamic>) {
+        // API_ERROR_CONTRACT format: {message: "...", details: {...}}
+        if (data['message'] is String) {
+          errorMessage = data['message'] as String;
+          final details = data['details'];
+          if (details is Map<String, dynamic> && details.isNotEmpty) {
+            final fieldErrors = details.entries
+                .map((e) => e.value is List 
+                    ? (e.value as List).join(', ') 
+                    : e.value.toString())
+                .join('; ');
+            errorMessage = '$errorMessage: $fieldErrors';
+          }
+        } 
+        // FastAPI validation format: {detail: [{msg: "..."}]}
+        else if (data['detail'] is List) {
+          final messages = (data['detail'] as List).map((e) {
+            if (e is Map<String, dynamic>) {
+              return e['msg'] as String? ?? e.toString();
+            }
+            return e.toString();
+          }).join(', ');
+          errorMessage = messages;
+        } else if (data['detail'] is String) {
+          errorMessage = data['detail'] as String;
+        }
+      }
+      
+      throw ServerException(errorMessage, e.response?.statusCode);
     }
   }
 }
