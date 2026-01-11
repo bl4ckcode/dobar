@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:barz/core/design/design_system.dart';
+import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
+import 'package:barz/features/session/presentation/bloc/session_state.dart';
 import 'package:barz/l10n/app_localizations.dart';
 import '../create_bar_page.dart';
 
@@ -100,9 +103,10 @@ class _FindBarStepState extends State<FindBarStep> {
         ),
         const SizedBox(height: BarzSpacing.sm),
         // BarzAddressField uses our secure backend proxy
+        // Smart country detection: user's country first, then Americas
         BarzAddressField(
           hintText: l10n.search_bar_hint,
-          countries: ['br', 'pt', 'us', 'es', 'mx', 'ar'],
+          countries: _getSearchCountries(context),
           onPlaceSelected: (details) {
             setState(() {
               widget.formData.name = _extractBarName(details.description);
@@ -115,6 +119,29 @@ class _FindBarStepState extends State<FindBarStep> {
         ),
       ],
     );
+  }
+
+  List<String> _getSearchCountries(BuildContext context) {
+    // Americas focus: Latin America + North America (max 5 for Google API)
+    const americasCountries = ['br', 'mx', 'ar', 'co', 'us'];
+    
+    // Try to get user's country from session
+    final sessionState = context.read<SessionBloc>().state;
+    if (sessionState is SessionReady) {
+      final userCountry = sessionState.session.user.countryCode?.toLowerCase();
+      if (userCountry != null && userCountry.isNotEmpty) {
+        // User's country first, then fill with Americas (max 5)
+        final countries = <String>[userCountry];
+        for (final c in americasCountries) {
+          if (!countries.contains(c) && countries.length < 5) {
+            countries.add(c);
+          }
+        }
+        return countries;
+      }
+    }
+    
+    return americasCountries;
   }
 
   String _extractBarName(String description) {
