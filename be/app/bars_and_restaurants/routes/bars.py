@@ -289,24 +289,14 @@ async def create_bar(name: str = Form(...),
 
 @bars_router.post("/wizard", response_model=BarResponse, summary="Create Bar (Wizard Flow)")
 async def create_bar_wizard(bar_data: BarCreate):
-    """
-    Create a new bar using JSON body (for Create Bar Wizard flow).
-    
-    This endpoint accepts all fields from the 5-step wizard:
-    - Step 1: Google Places autocomplete (name, address, lat/lng, country_code)
-    - Step 2: Business details (business_id, business_id_type, state_registration)
-    - Step 3: Photos (logo_url, cover_url, photo_urls)
-    - Step 4: Operating hours
-    - Step 5: Review & Submit
-    
-    Returns the created bar with verification_status = "pending".
-    """
     from datetime import datetime
+    from ..models.bank_account import BarBankAccount
+    from ..services import bank_account_service as bas
     
-    # Convert Pydantic model to dict
     data = bar_data.model_dump(exclude_none=True)
     
-    # Convert operating_hours to JSON-serializable format
+    bank_account_data = data.pop("bank_account", None)
+    
     if data.get("operating_hours"):
         data["operating_hours"] = {
             day: hours.model_dump() if hasattr(hours, 'model_dump') else hours
@@ -314,8 +304,33 @@ async def create_bar_wizard(bar_data: BarCreate):
             if hours is not None
         }
     
-    # Create the bar
     created_bar = await create_new_bar(data)
+    bar_id = created_bar["id"]
+    
+    if bank_account_data:
+        country_code = bank_account_data.get("country_code", data.get("country_code", "BR"))
+        valid, error = bas.validate_bank_account_for_country(country_code, bank_account_data)
+        if not valid:
+            raise APIError.validation_error(f"Bank account: {error}")
+        
+        bank_account_insert = {
+            "bar_id": bar_id,
+            "country_code": country_code.upper(),
+            "bank_code": bank_account_data.get("bank_code"),
+            "branch_code": bank_account_data.get("branch_code"),
+            "account_number_encrypted": bas.encrypt_value(bank_account_data.get("account_number")),
+            "account_type": bank_account_data.get("account_type"),
+            "pix_key_encrypted": bas.encrypt_value(bank_account_data.get("pix_key")),
+            "pix_key_type": bank_account_data.get("pix_key_type"),
+            "clabe_encrypted": bas.encrypt_value(bank_account_data.get("clabe")),
+            "cbu_encrypted": bas.encrypt_value(bank_account_data.get("cbu")),
+            "routing_number": bank_account_data.get("routing_number"),
+            "account_holder_name": bank_account_data.get("account_holder_name"),
+        }
+        bank_account_insert = {k: v for k, v in bank_account_insert.items() if v is not None}
+        
+        query = BarBankAccount.__table__.insert().values(**bank_account_insert)
+        await database.execute(query)
     
     return BarResponse(
         id=created_bar["id"],

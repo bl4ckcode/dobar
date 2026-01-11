@@ -1,17 +1,16 @@
 from typing import Optional, Literal
 from pydantic import BaseModel, EmailStr
 from datetime import datetime
+from .bank_account import BankAccountCreate
 
 
 class OperatingHoursDay(BaseModel):
-    """Operating hours for a single day."""
-    open: Optional[str] = None  # HH:MM format
-    close: Optional[str] = None  # HH:MM format
+    open: Optional[str] = None
+    close: Optional[str] = None
     is_closed: bool = False
 
 
 class OperatingHours(BaseModel):
-    """Weekly operating hours."""
     monday: Optional[OperatingHoursDay] = None
     tuesday: Optional[OperatingHoursDay] = None
     wednesday: Optional[OperatingHoursDay] = None
@@ -22,7 +21,6 @@ class OperatingHours(BaseModel):
 
 
 class BarCreate(BaseModel):
-    """Schema for creating a new bar (Create Bar Wizard)."""
     name: str
     address: str
     phone_number: str
@@ -31,22 +29,20 @@ class BarCreate(BaseModel):
     latitude: float
     longitude: float
     
-    # Country & Business ID
-    country_code: str = "BR"  # ISO 3166-1 alpha-2
-    business_id: Optional[str] = None  # CNPJ, NIF, EIN, etc.
-    business_id_type: Optional[str] = None  # "CNPJ", "NIF", "EIN", etc.
-    state_registration: Optional[str] = None  # Brazil-specific
+    country_code: str = "BR"
+    business_id: Optional[str] = None
+    business_id_type: Optional[str] = None
+    state_registration: Optional[str] = None
     
-    # Media
     logo_url: Optional[str] = None
     cover_url: Optional[str] = None
     photo_urls: Optional[list[str]] = None
     
-    # Legacy field (for backwards compatibility with image upload)
     image_url: Optional[str] = None
     
-    # Operating hours
     operating_hours: Optional[OperatingHours] = None
+    
+    bank_account: Optional[BankAccountCreate] = None
 
 
 class BarBase(BaseModel):
