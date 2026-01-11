@@ -131,14 +131,14 @@ class _CreateBarPageState extends State<CreateBarPage> {
           onPressed: () => _showExitConfirmation(context, l10n),
         ),
       ),
-      body: ResponsiveCenterContainer(
-        maxWidth: 600,
-        minWidth: 320,
-        maxWidthPercentage: 0.5,
-        child: Column(
-          children: [
-            _buildProgressIndicator(l10n),
-            Expanded(
+      body: Column(
+        children: [
+          _buildProgressIndicator(l10n),
+          Expanded(
+            child: ResponsiveCenterContainer(
+              maxWidth: 720,
+              minWidth: 320,
+              maxWidthPercentage: 0.6,
               child: PageView(
                 controller: _pageController,
                 physics: const NeverScrollableScrollPhysics(),
@@ -174,10 +174,10 @@ class _CreateBarPageState extends State<CreateBarPage> {
                   isLoading: _isSubmitting,
                 ),
               ],
+              ),
             ),
           ),
         ],
-      ),
       ),
     );
   }
@@ -351,35 +351,35 @@ class BankAccountData {
         if (pixKey.isNotEmpty) {
           return {
             'pix_key': pixKey,
-            'pix_key_type': pixKeyType,
+            if (pixKeyType.isNotEmpty) 'pix_key_type': pixKeyType,
           };
         }
         return {
           'bank_code': bankCode,
           'branch_code': branchCode,
           'account_number': accountNumber,
-          'account_type': accountType,
+          if (accountType.isNotEmpty) 'account_type': accountType,
         };
       case 'MX':
         return {
           'clabe': clabe,
-          'account_holder_name': accountHolderName,
+          if (accountHolderName.isNotEmpty) 'account_holder_name': accountHolderName,
         };
       case 'AR':
         return {
           'cbu': cbu,
-          'account_holder_name': accountHolderName,
+          if (accountHolderName.isNotEmpty) 'account_holder_name': accountHolderName,
         };
       case 'US':
         return {
           'routing_number': routingNumber,
           'account_number': accountNumber,
-          'account_type': accountType,
+          if (accountType.isNotEmpty) 'account_type': accountType,
         };
       default:
         return {
           'account_number': accountNumber,
-          'account_holder_name': accountHolderName,
+          if (accountHolderName.isNotEmpty) 'account_holder_name': accountHolderName,
         };
     }
   }

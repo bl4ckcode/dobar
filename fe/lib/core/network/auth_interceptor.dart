@@ -142,10 +142,43 @@ class AuthInterceptor extends QueuedInterceptor {
 
   String? _extractFromJson(dynamic json) {
     if (json is! Map<String, dynamic>) return null;
-    return json['message'] as String? ??
-        json['detail'] as String? ??
-        json['error'] as String? ??
-        (json['details'] as Map?)?.values.expand((v) => v is List ? v : [v]).join(', ');
+    
+    // dobar API Error Contract format (primary)
+    // {error_code: "...", message: "...", details: {...}}
+    if (json['message'] is String) {
+      final message = json['message'] as String;
+      
+      // Append field-specific errors from details if present
+      final details = json['details'];
+      if (details is Map<String, dynamic> && details.isNotEmpty) {
+        final fieldErrors = details.entries
+            .map((e) => e.value is List 
+                ? (e.value as List).join(', ') 
+                : e.value.toString())
+            .join('; ');
+        return '$message: $fieldErrors';
+      }
+      return message;
+    }
+    
+    // Fallback: simple error field
+    if (json['error'] is String) return json['error'] as String;
+    
+    // Fallback: FastAPI default format (detail can be string or array)
+    final detail = json['detail'];
+    if (detail is String) return detail;
+    if (detail is List && detail.isNotEmpty) {
+      final messages = detail.map((e) {
+        if (e is String) return e;
+        if (e is Map<String, dynamic>) {
+          return e['msg'] as String? ?? e.toString();
+        }
+        return e.toString();
+      }).join(', ');
+      return messages;
+    }
+    
+    return null;
   }
 
   void setTokens(String accessToken, String refreshToken) {

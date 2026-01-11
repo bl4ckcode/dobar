@@ -43,20 +43,6 @@ class ReviewStep extends StatelessWidget {
                 ),
                 const SizedBox(height: BarzSpacing.md),
                 _buildSection(
-                  icon: Icons.location_on_rounded,
-                  title: l10n.location,
-                  children: [
-                    if (formData.latitude != null && formData.longitude != null)
-                      _buildInfoRow(
-                        l10n.coordinates,
-                        '${formData.latitude!.toStringAsFixed(4)}, ${formData.longitude!.toStringAsFixed(4)}',
-                      )
-                    else
-                      _buildWarning(l10n.location_not_set),
-                  ],
-                ),
-                const SizedBox(height: BarzSpacing.md),
-                _buildSection(
                   icon: Icons.photo_library_rounded,
                   title: l10n.photos,
                   children: [
