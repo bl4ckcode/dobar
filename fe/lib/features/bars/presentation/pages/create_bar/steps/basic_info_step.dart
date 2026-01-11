@@ -41,59 +41,64 @@ class _BasicInfoStepState extends State<BasicInfoStep> {
       child: Column(
         children: [
           Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(BarzSpacing.lg),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildCountryBanner(),
-                  const SizedBox(height: BarzSpacing.lg),
-                  _buildSectionHeader(l10n.bar_name, Icons.store_rounded),
-                  const SizedBox(height: BarzSpacing.sm),
-                  FormBuilderTextField(
-                    name: 'name',
-                    initialValue: widget.formData.name,
-                    decoration: _inputDecoration(l10n.bar_name_hint),
-                    validator: FormBuilderValidators.compose([
-                      FormBuilderValidators.required(),
-                      FormBuilderValidators.minLength(3),
-                    ]),
-                    textCapitalization: TextCapitalization.words,
-                  ),
-                  const SizedBox(height: BarzSpacing.xl),
-                  _buildSectionHeader(l10n.address, Icons.location_on_rounded),
-                  const SizedBox(height: BarzSpacing.sm),
-                  FormBuilderTextField(
-                    name: 'address',
-                    initialValue: widget.formData.address,
-                    decoration: _inputDecoration(l10n.address_hint),
-                    validator: FormBuilderValidators.required(),
-                    maxLines: 2,
-                    textCapitalization: TextCapitalization.sentences,
-                  ),
-                  const SizedBox(height: BarzSpacing.xl),
-                  _buildSectionHeader(l10n.contact_info, Icons.phone_rounded),
-                  const SizedBox(height: BarzSpacing.sm),
-                  BarzPhoneField(
-                    hintText: l10n.phone_hint,
-                    initialCountryCode: widget.formData.countryCode,
-                    initialValue: widget.formData.phone,
-                    onChanged: (phone) {
-                      widget.formData.phone = phone.completeNumber;
-                    },
-                  ),
-                  const SizedBox(height: BarzSpacing.md),
-                  FormBuilderTextField(
-                    name: 'email',
-                    initialValue: widget.formData.email,
-                    decoration: _inputDecoration(l10n.email_hint, prefixIcon: Icons.email_outlined),
-                    keyboardType: TextInputType.emailAddress,
-                    validator: FormBuilderValidators.compose([
-                      FormBuilderValidators.required(),
-                      FormBuilderValidators.email(),
-                    ]),
-                  ),
-                ],
+            child: ResponsiveCenterContainer(
+              maxWidth: 720,
+              minWidth: 320,
+              maxWidthPercentage: 0.6,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(BarzSpacing.lg),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildCountryBanner(),
+                    const SizedBox(height: BarzSpacing.lg),
+                    _buildSectionHeader(l10n.bar_name, Icons.store_rounded),
+                    const SizedBox(height: BarzSpacing.sm),
+                    FormBuilderTextField(
+                      name: 'name',
+                      initialValue: widget.formData.name,
+                      decoration: _inputDecoration(l10n.bar_name_hint),
+                      validator: FormBuilderValidators.compose([
+                        FormBuilderValidators.required(),
+                        FormBuilderValidators.minLength(3),
+                      ]),
+                      textCapitalization: TextCapitalization.words,
+                    ),
+                    const SizedBox(height: BarzSpacing.xl),
+                    _buildSectionHeader(l10n.address, Icons.location_on_rounded),
+                    const SizedBox(height: BarzSpacing.sm),
+                    FormBuilderTextField(
+                      name: 'address',
+                      initialValue: widget.formData.address,
+                      decoration: _inputDecoration(l10n.address_hint),
+                      validator: FormBuilderValidators.required(),
+                      maxLines: 2,
+                      textCapitalization: TextCapitalization.sentences,
+                    ),
+                    const SizedBox(height: BarzSpacing.xl),
+                    _buildSectionHeader(l10n.contact_info, Icons.phone_rounded),
+                    const SizedBox(height: BarzSpacing.sm),
+                    BarzPhoneField(
+                      hintText: l10n.phone_hint,
+                      initialCountryCode: widget.formData.countryCode,
+                      initialValue: widget.formData.phone,
+                      onChanged: (phone) {
+                        widget.formData.phone = phone.completeNumber;
+                      },
+                    ),
+                    const SizedBox(height: BarzSpacing.md),
+                    FormBuilderTextField(
+                      name: 'email',
+                      initialValue: widget.formData.email,
+                      decoration: _inputDecoration(l10n.email_hint, prefixIcon: Icons.email_outlined),
+                      keyboardType: TextInputType.emailAddress,
+                      validator: FormBuilderValidators.compose([
+                        FormBuilderValidators.required(),
+                        FormBuilderValidators.email(),
+                      ]),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

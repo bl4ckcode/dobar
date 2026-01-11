@@ -135,18 +135,14 @@ class _CreateBarPageState extends State<CreateBarPage> {
         children: [
           _buildProgressIndicator(l10n),
           Expanded(
-            child: ResponsiveCenterContainer(
-              maxWidth: 720,
-              minWidth: 320,
-              maxWidthPercentage: 0.6,
-              child: PageView(
-                controller: _pageController,
-                physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  FindBarStep(
-                    formData: _formData,
-                    onNext: _nextStep,
-                  ),
+            child: PageView(
+              controller: _pageController,
+              physics: const NeverScrollableScrollPhysics(),
+              children: [
+                FindBarStep(
+                  formData: _formData,
+                  onNext: _nextStep,
+                ),
                 BasicInfoStep(
                   formData: _formData,
                   onNext: _nextStep,
@@ -174,7 +170,6 @@ class _CreateBarPageState extends State<CreateBarPage> {
                   isLoading: _isSubmitting,
                 ),
               ],
-              ),
             ),
           ),
         ],

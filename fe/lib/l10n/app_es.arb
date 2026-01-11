@@ -241,5 +241,10 @@
   "next": "Siguiente",
   "cancel": "Cancelar",
   "discard": "Descartar",
-  "field_required": "Este campo es obligatorio"
+  "field_required": "Este campo es obligatorio",
+  "dobar_bar_registration": "Registro de Bar Dobar",
+  "apply_to_all_days": "Aplicar a Todos los Días",
+  "general_hours": "Horario General",
+  "general_hours_hint": "Establece el horario para todos los días a la vez",
+  "or_customize": "O personaliza cada día abajo"
 }

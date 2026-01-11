@@ -25,50 +25,55 @@ class ReviewStep extends StatelessWidget {
     return Column(
       children: [
         Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(BarzSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(l10n),
-                const SizedBox(height: BarzSpacing.lg),
-                _buildSection(
-                  icon: Icons.store_rounded,
-                  title: l10n.basic_info,
-                  children: [
-                    _buildInfoRow(l10n.bar_name, formData.name),
-                    _buildInfoRow(l10n.address, formData.address),
-                    _buildInfoRow(l10n.phone, formData.phone),
-                    _buildInfoRow(l10n.email, formData.email),
-                  ],
-                ),
-                const SizedBox(height: BarzSpacing.md),
-                _buildSection(
-                  icon: Icons.photo_library_rounded,
-                  title: l10n.photos,
-                  children: [
-                    _buildPhotoStatus(l10n.bar_logo, formData.logoPath != null),
-                    _buildPhotoStatus(l10n.cover_photo, formData.coverPath != null),
-                    _buildPhotoStatus(
-                      l10n.gallery_photos,
-                      formData.photoPaths.isNotEmpty,
-                      count: formData.photoPaths.length,
-                    ),
-                  ],
-                ),
-                const SizedBox(height: BarzSpacing.md),
-                _buildSection(
-                  icon: Icons.schedule_rounded,
-                  title: l10n.operating_hours,
-                  children: _buildHoursList(context, l10n),
-                ),
-                const SizedBox(height: BarzSpacing.md),
-                _buildSection(
-                  icon: Icons.account_balance_rounded,
-                  title: l10n.payout_setup_title,
-                  children: _buildPaymentInfo(l10n),
-                ),
-              ],
+          child: ResponsiveCenterContainer(
+            maxWidth: 720,
+            minWidth: 320,
+            maxWidthPercentage: 0.6,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(BarzSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildHeader(l10n),
+                  const SizedBox(height: BarzSpacing.lg),
+                  _buildSection(
+                    icon: Icons.store_rounded,
+                    title: l10n.basic_info,
+                    children: [
+                      _buildInfoRow(l10n.bar_name, formData.name),
+                      _buildInfoRow(l10n.address, formData.address),
+                      _buildInfoRow(l10n.phone, formData.phone),
+                      _buildInfoRow(l10n.email, formData.email),
+                    ],
+                  ),
+                  const SizedBox(height: BarzSpacing.md),
+                  _buildSection(
+                    icon: Icons.photo_library_rounded,
+                    title: l10n.photos,
+                    children: [
+                      _buildPhotoStatus(l10n.bar_logo, formData.logoPath != null),
+                      _buildPhotoStatus(l10n.cover_photo, formData.coverPath != null),
+                      _buildPhotoStatus(
+                        l10n.gallery_photos,
+                        formData.photoPaths.isNotEmpty,
+                        count: formData.photoPaths.length,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: BarzSpacing.md),
+                  _buildSection(
+                    icon: Icons.schedule_rounded,
+                    title: l10n.operating_hours,
+                    children: _buildHoursList(context, l10n),
+                  ),
+                  const SizedBox(height: BarzSpacing.md),
+                  _buildSection(
+                    icon: Icons.account_balance_rounded,
+                    title: l10n.payout_setup_title,
+                    children: _buildPaymentInfo(l10n),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

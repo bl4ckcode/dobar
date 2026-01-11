@@ -287,5 +287,10 @@
   "account_savings": "Poupança",
   "account_holder_name": "Nome do Titular",
   "account_holder_hint": "Nome conforme consta na conta",
-  "routing_number": "Código de Roteamento"
+  "routing_number": "Código de Roteamento",
+  "dobar_bar_registration": "Cadastro de Bar Dobar",
+  "apply_to_all_days": "Aplicar a Todos os Dias",
+  "general_hours": "Horário Geral",
+  "general_hours_hint": "Defina o horário para todos os dias de uma vez",
+  "or_customize": "Ou personalize cada dia abaixo"
 }

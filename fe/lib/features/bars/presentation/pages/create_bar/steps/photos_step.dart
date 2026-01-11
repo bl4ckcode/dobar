@@ -28,38 +28,43 @@ class _PhotosStepState extends State<PhotosStep> {
     return Column(
       children: [
         Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(BarzSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildPhotoSection(
-                  title: l10n.bar_logo,
-                  subtitle: l10n.bar_logo_hint,
-                  icon: Icons.storefront_rounded,
-                  imagePath: widget.formData.logoPath,
-                  onTap: () => _pickImage(ImageType.logo),
-                  aspectRatio: 1,
-                ),
-                const SizedBox(height: BarzSpacing.xl),
-                _buildPhotoSection(
-                  title: l10n.cover_photo,
-                  subtitle: l10n.cover_photo_hint,
-                  icon: Icons.panorama_rounded,
-                  imagePath: widget.formData.coverPath,
-                  onTap: () => _pickImage(ImageType.cover),
-                  aspectRatio: 16 / 9,
-                ),
-                const SizedBox(height: BarzSpacing.xl),
-                _buildSectionHeader(l10n.gallery_photos, Icons.photo_library_rounded),
-                const SizedBox(height: BarzSpacing.sm),
-                Text(
-                  l10n.gallery_photos_hint,
-                  style: TextStyle(color: textSecondary, fontSize: 14),
-                ),
-                const SizedBox(height: BarzSpacing.md),
-                _buildGalleryGrid(),
-              ],
+          child: ResponsiveCenterContainer(
+            maxWidth: 720,
+            minWidth: 320,
+            maxWidthPercentage: 0.6,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(BarzSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildPhotoSection(
+                    title: l10n.bar_logo,
+                    subtitle: l10n.bar_logo_hint,
+                    icon: Icons.storefront_rounded,
+                    imagePath: widget.formData.logoPath,
+                    onTap: () => _pickImage(ImageType.logo),
+                    aspectRatio: 1,
+                  ),
+                  const SizedBox(height: BarzSpacing.xl),
+                  _buildPhotoSection(
+                    title: l10n.cover_photo,
+                    subtitle: l10n.cover_photo_hint,
+                    icon: Icons.panorama_rounded,
+                    imagePath: widget.formData.coverPath,
+                    onTap: () => _pickImage(ImageType.cover),
+                    aspectRatio: 16 / 9,
+                  ),
+                  const SizedBox(height: BarzSpacing.xl),
+                  _buildSectionHeader(l10n.gallery_photos, Icons.photo_library_rounded),
+                  const SizedBox(height: BarzSpacing.sm),
+                  Text(
+                    l10n.gallery_photos_hint,
+                    style: TextStyle(color: textSecondary, fontSize: 14),
+                  ),
+                  const SizedBox(height: BarzSpacing.md),
+                  _buildGalleryGrid(),
+                ],
+              ),
             ),
           ),
         ),

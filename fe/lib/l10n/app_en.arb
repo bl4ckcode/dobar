@@ -343,5 +343,10 @@
   "account_savings": "Savings",
   "account_holder_name": "Account Holder Name",
   "account_holder_hint": "Name as it appears on bank account",
-  "routing_number": "Routing Number"
+  "routing_number": "Routing Number",
+  "dobar_bar_registration": "Dobar Bar Registration",
+  "apply_to_all_days": "Apply to All Days",
+  "general_hours": "General Hours",
+  "general_hours_hint": "Set hours for all days at once",
+  "or_customize": "Or customize each day below"
 }

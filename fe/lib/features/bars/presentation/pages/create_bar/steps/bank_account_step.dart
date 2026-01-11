@@ -43,30 +43,33 @@ class _BankAccountStepState extends State<BankAccountStep> {
     return Column(
       children: [
         Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(BarzSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildInfoBanner(l10n),
-                const SizedBox(height: BarzSpacing.xl),
-                
-                // Business ID Section (CNPJ, RFC, CUIT, EIN, etc.)
-                if (_countryConfig.requiresBusinessId) ...[
-                  _buildSectionHeader(
-                    _countryConfig.businessIdLabel ?? l10n.business_id,
-                    Icons.badge_rounded,
-                  ),
-                  const SizedBox(height: BarzSpacing.sm),
-                  _buildBusinessIdSection(l10n),
+          child: ResponsiveCenterContainer(
+            maxWidth: 720,
+            minWidth: 320,
+            maxWidthPercentage: 0.6,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(BarzSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildInfoBanner(l10n),
                   const SizedBox(height: BarzSpacing.xl),
+                  
+                  if (_countryConfig.requiresBusinessId) ...[
+                    _buildSectionHeader(
+                      _countryConfig.businessIdLabel ?? l10n.business_id,
+                      Icons.badge_rounded,
+                    ),
+                    const SizedBox(height: BarzSpacing.sm),
+                    _buildBusinessIdSection(l10n),
+                    const SizedBox(height: BarzSpacing.xl),
+                  ],
+                  
+                  _buildSectionHeader(l10n.bank_account, Icons.account_balance_rounded),
+                  const SizedBox(height: BarzSpacing.sm),
+                  _buildBankAccountSection(l10n),
                 ],
-                
-                // Bank Account Section
-                _buildSectionHeader(l10n.bank_account, Icons.account_balance_rounded),
-                const SizedBox(height: BarzSpacing.sm),
-                _buildBankAccountSection(l10n),
-              ],
+              ),
             ),
           ),
         ),

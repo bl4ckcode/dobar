@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
@@ -29,19 +30,26 @@ class _FindBarStepState extends State<FindBarStep> {
     return Column(
       children: [
         Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(BarzSpacing.lg),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(l10n),
-                const SizedBox(height: BarzSpacing.xl),
-                _buildSearchSection(l10n),
-                const SizedBox(height: BarzSpacing.lg),
-                if (widget.formData.address.isNotEmpty) _buildSelectedPlace(l10n),
-                const SizedBox(height: BarzSpacing.lg),
-                _buildManualEntryToggle(l10n),
-              ],
+          child: ResponsiveCenterContainer(
+            maxWidth: 720,
+            minWidth: 320,
+            maxWidthPercentage: 0.6,
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(BarzSpacing.lg),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildAnimatedTitle(l10n),
+                  const SizedBox(height: BarzSpacing.lg),
+                  _buildHeader(l10n),
+                  const SizedBox(height: BarzSpacing.xl),
+                  _buildSearchSection(l10n),
+                  const SizedBox(height: BarzSpacing.lg),
+                  if (widget.formData.address.isNotEmpty) _buildSelectedPlace(l10n),
+                  const SizedBox(height: BarzSpacing.lg),
+                  _buildManualEntryToggle(l10n),
+                ],
+              ),
             ),
           ),
         ),
@@ -51,6 +59,23 @@ class _FindBarStepState extends State<FindBarStep> {
           isNextEnabled: widget.formData.address.isNotEmpty,
         ),
       ],
+    );
+  }
+
+  Widget _buildAnimatedTitle(AppLocalizations l10n) {
+    return Center(
+      child: Text(
+        l10n.dobar_bar_registration,
+        style: const TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+          color: barzDark,
+        ),
+        textAlign: TextAlign.center,
+      )
+          .animate()
+          .fadeIn(duration: 600.ms)
+          .slideY(begin: -0.3, end: 0, duration: 600.ms, curve: Curves.easeOutCubic),
     );
   }
 
