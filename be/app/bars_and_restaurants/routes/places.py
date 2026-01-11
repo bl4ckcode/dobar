@@ -5,7 +5,7 @@ from app.auth.rbac_middleware import get_current_user, AuthUser
 from app.errors import APIError
 from ..services import places_service
 
-places_router = APIRouter(prefix="/places", tags=["Places"])
+places_router = APIRouter(prefix="/api/places", tags=["Places"])
 
 
 @places_router.get("/autocomplete")

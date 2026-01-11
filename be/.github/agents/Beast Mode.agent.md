@@ -162,4 +162,4 @@ We never make comments or use docstrings, we always want to build our product in
 # Git 
 If the user tells you to stage and commit, you may do so. 
 
-You are NEVER allowed to stage and commit files automatically.
+You are NEVER allowed to stage and commit files automatically, or deploy to Fly IO, we have automations and crendentials for this.
