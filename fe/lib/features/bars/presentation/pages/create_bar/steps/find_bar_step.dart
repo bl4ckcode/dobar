@@ -6,13 +6,11 @@ import '../create_bar_page.dart';
 class FindBarStep extends StatefulWidget {
   final CreateBarFormData formData;
   final VoidCallback onNext;
-  final String googleApiKey;
 
   const FindBarStep({
     super.key,
     required this.formData,
     required this.onNext,
-    required this.googleApiKey,
   });
 
   @override
@@ -101,9 +99,8 @@ class _FindBarStepState extends State<FindBarStep> {
           ],
         ),
         const SizedBox(height: BarzSpacing.sm),
-        // BarzAddressField now uses JS interop on web, HTTP on mobile
+        // BarzAddressField uses our secure backend proxy
         BarzAddressField(
-          googleApiKey: widget.googleApiKey,
           hintText: l10n.search_bar_hint,
           countries: ['br', 'pt', 'us', 'es', 'mx', 'ar'],
           onPlaceSelected: (details) {

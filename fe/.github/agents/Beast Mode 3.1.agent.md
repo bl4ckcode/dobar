@@ -1,6 +1,6 @@
 ---
 description: Beast Mode 3.1
-tools: ['extensions', 'codebase', 'usages', 'vscodeAPI', 'problems', 'changes', 'testFailure', 'terminalSelection', 'terminalLastCommand', 'openSimpleBrowser', 'fetch', 'findTestFiles', 'searchResults', 'githubRepo', 'runCommands', 'runTasks', 'editFiles', 'runNotebooks', 'search', 'new']
+tools: ['vscode', 'execute/runNotebookCell', 'execute/testFailure', 'execute/getTerminalOutput', 'execute/runTask', 'execute/getTaskOutput', 'execute/createAndRunTask', 'execute/runInTerminal', 'read', 'edit/editFiles', 'search', 'web']
 ---
 
 # Beast Mode 3.1
@@ -146,6 +146,18 @@ If you are asked to write a prompt,  you should always generate the prompt in ma
 If you are not writing the prompt in a file, you should always wrap the prompt in triple backticks so that it is formatted correctly and can be easily copied from the chat.
 
 Remember that todo lists must always be written in markdown format and must always be wrapped in triple backticks.
+
+# Barz-backend terminal command lines execution
+Remember that syntax commands through terminal such as:
+
+fly postgres connect -a barzdb -d barz_db -c "SELECT id, firebase_uid, phone_number, email, google_id FROM users WHERE email LIKE '%carlos%' OR phone_number LIKE '%55%' ORDER BY id;"
+
+Doesn't work, you must add the following approach where you select the exact value you want:
+
+sql -d barz_db -c "DELETE FROM menu_items;" && psql -d barz_db -c "DELETE FROM menus;" && psql -d barz_db -c "SELECT setval('menus_id_seq', 1, false);" && psql -d barz_db -c "SELECT setval('menu_items_id_seq', 1, false);"
+
+# Dobar Philosophy and Culture when it comes to coding
+We never make comments or use docstrings, we always want to build our product international. We value so much keeping our product clean and efficient, that dobar principles are: keep it clean, conscise, reusable, scalable and efficient. Always follow these principles when writing code.
 
 # Git 
 If the user tells you to stage and commit, you may do so. 

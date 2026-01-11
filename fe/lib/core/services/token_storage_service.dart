@@ -44,12 +44,23 @@ class TokenStorageService {
 
   // Access Token
   Future<void> saveAccessToken(String token) async {
-    await _storage.write(key: _accessTokenKey, value: token);
-    _log('[TOKEN] Access token saved');
+    try {
+      await _storage.write(key: _accessTokenKey, value: token);
+      _log('[TOKEN] Access token saved (${token.length} chars)');
+    } catch (e) {
+      _log('[TOKEN] ERROR saving access token: $e');
+    }
   }
 
   Future<String?> getAccessToken() async {
-    return await _storage.read(key: _accessTokenKey);
+    try {
+      final token = await _storage.read(key: _accessTokenKey);
+      _log('[TOKEN] Access token read: ${token != null ? "exists (${token.length} chars)" : "null"}');
+      return token;
+    } catch (e) {
+      _log('[TOKEN] ERROR reading access token: $e');
+      return null;
+    }
   }
 
   Future<void> deleteAccessToken() async {

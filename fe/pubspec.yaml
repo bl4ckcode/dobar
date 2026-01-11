@@ -78,7 +78,7 @@ dependencies:
 
   # --- GOOGLE MAPS & LOCATION ---
   google_maps_flutter: ^2.12.0      # Updated
-  google_places_api_flutter: ^2.0.0 # Places autocomplete with configurable CORS
+  # google_places_api_flutter removed - using our backend proxy instead
   location: ^8.0.0
   flutter_polyline_points: ^3.1.0   # Updated
 

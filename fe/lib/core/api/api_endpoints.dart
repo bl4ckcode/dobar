@@ -99,5 +99,10 @@ class ApiEndpoints {
   static String pauseCampaign(int campaignId) => '/advertising/campaigns/$campaignId/pause';
   static String resumeCampaign(int campaignId) => '/advertising/campaigns/$campaignId/resume';
   static String campaignAnalytics(int campaignId) => '/advertising/analytics/$campaignId';
+
+  // Google Places API Proxy (secure - API key on server)
+  static const String placesAutocomplete = '/api/places/autocomplete';
+  static const String placesDetails = '/api/places/details';
+  static const String placesDetailsParsed = '/api/places/details/parsed';
 }
 

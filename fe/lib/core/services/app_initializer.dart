@@ -53,8 +53,9 @@ class AppInitializer {
 
   Future<void> _initializeServices() async {
     _debugLog('Initializing services...');
-    // Add any service initialization here
-    // e.g., analytics, crash reporting, etc.
+    // Check auth status at startup
+    final isAuth = await isUserAuthenticated();
+    _debugLog('🔐 Authenticated at startup: $isAuth');
   }
 
   Future<void> _preloadData() async {

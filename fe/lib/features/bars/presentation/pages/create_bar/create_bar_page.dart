@@ -11,8 +11,6 @@ import 'steps/photos_step.dart';
 import 'steps/hours_step.dart';
 import 'steps/review_step.dart';
 
-const _googleApiKey = 'AIzaSyBYxRApMMfkA9dI6qHYUEYxHY8ZsZf6jOI';
-
 class CreateBarPage extends StatefulWidget {
   const CreateBarPage({super.key});
 
@@ -142,7 +140,6 @@ class _CreateBarPageState extends State<CreateBarPage> {
                 FindBarStep(
                   formData: _formData,
                   onNext: _nextStep,
-                  googleApiKey: _googleApiKey,
                 ),
                 BasicInfoStep(
                   formData: _formData,

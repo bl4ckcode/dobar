@@ -165,12 +165,29 @@ class AuthInterceptor extends QueuedInterceptor {
   Future<void> loadTokens() async {
     _accessToken = await tokenStorage?.getAccessToken();
     _refreshToken = await tokenStorage?.getRefreshToken();
-    if (kDebugMode && _accessToken != null) print('[AUTH] Tokens loaded from storage');
+    if (kDebugMode) {
+      print('[AUTH] loadTokens() called');
+      print('[AUTH] Access token from storage: ${_accessToken != null ? "exists (${_accessToken!.length} chars)" : "null"}');
+      print('[AUTH] Refresh token from storage: ${_refreshToken != null ? "exists" : "null"}');
+    }
   }
 
   Future<bool> isAuthenticated() async {
-    if (_accessToken != null) return true;
+    if (kDebugMode) print('[AUTH] isAuthenticated() check - cached token: ${_accessToken != null}');
+    
+    if (_accessToken != null) {
+      if (kDebugMode) print('[AUTH] Using cached token - authenticated: true');
+      return true;
+    }
+    
     final stored = await tokenStorage?.getAccessToken();
-    return stored != null && stored.isNotEmpty;
+    final isAuth = stored != null && stored.isNotEmpty;
+    
+    if (kDebugMode) {
+      print('[AUTH] Checked storage - token: ${stored != null ? "exists (${stored.length} chars)" : "null"}');
+      print('[AUTH] isAuthenticated result: $isAuth');
+    }
+    
+    return isAuth;
   }
 }

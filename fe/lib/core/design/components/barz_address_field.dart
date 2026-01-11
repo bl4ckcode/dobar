@@ -1,9 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:google_places_api_flutter/google_places_api_flutter.dart';
+import 'package:barz/core/services/places_service.dart';
 import '../tokens/colors.dart';
 import '../tokens/radii.dart';
 
-/// Place details returned after selection
 class PlaceDetails {
   final String description;
   final String? placeId;
@@ -33,63 +33,16 @@ class PlaceDetails {
 
   String get formattedAddress => description;
 
-  /// Create PlaceDetails from the package's types
-  factory PlaceDetails.fromGooglePlace(Prediction prediction, PlaceDetailsModel? details) {
-    String? streetNumber;
-    String? route;
-    String? city;
-    String? state;
-    String? postalCode;
-    String? country;
-    String? countryCode;
-    double? lat;
-    double? lng;
-
-    if (details != null) {
-      final result = details.result;
-
-      // Parse geometry
-      if (result.geometry != null) {
-        lat = result.geometry!.location.lat;
-        lng = result.geometry!.location.lng;
-      }
-
-      // Parse address components
-      final components = result.address_components;
-      if (components != null) {
-        for (final component in components) {
-          final types = component.types ?? [];
-
-          if (types.contains('street_number')) {
-            streetNumber = component.long_name;
-          } else if (types.contains('route')) {
-            route = component.long_name;
-          } else if (types.contains('locality')) {
-            city = component.long_name;
-          } else if (types.contains('administrative_area_level_1')) {
-            state = component.short_name;
-          } else if (types.contains('postal_code')) {
-            postalCode = component.long_name;
-          } else if (types.contains('country')) {
-            country = component.long_name;
-            countryCode = component.short_name;
-          }
-        }
-      }
-    }
-
+  factory PlaceDetails.fromParsed(ParsedPlaceDetails parsed) {
     return PlaceDetails(
-      description: details?.result.formatted_address ?? prediction.description,
-      placeId: prediction.place_id,
-      latitude: lat,
-      longitude: lng,
-      streetNumber: streetNumber,
-      route: route,
-      city: city,
-      state: state,
-      postalCode: postalCode,
-      country: country,
-      countryCode: countryCode,
+      description: parsed.address,
+      placeId: parsed.placeId,
+      latitude: parsed.latitude,
+      longitude: parsed.longitude,
+      city: parsed.city,
+      state: parsed.state,
+      postalCode: parsed.postalCode,
+      countryCode: parsed.countryCode,
     );
   }
 }
@@ -97,7 +50,6 @@ class PlaceDetails {
 class BarzAddressField extends StatefulWidget {
   final String? label;
   final String hintText;
-  final String googleApiKey;
   final bool enabled;
   final String? initialValue;
   final ValueChanged<PlaceDetails>? onPlaceSelected;
@@ -105,13 +57,11 @@ class BarzAddressField extends StatefulWidget {
   final List<String>? countries;
   final FocusNode? focusNode;
   final int debounceTime;
-  final bool isLatLngRequired;
 
   const BarzAddressField({
     super.key,
     this.label,
     this.hintText = '',
-    required this.googleApiKey,
     this.enabled = true,
     this.initialValue,
     this.onPlaceSelected,
@@ -119,7 +69,6 @@ class BarzAddressField extends StatefulWidget {
     this.countries,
     this.focusNode,
     this.debounceTime = 600,
-    this.isLatLngRequired = true,
   });
 
   @override
@@ -128,17 +77,156 @@ class BarzAddressField extends StatefulWidget {
 
 class _BarzAddressFieldState extends State<BarzAddressField> {
   late TextEditingController _controller;
+  late FocusNode _focusNode;
+  final LayerLink _layerLink = LayerLink();
+  OverlayEntry? _overlayEntry;
+  List<PlacePrediction> _predictions = [];
+  Timer? _debounce;
+  bool _isLoading = false;
+  bool _isSelecting = false;
 
   @override
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.initialValue);
+    _focusNode = widget.focusNode ?? FocusNode();
+    _controller.addListener(_onTextChanged);
+    _focusNode.addListener(_onFocusChanged);
   }
 
   @override
   void dispose() {
+    _debounce?.cancel();
+    _controller.removeListener(_onTextChanged);
     _controller.dispose();
+    if (widget.focusNode == null) _focusNode.dispose();
+    _removeOverlay();
     super.dispose();
+  }
+
+  void _onFocusChanged() {
+    if (!_focusNode.hasFocus) {
+      Future.delayed(const Duration(milliseconds: 200), () {
+        if (!_isSelecting) _removeOverlay();
+      });
+    }
+  }
+
+  void _onTextChanged() {
+    if (_isSelecting) return;
+    widget.onChanged?.call(_controller.text);
+    _debounce?.cancel();
+    if (_controller.text.length < 3) {
+      _removeOverlay();
+      return;
+    }
+    _debounce = Timer(Duration(milliseconds: widget.debounceTime), _search);
+  }
+
+  Future<void> _search() async {
+    final query = _controller.text;
+    if (query.length < 3) return;
+
+    setState(() => _isLoading = true);
+    final results = await PlacesService.autocomplete(
+      query,
+      countries: widget.countries,
+    );
+    
+    if (mounted && _controller.text == query) {
+      setState(() {
+        _predictions = results;
+        _isLoading = false;
+      });
+      if (results.isNotEmpty) {
+        _showOverlay();
+      } else {
+        _removeOverlay();
+      }
+    }
+  }
+
+  void _showOverlay() {
+    _removeOverlay();
+    _overlayEntry = OverlayEntry(builder: (context) => _buildOverlay());
+    Overlay.of(context).insert(_overlayEntry!);
+  }
+
+  void _removeOverlay() {
+    _overlayEntry?.remove();
+    _overlayEntry = null;
+  }
+
+  Widget _buildOverlay() {
+    return Positioned(
+      width: context.size?.width ?? 300,
+      child: CompositedTransformFollower(
+        link: _layerLink,
+        showWhenUnlinked: false,
+        offset: const Offset(0, 60),
+        child: Material(
+          elevation: 4,
+          borderRadius: BorderRadius.circular(BarzRadii.md),
+          color: surfaceWhite,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxHeight: 250),
+            child: ListView.builder(
+              shrinkWrap: true,
+              padding: EdgeInsets.zero,
+              itemCount: _predictions.length,
+              itemBuilder: (context, index) {
+                final prediction = _predictions[index];
+                return InkWell(
+                  onTap: () => _selectPlace(prediction),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.location_on, color: barzGold, size: 20),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                prediction.mainText,
+                                style: const TextStyle(fontWeight: FontWeight.w600),
+                              ),
+                              if (prediction.secondaryText.isNotEmpty)
+                                Text(
+                                  prediction.secondaryText,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: textSecondary,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _selectPlace(PlacePrediction prediction) async {
+    _isSelecting = true;
+    _removeOverlay();
+    _controller.text = prediction.description;
+    
+    final details = await PlacesService.getDetails(prediction.placeId);
+    if (details != null && widget.onPlaceSelected != null) {
+      widget.onPlaceSelected!(PlaceDetails.fromParsed(details));
+    }
+    _isSelecting = false;
   }
 
   @override
@@ -159,83 +247,52 @@ class _BarzAddressFieldState extends State<BarzAddressField> {
           ),
           const SizedBox(height: 6),
         ],
-        PlaceSearchField(
-          apiKey: widget.googleApiKey,
-          controller: _controller,
-          isLatLongRequired: widget.isLatLngRequired,
-          onPlaceSelected: (prediction, details) {
-            widget.onPlaceSelected?.call(
-              PlaceDetails.fromGooglePlace(prediction, details),
-            );
-          },
-          builder: (context, controller, focusNode) {
-            return TextField(
-              controller: controller,
-              focusNode: focusNode,
-              enabled: widget.enabled,
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: widget.enabled ? textPrimary : textTertiary,
+        CompositedTransformTarget(
+          link: _layerLink,
+          child: TextField(
+            controller: _controller,
+            focusNode: _focusNode,
+            enabled: widget.enabled,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: widget.enabled ? textPrimary : textTertiary,
+            ),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: widget.enabled ? barzGoldMuted : surfaceMuted,
+              hintText: widget.hintText,
+              hintStyle: theme.textTheme.bodyLarge?.copyWith(color: textTertiary),
+              prefixIcon: const Icon(Icons.location_on_outlined, color: textSecondary),
+              suffixIcon: _isLoading
+                  ? const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: barzGold),
+                      ),
+                    )
+                  : _controller.text.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear, color: textSecondary),
+                          onPressed: () {
+                            _controller.clear();
+                            _removeOverlay();
+                          },
+                        )
+                      : null,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(BarzRadii.md),
+                borderSide: BorderSide.none,
               ),
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: widget.enabled ? barzGoldMuted : surfaceMuted,
-                hintText: widget.hintText,
-                hintStyle: theme.textTheme.bodyLarge?.copyWith(
-                  color: textTertiary,
-                ),
-                prefixIcon:
-                    const Icon(Icons.location_on_outlined, color: textSecondary),
-                suffixIcon: controller.text.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear, color: textSecondary),
-                        onPressed: () {
-                          controller.clear();
-                        },
-                      )
-                    : null,
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 16,
-                ),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(BarzRadii.md),
-                  borderSide: BorderSide.none,
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(BarzRadii.md),
-                  borderSide: BorderSide.none,
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(BarzRadii.md),
-                  borderSide: const BorderSide(color: barzGold, width: 2),
-                ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(BarzRadii.md),
+                borderSide: BorderSide.none,
               ),
-            );
-          },
-          decorationBuilder: (context, child) {
-            return Material(
-              elevation: 4,
-              borderRadius: BorderRadius.circular(BarzRadii.md),
-              color: surfaceWhite,
-              child: child,
-            );
-          },
-          itemBuilder: (context, prediction) => Padding(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            child: Row(
-              children: [
-                const Icon(Icons.location_on, color: barzGold, size: 20),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    prediction.description,
-                    style: theme.textTheme.bodyMedium,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(BarzRadii.md),
+                borderSide: const BorderSide(color: barzGold, width: 2),
+              ),
             ),
           ),
         ),
