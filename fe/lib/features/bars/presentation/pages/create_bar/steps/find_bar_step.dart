@@ -125,20 +125,24 @@ class _FindBarStepState extends State<FindBarStep> {
     // Americas focus: Latin America + North America (max 5 for Google API)
     const americasCountries = ['br', 'mx', 'ar', 'co', 'us'];
     
-    // Try to get user's country from session
-    final sessionState = context.read<SessionBloc>().state;
-    if (sessionState is SessionReady) {
-      final userCountry = sessionState.session.user.countryCode?.toLowerCase();
-      if (userCountry != null && userCountry.isNotEmpty) {
-        // User's country first, then fill with Americas (max 5)
-        final countries = <String>[userCountry];
-        for (final c in americasCountries) {
-          if (!countries.contains(c) && countries.length < 5) {
-            countries.add(c);
+    // Try to get user's country from session (defensive - may not be available)
+    try {
+      final sessionState = context.read<SessionBloc>().state;
+      if (sessionState is SessionReady) {
+        final userCountry = sessionState.session.user.countryCode?.toLowerCase();
+        if (userCountry != null && userCountry.isNotEmpty) {
+          // User's country first, then fill with Americas (max 5)
+          final countries = <String>[userCountry];
+          for (final c in americasCountries) {
+            if (!countries.contains(c) && countries.length < 5) {
+              countries.add(c);
+            }
           }
+          return countries;
         }
-        return countries;
       }
+    } catch (_) {
+      // SessionBloc not available, use default
     }
     
     return americasCountries;
