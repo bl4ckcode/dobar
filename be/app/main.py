@@ -17,6 +17,7 @@ from .bars_and_restaurants.services.connection_manager import ws_router
 from .bars_and_restaurants.routes.bar_owners import bar_owners_router
 from .bars_and_restaurants.routes.wallet import wallet_router
 from .bars_and_restaurants.routes.staff import staff_router, my_bars_router
+from .bars_and_restaurants.routes.places import places_router
 from .auth.profile import profile_router
 from fastapi.openapi.utils import get_openapi
 from contextlib import asynccontextmanager
@@ -115,6 +116,7 @@ app.include_router(wallet_router)
 app.include_router(staff_router)
 app.include_router(my_bars_router)
 app.include_router(profile_router)
+app.include_router(places_router)
 app.include_router(advertising_router)
 
 def custom_openapi():
