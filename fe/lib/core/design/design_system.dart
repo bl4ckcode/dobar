@@ -21,5 +21,6 @@ export 'components/barz_stepper_touch.dart';
 export 'components/barz_phone_field.dart';
 export 'components/barz_address_field.dart';
 export 'components/barz_masked_field.dart';
+export 'components/responsive_center_container.dart';
 export 'config/country_form_config.dart';
 export 'theme/barz_theme.dart';

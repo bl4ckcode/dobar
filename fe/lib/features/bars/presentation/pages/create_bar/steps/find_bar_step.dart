@@ -109,7 +109,8 @@ class _FindBarStepState extends State<FindBarStep> {
           countries: _getSearchCountries(context),
           onPlaceSelected: (details) {
             setState(() {
-              widget.formData.name = _extractBarName(details.description);
+              // Use displayName which prefers the actual place name from API
+              widget.formData.name = details.displayName;
               widget.formData.address = details.description;
               widget.formData.latitude = details.latitude;
               widget.formData.longitude = details.longitude;
@@ -146,11 +147,6 @@ class _FindBarStepState extends State<FindBarStep> {
     }
     
     return americasCountries;
-  }
-
-  String _extractBarName(String description) {
-    final parts = description.split(',');
-    return parts.isNotEmpty ? parts.first.trim() : '';
   }
 
   Widget _buildSelectedPlace(AppLocalizations l10n) {

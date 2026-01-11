@@ -131,19 +131,28 @@ class _CreateBarPageState extends State<CreateBarPage> {
           onPressed: () => _showExitConfirmation(context, l10n),
         ),
       ),
-      body: Column(
-        children: [
-          _buildProgressIndicator(l10n),
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              physics: const NeverScrollableScrollPhysics(),
-              children: [
-                FindBarStep(
+      body: ResponsiveCenterContainer(
+        maxWidth: 600,
+        minWidth: 320,
+        maxWidthPercentage: 0.5,
+        child: Column(
+          children: [
+            _buildProgressIndicator(l10n),
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  FindBarStep(
+                    formData: _formData,
+                    onNext: _nextStep,
+                  ),
+                BasicInfoStep(
                   formData: _formData,
                   onNext: _nextStep,
+                  onBack: _previousStep,
                 ),
-                BasicInfoStep(
+                BankAccountStep(
                   formData: _formData,
                   onNext: _nextStep,
                   onBack: _previousStep,
@@ -154,11 +163,6 @@ class _CreateBarPageState extends State<CreateBarPage> {
                   onBack: _previousStep,
                 ),
                 HoursStep(
-                  formData: _formData,
-                  onNext: _nextStep,
-                  onBack: _previousStep,
-                ),
-                BankAccountStep(
                   formData: _formData,
                   onNext: _nextStep,
                   onBack: _previousStep,
@@ -174,6 +178,7 @@ class _CreateBarPageState extends State<CreateBarPage> {
           ),
         ],
       ),
+      ),
     );
   }
 
@@ -181,32 +186,33 @@ class _CreateBarPageState extends State<CreateBarPage> {
     final stepLabels = [
       l10n.step_find_bar,
       l10n.step_basic_info,
+      l10n.step_payment,
       l10n.step_photos,
       l10n.step_hours,
-      l10n.step_payment,
       l10n.step_review,
     ];
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       color: surfaceWhite,
-      child: Column(
-        children: [
-          Row(
-            children: List.generate(_totalSteps, (index) {
-              final isCompleted = index < _currentStep;
-              final isCurrent = index == _currentStep;
+      child: Row(
+        children: List.generate(_totalSteps, (index) {
+          final isCompleted = index < _currentStep;
+          final isCurrent = index == _currentStep;
 
-              return Expanded(
-                child: Row(
+          return Expanded(
+            child: Row(
+              children: [
+                if (index > 0)
+                  Expanded(
+                    child: Container(
+                      height: 2,
+                      color: isCompleted ? barzGold : surfaceDim,
+                    ),
+                  ),
+                Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    if (index > 0)
-                      Expanded(
-                        child: Container(
-                          height: 2,
-                          color: isCompleted ? barzGold : surfaceDim,
-                        ),
-                      ),
                     Container(
                       width: 28,
                       height: 28,
@@ -238,24 +244,31 @@ class _CreateBarPageState extends State<CreateBarPage> {
                           end: const Offset(1.1, 1.1),
                           duration: 200.ms,
                         ),
-                    if (index < _totalSteps - 1)
-                      Expanded(
-                        child: Container(
-                          height: 2,
-                          color: isCompleted ? barzGold : surfaceDim,
-                        ),
+                    const SizedBox(height: 6),
+                    Text(
+                      stepLabels[index],
+                      style: TextStyle(
+                        fontSize: 10,
+                        fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w500,
+                        color: isCurrent ? barzDark : textSecondary,
                       ),
+                      textAlign: TextAlign.center,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ],
                 ),
-              );
-            }),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            stepLabels[_currentStep],
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-          ),
-        ],
+                if (index < _totalSteps - 1)
+                  Expanded(
+                    child: Container(
+                      height: 2,
+                      color: isCompleted ? barzGold : surfaceDim,
+                    ),
+                  ),
+              ],
+            ),
+          );
+        }),
       ),
     );
   }

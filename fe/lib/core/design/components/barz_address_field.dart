@@ -6,6 +6,7 @@ import '../tokens/radii.dart';
 
 class PlaceDetails {
   final String description;
+  final String? name;
   final String? placeId;
   final double? latitude;
   final double? longitude;
@@ -19,6 +20,7 @@ class PlaceDetails {
 
   PlaceDetails({
     required this.description,
+    this.name,
     this.placeId,
     this.latitude,
     this.longitude,
@@ -33,9 +35,13 @@ class PlaceDetails {
 
   String get formattedAddress => description;
 
+  /// Returns the place name if available, otherwise extracts from description
+  String get displayName => name ?? description.split(',').first.trim();
+
   factory PlaceDetails.fromParsed(ParsedPlaceDetails parsed) {
     return PlaceDetails(
       description: parsed.address,
+      name: parsed.name.isNotEmpty ? parsed.name : null,
       placeId: parsed.placeId,
       latitude: parsed.latitude,
       longitude: parsed.longitude,

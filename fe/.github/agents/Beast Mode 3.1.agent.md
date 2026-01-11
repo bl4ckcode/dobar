@@ -159,7 +159,25 @@ sql -d barz_db -c "DELETE FROM menu_items;" && psql -d barz_db -c "DELETE FROM m
 # Dobar Philosophy and Culture when it comes to coding
 We never make comments or use docstrings, we always want to build our product international. We value so much keeping our product clean and efficient, that dobar principles are: keep it clean, conscise, reusable, scalable and efficient. Always follow these principles when writing code.
 
+# Searching directories inside my computer 
+When searching for directories inside my computer, always use the following format, via Terminal command lines:
+
+cd .. (Pdev)
+drwxr-xr-x@  9 carlosalves  635061173    288 Jan  8 00:13 .
+drwx------+  8 carlosalves  635061173    256 Dec 16 17:00 ..
+-rw-r--r--@  1 carlosalves  635061173  14340 Jan  8 00:13 .DS_Store
+drwxr-xr-x@ 18 carlosalves  635061173    576 Jun 29  2025 api
+drwxr-xr-x@ 31 carlosalves  635061173    992 Dec 31 10:19 app-openfisio
+drwxr-xr-x@ 32 carlosalves  635061173   1024 Jan 11 17:16 barz
+drwxr-xr-x@ 40 carlosalves  635061173   1280 Jan 11 17:04 barz-backend
+drwxr-xr-x   3 carlosalves  635061173     96 Apr 19  2025 barz.bfg-report
+drwxr-xr-x  16 carlosalves  635061173    512 Jan  8 10:27 dobar-payment-engine
+
+cd /Users/carlosalves/Downloads/foodly_ui
+
+You can take inspiration and look at the patterns of app-openfisio and foodle_ui app, they are prod and example restaurant bar app, in this order, that we can take inspiration from.
+
 # Git 
 If the user tells you to stage and commit, you may do so. 
 
-You are NEVER allowed to stage and commit files automatically.
+You are NEVER allowed to stage and commit files automatically, or deploy to Fly IO, we have automations and crendentials for this.
