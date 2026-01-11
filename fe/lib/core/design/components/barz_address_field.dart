@@ -79,6 +79,7 @@ class _BarzAddressFieldState extends State<BarzAddressField> {
   late TextEditingController _controller;
   late FocusNode _focusNode;
   final LayerLink _layerLink = LayerLink();
+  final GlobalKey _textFieldKey = GlobalKey();
   OverlayEntry? _overlayEntry;
   List<PlacePrediction> _predictions = [];
   Timer? _debounce;
@@ -158,8 +159,11 @@ class _BarzAddressFieldState extends State<BarzAddressField> {
   }
 
   Widget _buildOverlay() {
+    final renderBox = _textFieldKey.currentContext?.findRenderObject() as RenderBox?;
+    final width = renderBox?.size.width ?? 300;
+    
     return Positioned(
-      width: context.size?.width ?? 300,
+      width: width,
       child: CompositedTransformFollower(
         link: _layerLink,
         showWhenUnlinked: false,
@@ -250,6 +254,7 @@ class _BarzAddressFieldState extends State<BarzAddressField> {
         CompositedTransformTarget(
           link: _layerLink,
           child: TextField(
+            key: _textFieldKey,
             controller: _controller,
             focusNode: _focusNode,
             enabled: widget.enabled,
