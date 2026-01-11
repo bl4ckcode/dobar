@@ -58,8 +58,8 @@ async def get_current_user(
                 headers={"WWW-Authenticate": "Bearer"},
             )
         
-        # Check if user is active
-        if not user.get("is_active", True):
+        is_active = getattr(user, "is_active", True) if hasattr(user, "is_active") else user["is_active"] if "is_active" in dict(user._mapping) else True
+        if not is_active:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="User account is inactive"

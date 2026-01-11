@@ -25,7 +25,7 @@ class BarCreate(BaseModel):
     address: str
     phone_number: str
     email: EmailStr
-    owner_id: int
+    owner_id: Optional[int] = None
     latitude: float
     longitude: float
     

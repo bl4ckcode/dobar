@@ -4,29 +4,31 @@ from httpx import AsyncClient
 
 @pytest.mark.asyncio
 class TestBarOwners:
-    async def test_create_bar_owner(self, client: AsyncClient):
+    async def test_create_bar_owner(self, auth_client):
+        client, headers, _ = auth_client
         response = await client.post("/barowners/", json={
             "id": 12345,
             "name": "John Owner",
             "email": "john@owner.com",
             "phone_number": "+1234567890"
-        })
+        }, headers=headers)
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == 12345
         assert data["name"] == "John Owner"
         assert data["email"] == "john@owner.com"
 
-    async def test_create_duplicate_bar_owner_fails(self, client: AsyncClient):
+    async def test_create_duplicate_bar_owner_fails(self, auth_client):
+        client, headers, _ = auth_client
         owner_data = {
             "id": 99999,
             "name": "Duplicate Owner",
             "email": "dup@owner.com",
             "phone_number": "+9876543210"
         }
-        response1 = await client.post("/barowners/", json=owner_data)
+        response1 = await client.post("/barowners/", json=owner_data, headers=headers)
         assert response1.status_code == 200
-        response2 = await client.post("/barowners/", json=owner_data)
+        response2 = await client.post("/barowners/", json=owner_data, headers=headers)
         assert response2.status_code == 409
         assert response2.json()["error_code"] == "CONFLICT"
         assert "already exists" in response2.json()["message"].lower()

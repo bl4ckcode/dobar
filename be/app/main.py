@@ -3,6 +3,7 @@ import os
 from dotenv import load_dotenv
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
 from app.bars_and_restaurants.models.nosql_models import create_geo_index
 from app.errors import APIError, ErrorResponse, ErrorCode
 from .database import engine, Base, database
@@ -94,6 +95,28 @@ async def api_error_handler(request: Request, exc: APIError):
     return JSONResponse(
         status_code=exc.status_code,
         content=exc.to_response().model_dump(exclude_none=True)
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    details = {}
+    for error in exc.errors():
+        loc = error.get("loc", [])
+        field = ".".join(str(part) for part in loc[1:]) if len(loc) > 1 else (loc[0] if loc else "unknown")
+        if not field:
+            field = "unknown"
+        if field not in details:
+            details[field] = []
+        details[field].append(error.get("msg", "Invalid value"))
+    
+    return JSONResponse(
+        status_code=422,
+        content={
+            "error_code": ErrorCode.VALIDATION_ERROR.value,
+            "message": "Validation failed",
+            "details": details
+        }
     )
 
 

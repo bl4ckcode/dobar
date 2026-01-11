@@ -9,11 +9,13 @@ from typing import Optional
 
 from app.bars_and_restaurants.services.image_upload import generate_presigned_url, upload_image_to_s3, extract_s3_key
 from app.errors import APIError
+from app.auth.dependencies import get_current_user
+from app.auth.auth_models import User
 from ..models.relational_models import Bar as BarModel, BarOwner
 from ..models.nosql_models import bars_collection
 from ..schemas.bars import Bar, BarCreate, BarResponse
-from ..models.nosql_models import insert_bar_into_mongo  # Import from nosql models
-from app.database import database  # Use the async database connection
+from ..models.nosql_models import insert_bar_into_mongo
+from app.database import database
 
 bars_router = APIRouter(prefix="/bars", tags=["Bars"])
 
@@ -288,12 +290,14 @@ async def create_bar(name: str = Form(...),
 
 
 @bars_router.post("/wizard", response_model=BarResponse, summary="Create Bar (Wizard Flow)")
-async def create_bar_wizard(bar_data: BarCreate):
+async def create_bar_wizard(bar_data: BarCreate, current_user: User = Depends(get_current_user)):
     from datetime import datetime
     from ..models.bank_account import BarBankAccount
     from ..services import bank_account_service as bas
     
     data = bar_data.model_dump(exclude_none=True)
+    
+    data["owner_id"] = current_user.id
     
     bank_account_data = data.pop("bank_account", None)
     

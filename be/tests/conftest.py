@@ -87,6 +87,7 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
     import app.database as db_module
     import app.auth.routes as auth_routes
     import app.auth.middleware as auth_middleware
+    import app.auth.dependencies as auth_dependencies
     import app.auth.profile as profile_routes
     import app.auth.rbac_middleware as rbac_middleware
     import app.bars_and_restaurants.routes.bars as bars_routes
@@ -101,6 +102,7 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
     db_module.database = test_database
     auth_routes.database = test_database
     auth_middleware.database = test_database
+    auth_dependencies.database = test_database
     profile_routes.database = test_database
     rbac_middleware.database = test_database
     bars_routes.database = test_database
@@ -117,6 +119,7 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
     db_module.database = original_db
     auth_routes.database = original_db
     auth_middleware.database = original_db
+    auth_dependencies.database = original_db
     profile_routes.database = original_db
     rbac_middleware.database = original_db
     bars_routes.database = original_db
