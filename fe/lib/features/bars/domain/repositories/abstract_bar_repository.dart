@@ -23,5 +23,6 @@ abstract class AbstractBarRepository {
     String? coverUrl,
     List<String>? photoUrls,
     Map<String, dynamic>? operatingHours,
+    Map<String, dynamic>? bankAccount,
   });
 }

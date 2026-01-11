@@ -184,11 +184,7 @@ class _FindBarStepState extends State<FindBarStep> {
           const SizedBox(height: 12),
           _buildInfoTile(Icons.store, widget.formData.name.isEmpty ? '-' : widget.formData.name),
           _buildInfoTile(Icons.location_on, widget.formData.address),
-          if (widget.formData.latitude != null && widget.formData.longitude != null)
-            _buildInfoTile(
-              Icons.pin_drop,
-              '${widget.formData.latitude!.toStringAsFixed(4)}, ${widget.formData.longitude!.toStringAsFixed(4)}',
-            ),
+
           _buildInfoTile(Icons.flag, '${config.name} (${config.currency})'),
         ],
       ),
@@ -271,9 +267,10 @@ class _FindBarStepState extends State<FindBarStep> {
       child: FilledButton(
         onPressed: isValid ? widget.onNext : null,
         style: FilledButton.styleFrom(
-          backgroundColor: barzGold,
-          foregroundColor: barzDark,
+          backgroundColor: successGreen,
+          foregroundColor: textOnDark,
           disabledBackgroundColor: surfaceDim,
+          disabledForegroundColor: textTertiary,
           padding: const EdgeInsets.all(16),
           minimumSize: const Size(double.infinity, 56),
         ),

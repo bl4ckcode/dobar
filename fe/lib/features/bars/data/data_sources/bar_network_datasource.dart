@@ -120,6 +120,7 @@ class BarNetworkDataSource {
     String? coverUrl,
     List<String>? photoUrls,
     Map<String, dynamic>? operatingHours,
+    Map<String, dynamic>? bankAccount,
   }) async {
     try {
       final response = await dio.post(
@@ -139,6 +140,7 @@ class BarNetworkDataSource {
           if (coverUrl != null) 'cover_url': coverUrl,
           if (photoUrls != null && photoUrls.isNotEmpty) 'photo_urls': photoUrls,
           if (operatingHours != null) 'operating_hours': operatingHours,
+          if (bankAccount != null) 'bank_account': bankAccount,
         },
       );
       return BarModel.fromJson(response.data);

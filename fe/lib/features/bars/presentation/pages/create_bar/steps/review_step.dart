@@ -75,6 +75,12 @@ class ReviewStep extends StatelessWidget {
                   title: l10n.operating_hours,
                   children: _buildHoursList(context, l10n),
                 ),
+                const SizedBox(height: BarzSpacing.md),
+                _buildSection(
+                  icon: Icons.account_balance_rounded,
+                  title: l10n.payout_setup_title,
+                  children: _buildPaymentInfo(l10n),
+                ),
               ],
             ),
           ),
@@ -268,6 +274,63 @@ class ReviewStep extends StatelessWidget {
     }).toList();
   }
 
+  List<Widget> _buildPaymentInfo(AppLocalizations l10n) {
+    final config = formData.countryConfig;
+    final bank = formData.bankAccount;
+    final widgets = <Widget>[];
+
+    // Business ID
+    if (config.requiresBusinessId && formData.businessId.isNotEmpty) {
+      widgets.add(_buildInfoRow(config.businessIdLabel ?? l10n.business_id, _maskSensitive(formData.businessId)));
+    }
+
+    // Bank account info based on country
+    switch (config.code) {
+      case CountryCode.br:
+        if (bank.pixKey.isNotEmpty) {
+          widgets.add(_buildInfoRow(l10n.pix_key, _maskSensitive(bank.pixKey)));
+          widgets.add(_buildInfoRow(l10n.pix_key_type, bank.pixKeyType.toUpperCase()));
+        } else if (bank.accountNumber.isNotEmpty) {
+          widgets.add(_buildInfoRow(l10n.bank_code, bank.bankCode));
+          widgets.add(_buildInfoRow(l10n.branch_code, bank.branchCode));
+          widgets.add(_buildInfoRow(l10n.account_number, _maskSensitive(bank.accountNumber)));
+        }
+        break;
+      case CountryCode.mx:
+        if (bank.clabe.isNotEmpty) {
+          widgets.add(_buildInfoRow('CLABE', _maskSensitive(bank.clabe)));
+        }
+        break;
+      case CountryCode.ar:
+        if (bank.cbu.isNotEmpty) {
+          widgets.add(_buildInfoRow('CBU', _maskSensitive(bank.cbu)));
+        }
+        break;
+      case CountryCode.us:
+        if (bank.routingNumber.isNotEmpty) {
+          widgets.add(_buildInfoRow(l10n.routing_number, bank.routingNumber));
+          widgets.add(_buildInfoRow(l10n.account_number, _maskSensitive(bank.accountNumber)));
+        }
+        break;
+      default:
+        if (bank.accountNumber.isNotEmpty) {
+          widgets.add(_buildInfoRow(l10n.account_number, _maskSensitive(bank.accountNumber)));
+        }
+    }
+
+    if (widgets.isEmpty) {
+      widgets.add(_buildWarning('Payment information not provided'));
+    }
+
+    return widgets;
+  }
+
+  /// Masks sensitive data - shows only last 4 characters
+  String _maskSensitive(String value) {
+    if (value.length <= 4) return '****';
+    return '****${value.substring(value.length - 4)}';
+  }
+
   Widget _buildBottomButtons(BuildContext context, AppLocalizations l10n) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -306,8 +369,10 @@ class ReviewStep extends StatelessWidget {
             child: FilledButton(
               onPressed: isLoading ? null : onSubmit,
               style: FilledButton.styleFrom(
-                backgroundColor: barzGold,
-                foregroundColor: barzDark,
+                backgroundColor: successGreen,
+                foregroundColor: textOnDark,
+                disabledBackgroundColor: surfaceDim,
+                disabledForegroundColor: textTertiary,
                 padding: const EdgeInsets.all(16),
               ),
               child: isLoading

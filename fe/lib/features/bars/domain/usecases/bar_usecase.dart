@@ -37,6 +37,7 @@ class BarUsecase {
     String? coverUrl,
     List<String>? photoUrls,
     Map<String, dynamic>? operatingHours,
+    Map<String, dynamic>? bankAccount,
   }) {
     return repository.createBar(
       name: name,
@@ -53,6 +54,7 @@ class BarUsecase {
       coverUrl: coverUrl,
       photoUrls: photoUrls,
       operatingHours: operatingHours,
+      bankAccount: bankAccount,
     );
   }
 }

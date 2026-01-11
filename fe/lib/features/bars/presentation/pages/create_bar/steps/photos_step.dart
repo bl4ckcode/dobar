@@ -244,7 +244,8 @@ class _PhotosStepState extends State<PhotosStep> {
                 child: FilledButton(
                   onPressed: widget.onNext,
                   style: FilledButton.styleFrom(
-                    backgroundColor: barzDark,
+                    backgroundColor: successGreen,
+                    foregroundColor: textOnDark,
                     padding: const EdgeInsets.all(16),
                   ),
                   child: Row(

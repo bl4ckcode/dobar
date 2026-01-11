@@ -92,20 +92,7 @@ class _BasicInfoStepState extends State<BasicInfoStep> {
                       FormBuilderValidators.email(),
                     ]),
                   ),
-                  if (_countryConfig.requiresBusinessId) ...[
-                    const SizedBox(height: BarzSpacing.xl),
-                    _buildSectionHeader(_countryConfig.businessIdLabel ?? l10n.business_id, Icons.badge_rounded),
-                    const SizedBox(height: BarzSpacing.sm),
-                    BarzMaskedField(
-                      hintText: _countryConfig.businessIdHint ?? '',
-                      customMask: _countryConfig.businessIdMask,
-                      maskType: BarzMaskType.custom,
-                      initialValue: widget.formData.businessId,
-                      onUnmaskedChanged: (value) {
-                        widget.formData.businessId = value;
-                      },
-                    ),
-                  ],
+                  // Business ID moved to Bank Account step
                 ],
               ),
             ),
@@ -224,7 +211,8 @@ class _BasicInfoStepState extends State<BasicInfoStep> {
             child: FilledButton(
               onPressed: _onSubmit,
               style: FilledButton.styleFrom(
-                backgroundColor: barzDark,
+                backgroundColor: successGreen,
+                foregroundColor: textOnDark,
                 padding: const EdgeInsets.all(16),
               ),
               child: Row(

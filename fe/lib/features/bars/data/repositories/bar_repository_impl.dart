@@ -60,6 +60,7 @@ class BarRepositoryImpl extends AbstractBarRepository {
     String? coverUrl,
     List<String>? photoUrls,
     Map<String, dynamic>? operatingHours,
+    Map<String, dynamic>? bankAccount,
   }) async {
     try {
       final result = await networkDataSource.createBar(
@@ -77,6 +78,7 @@ class BarRepositoryImpl extends AbstractBarRepository {
         coverUrl: coverUrl,
         photoUrls: photoUrls,
         operatingHours: operatingHours,
+        bankAccount: bankAccount,
       );
       return Right(result);
     } on ServerException catch (e) {

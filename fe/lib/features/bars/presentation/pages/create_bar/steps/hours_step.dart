@@ -266,7 +266,8 @@ class _HoursStepState extends State<HoursStep> {
             child: FilledButton(
               onPressed: widget.onNext,
               style: FilledButton.styleFrom(
-                backgroundColor: barzDark,
+                backgroundColor: successGreen,
+                foregroundColor: textOnDark,
                 padding: const EdgeInsets.all(16),
               ),
               child: Row(
