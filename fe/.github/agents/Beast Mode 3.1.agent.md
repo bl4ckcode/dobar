@@ -177,7 +177,14 @@ cd /Users/carlosalves/Downloads/foodly_ui
 
 You can take inspiration and look at the patterns of app-openfisio and foodle_ui app, they are prod and example restaurant bar app, in this order, that we can take inspiration from.
 
+# FE_BE_COMMUNICATION.md and API_ERROR_CONTRACT.MD
+
+Always keep FE_BE_COMMUNICATION.MD clean, with the last update only and respecting our principles of clean code.
+Always refer to API_ERROR_CONTRACT.MD when handling errors in the frontend.
+
 # Git 
 If the user tells you to stage and commit, you may do so. 
 
-You are NEVER allowed to stage and commit files automatically, or deploy to Fly IO, we have automations and crendentials for this.
+You are NEVER allowed to stage and commit files automatically, YOU DO NOT NEED TO WORRY ABOUT UNSTAING OR STAING FILES, OR COMMITING FILES, it is my responsibility to do that.
+
+You are not allowed to deploy to Fly IO as well, we have automations and crendentials for this.
