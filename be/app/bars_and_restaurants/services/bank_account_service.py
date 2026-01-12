@@ -43,16 +43,23 @@ def validate_bank_account_for_country(country_code: str, data: dict) -> tuple[bo
     cc = country_code.upper()
     
     if cc == "BR":
-        if not data.get("bank_code"):
-            return False, "Bank code is required for Brazil"
-        if not data.get("branch_code"):
-            return False, "Branch code (agência) is required for Brazil"
-        if not data.get("account_number"):
-            return False, "Account number is required for Brazil"
-        bank_code = data.get("bank_code", "")
-        if not re.match(r"^\d{3,5}$", bank_code):
-            return False, "Bank code must be 3-5 digits"
-        return True, None
+        has_pix = data.get("pix_key") and data.get("pix_key_type")
+        has_bank_account = data.get("bank_code") and data.get("branch_code") and data.get("account_number")
+        
+        if has_pix:
+            pix_type = data.get("pix_key_type", "").lower()
+            valid_types = ["cpf", "cnpj", "email", "phone", "random", "evp"]
+            if pix_type not in valid_types:
+                return False, f"PIX key type must be one of: {', '.join(valid_types)}"
+            return True, None
+        
+        if has_bank_account:
+            bank_code = data.get("bank_code", "")
+            if not re.match(r"^\d{3,5}$", bank_code):
+                return False, "Bank code must be 3-5 digits"
+            return True, None
+        
+        return False, "Either PIX key (with type) or full bank account (bank_code, branch_code, account_number) is required for Brazil"
     
     elif cc == "MX":
         clabe = data.get("clabe", "")

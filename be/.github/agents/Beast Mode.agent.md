@@ -180,4 +180,6 @@ You can take inspiration and look at the patterns of app-openfisio and foodle_ui
 # Git 
 If the user tells you to stage and commit, you may do so. 
 
-You are NEVER allowed to stage and commit files automatically, or deploy to Fly IO, we have automations and crendentials for this.
+You are NEVER allowed to stage and commit files automatically, YOU DO NOT NEED TO WORRY ABOUT UNSTAING OR STAING FILES, OR COMMITING FILES, it is my responsibility to do that.
+
+You are not allowed to deploy to Fly IO as well, we have automations and crendentials for this.
