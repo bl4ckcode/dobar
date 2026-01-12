@@ -27,13 +27,40 @@ class BankAccountStep extends StatefulWidget {
 class _BankAccountStepState extends State<BankAccountStep> {
   late CountryFormConfig _countryConfig;
   bool _usePixKey = false;
+  bool _isFormValid = false;
 
   @override
   void initState() {
     super.initState();
     _countryConfig = widget.formData.countryConfig;
-    // Default to PIX if no bank details entered yet
     _usePixKey = widget.formData.bankAccount.pixKey.isNotEmpty;
+    _checkFormValidity();
+  }
+
+  void _checkFormValidity() {
+    bool hasBusinessId = !_countryConfig.requiresBusinessId || widget.formData.businessId.isNotEmpty;
+    bool hasBankInfo = _hasBankInfo();
+    setState(() {
+      _isFormValid = hasBusinessId && hasBankInfo;
+    });
+  }
+
+  bool _hasBankInfo() {
+    final bank = widget.formData.bankAccount;
+    switch (_countryConfig.code) {
+      case CountryCode.br:
+        return _usePixKey 
+            ? bank.pixKey.isNotEmpty 
+            : (bank.bankCode.isNotEmpty && bank.branchCode.isNotEmpty && bank.accountNumber.isNotEmpty);
+      case CountryCode.mx:
+        return bank.clabe.length == 18;
+      case CountryCode.ar:
+        return bank.cbu.length == 22;
+      case CountryCode.us:
+        return bank.routingNumber.length == 9 && bank.accountNumber.isNotEmpty;
+      default:
+        return bank.accountNumber.isNotEmpty;
+    }
   }
 
   @override
@@ -76,6 +103,7 @@ class _BankAccountStepState extends State<BankAccountStep> {
         WizardFooter(
           onBack: widget.onBack,
           onNext: _validateAndProceed,
+          isNextEnabled: _isFormValid,
         ),
       ],
     );
@@ -157,6 +185,7 @@ class _BankAccountStepState extends State<BankAccountStep> {
             initialValue: widget.formData.businessId,
             onUnmaskedChanged: (value) {
               widget.formData.businessId = value;
+              _checkFormValidity();
             },
           ),
         ],
@@ -245,7 +274,10 @@ class _BankAccountStepState extends State<BankAccountStep> {
               ),
               Switch(
                 value: _usePixKey,
-                onChanged: (value) => setState(() => _usePixKey = value),
+                onChanged: (value) {
+                  setState(() => _usePixKey = value);
+                  _checkFormValidity();
+                },
                 activeTrackColor: barzGoldLight,
                 thumbColor: WidgetStatePropertyAll(_usePixKey ? barzGold : null),
               ),
@@ -299,7 +331,10 @@ class _BankAccountStepState extends State<BankAccountStep> {
         TextFormField(
           initialValue: widget.formData.bankAccount.pixKey,
           decoration: _inputDecoration(_getPixKeyHint()),
-          onChanged: (value) => widget.formData.bankAccount.pixKey = value,
+          onChanged: (value) {
+            widget.formData.bankAccount.pixKey = value;
+            _checkFormValidity();
+          },
         ),
       ],
     );
@@ -340,7 +375,10 @@ class _BankAccountStepState extends State<BankAccountStep> {
                     decoration: _inputDecoration('001'),
                     keyboardType: TextInputType.number,
                     maxLength: 3,
-                    onChanged: (value) => widget.formData.bankAccount.bankCode = value,
+                    onChanged: (value) {
+                      widget.formData.bankAccount.bankCode = value;
+                      _checkFormValidity();
+                    },
                   ),
                 ],
               ),
@@ -358,7 +396,10 @@ class _BankAccountStepState extends State<BankAccountStep> {
                     decoration: _inputDecoration('1234'),
                     keyboardType: TextInputType.number,
                     maxLength: 4,
-                    onChanged: (value) => widget.formData.bankAccount.branchCode = value,
+                    onChanged: (value) {
+                      widget.formData.bankAccount.branchCode = value;
+                      _checkFormValidity();
+                    },
                   ),
                 ],
               ),
@@ -372,7 +413,10 @@ class _BankAccountStepState extends State<BankAccountStep> {
           initialValue: widget.formData.bankAccount.accountNumber,
           decoration: _inputDecoration('12345678-9'),
           keyboardType: TextInputType.number,
-          onChanged: (value) => widget.formData.bankAccount.accountNumber = value,
+          onChanged: (value) {
+            widget.formData.bankAccount.accountNumber = value;
+            _checkFormValidity();
+          },
         ),
         const SizedBox(height: 16),
         Text(l10n.account_type, style: const TextStyle(fontWeight: FontWeight.w500)),
@@ -415,6 +459,7 @@ class _BankAccountStepState extends State<BankAccountStep> {
           initialValue: widget.formData.bankAccount.clabe,
           onUnmaskedChanged: (value) {
             widget.formData.bankAccount.clabe = value;
+            _checkFormValidity();
           },
         ),
         const SizedBox(height: 16),
@@ -424,7 +469,10 @@ class _BankAccountStepState extends State<BankAccountStep> {
           initialValue: widget.formData.bankAccount.accountHolderName,
           decoration: _inputDecoration('Restaurant Name S.A. de C.V.'),
           textCapitalization: TextCapitalization.words,
-          onChanged: (value) => widget.formData.bankAccount.accountHolderName = value,
+          onChanged: (value) {
+            widget.formData.bankAccount.accountHolderName = value;
+            _checkFormValidity();
+          },
         ),
       ],
     );
@@ -451,6 +499,7 @@ class _BankAccountStepState extends State<BankAccountStep> {
           initialValue: widget.formData.bankAccount.cbu,
           onUnmaskedChanged: (value) {
             widget.formData.bankAccount.cbu = value;
+            _checkFormValidity();
           },
         ),
         const SizedBox(height: 16),
@@ -460,7 +509,10 @@ class _BankAccountStepState extends State<BankAccountStep> {
           initialValue: widget.formData.bankAccount.accountHolderName,
           decoration: _inputDecoration('Restaurant Name S.R.L.'),
           textCapitalization: TextCapitalization.words,
-          onChanged: (value) => widget.formData.bankAccount.accountHolderName = value,
+          onChanged: (value) {
+            widget.formData.bankAccount.accountHolderName = value;
+            _checkFormValidity();
+          },
         ),
       ],
     );
@@ -482,7 +534,10 @@ class _BankAccountStepState extends State<BankAccountStep> {
           decoration: _inputDecoration('110000000'),
           keyboardType: TextInputType.number,
           maxLength: 9,
-          onChanged: (value) => widget.formData.bankAccount.routingNumber = value,
+          onChanged: (value) {
+            widget.formData.bankAccount.routingNumber = value;
+            _checkFormValidity();
+          },
         ),
         const SizedBox(height: 16),
         Text(l10n.account_number, style: const TextStyle(fontWeight: FontWeight.w500)),
@@ -491,7 +546,10 @@ class _BankAccountStepState extends State<BankAccountStep> {
           initialValue: widget.formData.bankAccount.accountNumber,
           decoration: _inputDecoration('000123456789'),
           keyboardType: TextInputType.number,
-          onChanged: (value) => widget.formData.bankAccount.accountNumber = value,
+          onChanged: (value) {
+            widget.formData.bankAccount.accountNumber = value;
+            _checkFormValidity();
+          },
         ),
         const SizedBox(height: 16),
         Text(l10n.account_type, style: const TextStyle(fontWeight: FontWeight.w500)),
@@ -523,7 +581,10 @@ class _BankAccountStepState extends State<BankAccountStep> {
           initialValue: widget.formData.bankAccount.accountNumber,
           decoration: _inputDecoration(l10n.account_number_hint),
           keyboardType: TextInputType.number,
-          onChanged: (value) => widget.formData.bankAccount.accountNumber = value,
+          onChanged: (value) {
+            widget.formData.bankAccount.accountNumber = value;
+            _checkFormValidity();
+          },
         ),
         const SizedBox(height: 16),
         Text(l10n.account_holder_name, style: const TextStyle(fontWeight: FontWeight.w500)),
@@ -532,7 +593,10 @@ class _BankAccountStepState extends State<BankAccountStep> {
           initialValue: widget.formData.bankAccount.accountHolderName,
           decoration: _inputDecoration(l10n.account_holder_hint),
           textCapitalization: TextCapitalization.words,
-          onChanged: (value) => widget.formData.bankAccount.accountHolderName = value,
+          onChanged: (value) {
+            widget.formData.bankAccount.accountHolderName = value;
+            _checkFormValidity();
+          },
         ),
       ],
     );

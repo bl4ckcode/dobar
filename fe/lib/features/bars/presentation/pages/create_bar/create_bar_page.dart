@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:animated_text_kit/animated_text_kit.dart';
 import 'package:go_router/go_router.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/core/utils/injections.dart';
@@ -125,7 +126,22 @@ class _CreateBarPageState extends State<CreateBarPage> {
       appBar: AppBar(
         backgroundColor: barzDark,
         foregroundColor: Colors.white,
-        title: Text(l10n.create_bar),
+        centerTitle: true,
+        title: AnimatedTextKit(
+          animatedTexts: [
+            TypewriterAnimatedText(
+              l10n.dobar_bar_registration,
+              textStyle: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: barzGold,
+              ),
+              speed: const Duration(milliseconds: 80),
+            ),
+          ],
+          totalRepeatCount: 1,
+          displayFullTextOnTap: true,
+        ),
         leading: IconButton(
           icon: const Icon(Icons.close),
           onPressed: () => _showExitConfirmation(context, l10n),

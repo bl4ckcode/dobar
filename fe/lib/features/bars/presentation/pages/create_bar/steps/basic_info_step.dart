@@ -25,11 +25,23 @@ class BasicInfoStep extends StatefulWidget {
 class _BasicInfoStepState extends State<BasicInfoStep> {
   final _formKey = GlobalKey<FormBuilderState>();
   late CountryFormConfig _countryConfig;
+  bool _isFormValid = false;
 
   @override
   void initState() {
     super.initState();
     _countryConfig = widget.formData.countryConfig;
+    _checkFormValidity();
+  }
+
+  void _checkFormValidity() {
+    final hasName = widget.formData.name.isNotEmpty;
+    final hasAddress = widget.formData.address.isNotEmpty;
+    final hasPhone = widget.formData.phone.isNotEmpty;
+    final hasEmail = widget.formData.email.isNotEmpty;
+    setState(() {
+      _isFormValid = hasName && hasAddress && hasPhone && hasEmail;
+    });
   }
 
   @override
@@ -63,6 +75,10 @@ class _BasicInfoStepState extends State<BasicInfoStep> {
                         FormBuilderValidators.minLength(3),
                       ]),
                       textCapitalization: TextCapitalization.words,
+                      onChanged: (value) {
+                        widget.formData.name = value ?? '';
+                        _checkFormValidity();
+                      },
                     ),
                     const SizedBox(height: BarzSpacing.xl),
                     _buildSectionHeader(l10n.address, Icons.location_on_rounded),
@@ -74,6 +90,10 @@ class _BasicInfoStepState extends State<BasicInfoStep> {
                       validator: FormBuilderValidators.required(),
                       maxLines: 2,
                       textCapitalization: TextCapitalization.sentences,
+                      onChanged: (value) {
+                        widget.formData.address = value ?? '';
+                        _checkFormValidity();
+                      },
                     ),
                     const SizedBox(height: BarzSpacing.xl),
                     _buildSectionHeader(l10n.contact_info, Icons.phone_rounded),
@@ -84,18 +104,27 @@ class _BasicInfoStepState extends State<BasicInfoStep> {
                       initialValue: widget.formData.phone,
                       onChanged: (phone) {
                         widget.formData.phone = phone.completeNumber;
+                        _checkFormValidity();
                       },
                     ),
                     const SizedBox(height: BarzSpacing.md),
                     FormBuilderTextField(
                       name: 'email',
                       initialValue: widget.formData.email,
-                      decoration: _inputDecoration(l10n.email_hint, prefixIcon: Icons.email_outlined),
+                      decoration: _inputDecoration(
+                        l10n.email_hint, 
+                        prefixIcon: Icons.email_rounded,
+                        iconSize: 28,
+                      ),
                       keyboardType: TextInputType.emailAddress,
                       validator: FormBuilderValidators.compose([
                         FormBuilderValidators.required(),
                         FormBuilderValidators.email(),
                       ]),
+                      onChanged: (value) {
+                        widget.formData.email = value ?? '';
+                        _checkFormValidity();
+                      },
                     ),
                   ],
                 ),
@@ -105,6 +134,7 @@ class _BasicInfoStepState extends State<BasicInfoStep> {
           WizardFooter(
             onBack: widget.onBack,
             onNext: _onSubmit,
+            isNextEnabled: _isFormValid,
           ),
         ],
       ),
@@ -153,12 +183,20 @@ class _BasicInfoStepState extends State<BasicInfoStep> {
     );
   }
 
-  InputDecoration _inputDecoration(String hint, {IconData? prefixIcon}) {
+  InputDecoration _inputDecoration(String hint, {IconData? prefixIcon, double iconSize = 24}) {
     return InputDecoration(
       hintText: hint,
       filled: true,
       fillColor: barzGoldMuted,
-      prefixIcon: prefixIcon != null ? Icon(prefixIcon, color: textSecondary) : null,
+      prefixIcon: prefixIcon != null 
+          ? Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: Icon(prefixIcon, color: textSecondary, size: iconSize),
+            )
+          : null,
+      prefixIconConstraints: prefixIcon != null 
+          ? const BoxConstraints(minWidth: 48, minHeight: 48)
+          : null,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(BarzRadii.md),
         borderSide: BorderSide.none,
