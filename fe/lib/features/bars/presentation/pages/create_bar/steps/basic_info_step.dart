@@ -38,10 +38,16 @@ class _BasicInfoStepState extends State<BasicInfoStep> {
     final hasName = widget.formData.name.isNotEmpty;
     final hasAddress = widget.formData.address.isNotEmpty;
     final hasPhone = widget.formData.phone.isNotEmpty;
-    final hasEmail = widget.formData.email.isNotEmpty;
+    final hasValidEmail = _isValidEmail(widget.formData.email);
     setState(() {
-      _isFormValid = hasName && hasAddress && hasPhone && hasEmail;
+      _isFormValid = hasName && hasAddress && hasPhone && hasValidEmail;
     });
+  }
+
+  bool _isValidEmail(String email) {
+    if (email.isEmpty) return false;
+    final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+    return emailRegex.hasMatch(email);
   }
 
   @override
