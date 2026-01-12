@@ -299,6 +299,14 @@ async def create_bar_wizard(bar_data: BarCreate, current_user: User = Depends(ge
     
     data["owner_id"] = current_user.id
     
+    bank_account_data = data.pop("bank_account", None)
+    
+    if bank_account_data:
+        country_code = bank_account_data.get("country_code", data.get("country_code", "BR"))
+        valid, error = bas.validate_bank_account_for_country(country_code, bank_account_data)
+        if not valid:
+            raise APIError.validation_error(f"Bank account: {error}")
+    
     existing_owner = await get_bar_owner_by_id(current_user.id)
     if not existing_owner:
         user_email = current_user.email if hasattr(current_user, 'email') else current_user["email"] if "email" in dict(current_user._mapping) else None
@@ -310,8 +318,6 @@ async def create_bar_wizard(bar_data: BarCreate, current_user: User = Depends(ge
             "phone_number": data.get("phone_number") or user_phone
         }
         await database.execute(BarOwner.__table__.insert().values(**owner_insert))
-    
-    bank_account_data = data.pop("bank_account", None)
     
     if data.get("operating_hours"):
         data["operating_hours"] = {
@@ -325,9 +331,6 @@ async def create_bar_wizard(bar_data: BarCreate, current_user: User = Depends(ge
     
     if bank_account_data:
         country_code = bank_account_data.get("country_code", data.get("country_code", "BR"))
-        valid, error = bas.validate_bank_account_for_country(country_code, bank_account_data)
-        if not valid:
-            raise APIError.validation_error(f"Bank account: {error}")
         
         bank_account_insert = {
             "bar_id": bar_id,
