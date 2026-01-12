@@ -301,11 +301,13 @@ async def create_bar_wizard(bar_data: BarCreate, current_user: User = Depends(ge
     
     existing_owner = await get_bar_owner_by_id(current_user.id)
     if not existing_owner:
+        user_email = current_user.email if hasattr(current_user, 'email') else current_user["email"] if "email" in dict(current_user._mapping) else None
+        user_phone = current_user.phone_number if hasattr(current_user, 'phone_number') else current_user["phone_number"] if "phone_number" in dict(current_user._mapping) else None
         owner_insert = {
             "id": current_user.id,
-            "name": current_user.display_name or data.get("name", "Bar Owner"),
-            "email": data.get("email") or current_user.email,
-            "phone_number": data.get("phone_number") or current_user.phone_number
+            "name": data.get("name", "Bar Owner"),
+            "email": data.get("email") or user_email,
+            "phone_number": data.get("phone_number") or user_phone
         }
         await database.execute(BarOwner.__table__.insert().values(**owner_insert))
     
