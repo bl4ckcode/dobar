@@ -2,6 +2,7 @@ import 'package:barz/core/api/api_endpoints.dart';
 import 'package:barz/core/network/exceptions.dart';
 import 'package:barz/features/bars/domain/models/bar_model.dart';
 import 'package:barz/features/bars/domain/models/menu_model.dart';
+import 'package:barz/features/bars/domain/models/dashboard_models.dart';
 import 'package:dio/dio.dart';
 
 class BarNetworkDataSource {
@@ -177,6 +178,68 @@ class BarNetworkDataSource {
       }
       
       throw ServerException(errorMessage, e.response?.statusCode);
+    }
+  }
+
+  Future<DashboardStats> getDashboardStats(int barId, {String period = 'today'}) async {
+    try {
+      final response = await dio.get(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.barDashboardStats(barId)}',
+        queryParameters: {'period': period},
+      );
+      return DashboardStats.fromJson(response.data);
+    } on DioException catch (e) {
+      throw ServerException(
+          e.response?.data?['detail'] ?? 'Failed to fetch dashboard stats',
+          e.response?.statusCode);
+    }
+  }
+
+  Future<RecentOrdersResponse> getBarOrders(int barId, {int limit = 10, String status = 'all', int page = 1}) async {
+    try {
+      final response = await dio.get(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.barOrders(barId)}',
+        queryParameters: {
+          'limit': limit,
+          'status': status,
+          'page': page,
+        },
+      );
+      return RecentOrdersResponse.fromJson(response.data);
+    } on DioException catch (e) {
+      throw ServerException(
+          e.response?.data?['detail'] ?? 'Failed to fetch orders',
+          e.response?.statusCode);
+    }
+  }
+
+  Future<BarStatus> getBarStatus(int barId) async {
+    try {
+      final response = await dio.get(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.barStatus(barId)}',
+      );
+      return BarStatus.fromJson(response.data);
+    } on DioException catch (e) {
+      throw ServerException(
+          e.response?.data?['detail'] ?? 'Failed to fetch bar status',
+          e.response?.statusCode);
+    }
+  }
+
+  Future<BarStatus> toggleBarStatus(int barId, bool isOpen, {String? reason}) async {
+    try {
+      final response = await dio.post(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.barStatusToggle(barId)}',
+        data: {
+          'is_open': isOpen,
+          if (reason != null) 'reason': reason,
+        },
+      );
+      return BarStatus.fromJson(response.data);
+    } on DioException catch (e) {
+      throw ServerException(
+          e.response?.data?['detail'] ?? 'Failed to toggle bar status',
+          e.response?.statusCode);
     }
   }
 }

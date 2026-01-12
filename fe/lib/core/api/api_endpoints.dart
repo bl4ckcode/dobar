@@ -104,5 +104,10 @@ class ApiEndpoints {
   static const String placesAutocomplete = '/api/places/autocomplete';
   static const String placesDetails = '/api/places/details';
   static const String placesDetailsParsed = '/api/places/details/parsed';
-}
 
+  // Dashboard & Bar Status
+  static String barDashboardStats(int barId) => '/bars/$barId/dashboard/stats';
+  static String barOrders(int barId) => '/bars/$barId/orders';
+  static String barStatus(int barId) => '/bars/$barId/status';
+  static String barStatusToggle(int barId) => '/bars/$barId/status/toggle';
+}

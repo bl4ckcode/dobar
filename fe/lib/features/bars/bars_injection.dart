@@ -5,6 +5,7 @@ import 'package:barz/features/bars/data/repositories/bar_repository_impl.dart';
 import 'package:barz/features/bars/domain/repositories/abstract_bar_repository.dart';
 import 'package:barz/features/bars/domain/usecases/bar_usecase.dart';
 import 'package:barz/features/bars/presentation/bloc/bar_bloc.dart';
+import 'package:barz/features/bars/presentation/bloc/dashboard_bloc.dart';
 
 Future<void> initBarsInjection() async {
   getItInjector.registerLazySingleton<BarNetworkDataSource>(
@@ -22,5 +23,9 @@ Future<void> initBarsInjection() async {
 
   getItInjector.registerFactory<BarBloc>(
     () => BarBloc(barUsecase: getItInjector<BarUsecase>()),
+  );
+
+  getItInjector.registerFactory<DashboardBloc>(
+    () => DashboardBloc(dataSource: getItInjector<BarNetworkDataSource>()),
   );
 }

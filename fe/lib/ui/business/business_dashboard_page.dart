@@ -3,10 +3,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/core/rbac/rbac.dart';
+import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
 import 'package:barz/features/session/presentation/bloc/session_event.dart';
 import 'package:barz/features/session/domain/models/bar_access.dart';
+import 'package:barz/features/bars/presentation/bloc/dashboard_bloc.dart';
+import 'package:barz/features/bars/domain/models/dashboard_models.dart';
 
 class BusinessDashboardPage extends StatelessWidget {
   const BusinessDashboardPage({super.key});
@@ -25,12 +28,37 @@ class BusinessDashboardPage extends StatelessWidget {
           return const Center(child: Text('No bar selected'));
         }
 
-        final isOwnerOrAdmin = activeBar.role == BarRole.owner || activeBar.role == BarRole.admin;
+        return BlocProvider(
+          create: (context) => getItInjector<DashboardBloc>()
+            ..add(LoadDashboard(barId: activeBar.barId)),
+          child: _DashboardContent(
+            activeBar: activeBar,
+            allBars: session.barAccess,
+          ),
+        );
+      },
+    );
+  }
+}
 
+class _DashboardContent extends StatelessWidget {
+  final BarAccess activeBar;
+  final List<BarAccess> allBars;
+
+  const _DashboardContent({required this.activeBar, required this.allBars});
+
+  @override
+  Widget build(BuildContext context) {
+    final isOwnerOrAdmin = activeBar.role == BarRole.owner || activeBar.role == BarRole.admin;
+
+    return BlocBuilder<DashboardBloc, DashboardState>(
+      builder: (context, dashboardState) {
         return Scaffold(
           backgroundColor: barzGoldSoft,
           body: RefreshIndicator(
-            onRefresh: () async {},
+            onRefresh: () async {
+              context.read<DashboardBloc>().add(RefreshDashboard(barId: activeBar.barId));
+            },
             child: CustomScrollView(
               slivers: [
                 SliverToBoxAdapter(
@@ -39,18 +67,37 @@ class BusinessDashboardPage extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _WelcomeHeader(barName: activeBar.barName, role: activeBar.role),
+                        _WelcomeHeader(
+                          barName: activeBar.barName,
+                          role: activeBar.role,
+                          isOpen: dashboardState is DashboardLoaded ? dashboardState.status.isOpen : true,
+                          onToggleOpen: () {
+                            if (dashboardState is DashboardLoaded) {
+                              context.read<DashboardBloc>().add(ToggleBarOpen(
+                                barId: activeBar.barId,
+                                isOpen: !dashboardState.status.isOpen,
+                              ));
+                            }
+                          },
+                        ),
                         const SizedBox(height: 20),
-                        _QuickStatsGrid(isOwnerOrAdmin: isOwnerOrAdmin),
+                        _QuickStatsGrid(
+                          isOwnerOrAdmin: isOwnerOrAdmin,
+                          stats: dashboardState is DashboardLoaded ? dashboardState.stats : null,
+                          isLoading: dashboardState is DashboardLoading,
+                        ),
                         const SizedBox(height: 24),
                         if (isOwnerOrAdmin) ...[
                           _PromoteCampaignCard(),
                           const SizedBox(height: 24),
                         ],
-                        _RecentOrdersSection(),
+                        _RecentOrdersSection(
+                          orders: dashboardState is DashboardLoaded ? dashboardState.recentOrders : null,
+                          isLoading: dashboardState is DashboardLoading,
+                        ),
                         const SizedBox(height: 24),
                         if (isOwnerOrAdmin) ...[
-                          _BarsOverviewSection(bars: session.barAccess),
+                          _BarsOverviewSection(bars: allBars),
                           const SizedBox(height: 24),
                         ],
                         _QuickActionsSection(activeBar: activeBar),
@@ -71,8 +118,15 @@ class BusinessDashboardPage extends StatelessWidget {
 class _WelcomeHeader extends StatelessWidget {
   final String barName;
   final BarRole role;
+  final bool isOpen;
+  final VoidCallback onToggleOpen;
 
-  const _WelcomeHeader({required this.barName, required this.role});
+  const _WelcomeHeader({
+    required this.barName,
+    required this.role,
+    required this.isOpen,
+    required this.onToggleOpen,
+  });
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
@@ -124,29 +178,32 @@ class _WelcomeHeader extends StatelessWidget {
                   ),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: successGreen,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
+              GestureDetector(
+                onTap: onToggleOpen,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isOpen ? successGreen : errorRed,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 6),
-                    const Text(
-                      'Open',
-                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
-                    ),
-                  ],
+                      const SizedBox(width: 6),
+                      Text(
+                        isOpen ? 'Open' : 'Closed',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -171,11 +228,26 @@ class _WelcomeHeader extends StatelessWidget {
 
 class _QuickStatsGrid extends StatelessWidget {
   final bool isOwnerOrAdmin;
+  final DashboardStats? stats;
+  final bool isLoading;
 
-  const _QuickStatsGrid({required this.isOwnerOrAdmin});
+  const _QuickStatsGrid({
+    required this.isOwnerOrAdmin,
+    this.stats,
+    this.isLoading = false,
+  });
+
+  String _formatTrend(double percent) {
+    if (percent >= 0) return '+${percent.toStringAsFixed(0)}%';
+    return '${percent.toStringAsFixed(0)}%';
+  }
 
   @override
   Widget build(BuildContext context) {
+    final orderStats = stats?.orders;
+    final revenueStats = stats?.revenue;
+    final avgTicket = stats?.averageTicket;
+
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
@@ -186,31 +258,35 @@ class _QuickStatsGrid extends StatelessWidget {
       children: [
         _StatCard(
           title: "Today's Orders",
-          value: '0',
+          value: isLoading ? '-' : '${orderStats?.total ?? 0}',
           icon: Icons.receipt_long_rounded,
           color: infoBlue,
-          trend: '+0%',
+          trend: orderStats != null ? _formatTrend(orderStats.trendPercent) : null,
+          isLoading: isLoading,
         ),
         _StatCard(
           title: 'Pending',
-          value: '0',
+          value: isLoading ? '-' : '${orderStats?.pending ?? 0}',
           icon: Icons.pending_actions_rounded,
           color: warningOrange,
-          showBadge: true,
+          showBadge: (orderStats?.pending ?? 0) > 0,
+          isLoading: isLoading,
         ),
         if (isOwnerOrAdmin) ...[
           _StatCard(
             title: 'Revenue',
-            value: 'R\$ 0',
+            value: isLoading ? '-' : (revenueStats?.formattedTotal ?? 'R\$ 0'),
             icon: Icons.trending_up_rounded,
             color: successGreen,
-            trend: '+0%',
+            trend: revenueStats != null ? _formatTrend(revenueStats.trendPercent) : null,
+            isLoading: isLoading,
           ),
           _StatCard(
             title: 'Avg. Ticket',
-            value: 'R\$ 0',
+            value: isLoading ? '-' : (avgTicket?.formattedValue ?? 'R\$ 0'),
             icon: Icons.analytics_rounded,
             color: barzGold,
+            isLoading: isLoading,
           ),
         ],
       ],
@@ -225,6 +301,7 @@ class _StatCard extends StatelessWidget {
   final Color color;
   final String? trend;
   final bool showBadge;
+  final bool isLoading;
 
   const _StatCard({
     required this.title,
@@ -233,6 +310,7 @@ class _StatCard extends StatelessWidget {
     required this.color,
     this.trend,
     this.showBadge = false,
+    this.isLoading = false,
   });
 
   @override
@@ -250,7 +328,9 @@ class _StatCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
+      child: isLoading
+          ? const Center(child: CircularProgressIndicator(strokeWidth: 2))
+          : Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -383,8 +463,15 @@ class _PromoteCampaignCard extends StatelessWidget {
 }
 
 class _RecentOrdersSection extends StatelessWidget {
+  final RecentOrdersResponse? orders;
+  final bool isLoading;
+
+  const _RecentOrdersSection({this.orders, this.isLoading = false});
+
   @override
   Widget build(BuildContext context) {
+    final hasOrders = orders != null && orders!.orders.isNotEmpty;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -402,40 +489,183 @@ class _RecentOrdersSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.all(32),
-          decoration: BoxDecoration(
-            color: surfaceWhite,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: surfaceDim),
-          ),
-          child: Center(
-            child: Column(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: barzGoldSoft,
-                    shape: BoxShape.circle,
+        if (isLoading)
+          Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: surfaceWhite,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: surfaceDim),
+            ),
+            child: const Center(child: CircularProgressIndicator()),
+          )
+        else if (!hasOrders)
+          Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: surfaceWhite,
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: surfaceDim),
+            ),
+            child: Center(
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: barzGoldSoft,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(Icons.receipt_long_rounded, size: 32, color: barzGold),
                   ),
-                  child: Icon(Icons.receipt_long_rounded, size: 32, color: barzGold),
+                  const SizedBox(height: 12),
+                  Text(
+                    'No orders yet',
+                    style: TextStyle(color: textSecondary, fontWeight: FontWeight.w500),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Orders will appear here when customers place them',
+                    style: TextStyle(color: textTertiary, fontSize: 13),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          Column(
+            children: orders!.orders.map((order) => _OrderCard(order: order)).toList(),
+          ),
+      ],
+    );
+  }
+}
+
+class _OrderCard extends StatelessWidget {
+  final RecentOrder order;
+
+  const _OrderCard({required this.order});
+
+  Color _getStatusColor() {
+    switch (order.status) {
+      case 'pending':
+        return warningOrange;
+      case 'preparing':
+        return infoBlue;
+      case 'ready':
+        return successGreen;
+      case 'completed':
+        return textSecondary;
+      case 'cancelled':
+        return errorRed;
+      default:
+        return textSecondary;
+    }
+  }
+
+  String _getStatusLabel() {
+    switch (order.status) {
+      case 'pending':
+        return 'Pending';
+      case 'preparing':
+        return 'Preparing';
+      case 'ready':
+        return 'Ready';
+      case 'completed':
+        return 'Completed';
+      case 'cancelled':
+        return 'Cancelled';
+      default:
+        return order.status;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: surfaceWhite,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: surfaceDim),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: _getStatusColor().withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Center(
+              child: Text(
+                order.orderNumber,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: _getStatusColor(),
+                  fontSize: 14,
                 ),
-                const SizedBox(height: 12),
-                Text(
-                  'No orders yet',
-                  style: TextStyle(color: textSecondary, fontWeight: FontWeight.w500),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      order.customerName ?? 'Customer',
+                      style: const TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    Text(
+                      order.formattedTotal,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 4),
-                Text(
-                  'Orders will appear here when customers place them',
-                  style: TextStyle(color: textTertiary, fontSize: 13),
-                  textAlign: TextAlign.center,
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: _getStatusColor().withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        _getStatusLabel(),
+                        style: TextStyle(
+                          color: _getStatusColor(),
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '${order.itemsCount} items',
+                      style: TextStyle(color: textSecondary, fontSize: 12),
+                    ),
+                    if (order.tableNumber != null) ...[
+                      const SizedBox(width: 8),
+                      Text(
+                        'Table ${order.tableNumber}',
+                        style: TextStyle(color: textSecondary, fontSize: 12),
+                      ),
+                    ],
+                  ],
                 ),
               ],
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
