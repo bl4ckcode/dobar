@@ -299,6 +299,16 @@ async def create_bar_wizard(bar_data: BarCreate, current_user: User = Depends(ge
     
     data["owner_id"] = current_user.id
     
+    existing_owner = await get_bar_owner_by_id(current_user.id)
+    if not existing_owner:
+        owner_insert = {
+            "id": current_user.id,
+            "name": current_user.display_name or data.get("name", "Bar Owner"),
+            "email": data.get("email") or current_user.email,
+            "phone_number": data.get("phone_number") or current_user.phone_number
+        }
+        await database.execute(BarOwner.__table__.insert().values(**owner_insert))
+    
     bank_account_data = data.pop("bank_account", None)
     
     if data.get("operating_hours"):
