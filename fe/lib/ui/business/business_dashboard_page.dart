@@ -1,16 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:barz/core/utils/constant/colors.dart';
+import 'package:go_router/go_router.dart';
+import 'package:barz/core/design/design_system.dart';
+import 'package:barz/core/rbac/rbac.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
+import 'package:barz/features/session/presentation/bloc/session_event.dart';
+import 'package:barz/features/session/domain/models/bar_access.dart';
 
-/// Dashboard page for bar owners/managers.
-/// 
-/// Shows:
-/// - Today's orders summary
-/// - Revenue metrics
-/// - Pending orders count
-/// - Quick actions
 class BusinessDashboardPage extends StatelessWidget {
   const BusinessDashboardPage({super.key});
 
@@ -22,242 +19,679 @@ class BusinessDashboardPage extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final activeBar = state.session.activeBar;
+        final session = state.session;
+        final activeBar = session.activeBar;
         if (activeBar == null) {
           return const Center(child: Text('No bar selected'));
         }
 
+        final isOwnerOrAdmin = activeBar.role == BarRole.owner || activeBar.role == BarRole.admin;
+
         return Scaffold(
-          backgroundColor: barzCream,
+          backgroundColor: barzGoldSoft,
           body: RefreshIndicator(
-            onRefresh: () async {
-              // TODO: Refresh dashboard data
-            },
-            child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildWelcomeCard(activeBar.barName),
-                  const SizedBox(height: 16),
-                  _buildQuickStats(),
-                  const SizedBox(height: 16),
-                  _buildRecentOrders(),
-                  const SizedBox(height: 16),
-                  _buildQuickActions(context),
-                ],
-              ),
+            onRefresh: () async {},
+            child: CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _WelcomeHeader(barName: activeBar.barName, role: activeBar.role),
+                        const SizedBox(height: 20),
+                        _QuickStatsGrid(isOwnerOrAdmin: isOwnerOrAdmin),
+                        const SizedBox(height: 24),
+                        if (isOwnerOrAdmin) ...[
+                          _PromoteCampaignCard(),
+                          const SizedBox(height: 24),
+                        ],
+                        _RecentOrdersSection(),
+                        const SizedBox(height: 24),
+                        if (isOwnerOrAdmin) ...[
+                          _BarsOverviewSection(bars: session.barAccess),
+                          const SizedBox(height: 24),
+                        ],
+                        _QuickActionsSection(activeBar: activeBar),
+                        const SizedBox(height: 32),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         );
       },
     );
   }
+}
 
-  Widget _buildWelcomeCard(String barName) {
+class _WelcomeHeader extends StatelessWidget {
+  final String barName;
+  final BarRole role;
+
+  const _WelcomeHeader({required this.barName, required this.role});
+
+  String _getGreeting() {
     final hour = DateTime.now().hour;
-    String greeting;
-    if (hour < 12) {
-      greeting = 'Good morning';
-    } else if (hour < 18) {
-      greeting = 'Good afternoon';
-    } else {
-      greeting = 'Good evening';
-    }
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+  }
 
-    return Card(
-      color: barzBlack,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              greeting,
-              style: const TextStyle(color: Colors.white70, fontSize: 14),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              barName,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.green,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Text(
-                    '● Open',
-                    style: TextStyle(color: Colors.white, fontSize: 12),
-                  ),
-                ),
-              ],
-            ),
-          ],
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [barzDark, barzDark.withValues(alpha: 0.85)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
         ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: barzDark.withValues(alpha: 0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _getGreeting(),
+                    style: TextStyle(color: Colors.white70, fontSize: 14),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    barName,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 26,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: successGreen,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Text(
+                      'Open',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+            decoration: BoxDecoration(
+              color: barzGold.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              role.displayName,
+              style: TextStyle(color: barzGold, fontWeight: FontWeight.w600, fontSize: 12),
+            ),
+          ),
+        ],
       ),
     );
   }
+}
 
-  Widget _buildQuickStats() {
+class _QuickStatsGrid extends StatelessWidget {
+  final bool isOwnerOrAdmin;
+
+  const _QuickStatsGrid({required this.isOwnerOrAdmin});
+
+  @override
+  Widget build(BuildContext context) {
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       mainAxisSpacing: 12,
       crossAxisSpacing: 12,
-      childAspectRatio: 1.5,
+      childAspectRatio: 1.4,
       children: [
-        _buildStatCard(
-          'Today\'s Orders',
-          '0',
-          Icons.receipt_long,
-          Colors.blue,
+        _StatCard(
+          title: "Today's Orders",
+          value: '0',
+          icon: Icons.receipt_long_rounded,
+          color: infoBlue,
+          trend: '+0%',
         ),
-        _buildStatCard(
-          'Pending',
-          '0',
-          Icons.pending_actions,
-          Colors.orange,
+        _StatCard(
+          title: 'Pending',
+          value: '0',
+          icon: Icons.pending_actions_rounded,
+          color: warningOrange,
+          showBadge: true,
         ),
-        _buildStatCard(
-          'Revenue',
-          'R\$ 0.00',
-          Icons.attach_money,
-          Colors.green,
-        ),
-        _buildStatCard(
-          'Avg. Order',
-          'R\$ 0.00',
-          Icons.analytics,
-          Colors.purple,
-        ),
+        if (isOwnerOrAdmin) ...[
+          _StatCard(
+            title: 'Revenue',
+            value: 'R\$ 0',
+            icon: Icons.trending_up_rounded,
+            color: successGreen,
+            trend: '+0%',
+          ),
+          _StatCard(
+            title: 'Avg. Ticket',
+            value: 'R\$ 0',
+            icon: Icons.analytics_rounded,
+            color: barzGold,
+          ),
+        ],
       ],
     );
   }
+}
 
-  Widget _buildStatCard(String label, String value, IconData icon, Color color) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Icon(icon, color: color, size: 24),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  value,
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+class _StatCard extends StatelessWidget {
+  final String title;
+  final String value;
+  final IconData icon;
+  final Color color;
+  final String? trend;
+  final bool showBadge;
+
+  const _StatCard({
+    required this.title,
+    required this.value,
+    required this.icon,
+    required this.color,
+    this.trend,
+    this.showBadge = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: surfaceWhite,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              if (trend != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: successGreen.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    trend!,
+                    style: TextStyle(color: successGreen, fontSize: 11, fontWeight: FontWeight.w600),
                   ),
                 ),
-                Text(
-                  label,
-                  style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+              if (showBadge)
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: warningOrange,
+                    shape: BoxShape.circle,
+                  ),
                 ),
-              ],
-            ),
-          ],
-        ),
+            ],
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                value,
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: textPrimary),
+              ),
+              Text(
+                title,
+                style: TextStyle(fontSize: 12, color: textSecondary),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
+}
 
-  Widget _buildRecentOrders() {
+class _PromoteCampaignCard extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [barzGold, barzGold.withValues(alpha: 0.85)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: barzGold.withValues(alpha: 0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.campaign_rounded, color: barzDark, size: 24),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Boost Your Sales',
+                      style: TextStyle(
+                        color: barzDark,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Create a campaign and reach more customers in your area!',
+                  style: TextStyle(color: barzDark.withValues(alpha: 0.7), fontSize: 14),
+                ),
+                const SizedBox(height: 16),
+                FilledButton.icon(
+                  onPressed: () {},
+                  style: FilledButton.styleFrom(
+                    backgroundColor: barzDark,
+                    foregroundColor: barzGold,
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  ),
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Create Campaign'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 16),
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: barzDark.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(Icons.trending_up_rounded, color: barzDark, size: 40),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecentOrdersSection extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Recent Orders',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'Recent Orders',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textPrimary),
+            ),
+            TextButton(
+              onPressed: () {},
+              child: Text('View All', style: TextStyle(color: barzGold, fontWeight: FontWeight.w600)),
+            ),
+          ],
         ),
         const SizedBox(height: 12),
-        Card(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: const Padding(
-            padding: EdgeInsets.all(32),
-            child: Center(
-              child: Column(
-                children: [
-                  Icon(Icons.receipt_long, size: 48, color: Colors.grey),
-                  SizedBox(height: 8),
-                  Text(
-                    'No recent orders',
-                    style: TextStyle(color: Colors.grey),
+        Container(
+          padding: const EdgeInsets.all(32),
+          decoration: BoxDecoration(
+            color: surfaceWhite,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: surfaceDim),
+          ),
+          child: Center(
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: barzGoldSoft,
+                    shape: BoxShape.circle,
                   ),
-                ],
-              ),
+                  child: Icon(Icons.receipt_long_rounded, size: 32, color: barzGold),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'No orders yet',
+                  style: TextStyle(color: textSecondary, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Orders will appear here when customers place them',
+                  style: TextStyle(color: textTertiary, fontSize: 13),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
           ),
         ),
       ],
     );
   }
+}
 
-  Widget _buildQuickActions(BuildContext context) {
+class _BarsOverviewSection extends StatelessWidget {
+  final List<BarAccess> bars;
+
+  const _BarsOverviewSection({required this.bars});
+
+  Future<void> _navigateToCreateBar(BuildContext context) async {
+    final result = await context.push<bool>('/create-bar');
+    if (result == true && context.mounted) {
+      context.read<SessionBloc>().add(const SessionEvent.refreshBarAccess());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const Text(
+              'My Bars',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textPrimary),
+            ),
+            TextButton.icon(
+              onPressed: () => _navigateToCreateBar(context),
+              icon: Icon(Icons.add, size: 18, color: barzGold),
+              label: Text('Add Bar', style: TextStyle(color: barzGold, fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: 100,
+          child: ListView.separated(
+            scrollDirection: Axis.horizontal,
+            itemCount: bars.length + 1,
+            separatorBuilder: (context, index) => const SizedBox(width: 12),
+            itemBuilder: (context, index) {
+              if (index == bars.length) {
+                return _AddBarCard(onTap: () => _navigateToCreateBar(context));
+              }
+              final bar = bars[index];
+              return _BarMiniCard(bar: bar);
+            },
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AddBarCard extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _AddBarCard({required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: 120,
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: surfaceWhite,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: barzGold, style: BorderStyle.solid, width: 2),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: barzGoldSoft,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(Icons.add_business_rounded, color: barzGold, size: 20),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Add Bar',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13, color: barzGold),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BarMiniCard extends StatelessWidget {
+  final BarAccess bar;
+
+  const _BarMiniCard({required this.bar});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 160,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: surfaceWhite,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: surfaceDim),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: barzGoldSoft,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(Icons.local_bar_rounded, color: barzGold, size: 20),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  bar.barName,
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: barzGoldSoft,
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              bar.role.displayName,
+              style: TextStyle(color: barzGold, fontSize: 11, fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickActionsSection extends StatelessWidget {
+  final BarAccess activeBar;
+
+  const _QuickActionsSection({required this.activeBar});
+
+  @override
+  Widget build(BuildContext context) {
+    final isOwnerOrAdmin = activeBar.role == BarRole.owner || activeBar.role == BarRole.admin;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
           'Quick Actions',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: textPrimary),
         ),
         const SizedBox(height: 12),
-        Row(
+        Wrap(
+          spacing: 12,
+          runSpacing: 12,
           children: [
-            Expanded(
-              child: _buildActionButton(
-                'Add Item',
-                Icons.add_circle,
-                () {
-                  // TODO: Navigate to add menu item
-                },
-              ),
+            _QuickActionChip(
+              icon: Icons.point_of_sale_rounded,
+              label: 'Cashier',
+              onTap: () {},
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildActionButton(
-                'View Orders',
-                Icons.list_alt,
-                () {
-                  // TODO: Navigate to orders
-                },
+            if (activeBar.canEditMenu)
+              _QuickActionChip(
+                icon: Icons.restaurant_menu_rounded,
+                label: 'Edit Menu',
+                onTap: () {},
               ),
-            ),
+            if (isOwnerOrAdmin) ...[
+              _QuickActionChip(
+                icon: Icons.local_offer_rounded,
+                label: 'New Promo',
+                onTap: () {},
+              ),
+              _QuickActionChip(
+                icon: Icons.qr_code_rounded,
+                label: 'Table QR',
+                onTap: () {},
+              ),
+            ],
+            if (activeBar.canManageStaff)
+              _QuickActionChip(
+                icon: Icons.person_add_rounded,
+                label: 'Invite Staff',
+                onTap: () {},
+                highlighted: true,
+              ),
           ],
         ),
       ],
     );
   }
+}
 
-  Widget _buildActionButton(String label, IconData icon, VoidCallback onTap) {
-    return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+class _QuickActionChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  final bool highlighted;
+
+  const _QuickActionChip({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    this.highlighted = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: highlighted ? barzGold : surfaceWhite,
+      borderRadius: BorderRadius.circular(12),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: highlighted ? null : Border.all(color: surfaceDim),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(icon, color: barzYellow, size: 32),
-              const SizedBox(height: 8),
-              Text(label, style: const TextStyle(fontWeight: FontWeight.w500)),
+              Icon(icon, size: 18, color: highlighted ? barzDark : textPrimary),
+              const SizedBox(width: 8),
+              Text(
+                label,
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: highlighted ? barzDark : textPrimary,
+                ),
+              ),
             ],
           ),
         ),

@@ -115,8 +115,11 @@ class BusinessOnboardingView extends StatelessWidget {
       backgroundColor: barzBlack,
       title: l10n.business_create_bar,
       subtitle: l10n.business_create_bar_subtitle,
-      onTap: () {
-        context.push('/create-bar');
+      onTap: () async {
+        final result = await context.push<bool>('/create-bar');
+        if (result == true && context.mounted) {
+          context.read<SessionBloc>().add(const SessionEvent.refreshBarAccess());
+        }
       },
     );
   }

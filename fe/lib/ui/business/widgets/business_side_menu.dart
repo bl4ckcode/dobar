@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/core/rbac/rbac.dart';
 import 'package:barz/features/session/domain/models/bar_access.dart';
+import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
+import 'package:barz/features/session/presentation/bloc/session_event.dart';
 import 'package:barz/l10n/app_localizations.dart';
 import '../business_shell.dart';
 
@@ -158,13 +162,8 @@ class BusinessSideMenu extends StatelessWidget {
     final RenderBox button = context.findRenderObject() as RenderBox;
     final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
     
-    showMenu<int>(
-      context: context,
-      position: RelativeRect.fromRect(
-        button.localToGlobal(Offset.zero) & button.size,
-        Offset.zero & overlay.size,
-      ),
-      items: bars.map((bar) {
+    final menuItems = <PopupMenuEntry<int>>[
+      ...bars.map((bar) {
         final isActive = bar.barId == activeBar.barId;
         return PopupMenuItem<int>(
           value: bar.barId,
@@ -194,12 +193,42 @@ class BusinessSideMenu extends StatelessWidget {
             ],
           ),
         );
-      }).toList(),
-    ).then((barId) {
-      if (barId != null && barId != activeBar.barId) {
-        onBarSelected(barId);
+      }),
+      const PopupMenuDivider(),
+      PopupMenuItem<int>(
+        value: -1,
+        child: Row(
+          children: [
+            Icon(Icons.add_business_rounded, color: barzGold, size: 20),
+            const SizedBox(width: 12),
+            Text('Add Bar', style: TextStyle(color: barzGold, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    ];
+    
+    showMenu<int>(
+      context: context,
+      position: RelativeRect.fromRect(
+        button.localToGlobal(Offset.zero) & button.size,
+        Offset.zero & overlay.size,
+      ),
+      items: menuItems,
+    ).then((value) {
+      if (value == null) return;
+      if (value == -1) {
+        _navigateToCreateBar(context);
+      } else if (value != activeBar.barId) {
+        onBarSelected(value);
       }
     });
+  }
+
+  Future<void> _navigateToCreateBar(BuildContext context) async {
+    final result = await context.push<bool>('/create-bar');
+    if (result == true && context.mounted) {
+      context.read<SessionBloc>().add(const SessionEvent.refreshBarAccess());
+    }
   }
 
   Widget _buildNavItem(BusinessNavItem item, int index) {
