@@ -294,6 +294,7 @@ async def create_bar_wizard(bar_data: BarCreate, current_user: User = Depends(ge
     from datetime import datetime
     from ..models.bank_account import BarBankAccount
     from ..services import bank_account_service as bas
+    from app.auth.rbac_models import BarStaff
     
     data = bar_data.model_dump(exclude_none=True)
     
@@ -328,6 +329,15 @@ async def create_bar_wizard(bar_data: BarCreate, current_user: User = Depends(ge
     
     created_bar = await create_new_bar(data)
     bar_id = created_bar["id"]
+    
+    staff_insert = {
+        "user_id": current_user.id,
+        "bar_id": bar_id,
+        "role": "owner",
+        "is_active": True,
+        "accepted_at": datetime.utcnow()
+    }
+    await database.execute(BarStaff.__table__.insert().values(**staff_insert))
     
     if bank_account_data:
         country_code = bank_account_data.get("country_code", data.get("country_code", "BR"))

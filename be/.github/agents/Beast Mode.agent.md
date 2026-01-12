@@ -177,6 +177,11 @@ cd /Users/carlosalves/Downloads/foodly_ui
 
 You can take inspiration and look at the patterns of app-openfisio and foodle_ui app, they are prod and example restaurant bar app, in this order, that we can take inspiration from.
 
+# FE_BE_COMMUNICATION.md and API_ERROR_CONTRACT.MD
+
+Always keep FE_BE_COMMUNICATION.MD clean, with the last update only and respecting our principles of clean code.
+Always refer to API_ERROR_CONTRACT.MD when creating new error handling in the backend.
+
 # Git 
 If the user tells you to stage and commit, you may do so. 
 
