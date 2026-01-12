@@ -1,24 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:intl_phone_field/intl_phone_field.dart';
-import 'package:intl_phone_field/phone_number.dart';
-import 'package:intl_phone_field/countries.dart';
+import 'package:phone_form_field/phone_form_field.dart';
 import '../tokens/colors.dart';
 import '../tokens/radii.dart';
 
-class BarzPhoneField extends StatelessWidget {
+class BarzPhoneField extends StatefulWidget {
   final String? label;
   final String hintText;
   final bool enabled;
   final String? errorText;
-  final ValueChanged<PhoneNumber>? onChanged;
-  final ValueChanged<Country>? onCountryChanged;
+  final ValueChanged<PhoneNumber?>? onChanged;
   final String initialCountryCode;
   final String? initialValue;
   final FocusNode? focusNode;
-  final bool showDropdownIcon;
-  final bool disableLengthCheck;
-  final List<String>? countryFilter;
-  final List<String>? favoriteCountries;
+  final List<IsoCode>? favoriteCountries;
+  final bool isRequired;
+  final bool showFlag;
+  final bool showDialCode;
 
   const BarzPhoneField({
     super.key,
@@ -27,70 +24,123 @@ class BarzPhoneField extends StatelessWidget {
     this.enabled = true,
     this.errorText,
     this.onChanged,
-    this.onCountryChanged,
     this.initialCountryCode = 'BR',
     this.initialValue,
     this.focusNode,
-    this.showDropdownIcon = true,
-    this.disableLengthCheck = false,
-    this.countryFilter,
-    this.favoriteCountries = const ['BR', 'PT', 'US'],
+    this.favoriteCountries = const [IsoCode.BR, IsoCode.PT, IsoCode.US, IsoCode.MX, IsoCode.AR],
+    this.isRequired = false,
+    this.showFlag = true,
+    this.showDialCode = true,
   });
 
-  List<Country>? _getFilteredCountries() {
-    if (countryFilter == null) return null;
-    return countries.where((c) => countryFilter!.contains(c.code)).toList();
+  @override
+  State<BarzPhoneField> createState() => _BarzPhoneFieldState();
+}
+
+class _BarzPhoneFieldState extends State<BarzPhoneField> {
+  late PhoneController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = PhoneController(
+      initialValue: _parseInitialValue(),
+    );
+    _controller.addListener(_onPhoneChanged);
+  }
+
+  PhoneNumber _parseInitialValue() {
+    if (widget.initialValue != null && widget.initialValue!.isNotEmpty) {
+      try {
+        return PhoneNumber.parse(widget.initialValue!);
+      } catch (_) {
+        return PhoneNumber(isoCode: _getIsoCode(widget.initialCountryCode), nsn: '');
+      }
+    }
+    return PhoneNumber(isoCode: _getIsoCode(widget.initialCountryCode), nsn: '');
+  }
+
+  IsoCode _getIsoCode(String code) {
+    try {
+      return IsoCode.values.firstWhere(
+        (iso) => iso.name.toUpperCase() == code.toUpperCase(),
+        orElse: () => IsoCode.BR,
+      );
+    } catch (_) {
+      return IsoCode.BR;
+    }
+  }
+
+  void _onPhoneChanged() {
+    widget.onChanged?.call(_controller.value);
+  }
+
+  PhoneNumberInputValidator? _getValidator(BuildContext context) {
+    if (widget.isRequired) {
+      return PhoneValidator.compose([
+        PhoneValidator.required(context),
+        PhoneValidator.valid(context),
+      ]);
+    }
+    return PhoneValidator.valid(context);
+  }
+
+  @override
+  void dispose() {
+    _controller.removeListener(_onPhoneChanged);
+    _controller.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final hasError = widget.errorText != null && widget.errorText!.isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (label != null) ...[
+        if (widget.label != null) ...[
           Text(
-            label!,
+            widget.label!,
             style: theme.textTheme.labelLarge?.copyWith(
-              color: textPrimary,
+              color: hasError ? errorRed : textPrimary,
               fontWeight: FontWeight.w600,
             ),
           ),
           const SizedBox(height: 6),
         ],
-        IntlPhoneField(
-          initialValue: initialValue,
-          initialCountryCode: initialCountryCode,
-          enabled: enabled,
-          focusNode: focusNode,
-          showDropdownIcon: showDropdownIcon,
-          disableLengthCheck: disableLengthCheck,
-          countries: _getFilteredCountries(),
-          flagsButtonPadding: const EdgeInsets.only(left: 12),
-          dropdownIconPosition: IconPosition.trailing,
-          dropdownIcon: Icon(
-            Icons.arrow_drop_down,
-            color: enabled ? textSecondary : textTertiary,
+        PhoneFormField(
+          controller: _controller,
+          focusNode: widget.focusNode,
+          enabled: widget.enabled,
+          isCountryButtonPersistent: true,
+          isCountrySelectionEnabled: true,
+          countrySelectorNavigator: CountrySelectorNavigator.modalBottomSheet(
+            favorites: widget.favoriteCountries ?? [],
           ),
-          dropdownTextStyle: theme.textTheme.bodyLarge?.copyWith(
-            color: enabled ? textPrimary : textTertiary,
+          countryButtonStyle: CountryButtonStyle(
+            showDialCode: widget.showDialCode,
+            showIsoCode: false,
+            showFlag: widget.showFlag,
+            flagSize: 24,
+            textStyle: theme.textTheme.bodyLarge?.copyWith(
+              color: widget.enabled ? textPrimary : textTertiary,
+            ),
+            padding: const EdgeInsets.only(left: 12, right: 4),
           ),
           style: theme.textTheme.bodyLarge?.copyWith(
-            color: enabled ? textPrimary : textTertiary,
+            color: widget.enabled ? textPrimary : textTertiary,
           ),
-          invalidNumberMessage: null,
-          languageCode: 'pt',
-          onChanged: onChanged,
-          onCountryChanged: onCountryChanged,
           decoration: InputDecoration(
             filled: true,
-            fillColor: enabled ? barzGoldMuted : surfaceMuted,
-            hintText: hintText,
+            fillColor: widget.enabled ? barzGoldMuted : surfaceMuted,
+            hintText: widget.hintText,
             hintStyle: theme.textTheme.bodyLarge?.copyWith(
               color: textTertiary,
             ),
+            errorText: widget.errorText,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,
               vertical: 16,
@@ -119,9 +169,10 @@ class BarzPhoneField extends StatelessWidget {
               borderRadius: BorderRadius.circular(BarzRadii.md),
               borderSide: const BorderSide(color: errorRed, width: 2),
             ),
-            errorText: errorText,
             counterText: '',
           ),
+          validator: _getValidator(context),
+          autovalidateMode: AutovalidateMode.onUserInteraction,
         ),
       ],
     );
@@ -143,10 +194,10 @@ class PhoneNumberData {
 
   factory PhoneNumberData.fromPhoneNumber(PhoneNumber phoneNumber) {
     return PhoneNumberData(
-      countryISOCode: phoneNumber.countryISOCode,
-      countryCode: phoneNumber.countryCode,
-      number: phoneNumber.number,
-      completeNumber: phoneNumber.completeNumber,
+      countryISOCode: phoneNumber.isoCode.name,
+      countryCode: '+${phoneNumber.countryCode}',
+      number: phoneNumber.nsn,
+      completeNumber: phoneNumber.international,
     );
   }
 

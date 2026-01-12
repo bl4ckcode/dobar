@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
+import 'package:phone_form_field/phone_form_field.dart';
 import 'firebase_options.dart';
 import 'core/utils/injections.dart';
 import 'core/services/app_initializer.dart';
@@ -69,7 +70,10 @@ class DobarAppState extends State<DobarApp> with WidgetsBindingObserver {
       theme: getBarzLightTheme(),
       darkTheme: getBarzDarkTheme(),
       themeMode: ThemeMode.light,
-      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      localizationsDelegates: [
+        ...AppLocalizations.localizationsDelegates,
+        ...PhoneFieldLocalization.delegates,
+      ],
       supportedLocales: AppLocalizations.supportedLocales,
     );
   }

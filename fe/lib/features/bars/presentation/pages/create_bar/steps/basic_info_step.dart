@@ -102,8 +102,11 @@ class _BasicInfoStepState extends State<BasicInfoStep> {
                       hintText: l10n.phone_hint,
                       initialCountryCode: widget.formData.countryCode,
                       initialValue: widget.formData.phone,
+                      isRequired: true,
                       onChanged: (phone) {
-                        widget.formData.phone = phone.completeNumber;
+                        if (phone != null) {
+                          widget.formData.phone = phone.international;
+                        }
                         _checkFormValidity();
                       },
                     ),
