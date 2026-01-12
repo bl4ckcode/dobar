@@ -271,7 +271,7 @@ def require_bar_role(*allowed_roles: BarRole):
         )
         staff = await database.fetch_one(staff_query)
         
-        if staff and staff.get("custom_permissions"):
+        if staff and staff["custom_permissions"]:
             try:
                 custom = json.loads(staff["custom_permissions"])
                 permissions.extend(custom)
@@ -336,7 +336,7 @@ def require_bar_permission(permission: Permission):
         )
         staff = await database.fetch_one(staff_query)
         
-        if staff and staff.get("custom_permissions"):
+        if staff and staff["custom_permissions"]:
             try:
                 custom = json.loads(staff["custom_permissions"])
                 permissions.extend(custom)
