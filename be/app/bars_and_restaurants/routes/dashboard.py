@@ -2,13 +2,12 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime, timezone, timedelta
-from sqlalchemy import func, and_, or_
 
 from app.database import database
 from app.errors import APIError
 from app.auth.rbac_middleware import require_bar_permission, BarAuthContext
 from app.auth.rbac_models import Permission
-from ..models.relational_models import Bar as BarModel, Order as OrderModel
+from ..models.relational_models import Bar as BarModel
 
 dashboard_router = APIRouter(prefix="/bars", tags=["Dashboard"])
 
@@ -143,24 +142,18 @@ async def get_dashboard_stats(
 ):
     current_start, current_end, prev_start, prev_end = get_period_range(period)
     
+    orders_query = """
+        SELECT id, status, total_price, created_at 
+        FROM orders 
+        WHERE bar_id = :bar_id AND created_at >= :start_date AND created_at <= :end_date
+    """
+    
     current_orders = await database.fetch_all(
-        OrderModel.__table__.select().where(
-            and_(
-                OrderModel.bar_id == bar_id,
-                OrderModel.created_at >= current_start,
-                OrderModel.created_at <= current_end
-            )
-        )
+        orders_query, {"bar_id": bar_id, "start_date": current_start, "end_date": current_end}
     )
     
     prev_orders = await database.fetch_all(
-        OrderModel.__table__.select().where(
-            and_(
-                OrderModel.bar_id == bar_id,
-                OrderModel.created_at >= prev_start,
-                OrderModel.created_at <= prev_end
-            )
-        )
+        orders_query, {"bar_id": bar_id, "start_date": prev_start, "end_date": prev_end}
     )
     
     current_total = len(current_orders)
@@ -224,18 +217,22 @@ async def get_bar_orders(
 ):
     offset = (page - 1) * limit
     
-    base_query = OrderModel.__table__.select().where(OrderModel.bar_id == bar_id)
+    orders_query = """
+        SELECT id, status, total_price, created_at, estimated_ready_time 
+        FROM orders 
+        WHERE bar_id = :bar_id
+    """
     count_query = "SELECT COUNT(*) FROM orders WHERE bar_id = :bar_id"
     params = {"bar_id": bar_id, "limit": limit, "offset": offset}
     
     if status != "all":
-        base_query = base_query.where(OrderModel.status == status)
+        orders_query += " AND status = :status"
         count_query += " AND status = :status"
         params["status"] = status
     
-    base_query = base_query.order_by(OrderModel.created_at.desc()).limit(limit).offset(offset)
+    orders_query += " ORDER BY created_at DESC LIMIT :limit OFFSET :offset"
     
-    orders = await database.fetch_all(base_query)
+    orders = await database.fetch_all(orders_query, params)
     total = await database.fetch_val(count_query, params)
     
     order_ids = [o["id"] for o in orders]
