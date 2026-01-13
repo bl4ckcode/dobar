@@ -212,3 +212,20 @@ You are NEVER allowed to stage and commit files automatically, YOU DO NOT NEED T
 You are not allowed to deploy to Fly IO as well, we have automations and crendentials for this.
 
 .github/workflows/deploy.yml always run tests and deploy, so we must ensure our unit tests are covering new codes always too otherwise it's gonna fail.
+
+# When to Use [migrate] in Commit Messages
+
+## ✅ USE [migrate] when:
+- You created a NEW migration file in `migrations/versions/`
+- The migration adds/removes tables, columns, indexes, or constraints
+- The Alembic chain has been updated (new revision ID at head)
+
+## ❌ DO NOT use [migrate] when:
+- Only code changes (routes, services, schemas, tests)
+- Database changes were applied manually via psql
+- Fixing bugs in existing code
+- No new files in `migrations/versions/`
+
+## Quick Check:
+```bash
+git status | grep migrations/versions

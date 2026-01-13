@@ -100,7 +100,7 @@ class BarOrdersResponse(BaseModel):
 
 
 def get_period_range(period: str) -> tuple[datetime, datetime, datetime, datetime]:
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
     today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
     
     if period == "today":
@@ -217,45 +217,54 @@ async def get_bar_orders(
 ):
     offset = (page - 1) * limit
     
-    orders_query = """
-        SELECT id, status, total_price, created_at, estimated_ready_time 
-        FROM orders 
-        WHERE bar_id = :bar_id
-    """
-    count_query = "SELECT COUNT(*) FROM orders WHERE bar_id = :bar_id"
-    params = {"bar_id": bar_id, "limit": limit, "offset": offset}
-    
     if status != "all":
-        orders_query += " AND status = :status"
-        count_query += " AND status = :status"
-        params["status"] = status
+        orders_query = """
+            SELECT id, status, total_price, created_at, estimated_ready_time 
+            FROM orders 
+            WHERE bar_id = :bar_id AND status = :status
+            ORDER BY created_at DESC NULLS LAST LIMIT :lim OFFSET :offs
+        """
+        count_query = "SELECT COUNT(*) FROM orders WHERE bar_id = :bar_id AND status = :status"
+        query_params = {"bar_id": bar_id, "status": status, "lim": limit, "offs": offset}
+        count_params = {"bar_id": bar_id, "status": status}
+    else:
+        orders_query = """
+            SELECT id, status, total_price, created_at, estimated_ready_time 
+            FROM orders 
+            WHERE bar_id = :bar_id
+            ORDER BY created_at DESC NULLS LAST LIMIT :lim OFFSET :offs
+        """
+        count_query = "SELECT COUNT(*) FROM orders WHERE bar_id = :bar_id"
+        query_params = {"bar_id": bar_id, "lim": limit, "offs": offset}
+        count_params = {"bar_id": bar_id}
     
-    orders_query += " ORDER BY created_at DESC LIMIT :limit OFFSET :offset"
-    
-    orders = await database.fetch_all(orders_query, params)
-    total = await database.fetch_val(count_query, params)
+    orders = await database.fetch_all(orders_query, query_params)
+    total = await database.fetch_val(count_query, count_params)
     
     order_ids = [o["id"] for o in orders]
     items_count = {}
     if order_ids:
-        items_query = """
+        placeholders = ", ".join([f":id{i}" for i in range(len(order_ids))])
+        items_query = f"""
             SELECT order_id, SUM(quantity) as cnt 
             FROM order_items 
-            WHERE order_id = ANY(:ids)
+            WHERE order_id IN ({placeholders})
             GROUP BY order_id
         """
-        items_result = await database.fetch_all(items_query, {"ids": order_ids})
+        items_params = {f"id{i}": oid for i, oid in enumerate(order_ids)}
+        items_result = await database.fetch_all(items_query, items_params)
         items_count = {r["order_id"]: int(r["cnt"]) for r in items_result}
     
     order_summaries = []
     for o in orders:
+        created = o["created_at"] or datetime.utcnow()
         order_summaries.append(OrderSummary(
             id=o["id"],
             order_number=f"#{o['id']}",
             status=o["status"] or "pending",
             total=o["total_price"] or 0,
             items_count=items_count.get(o["id"], 0),
-            created_at=o["created_at"],
+            created_at=created,
             estimated_ready_at=o["estimated_ready_time"]
         ))
     
