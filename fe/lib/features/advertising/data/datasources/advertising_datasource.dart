@@ -257,7 +257,8 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
         '${ApiEndpoints.baseUrl}${ApiEndpoints.campaigns}',
         queryParameters: {'bar_id': barId},
       );
-      return (response.data as List)
+      final campaignsList = response.data['campaigns'] as List? ?? [];
+      return campaignsList
           .map((json) => AdCampaign.fromJson(json))
           .toList();
     } on DioException catch (e) {
