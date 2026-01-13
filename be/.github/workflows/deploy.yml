@@ -48,8 +48,34 @@ jobs:
     name: Deploy to Fly.io
     runs-on: ubuntu-latest
     needs: test
+    outputs:
+      should_migrate: ${{ steps.check_migrate.outputs.should_migrate }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+      
+      - name: Check if migrations should run
+        id: check_migrate
+        run: |
+          COMMIT_MSG="${{ github.event.head_commit.message }}"
+          MANUAL_TRIGGER="${{ github.event.inputs.run_migrations }}"
+          
+          # Check for [migrate] flag in commit message
+          if [[ "$COMMIT_MSG" == *"[migrate]"* ]]; then
+            echo "🔄 Found [migrate] flag in commit message"
+            echo "should_migrate=true" >> $GITHUB_OUTPUT
+          # Check for manual trigger
+          elif [[ "$MANUAL_TRIGGER" == "true" ]]; then
+            echo "🔄 Manual migration trigger"
+            echo "should_migrate=true" >> $GITHUB_OUTPUT
+          elif [[ "$MANUAL_TRIGGER" == "dry-run" ]]; then
+            echo "🔍 Dry-run migration trigger"
+            echo "should_migrate=dry-run" >> $GITHUB_OUTPUT
+          else
+            echo "⏭️ No migration flag found, skipping migrations"
+            echo "should_migrate=false" >> $GITHUB_OUTPUT
+          fi
       
       - name: Setup Fly CLI
         uses: superfly/flyctl-actions/setup-flyctl@master
@@ -63,9 +89,7 @@ jobs:
     name: Run Database Migrations
     runs-on: ubuntu-latest
     needs: deploy
-    if: |
-      github.event_name == 'workflow_dispatch' && 
-      (github.event.inputs.run_migrations == 'true' || github.event.inputs.run_migrations == 'dry-run')
+    if: needs.deploy.outputs.should_migrate == 'true' || needs.deploy.outputs.should_migrate == 'dry-run'
     steps:
       - uses: actions/checkout@v4
       
@@ -74,22 +98,22 @@ jobs:
 
       - name: Check current migration status
         run: |
-          echo "📊 Checking current database migration status..."
-          flyctl ssh console -a barz-backend-bold-sun-5691 -C "alembic current" || echo "Could not check current status"
+          echo "📊 Current database migration status:"
+          flyctl ssh console -a barz-backend-bold-sun-5691 -C "alembic current" || echo "⚠️ Could not check status"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Show pending migrations (dry-run)
-        if: github.event.inputs.run_migrations == 'dry-run'
+        if: needs.deploy.outputs.should_migrate == 'dry-run'
         run: |
-          echo "🔍 DRY-RUN: Showing pending migrations..."
+          echo "🔍 DRY-RUN: Showing migration history..."
           flyctl ssh console -a barz-backend-bold-sun-5691 -C "alembic history --verbose" || true
-          echo "⚠️  Dry-run complete. No migrations were applied."
+          echo "⚠️ Dry-run complete. No migrations were applied."
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
       - name: Run migrations
-        if: github.event.inputs.run_migrations == 'true'
+        if: needs.deploy.outputs.should_migrate == 'true'
         run: |
           echo "🚀 Running database migrations..."
           flyctl ssh console -a barz-backend-bold-sun-5691 -C "alembic upgrade head"
@@ -99,9 +123,9 @@ jobs:
         timeout-minutes: 5
 
       - name: Verify migration status
-        if: github.event.inputs.run_migrations == 'true'
+        if: needs.deploy.outputs.should_migrate == 'true'
         run: |
-          echo "🔍 Verifying final migration status..."
+          echo "🔍 Final migration status:"
           flyctl ssh console -a barz-backend-bold-sun-5691 -C "alembic current"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
