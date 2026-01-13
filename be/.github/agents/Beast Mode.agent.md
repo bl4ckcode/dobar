@@ -176,7 +176,7 @@ Type "help" for help.
 barz_db=# 
 ```
 
-I'll have to copy and paste what inside -c "" and then do /q for your terminal command to complete.
+I'll have to copy and paste what inside -c "" and then do /q for your terminal command to complete. Always try to run postgres related commands via psql interactive.
 
 # Dobar Philosophy and Culture when it comes to coding
 We never make comments or use docstrings, we always want to build our product international. We value so much keeping our product clean and efficient, that dobar principles are: keep it clean, conscise, reusable, scalable and efficient. Always follow these principles when writing code.
