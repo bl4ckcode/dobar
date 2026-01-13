@@ -1,7 +1,7 @@
 """Add bar creation wizard fields
 
 Revision ID: bar_wizard_001
-Revises: advertising_tables_001
+Revises: 712e048e6d0b
 Create Date: 2026-01-10
 """
 from alembic import op
@@ -9,43 +9,59 @@ import sqlalchemy as sa
 
 # revision identifiers
 revision = 'bar_wizard_001'
-down_revision = 'advertising_tables_001'
+down_revision = '712e048e6d0b'
 branch_labels = None
 depends_on = None
 
 
 def upgrade():
-    # Add new columns to bars table for Create Bar Wizard
-    op.add_column('bars', sa.Column('country_code', sa.String(2), nullable=True, server_default='BR'))
-    op.add_column('bars', sa.Column('business_id', sa.String(50), nullable=True))
-    op.add_column('bars', sa.Column('business_id_type', sa.String(20), nullable=True))
-    op.add_column('bars', sa.Column('state_registration', sa.String(50), nullable=True))
-    op.add_column('bars', sa.Column('verification_status', sa.String(20), nullable=True, server_default='pending'))
+    op.execute("""
+        DO $$ 
+        BEGIN 
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bars' AND column_name='country_code') THEN
+                ALTER TABLE bars ADD COLUMN country_code VARCHAR(2) DEFAULT 'BR';
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bars' AND column_name='business_id') THEN
+                ALTER TABLE bars ADD COLUMN business_id VARCHAR(50);
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bars' AND column_name='business_id_type') THEN
+                ALTER TABLE bars ADD COLUMN business_id_type VARCHAR(20);
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bars' AND column_name='state_registration') THEN
+                ALTER TABLE bars ADD COLUMN state_registration VARCHAR(50);
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bars' AND column_name='verification_status') THEN
+                ALTER TABLE bars ADD COLUMN verification_status VARCHAR(20) DEFAULT 'pending';
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bars' AND column_name='logo_url') THEN
+                ALTER TABLE bars ADD COLUMN logo_url VARCHAR;
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bars' AND column_name='cover_url') THEN
+                ALTER TABLE bars ADD COLUMN cover_url VARCHAR;
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bars' AND column_name='photo_urls') THEN
+                ALTER TABLE bars ADD COLUMN photo_urls JSON;
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bars' AND column_name='operating_hours') THEN
+                ALTER TABLE bars ADD COLUMN operating_hours JSON;
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bars' AND column_name='created_at') THEN
+                ALTER TABLE bars ADD COLUMN created_at TIMESTAMP DEFAULT NOW();
+            END IF;
+            IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='bars' AND column_name='updated_at') THEN
+                ALTER TABLE bars ADD COLUMN updated_at TIMESTAMP DEFAULT NOW();
+            END IF;
+        END $$;
+    """)
     
-    # Media fields
-    op.add_column('bars', sa.Column('logo_url', sa.String(), nullable=True))
-    op.add_column('bars', sa.Column('cover_url', sa.String(), nullable=True))
-    op.add_column('bars', sa.Column('photo_urls', sa.JSON(), nullable=True))
-    
-    # Operating hours
-    op.add_column('bars', sa.Column('operating_hours', sa.JSON(), nullable=True))
-    
-    # Timestamps
-    op.add_column('bars', sa.Column('created_at', sa.DateTime(), nullable=True, server_default=sa.func.now()))
-    op.add_column('bars', sa.Column('updated_at', sa.DateTime(), nullable=True, server_default=sa.func.now()))
-    
-    # Create indexes
-    op.create_index('ix_bars_country_code', 'bars', ['country_code'])
-    op.create_index('ix_bars_business_id', 'bars', ['business_id'])
-    op.create_index('ix_bars_verification_status', 'bars', ['verification_status'])
-    
-    # Create unique constraint on (country_code, business_id) where business_id is not null
-    # Note: PostgreSQL partial unique index
-    op.execute('''
-        CREATE UNIQUE INDEX ix_bars_country_business_id 
+    op.execute("CREATE INDEX IF NOT EXISTS ix_bars_country_code ON bars(country_code)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_bars_business_id ON bars(business_id)")
+    op.execute("CREATE INDEX IF NOT EXISTS ix_bars_verification_status ON bars(verification_status)")
+    op.execute("""
+        CREATE UNIQUE INDEX IF NOT EXISTS ix_bars_country_business_id 
         ON bars(country_code, business_id) 
         WHERE business_id IS NOT NULL
-    ''')
+    """)
 
 
 def downgrade():
