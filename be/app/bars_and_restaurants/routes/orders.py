@@ -12,7 +12,9 @@ from ..schemas.orders import (
     Order as OrderSchema, 
     OrderStatusUpdate, 
     OrderWithHistory,
-    OrderListResponse
+    OrderListResponse,
+    SyncRequest,
+    SyncResponse
 )
 from app.database import database
 from app.auth.middleware import get_current_active_user, get_optional_user
@@ -285,3 +287,13 @@ async def update_order_status(
     except Exception as e:
         await transaction.rollback()
         raise APIError.server_error(f"Failed to update order status: {str(e)}")
+
+
+@orders_router.post("/sync", response_model=SyncResponse)
+async def sync_offline_operations(
+    sync_request: SyncRequest,
+    current_user: User = Depends(get_current_active_user)
+):
+    from ..services.sync_service import sync_operations
+    result = await sync_operations(current_user["id"], [op.model_dump() for op in sync_request.operations])
+    return SyncResponse(**result)

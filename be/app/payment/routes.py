@@ -1,19 +1,70 @@
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Header
+from typing import Optional
+from datetime import datetime, timedelta
+import json
 
 from app.errors import APIError, map_gateway_error
 from app.auth.dependencies import get_current_user
 from app.auth.auth_models import User
+from app.database import database
 from .schemas import PaymentRequest, RefundRequest
+from .models import IdempotencyKey
 from . import get_payment_gateway, PaymentGateway
 
 payment_router = APIRouter(prefix="/payments", tags=["Payments"])
+
+IDEMPOTENCY_TTL_HOURS = 24
+
+
+async def check_idempotency(key: str, user_id: int, request_path: str):
+    if not key:
+        return None
+    
+    query = IdempotencyKey.__table__.select().where(
+        IdempotencyKey.key == key,
+        IdempotencyKey.user_id == user_id
+    )
+    existing = await database.fetch_one(query)
+    
+    if existing:
+        if existing["expires_at"] > datetime.utcnow():
+            return existing["response_body"]
+    return None
+
+
+async def save_idempotency(key: str, user_id: int, request_path: str, response_status: int, response_body: dict):
+    if not key:
+        return
+    
+    expires_at = datetime.utcnow() + timedelta(hours=IDEMPOTENCY_TTL_HOURS)
+    
+    query = IdempotencyKey.__table__.insert().values(
+        key=key,
+        user_id=user_id,
+        request_path=request_path,
+        response_status=response_status,
+        response_body=response_body,
+        expires_at=expires_at
+    )
+    
+    try:
+        await database.execute(query)
+    except Exception:
+        pass
+
 
 @payment_router.post("/charge")
 async def create_charge(
     payment_request: PaymentRequest,
     current_user: User = Depends(get_current_user),
-    gateway = Depends(get_payment_gateway)
+    gateway = Depends(get_payment_gateway),
+    x_idempotency_key: Optional[str] = Header(None, alias="X-Idempotency-Key")
 ):
+    if x_idempotency_key:
+        cached = await check_idempotency(x_idempotency_key, current_user["id"], "/payments/charge")
+        if cached:
+            return cached
+    
     response = gateway.create_charge(
         amount=payment_request.amount,
         currency=payment_request.currency,
@@ -29,6 +80,9 @@ async def create_charge(
             gateway_code=gateway_code,
             transaction_id=transaction_id
         )
+    
+    if x_idempotency_key:
+        await save_idempotency(x_idempotency_key, current_user["id"], "/payments/charge", 200, response)
 
     return response
 

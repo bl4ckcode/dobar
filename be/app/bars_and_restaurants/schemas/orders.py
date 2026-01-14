@@ -87,8 +87,30 @@ class OrderWithHistory(Order):
 
 
 class OrderListResponse(BaseModel):
-    """Schema for paginated order list."""
     orders: List[Order]
     total: int
     page: int
     page_size: int
+
+
+class SyncOperation(BaseModel):
+    type: str
+    order_id: Optional[int] = None
+    bar_id: Optional[int] = None
+    client_timestamp: str
+
+
+class SyncRequest(BaseModel):
+    operations: List[SyncOperation]
+
+
+class SyncConflict(BaseModel):
+    operation: dict
+    conflict_type: str
+    server_state: Optional[dict] = None
+    resolution: str
+
+
+class SyncResponse(BaseModel):
+    synced: List[dict]
+    conflicts: List[SyncConflict]
