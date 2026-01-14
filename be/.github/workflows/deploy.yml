@@ -57,10 +57,10 @@ jobs:
       
       - name: Check if migrations should run
         id: check_migrate
+        env:
+          COMMIT_MSG: ${{ github.event.head_commit.message }}
+          MANUAL_TRIGGER: ${{ github.event.inputs.run_migrations }}
         run: |
-          COMMIT_MSG="${{ github.event.head_commit.message }}"
-          MANUAL_TRIGGER="${{ github.event.inputs.run_migrations }}"
-          
           # Check for [migrate] flag in commit message
           if [[ "$COMMIT_MSG" == *"[migrate]"* ]]; then
             echo "🔄 Found [migrate] flag in commit message"
