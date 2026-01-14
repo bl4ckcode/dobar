@@ -1,8 +1,11 @@
 import os
 import json
 import re
+import base64
+import tempfile
 from typing import Optional
 from google.cloud import vision
+from google.oauth2 import service_account
 import openai
 
 
@@ -31,7 +34,14 @@ class MenuExtractionService:
     
     def _get_vision_client(self):
         if not self.vision_client:
-            self.vision_client = vision.ImageAnnotatorClient()
+            creds_base64 = os.getenv("GOOGLE_CREDENTIALS_BASE64")
+            if creds_base64:
+                creds_json = base64.b64decode(creds_base64).decode("utf-8")
+                creds_dict = json.loads(creds_json)
+                credentials = service_account.Credentials.from_service_account_info(creds_dict)
+                self.vision_client = vision.ImageAnnotatorClient(credentials=credentials)
+            else:
+                self.vision_client = vision.ImageAnnotatorClient()
         return self.vision_client
     
     def _get_openai_client(self):
