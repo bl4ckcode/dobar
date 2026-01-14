@@ -6,7 +6,7 @@ MongoDB support is deprecated but kept for legacy data migration.
 """
 from datetime import datetime
 from typing import List, Optional
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Query, UploadFile, File, Form, Depends
 from sqlalchemy import and_
 
 from ..models.relational_models import Menu as MenuModel, MenuItem as MenuItemModel, Bar
@@ -14,10 +14,12 @@ from ..models.nosql_models import menus_collection  # Legacy - for migration onl
 from ..schemas.menus import (
     MenuCreate, MenuUpdate, Menu, MenuWithItems,
     MenuItemCreate, MenuItemCreateViaURL, MenuItemUpdate, MenuItem,
-    LegacyMenuItem
+    LegacyMenuItem, MenuExtractionResponse
 )
 from app.database import database
 from app.errors import APIError
+from app.auth.middleware import get_current_active_user
+from app.auth.auth_models import User
 
 menus_router = APIRouter(prefix="/menus", tags=["Menus"])
 
@@ -391,3 +393,42 @@ async def read_menu_items_legacy(menu_id: int):
         pass
     
     return {"items": []}
+
+
+@menus_router.post("/extract", response_model=MenuExtractionResponse)
+async def extract_menu_from_image(
+    image: UploadFile = File(...),
+    bar_id: int = Form(...),
+    language_hint: Optional[str] = Form(None),
+    current_user: User = Depends(get_current_active_user)
+):
+    if image.content_type not in ["image/jpeg", "image/png", "image/jpg"]:
+        raise APIError.validation_error(
+            message="Invalid image format. Only JPEG and PNG are supported.",
+            details={"image": ["Must be JPEG or PNG"]}
+        )
+    
+    content = await image.read()
+    
+    if len(content) > 10 * 1024 * 1024:
+        raise APIError.validation_error(
+            message="Image too large. Maximum size is 10MB.",
+            details={"image": ["Max size 10MB"]}
+        )
+    
+    bar = await get_bar_by_id(bar_id)
+    if not bar:
+        raise APIError.partner_not_found("Bar not found")
+    
+    from ..services.menu_extraction import menu_extraction_service
+    
+    try:
+        result = await menu_extraction_service.extract_menu(content, language_hint)
+        return MenuExtractionResponse(**result)
+    except ValueError as e:
+        error_msg = str(e)
+        if "quality" in error_msg.lower():
+            raise APIError.bad_request(error_msg)
+        elif "No menu items" in error_msg:
+            raise APIError.validation_error(message=error_msg, details={})
+        raise APIError.server_error(f"Menu extraction failed: {error_msg}")

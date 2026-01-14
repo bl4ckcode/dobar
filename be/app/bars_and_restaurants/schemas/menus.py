@@ -99,8 +99,25 @@ class MenuWithItems(Menu):
 # =============================================================================
 
 class LegacyMenuItem(BaseModel):
-    """Legacy schema for MongoDB menu items - TO BE DEPRECATED."""
     item_name: str
     price: float
     available: bool
     picture: Optional[str] = None
+
+
+class ExtractedMenuItem(BaseModel):
+    name: str
+    price: float
+    description: Optional[str] = None
+
+
+class ExtractedCategory(BaseModel):
+    name: str
+    items: List[ExtractedMenuItem]
+
+
+class MenuExtractionResponse(BaseModel):
+    confidence: float
+    categories: List[ExtractedCategory]
+    raw_text: str
+    currency_detected: str
