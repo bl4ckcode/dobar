@@ -99,6 +99,10 @@ dependencies:
   sms_autofill: ^2.4.1
   permission_handler: ^12.0.1       # Updated
   
+  # --- CAMERA & IMAGE ---
+  image_picker: ^1.2.1              # Camera and gallery image selection
+  image_cropper: ^8.0.2             # Crop images before upload
+  
   # --- MISC ---
   pretty_animated_buttons: ^0.0.2
   image: ^4.5.3

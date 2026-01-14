@@ -13,6 +13,7 @@ import 'package:barz/features/cart/cart_injection.dart';
 import 'package:barz/features/checkin/checkin_injection.dart';
 import 'package:barz/features/home/home_injection.dart';
 import 'package:barz/features/location/location_injection.dart';
+import 'package:barz/features/menu_reader/menu_reader_injection.dart';
 import 'package:barz/features/onboarding/onboarding_injection.dart';
 import 'package:barz/features/orders/orders_injection.dart';
 import 'package:barz/features/partners/partners_injection.dart';
@@ -40,6 +41,7 @@ Future<void> initInjections() async {
   await initCartInjection();
   await initOrdersInjection();
   await initCheckinInjection();
+  await initMenuReaderInjection();
   initUserInjection();
   initPaymentsInjection();
   initPromotionsInjection();

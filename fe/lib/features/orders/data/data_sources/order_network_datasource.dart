@@ -1,5 +1,6 @@
 import 'package:barz/core/api/api_endpoints.dart';
 import 'package:barz/core/network/exceptions.dart';
+import 'package:barz/core/services/offline/sync_models.dart';
 import 'package:barz/features/orders/domain/models/order_model.dart';
 import 'package:dio/dio.dart';
 
@@ -63,6 +64,20 @@ class OrderNetworkDataSource {
     } on DioException catch (e) {
       throw ServerException(
           e.response?.data?['detail'] ?? 'Failed to cancel order',
+          e.response?.statusCode);
+    }
+  }
+
+  Future<SyncResponse> syncOrders(List<SyncOperation> operations) async {
+    try {
+      final response = await dio.post(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.syncOrders}',
+        data: {'operations': operations.map((o) => o.toJson()).toList()},
+      );
+      return SyncResponse.fromJson(response.data);
+    } on DioException catch (e) {
+      throw ServerException(
+          e.response?.data?['detail'] ?? 'Failed to sync orders',
           e.response?.statusCode);
     }
   }

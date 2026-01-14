@@ -1,5 +1,6 @@
 import 'package:barz/core/api/api_endpoints.dart';
 import 'package:barz/core/network/exceptions.dart';
+import 'package:barz/core/utils/idempotency.dart';
 import 'package:barz/features/payments/domain/models/payment_method.dart';
 import 'package:barz/features/payments/domain/models/transaction.dart';
 import 'package:barz/features/payments/domain/models/payment_model.dart';
@@ -10,12 +11,12 @@ abstract class PaymentDatasource {
   Future<PaymentMethod> addPaymentMethod(PaymentMethod method, String? cardToken);
   Future<PaymentMethod> setDefaultPaymentMethod(int methodId);
   Future<bool> removePaymentMethod(int methodId);
-  Future<Transaction> processPayment(PaymentRequest request);
-  Future<PixPaymentResponse> initiatePixPayment(PaymentRequest request);
+  Future<Transaction> processPayment(PaymentRequest request, {String? idempotencyKey});
+  Future<PixPaymentResponse> initiatePixPayment(PaymentRequest request, {String? idempotencyKey});
   Future<Transaction> checkPaymentStatus(int transactionId);
   Future<List<Transaction>> getTransactionHistory({int? limit, int? offset});
-  Future<Transaction> refundTransaction(int transactionId, {double? amount});
-  Future<Transaction> topUpWallet(double amount, PaymentType paymentType, {int? paymentMethodId});
+  Future<Transaction> refundTransaction(int transactionId, {double? amount, String? idempotencyKey});
+  Future<Transaction> topUpWallet(double amount, PaymentType paymentType, {int? paymentMethodId, String? idempotencyKey});
 }
 
 class PaymentNetworkDatasource implements PaymentDatasource {
@@ -66,9 +67,14 @@ class PaymentNetworkDatasource implements PaymentDatasource {
   }
 
   @override
-  Future<Transaction> processPayment(PaymentRequest request) async {
+  Future<Transaction> processPayment(PaymentRequest request, {String? idempotencyKey}) async {
     try {
-      final response = await dio.post('${ApiEndpoints.baseUrl}${ApiEndpoints.payments}', data: request.toJson());
+      final key = idempotencyKey ?? IdempotencyKey.forPayment(request.orderId);
+      final response = await dio.post(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.payments}',
+        data: request.toJson(),
+        options: Options(headers: {'X-Idempotency-Key': key}),
+      );
       return Transaction.fromJson(response.data);
     } on DioException catch (e) {
       throw ServerException(e.response?.data?['detail'] ?? 'Failed to process payment', e.response?.statusCode);
@@ -76,9 +82,14 @@ class PaymentNetworkDatasource implements PaymentDatasource {
   }
 
   @override
-  Future<PixPaymentResponse> initiatePixPayment(PaymentRequest request) async {
+  Future<PixPaymentResponse> initiatePixPayment(PaymentRequest request, {String? idempotencyKey}) async {
     try {
-      final response = await dio.post('${ApiEndpoints.baseUrl}${ApiEndpoints.pixPayment}', data: request.toJson());
+      final key = idempotencyKey ?? IdempotencyKey.forPayment(request.orderId);
+      final response = await dio.post(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.pixPayment}',
+        data: request.toJson(),
+        options: Options(headers: {'X-Idempotency-Key': key}),
+      );
       return PixPaymentResponse.fromJson(response.data);
     } on DioException catch (e) {
       throw ServerException(e.response?.data?['detail'] ?? 'Failed to initiate PIX payment', e.response?.statusCode);
@@ -109,9 +120,14 @@ class PaymentNetworkDatasource implements PaymentDatasource {
   }
 
   @override
-  Future<Transaction> refundTransaction(int transactionId, {double? amount}) async {
+  Future<Transaction> refundTransaction(int transactionId, {double? amount, String? idempotencyKey}) async {
     try {
-      final response = await dio.post('${ApiEndpoints.baseUrl}${ApiEndpoints.payments}/$transactionId/refund', data: amount != null ? {'amount': amount} : null);
+      final key = idempotencyKey ?? IdempotencyKey.forOrder(transactionId, 'refund');
+      final response = await dio.post(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.payments}/$transactionId/refund',
+        data: amount != null ? {'amount': amount} : null,
+        options: Options(headers: {'X-Idempotency-Key': key}),
+      );
       return Transaction.fromJson(response.data);
     } on DioException catch (e) {
       throw ServerException(e.response?.data?['detail'] ?? 'Failed to refund transaction', e.response?.statusCode);
@@ -119,8 +135,9 @@ class PaymentNetworkDatasource implements PaymentDatasource {
   }
 
   @override
-  Future<Transaction> topUpWallet(double amount, PaymentType paymentType, {int? paymentMethodId}) async {
+  Future<Transaction> topUpWallet(double amount, PaymentType paymentType, {int? paymentMethodId, String? idempotencyKey}) async {
     try {
+      final key = idempotencyKey ?? IdempotencyKey.generate();
       final response = await dio.post(
         '${ApiEndpoints.baseUrl}${ApiEndpoints.walletTopUp}',
         data: {
@@ -128,6 +145,7 @@ class PaymentNetworkDatasource implements PaymentDatasource {
           'payment_type': paymentType.name,
           if (paymentMethodId != null) 'payment_method_id': paymentMethodId,
         },
+        options: Options(headers: {'X-Idempotency-Key': key}),
       );
       return Transaction.fromJson(response.data);
     } on DioException catch (e) {

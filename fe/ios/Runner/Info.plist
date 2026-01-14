@@ -61,5 +61,9 @@
 	<string>To find the best bars and restaurants around you, we need your location :)</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>To find the best drinks from the best bars and restaurants around you, we need your location :)</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Take photos of your menu to automatically import items using AI</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Select photos of your menu to automatically import items using AI</string>
 </dict>
 </plist>

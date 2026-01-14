@@ -16,6 +16,7 @@ class ApiEndpoints {
 
   // Menus
   static const String menusCreate = '/menus/';
+  static const String menuExtract = '/menus/extract';
   static String menus(int barId) => '/menus/$barId';
   static String menusForBar(int barId) => '/menus/bar/$barId';
   static String menuFull(int menuId) => '/menus/$menuId/full';
@@ -37,6 +38,7 @@ class ApiEndpoints {
 
   static const String orders = '/orders/';
   static const String myOrders = '/orders/user/me';
+  static const String syncOrders = '/orders/sync';
   static String order(int id) => '/orders/$id';
   static String orderTimeline(int id) => '/orders/$id/timeline';
   static String cancelOrder(int id) => '/orders/$id/cancel';
