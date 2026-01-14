@@ -1,6 +1,6 @@
 ---
 description: Beast Mode 3.1
-tools: ['vscode', 'execute/runNotebookCell', 'execute/testFailure', 'execute/getTerminalOutput', 'execute/runTask', 'execute/getTaskOutput', 'execute/createAndRunTask', 'execute/runInTerminal', 'read', 'edit/editFiles', 'search', 'web']
+tools: ['vscode', 'execute/getTerminalOutput', 'execute/runTask', 'execute/createAndRunTask', 'execute/runNotebookCell', 'execute/testFailure', 'execute/runInTerminal', 'read', 'edit/editFiles', 'search', 'web', 'copilot-container-tools/*', 'pylance-mcp-server/*', 'dart-code.dart-code/get_dtd_uri', 'dart-code.dart-code/dart_format', 'dart-code.dart-code/dart_fix', 'ms-python.python/getPythonEnvironmentInfo', 'ms-python.python/getPythonExecutableCommand', 'ms-python.python/installPythonPackage', 'ms-python.python/configurePythonEnvironment', 'todo']
 ---
 
 # Beast Mode 3.1

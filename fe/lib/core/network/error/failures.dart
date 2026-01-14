@@ -14,3 +14,20 @@ class ServerFailure extends Failure {
 
   const ServerFailure(super.errorMessage, this.statusCode);
 }
+
+class CacheFailure extends Failure {
+  const CacheFailure(super.errorMessage);
+}
+
+class NetworkFailure extends Failure {
+  const NetworkFailure(super.errorMessage);
+}
+
+class SyncFailure extends Failure {
+  final int pendingCount;
+  
+  const SyncFailure(super.errorMessage, {this.pendingCount = 0});
+  
+  @override
+  List<Object> get props => [errorMessage, pendingCount];
+}

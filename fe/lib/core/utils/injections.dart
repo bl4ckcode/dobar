@@ -4,6 +4,7 @@ import 'package:barz/core/services/email_prompt_service.dart';
 import 'package:barz/core/services/image_refresh_service.dart';
 import 'package:barz/core/services/notifications/notification_service.dart';
 import 'package:barz/core/services/token_storage_service.dart';
+import 'package:barz/core/services/offline/offline.dart';
 import 'package:barz/core/utils/log/app_logger.dart';
 import 'package:barz/features/advertising/advertising_injection.dart';
 import 'package:barz/features/authentication/auth_injection.dart';
@@ -28,6 +29,7 @@ final getItInjector = GetIt.instance;
 
 Future<void> initInjections() async {
   await initSharedPrefsInjections();
+  await initOfflineServicesInjections();
   await initAppInjections();
   await initDioInjections();
   await initNotificationInjections();
@@ -57,6 +59,26 @@ Future<void> initSharedPrefsInjections() async {
   getItInjector.registerLazySingleton<EmailPromptService>(
     () => EmailPromptService(getItInjector<SharedPreferences>()),
   );
+}
+
+Future<void> initOfflineServicesInjections() async {
+  final hiveStorage = HiveStorageService();
+  await hiveStorage.initialize();
+  getItInjector.registerSingleton<HiveStorageService>(hiveStorage);
+
+  final connectivity = ConnectivityService();
+  await connectivity.initialize();
+  getItInjector.registerSingleton<ConnectivityService>(connectivity);
+
+  final syncService = SyncService();
+  await syncService.initialize();
+  getItInjector.registerSingleton<SyncService>(syncService);
+
+  final backgroundWorker = BackgroundWorker();
+  await backgroundWorker.initialize();
+  await backgroundWorker.registerPeriodicSync();
+  await backgroundWorker.scheduleCleanup();
+  getItInjector.registerSingleton<BackgroundWorker>(backgroundWorker);
 }
 
 Future<void> initDioInjections() async {
