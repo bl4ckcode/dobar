@@ -3,10 +3,18 @@ import json
 import re
 import base64
 import tempfile
+import httpx
+from io import BytesIO
 from typing import Optional
 from google.cloud import vision
 from google.oauth2 import service_account
 import openai
+
+try:
+    import fitz
+    PDF_SUPPORT = True
+except ImportError:
+    PDF_SUPPORT = False
 
 
 EXTRACTION_PROMPT = """You are a menu parser. Extract menu items from the following OCR text.
@@ -112,6 +120,72 @@ class MenuExtractionService:
         text_confidence = min(1.0, text_length / 500) if text_length > 50 else 0.3
         
         return round((price_ratio * 0.7 + text_confidence * 0.3), 2)
+    
+    async def download_from_url(self, url: str) -> tuple[bytes, str]:
+        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            response = await client.get(url)
+            response.raise_for_status()
+            
+            content_type = response.headers.get("content-type", "").lower()
+            
+            if "pdf" in content_type or url.lower().endswith(".pdf"):
+                return response.content, "pdf"
+            elif any(t in content_type for t in ["image/jpeg", "image/png", "image/webp"]):
+                return response.content, "image"
+            elif url.lower().endswith((".jpg", ".jpeg", ".png", ".webp")):
+                return response.content, "image"
+            else:
+                return response.content, "html"
+    
+    async def extract_text_from_pdf(self, pdf_content: bytes) -> str:
+        if not PDF_SUPPORT:
+            raise ValueError("PDF support not available. Install PyMuPDF: pip install pymupdf")
+        
+        text_parts = []
+        with fitz.open(stream=pdf_content, filetype="pdf") as doc:
+            for page in doc:
+                text_parts.append(page.get_text())
+        
+        return "\n".join(text_parts)
+    
+    async def extract_text_from_html(self, html_content: bytes) -> str:
+        text = html_content.decode("utf-8", errors="ignore")
+        text = re.sub(r"<script[^>]*>.*?</script>", "", text, flags=re.DOTALL | re.IGNORECASE)
+        text = re.sub(r"<style[^>]*>.*?</style>", "", text, flags=re.DOTALL | re.IGNORECASE)
+        text = re.sub(r"<[^>]+>", " ", text)
+        text = re.sub(r"\s+", " ", text)
+        return text.strip()
+    
+    async def extract_menu_from_url(self, url: str, language_hint: Optional[str] = None) -> dict:
+        content, content_type = await self.download_from_url(url)
+        
+        if content_type == "image":
+            return await self.extract_menu(content, language_hint)
+        elif content_type == "pdf":
+            raw_text = await self.extract_text_from_pdf(content)
+        elif content_type == "html":
+            raw_text = await self.extract_text_from_html(content)
+        else:
+            raise ValueError(f"Unsupported content type: {content_type}")
+        
+        if not raw_text or len(raw_text.strip()) < 10:
+            raise ValueError("Could not extract text from URL")
+        
+        parsed_data = await self.parse_menu_with_llm(raw_text, language_hint)
+        
+        if not parsed_data.get("categories") or all(
+            len(cat.get("items", [])) == 0 for cat in parsed_data["categories"]
+        ):
+            raise ValueError("No menu items detected in content")
+        
+        confidence = self.calculate_confidence(raw_text, parsed_data)
+        
+        return {
+            "confidence": confidence,
+            "categories": parsed_data.get("categories", []),
+            "raw_text": raw_text[:5000],
+            "currency_detected": parsed_data.get("currency", "BRL")
+        }
     
     async def extract_menu(self, image_content: bytes, language_hint: Optional[str] = None) -> dict:
         raw_text = await self.extract_text_from_image(image_content)

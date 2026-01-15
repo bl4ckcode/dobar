@@ -8,13 +8,14 @@ from datetime import datetime
 from typing import List, Optional
 from fastapi import APIRouter, Query, UploadFile, File, Form, Depends
 from sqlalchemy import and_
+import httpx
 
 from ..models.relational_models import Menu as MenuModel, MenuItem as MenuItemModel, Bar
 from ..models.nosql_models import menus_collection  # Legacy - for migration only
 from ..schemas.menus import (
     MenuCreate, MenuUpdate, Menu, MenuWithItems,
     MenuItemCreate, MenuItemCreateViaURL, MenuItemUpdate, MenuItem,
-    LegacyMenuItem, MenuExtractionResponse
+    LegacyMenuItem, MenuExtractionResponse, MenuExtractionURLRequest
 )
 from app.database import database
 from app.errors import APIError
@@ -428,6 +429,34 @@ async def extract_menu_from_image(
     except ValueError as e:
         error_msg = str(e)
         if "quality" in error_msg.lower():
+            raise APIError.bad_request(error_msg)
+        elif "No menu items" in error_msg:
+            raise APIError.validation_error(message=error_msg, details={})
+        raise APIError.server_error(f"Menu extraction failed: {error_msg}")
+
+
+@menus_router.post("/extract-url", response_model=MenuExtractionResponse)
+async def extract_menu_from_url(
+    request: MenuExtractionURLRequest,
+    current_user: User = Depends(get_current_active_user)
+):
+    bar = await get_bar_by_id(request.bar_id)
+    if not bar:
+        raise APIError.partner_not_found("Bar not found")
+    
+    from ..services.menu_extraction import menu_extraction_service
+    
+    try:
+        result = await menu_extraction_service.extract_menu_from_url(
+            request.menu_url, 
+            request.language_hint
+        )
+        return MenuExtractionResponse(**result)
+    except httpx.HTTPStatusError as e:
+        raise APIError.bad_request(f"Could not fetch URL: {e.response.status_code}")
+    except ValueError as e:
+        error_msg = str(e)
+        if "quality" in error_msg.lower() or "Could not extract" in error_msg:
             raise APIError.bad_request(error_msg)
         elif "No menu items" in error_msg:
             raise APIError.validation_error(message=error_msg, details={})

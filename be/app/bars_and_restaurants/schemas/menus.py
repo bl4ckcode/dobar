@@ -121,3 +121,9 @@ class MenuExtractionResponse(BaseModel):
     categories: List[ExtractedCategory]
     raw_text: str
     currency_detected: str
+
+
+class MenuExtractionURLRequest(BaseModel):
+    menu_url: str
+    bar_id: int
+    language_hint: Optional[str] = None
