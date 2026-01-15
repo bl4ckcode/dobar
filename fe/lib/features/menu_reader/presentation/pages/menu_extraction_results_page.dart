@@ -29,7 +29,7 @@ class MenuExtractionResultsPage extends StatelessWidget {
               backgroundColor: successGreen,
             ),
           );
-          Navigator.of(context).popUntil((route) => route.isFirst);
+          Navigator.of(context).pop(true);
         } else if (state.status == MenuReaderStatus.error) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

@@ -42,9 +42,9 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
   @override
   Widget build(BuildContext context) {
     return BlocConsumer<MenuReaderBloc, MenuReaderState>(
-      listener: (context, state) {
+      listener: (context, state) async {
         if (state.status == MenuReaderStatus.extracted) {
-          Navigator.of(context).push(
+          final saved = await Navigator.of(context).push<bool>(
             MaterialPageRoute(
               builder: (_) => BlocProvider.value(
                 value: context.read<MenuReaderBloc>(),
@@ -52,6 +52,9 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
               ),
             ),
           );
+          if (saved == true && context.mounted) {
+            Navigator.of(context).pop(true);
+          }
         } else if (state.status == MenuReaderStatus.error) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(

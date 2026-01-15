@@ -172,8 +172,8 @@ drwxr-xr-x@ 32 carlosalves  635061173   1024 Jan 11 17:16 barz
 drwxr-xr-x@ 40 carlosalves  635061173   1280 Jan 11 17:04 barz-backend
 drwxr-xr-x   3 carlosalves  635061173     96 Apr 19  2025 barz.bfg-report
 drwxr-xr-x  16 carlosalves  635061173    512 Jan  8 10:27 dobar-payment-engine
-
-cd /Users/carlosalves/Downloads/foodly_ui
+cd app-openfisio
+cd /Users/carlosalves/Downloads/foodly_ui-main
 
 You can take inspiration and look at the patterns of app-openfisio and foodle_ui app, they are prod and example restaurant bar app, in this order, that we can take inspiration from.
 

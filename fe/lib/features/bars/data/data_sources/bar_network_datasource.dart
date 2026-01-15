@@ -242,4 +242,54 @@ class BarNetworkDataSource {
           e.response?.statusCode);
     }
   }
+
+  Future<void> deleteMenuItem(int menuId, int itemId) async {
+    try {
+      await dio.delete(
+        '${ApiEndpoints.baseUrl}/menus/$menuId/items/$itemId',
+      );
+    } on DioException catch (e) {
+      throw ServerException(
+          e.response?.data?['detail'] ?? 'Failed to delete menu item',
+          e.response?.statusCode);
+    }
+  }
+
+  Future<void> updateItemAvailability(int menuId, int itemId, bool isAvailable) async {
+    try {
+      await dio.patch(
+        '${ApiEndpoints.baseUrl}/menus/$menuId/items/$itemId/availability',
+        data: {'available': isAvailable},
+      );
+    } on DioException catch (e) {
+      throw ServerException(
+          e.response?.data?['detail'] ?? 'Failed to update item availability',
+          e.response?.statusCode);
+    }
+  }
+
+  Future<void> updateMenuItem(
+    int menuId,
+    int itemId, {
+    required String name,
+    String? description,
+    required double price,
+    String? category,
+  }) async {
+    try {
+      await dio.put(
+        '${ApiEndpoints.baseUrl}/menus/$menuId/items/$itemId',
+        data: {
+          'name': name,
+          'price': price,
+          if (description != null) 'description': description,
+          if (category != null) 'category': category,
+        },
+      );
+    } on DioException catch (e) {
+      throw ServerException(
+          e.response?.data?['detail'] ?? 'Failed to update menu item',
+          e.response?.statusCode);
+    }
+  }
 }
