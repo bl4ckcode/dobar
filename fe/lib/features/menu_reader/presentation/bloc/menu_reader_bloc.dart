@@ -131,7 +131,7 @@ class MenuReaderBloc extends Bloc<MenuReaderEvent, MenuReaderState> {
     emit(state.copyWith(status: MenuReaderStatus.saving));
 
     final result = await repository.saveExtractedItems(
-      menuId: event.menuId,
+      barId: event.barId,
       categories: state.editableCategories,
     );
 

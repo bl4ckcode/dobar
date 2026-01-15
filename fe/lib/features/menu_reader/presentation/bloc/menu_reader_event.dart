@@ -83,12 +83,12 @@ class UpdateCategoryName extends MenuReaderEvent {
 }
 
 class SaveExtractedItems extends MenuReaderEvent {
-  final int menuId;
+  final int barId;
 
-  const SaveExtractedItems({required this.menuId});
+  const SaveExtractedItems({required this.barId});
 
   @override
-  List<Object?> get props => [menuId];
+  List<Object?> get props => [barId];
 }
 
 class ResetMenuReader extends MenuReaderEvent {}

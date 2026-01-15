@@ -11,11 +11,11 @@ import 'package:barz/features/menu_reader/presentation/widgets/extracted_item_ca
 import 'package:loading_animation_widget/loading_animation_widget.dart';
 
 class MenuExtractionResultsPage extends StatelessWidget {
-  final int menuId;
+  final int barId;
 
   const MenuExtractionResultsPage({
     super.key,
-    required this.menuId,
+    required this.barId,
   });
 
   @override
@@ -33,7 +33,7 @@ class MenuExtractionResultsPage extends StatelessWidget {
         } else if (state.status == MenuReaderStatus.error) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(state.errorMessage ?? 'Failed to save items'),
+              content: Text(state.errorMessage ?? 'Failed to save menu items'),
               backgroundColor: errorRed,
             ),
           );
@@ -158,13 +158,14 @@ class MenuExtractionResultsPage extends StatelessWidget {
                     color: textSecondary,
                   ),
                 ),
+                const SizedBox(height: 8),
+                LinearProgressIndicator(
+                  value: confidence,
+                  backgroundColor: surfaceDim,
+                  valueColor: AlwaysStoppedAnimation(confidenceColor),
+                ),
               ],
             ),
-          ),
-          LinearProgressIndicator(
-            value: confidence,
-            backgroundColor: surfaceDim,
-            valueColor: AlwaysStoppedAnimation(confidenceColor),
           ),
         ],
       ),
@@ -271,7 +272,7 @@ class MenuExtractionResultsPage extends StatelessWidget {
               onPressed: state.selectedItemCount > 0
                   ? () {
                       context.read<MenuReaderBloc>().add(
-                        SaveExtractedItems(menuId: menuId),
+                        SaveExtractedItems(barId: barId),
                       );
                     }
                   : null,

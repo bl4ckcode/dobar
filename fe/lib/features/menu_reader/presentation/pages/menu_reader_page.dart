@@ -48,7 +48,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
             MaterialPageRoute(
               builder: (_) => BlocProvider.value(
                 value: context.read<MenuReaderBloc>(),
-                child: MenuExtractionResultsPage(menuId: widget.menuId),
+                child: MenuExtractionResultsPage(barId: widget.barId),
               ),
             ),
           );

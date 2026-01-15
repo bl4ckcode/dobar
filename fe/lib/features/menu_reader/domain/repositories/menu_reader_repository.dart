@@ -17,7 +17,7 @@ abstract class MenuReaderRepository {
   });
 
   Future<Either<Failure, bool>> saveExtractedItems({
-    required int menuId,
+    required int barId,
     required List<ExtractedCategory> categories,
   });
 }

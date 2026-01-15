@@ -59,10 +59,15 @@ class MenuReaderRepositoryImpl implements MenuReaderRepository {
 
   @override
   Future<Either<Failure, bool>> saveExtractedItems({
-    required int menuId,
+    required int barId,
     required List<ExtractedCategory> categories,
   }) async {
     try {
+      final menuId = await _getOrCreateMenuForBar(barId);
+      if (menuId == null) {
+        return const Left(ServerFailure('Failed to get or create menu', null));
+      }
+
       int successCount = 0;
       int totalItems = 0;
 
@@ -72,7 +77,7 @@ class MenuReaderRepositoryImpl implements MenuReaderRepository {
           totalItems++;
           
           await dio.post(
-            '${ApiEndpoints.baseUrl}${ApiEndpoints.menuItems(menuId)}/',
+            '${ApiEndpoints.baseUrl}${ApiEndpoints.menuItems(menuId)}',
             data: {
               'name': item.name,
               'description': item.description,
@@ -97,6 +102,33 @@ class MenuReaderRepositoryImpl implements MenuReaderRepository {
       ));
     } catch (e) {
       return Left(ServerFailure('Failed to save menu items: $e', null));
+    }
+  }
+
+  Future<int?> _getOrCreateMenuForBar(int barId) async {
+    try {
+      final response = await dio.get(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.menusForBar(barId)}',
+      );
+      
+      final menus = response.data as List<dynamic>;
+      if (menus.isNotEmpty) {
+        return menus.first['id'] as int;
+      }
+      
+      final createResponse = await dio.post(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.menusCreate}',
+        data: {
+          'bar_id': barId,
+          'name': 'Menu Principal',
+          'description': 'Menu criado automaticamente',
+          'is_active': true,
+        },
+      );
+      
+      return createResponse.data['id'] as int;
+    } catch (e) {
+      return null;
     }
   }
 }
