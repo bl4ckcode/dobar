@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:barz/core/design/components/responsive_center_container.dart';
+import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/core/utils/constant/colors.dart';
-import 'package:barz/core/utils/injections.dart';
-import 'package:barz/features/menu_reader/presentation/bloc/menu_reader_bloc.dart';
-import 'package:barz/features/menu_reader/presentation/pages/menu_reader_page.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
 
@@ -58,7 +57,10 @@ class MenuManagementPage extends StatelessWidget {
                   const SizedBox(height: 12),
                   OutlinedButton.icon(
                     onPressed: activeBar != null
-                        ? () => _openMenuReader(context, activeBar.barId)
+                        ? () => context.push(
+                            AppRoute.businessMenuReader.path,
+                            extra: {'barId': activeBar.barId, 'menuId': 0},
+                          )
                         : null,
                     icon: const Icon(Icons.camera_alt),
                     label: const Text('Scan Menu (AI)'),
@@ -69,20 +71,6 @@ class MenuManagementPage extends StatelessWidget {
           ),
         );
       },
-    );
-  }
-
-  void _openMenuReader(BuildContext context, int barId) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => BlocProvider(
-          create: (_) => getItInjector<MenuReaderBloc>(),
-          child: MenuReaderPage(
-            barId: barId,
-            menuId: 0,
-          ),
-        ),
-      ),
     );
   }
 }

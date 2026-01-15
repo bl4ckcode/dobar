@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/core/rbac/rbac.dart';
+import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
@@ -10,7 +11,6 @@ import 'package:barz/features/session/presentation/bloc/session_event.dart';
 import 'package:barz/features/session/domain/models/bar_access.dart';
 import 'package:barz/features/bars/presentation/bloc/dashboard_bloc.dart';
 import 'package:barz/features/bars/domain/models/dashboard_models.dart';
-import 'package:barz/ui/business/business_shell.dart';
 
 class BusinessDashboardPage extends StatelessWidget {
   const BusinessDashboardPage({super.key});
@@ -831,10 +831,6 @@ class _QuickActionsSection extends StatelessWidget {
 
   const _QuickActionsSection({required this.activeBar});
 
-  void _navigateToTab(BuildContext context, int tabIndex) {
-    BusinessNavigation.of(context)?.navigateToTab(tabIndex);
-  }
-
   void _showComingSoon(BuildContext context, String feature) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -864,19 +860,19 @@ class _QuickActionsSection extends StatelessWidget {
             _QuickActionChip(
               icon: Icons.point_of_sale_rounded,
               label: 'Cashier',
-              onTap: () => _navigateToTab(context, 1),
+              onTap: () => context.go(AppRoute.businessCashier.path),
             ),
             if (activeBar.canEditMenu)
               _QuickActionChip(
                 icon: Icons.restaurant_menu_rounded,
                 label: 'Edit Menu',
-                onTap: () => _navigateToTab(context, 2),
+                onTap: () => context.go(AppRoute.businessMenu.path),
               ),
             if (isOwnerOrAdmin) ...[
               _QuickActionChip(
                 icon: Icons.local_offer_rounded,
                 label: 'New Promo',
-                onTap: () => _navigateToTab(context, activeBar.canEditMenu ? 3 : 2),
+                onTap: () => context.go(AppRoute.businessCampaigns.path),
               ),
               _QuickActionChip(
                 icon: Icons.qr_code_rounded,

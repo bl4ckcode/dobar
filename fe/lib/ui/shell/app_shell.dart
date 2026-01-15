@@ -1,18 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
+import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
 import 'package:barz/features/session/presentation/bloc/session_event.dart';
-import 'package:barz/ui/business/business_shell.dart';
 import 'wireframe_shell.dart';
 
-/// The main app shell that switches between client and business views.
-/// 
-/// This widget is only shown for authenticated users (router handles auth guard).
-/// It initializes the user session and determines which shell to show:
-/// - [WireframeShell] for clients (no bar access)
-/// - [BusinessShell] for bar owners/staff (has bar access)
 class AppShell extends StatefulWidget {
   const AppShell({super.key});
 
@@ -27,7 +22,6 @@ class _AppShellState extends State<AppShell> {
   void initState() {
     super.initState();
     _sessionBloc = getItInjector<SessionBloc>();
-    // Initialize session - we know user is authenticated (router guards this)
     _sessionBloc.add(const SessionEvent.initialize());
   }
 
@@ -35,27 +29,31 @@ class _AppShellState extends State<AppShell> {
   Widget build(BuildContext context) {
     return BlocProvider<SessionBloc>.value(
       value: _sessionBloc,
-      child: BlocBuilder<SessionBloc, SessionState>(
+      child: BlocConsumer<SessionBloc, SessionState>(
+        listener: (context, state) {
+          state.whenOrNull(
+            ready: (session, forceClientMode) {
+              if (!forceClientMode && (session.isBusiness || session.barAccess.isNotEmpty)) {
+                context.go(AppRoute.businessDashboard.path);
+              }
+            },
+          );
+        },
         builder: (context, state) {
           return state.when(
             initial: () => const _LoadingView(),
             loading: () => const _LoadingView(),
             ready: (session, forceClientMode) {
-              // Determine which shell to show based on user type and bar access
-              // Business users should always see BusinessShell (even with no bars)
-              // so they can create their first bar
               if (forceClientMode) {
                 return const WireframeShell();
               }
               
-              // Show BusinessShell for business users OR users with bar access
               if (session.isBusiness || session.barAccess.isNotEmpty) {
-                return const BusinessShell();
+                return const _LoadingView();
               }
               
               return const WireframeShell();
             },
-            // On error, show client view with error message option
             error: (message) => const WireframeShell(),
             loggedOut: () => const WireframeShell(),
           );

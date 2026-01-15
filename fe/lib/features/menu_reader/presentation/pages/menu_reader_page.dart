@@ -1,11 +1,12 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:barz/core/design/components/responsive_center_container.dart';
 import 'package:barz/core/design/tokens/colors.dart';
 import 'package:barz/core/design/tokens/spacing.dart';
 import 'package:barz/core/design/tokens/radii.dart';
+import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/features/menu_reader/presentation/bloc/menu_reader_bloc.dart';
 import 'package:barz/features/menu_reader/presentation/bloc/menu_reader_event.dart';
 import 'package:barz/features/menu_reader/presentation/bloc/menu_reader_state.dart';
@@ -63,16 +64,42 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
       builder: (context, state) {
         return Container(
           color: barzGoldSoft,
-          child: ResponsiveCenterContainer(
-            maxWidthPercentage: 0.6,
-            maxWidth: 800,
-            padding: const EdgeInsets.all(BarzSpacing.lg),
-            child: state.status == MenuReaderStatus.extracting
-                ? _buildLoadingState()
-                : _buildInitialState(context),
+          child: Column(
+            children: [
+              _buildToolbar(context),
+              Expanded(
+                child: state.status == MenuReaderStatus.extracting
+                    ? _buildLoadingState()
+                    : _buildInitialState(context),
+              ),
+            ],
           ),
         );
       },
+    );
+  }
+
+  Widget _buildToolbar(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
+      color: barzGoldSoft,
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => context.go(AppRoute.businessMenu.path),
+          ),
+          const Expanded(
+            child: Text(
+              'Menu Reader AI',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -106,6 +133,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
 
   Widget _buildInitialState(BuildContext context) {
     return SingleChildScrollView(
+      padding: const EdgeInsets.all(BarzSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
