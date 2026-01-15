@@ -74,6 +74,8 @@ class MenuExtractionService:
         venue_id = platform_data["venue_id"]
         api_url = platform_data["config"]["api_template"].format(venue_id=venue_id)
         
+        lang = (language_hint or "pt").split("-")[0]
+        
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.get(api_url)
             response.raise_for_status()
@@ -82,29 +84,54 @@ class MenuExtractionService:
         categories = []
         currency = "BRL"
         
-        for category in data.get("categories", []):
-            cat_name = category.get("name", {})
-            category_name = cat_name.get(language_hint, "") or cat_name.get("pt", "") or cat_name.get("en", "") or "Menu"
+        raw_categories = data if isinstance(data, list) else data.get("categories", [])
+        
+        for category in raw_categories:
+            cat_name_obj = category.get("name", {})
+            if isinstance(cat_name_obj, str):
+                category_name = cat_name_obj
+            else:
+                category_name = cat_name_obj.get(lang, "") or cat_name_obj.get("pt", "") or cat_name_obj.get("en", "") or "Menu"
             
             items = []
-            for menu in category.get("menus", []):
-                for item in menu.get("menuItems", []):
-                    item_name_obj = item.get("name", {})
-                    item_desc_obj = item.get("description", {})
-                    
-                    item_name = item_name_obj.get(language_hint, "") or item_name_obj.get("pt", "") or item_name_obj.get("en", "") or "Unknown"
-                    item_desc = item_desc_obj.get(language_hint, "") or item_desc_obj.get("pt", "") or item_desc_obj.get("en", "")
-                    
-                    price = 0.0
-                    options = item.get("options", [])
-                    if options:
-                        price_cents = options[0].get("price", 0)
+            
+            menu_items = category.get("menuItems", [])
+            
+            for nested_menu in category.get("menus", []):
+                if isinstance(nested_menu, dict) and "menuItems" in nested_menu:
+                    menu_items.extend(nested_menu.get("menuItems", []))
+            
+            for item in menu_items:
+                item_name_obj = item.get("name", {})
+                item_desc_obj = item.get("descript", {}) or item.get("description", {})
+                
+                if isinstance(item_name_obj, str):
+                    item_name = item_name_obj
+                else:
+                    item_name = item_name_obj.get(lang, "") or item_name_obj.get("pt", "") or item_name_obj.get("en", "") or "Unknown"
+                
+                if isinstance(item_desc_obj, str):
+                    item_desc = item_desc_obj
+                else:
+                    item_desc = item_desc_obj.get(lang, "") or item_desc_obj.get("pt", "") or item_desc_obj.get("en", "")
+                
+                price = 0.0
+                options = item.get("options", [])
+                if options and len(options) > 0:
+                    price_cents = options[0].get("price", 0)
+                    if price_cents:
                         price = price_cents / 100.0
-                    
+                
+                if not price:
+                    price = item.get("price", 0)
+                    if price and price > 100:
+                        price = price / 100.0
+                
+                if item_name and item_name != "Unknown":
                     items.append({
                         "name": item_name,
-                        "price": price,
-                        "description": item_desc or None
+                        "price": round(price, 2),
+                        "description": item_desc.strip() if item_desc else None
                     })
             
             if items:
