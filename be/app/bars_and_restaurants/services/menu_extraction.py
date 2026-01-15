@@ -82,7 +82,7 @@ class MenuExtractionService:
         )
         
         response = client.chat.completions.create(
-            model="gpt-4-turbo-preview",
+            model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You extract structured menu data from OCR text. Return only valid JSON."},
                 {"role": "user", "content": prompt}
