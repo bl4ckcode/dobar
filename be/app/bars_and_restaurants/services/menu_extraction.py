@@ -8,6 +8,7 @@ from io import BytesIO
 from typing import Optional
 from google.cloud import vision
 from google.oauth2 import service_account
+from google.api_core.exceptions import ServiceUnavailable, DeadlineExceeded
 import openai
 
 try:
@@ -40,8 +41,8 @@ class MenuExtractionService:
         self.vision_client = None
         self.openai_client = None
     
-    def _get_vision_client(self):
-        if not self.vision_client:
+    def _get_vision_client(self, force_recreate: bool = False):
+        if not self.vision_client or force_recreate:
             creds_base64 = os.getenv("GOOGLE_CREDENTIALS_BASE64")
             if creds_base64:
                 creds_json = base64.b64decode(creds_base64).decode("utf-8")
@@ -61,17 +62,26 @@ class MenuExtractionService:
         return self.openai_client
     
     async def extract_text_from_image(self, image_content: bytes) -> str:
-        client = self._get_vision_client()
-        image = vision.Image(content=image_content)
-        response = client.document_text_detection(image=image)
-        
-        if response.error.message:
-            raise ValueError(f"Vision API error: {response.error.message}")
-        
-        if not response.full_text_annotation:
-            return ""
-        
-        return response.full_text_annotation.text
+        max_retries = 2
+        for attempt in range(max_retries):
+            try:
+                client = self._get_vision_client(force_recreate=(attempt > 0))
+                image = vision.Image(content=image_content)
+                response = client.document_text_detection(image=image)
+                
+                if response.error.message:
+                    raise ValueError(f"Vision API error: {response.error.message}")
+                
+                if not response.full_text_annotation:
+                    return ""
+                
+                return response.full_text_annotation.text
+            
+            except (ServiceUnavailable, DeadlineExceeded) as e:
+                if attempt == max_retries - 1:
+                    raise ValueError(f"Google Vision API temporarily unavailable: {str(e)}")
+                self.vision_client = None
+                continue
     
     async def parse_menu_with_llm(self, raw_text: str, language_hint: Optional[str] = None) -> dict:
         client = self._get_openai_client()
