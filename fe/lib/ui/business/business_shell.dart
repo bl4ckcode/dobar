@@ -18,6 +18,27 @@ import 'widgets/business_side_menu.dart';
 /// Responsive breakpoint for switching between mobile and web layouts
 const double kBusinessWebBreakpoint = 768.0;
 
+class BusinessNavigation extends InheritedWidget {
+  final void Function(int index) navigateToTab;
+  final int currentIndex;
+
+  const BusinessNavigation({
+    super.key,
+    required this.navigateToTab,
+    required this.currentIndex,
+    required super.child,
+  });
+
+  static BusinessNavigation? of(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<BusinessNavigation>();
+  }
+
+  @override
+  bool updateShouldNotify(BusinessNavigation oldWidget) {
+    return currentIndex != oldWidget.currentIndex;
+  }
+}
+
 /// Main shell for business users (bar owners/staff).
 /// 
 /// Responsive design:
@@ -91,17 +112,21 @@ class _BusinessShellState extends State<BusinessShell> {
           _selectedIndex = 0;
         }
 
-        // Responsive: Use side menu for web, bottom nav for mobile
-        return LayoutBuilder(
-          builder: (context, constraints) {
-            final isWebLayout = constraints.maxWidth >= kBusinessWebBreakpoint;
-            
-            if (isWebLayout) {
-              return _buildWebLayout(context, session.barAccess, activeBar, navItems);
-            } else {
-              return _buildMobileLayout(context, session.barAccess, activeBar, navItems);
-            }
-          },
+        // Wrap in BusinessNavigation for child widgets to access navigation
+        return BusinessNavigation(
+          navigateToTab: navigateToTab,
+          currentIndex: _selectedIndex,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isWebLayout = constraints.maxWidth >= kBusinessWebBreakpoint;
+              
+              if (isWebLayout) {
+                return _buildWebLayout(context, session.barAccess, activeBar, navItems);
+              } else {
+                return _buildMobileLayout(context, session.barAccess, activeBar, navItems);
+              }
+            },
+          ),
         );
       },
     );

@@ -10,6 +10,7 @@ import 'package:barz/features/session/presentation/bloc/session_event.dart';
 import 'package:barz/features/session/domain/models/bar_access.dart';
 import 'package:barz/features/bars/presentation/bloc/dashboard_bloc.dart';
 import 'package:barz/features/bars/domain/models/dashboard_models.dart';
+import 'package:barz/ui/business/business_shell.dart';
 
 class BusinessDashboardPage extends StatelessWidget {
   const BusinessDashboardPage({super.key});
@@ -831,10 +832,7 @@ class _QuickActionsSection extends StatelessWidget {
   const _QuickActionsSection({required this.activeBar});
 
   void _navigateToTab(BuildContext context, int tabIndex) {
-    final shellState = context.findAncestorStateOfType<State>();
-    if (shellState != null && shellState.mounted) {
-      (shellState as dynamic).navigateToTab(tabIndex);
-    }
+    BusinessNavigation.of(context)?.navigateToTab(tabIndex);
   }
 
   void _showComingSoon(BuildContext context, String feature) {

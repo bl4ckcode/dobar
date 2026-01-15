@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:barz/core/design/components/responsive_center_container.dart';
 import 'package:barz/core/design/tokens/colors.dart';
 import 'package:barz/core/design/tokens/spacing.dart';
 import 'package:barz/core/design/tokens/radii.dart';
@@ -60,16 +61,16 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
         }
       },
       builder: (context, state) {
-        return Scaffold(
-          backgroundColor: barzGoldSoft,
-          appBar: AppBar(
-            title: const Text('Menu Reader AI'),
-            backgroundColor: barzGoldSoft,
-            elevation: 0,
+        return Container(
+          color: barzGoldSoft,
+          child: ResponsiveCenterContainer(
+            maxWidthPercentage: 0.6,
+            maxWidth: 800,
+            padding: const EdgeInsets.all(BarzSpacing.lg),
+            child: state.status == MenuReaderStatus.extracting
+                ? _buildLoadingState()
+                : _buildInitialState(context),
           ),
-          body: state.status == MenuReaderStatus.extracting
-              ? _buildLoadingState()
-              : _buildInitialState(context),
         );
       },
     );
@@ -105,7 +106,6 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
 
   Widget _buildInitialState(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(BarzSpacing.lg),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
