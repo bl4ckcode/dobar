@@ -6,7 +6,7 @@ MongoDB support is deprecated but kept for legacy data migration.
 """
 from datetime import datetime
 from typing import List, Optional
-from fastapi import APIRouter, Query, UploadFile, File, Form, Depends
+from fastapi import APIRouter, Query, UploadFile, File, Form, Depends, Request
 from sqlalchemy import and_
 import httpx
 
@@ -397,12 +397,65 @@ async def read_menu_items_legacy(menu_id: int):
 
 
 @menus_router.post("/extract", response_model=MenuExtractionResponse)
-async def extract_menu_from_image(
-    image: UploadFile = File(...),
-    bar_id: int = Form(...),
+async def extract_menu_unified(
+    request: Request,
+    image: Optional[UploadFile] = File(None),
+    bar_id: Optional[int] = Form(None),
     language_hint: Optional[str] = Form(None),
     current_user: User = Depends(get_current_active_user)
 ):
+    from ..services.menu_extraction import menu_extraction_service
+    
+    content_type = request.headers.get("content-type", "")
+    
+    if "application/json" in content_type:
+        body = await request.json()
+        menu_url = body.get("menu_url")
+        bar_id = body.get("bar_id")
+        language_hint = body.get("language_hint")
+        
+        if not menu_url:
+            raise APIError.validation_error(
+                message="Validation failed",
+                details={"menu_url": ["Field required"]}
+            )
+        if not bar_id:
+            raise APIError.validation_error(
+                message="Validation failed",
+                details={"bar_id": ["Field required"]}
+            )
+        
+        bar = await get_bar_by_id(bar_id)
+        if not bar:
+            raise APIError.partner_not_found("Bar not found")
+        
+        try:
+            result = await menu_extraction_service.extract_menu_from_url(
+                menu_url, 
+                language_hint
+            )
+            return MenuExtractionResponse(**result)
+        except httpx.HTTPStatusError as e:
+            raise APIError.bad_request(f"Could not fetch URL: {e.response.status_code}")
+        except ValueError as e:
+            error_msg = str(e)
+            if "quality" in error_msg.lower() or "Could not extract" in error_msg:
+                raise APIError.bad_request(error_msg)
+            elif "No menu items" in error_msg:
+                raise APIError.validation_error(message=error_msg, details={})
+            raise APIError.server_error(f"Menu extraction failed: {error_msg}")
+    
+    if not image:
+        raise APIError.validation_error(
+            message="Validation failed",
+            details={"image": ["Field required. Send multipart/form-data with image file OR JSON with menu_url"]}
+        )
+    if not bar_id:
+        raise APIError.validation_error(
+            message="Validation failed",
+            details={"bar_id": ["Field required"]}
+        )
+    
     if image.content_type not in ["image/jpeg", "image/png", "image/jpg"]:
         raise APIError.validation_error(
             message="Invalid image format. Only JPEG and PNG are supported.",
@@ -420,8 +473,6 @@ async def extract_menu_from_image(
     bar = await get_bar_by_id(bar_id)
     if not bar:
         raise APIError.partner_not_found("Bar not found")
-    
-    from ..services.menu_extraction import menu_extraction_service
     
     try:
         result = await menu_extraction_service.extract_menu(content, language_hint)
