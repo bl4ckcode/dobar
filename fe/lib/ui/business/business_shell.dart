@@ -39,6 +39,13 @@ class BusinessShell extends StatefulWidget {
 
 class _BusinessShellState extends State<BusinessShell> {
   int _selectedIndex = 0;
+  late List<BusinessNavItem> _currentNavItems = [];
+
+  void navigateToTab(int index) {
+    if (index >= 0 && index < _currentNavItems.length) {
+      setState(() => _selectedIndex = index);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -77,6 +84,7 @@ class _BusinessShellState extends State<BusinessShell> {
 
         // Build navigation items based on permissions
         final navItems = _buildNavItems(context, activeBar);
+        _currentNavItems = navItems;
         
         // Ensure selected index is valid
         if (_selectedIndex >= navItems.length) {

@@ -830,6 +830,23 @@ class _QuickActionsSection extends StatelessWidget {
 
   const _QuickActionsSection({required this.activeBar});
 
+  void _navigateToTab(BuildContext context, int tabIndex) {
+    final shellState = context.findAncestorStateOfType<State>();
+    if (shellState != null && shellState.mounted) {
+      (shellState as dynamic).navigateToTab(tabIndex);
+    }
+  }
+
+  void _showComingSoon(BuildContext context, String feature) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$feature coming soon!'),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isOwnerOrAdmin = activeBar.role == BarRole.owner || activeBar.role == BarRole.admin;
@@ -849,31 +866,31 @@ class _QuickActionsSection extends StatelessWidget {
             _QuickActionChip(
               icon: Icons.point_of_sale_rounded,
               label: 'Cashier',
-              onTap: () {},
+              onTap: () => _navigateToTab(context, 1),
             ),
             if (activeBar.canEditMenu)
               _QuickActionChip(
                 icon: Icons.restaurant_menu_rounded,
                 label: 'Edit Menu',
-                onTap: () {},
+                onTap: () => _navigateToTab(context, 2),
               ),
             if (isOwnerOrAdmin) ...[
               _QuickActionChip(
                 icon: Icons.local_offer_rounded,
                 label: 'New Promo',
-                onTap: () {},
+                onTap: () => _navigateToTab(context, activeBar.canEditMenu ? 3 : 2),
               ),
               _QuickActionChip(
                 icon: Icons.qr_code_rounded,
                 label: 'Table QR',
-                onTap: () {},
+                onTap: () => _showComingSoon(context, 'Table QR Generator'),
               ),
             ],
             if (activeBar.canManageStaff)
               _QuickActionChip(
                 icon: Icons.person_add_rounded,
                 label: 'Invite Staff',
-                onTap: () {},
+                onTap: () => _showComingSoon(context, 'Staff Invitations'),
                 highlighted: true,
               ),
           ],
