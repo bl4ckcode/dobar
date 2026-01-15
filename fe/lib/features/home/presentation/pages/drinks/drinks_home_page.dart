@@ -11,6 +11,7 @@ import 'package:barz/features/home/domain/usecases/drinks_home_usecase.dart';
 import 'package:barz/features/home/presentation/bloc/drinks/drinks_home_bloc.dart';
 import 'package:barz/features/home/presentation/bloc/drinks/drinks_home_event.dart';
 import 'package:barz/features/home/presentation/bloc/drinks/drinks_home_state.dart';
+import 'package:barz/features/trending/domain/models/trending_drink.dart';
 import 'package:barz/features/trending/presentation/bloc/trending_bloc.dart';
 import 'package:barz/features/trending/presentation/bloc/trending_event.dart';
 import 'package:barz/features/trending/presentation/bloc/trending_state.dart';
@@ -25,6 +26,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:location/location.dart';
 
 class DrinksHomePage extends StatefulWidget {
@@ -245,7 +247,8 @@ class _DrinksHomePageState extends State<DrinksHomePage> {
           )).toList(),
           cardsType: CardType.circle,
           onCardTap: (ParallaxRecipeUiModel selected) {
-            // TODO: Navigate to drink detail or search
+            final drink = drinks.firstWhere((d) => d.id == selected.id);
+            _showDrinkDetails(context, drink);
           },
         );
       },
@@ -303,6 +306,140 @@ class _DrinksHomePageState extends State<DrinksHomePage> {
           ],
         );
       },
+    );
+  }
+
+  void _showDrinkDetails(BuildContext context, TrendingDrink drink) {
+    final currencyFormat = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            Row(
+              children: [
+                if (drink.picture != null)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.network(
+                      drink.picture!,
+                      width: 80,
+                      height: 80,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: barzGold.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.local_bar, color: barzGold, size: 40),
+                      ),
+                    ),
+                  )
+                else
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: barzGold.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.local_bar, color: barzGold, size: 40),
+                  ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        drink.name,
+                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: barzGold.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          drink.category,
+                          style: TextStyle(
+                            color: barzGold.withValues(alpha: 0.9),
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Text(
+                  currencyFormat.format(drink.price),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: barzGold,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            if (drink.description != null && drink.description!.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Text(
+                drink.description!,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: textSecondary,
+                ),
+              ),
+            ],
+            const SizedBox(height: 24),
+            Row(
+              children: [
+                Icon(
+                  drink.available ? Icons.check_circle : Icons.cancel,
+                  color: drink.available ? successGreen : errorRed,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  drink.available 
+                      ? 'Available' 
+                      : AppLocalizations.of(context)!.menu_item_unavailable,
+                  style: TextStyle(
+                    color: drink.available ? successGreen : errorRed,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
     );
   }
 }

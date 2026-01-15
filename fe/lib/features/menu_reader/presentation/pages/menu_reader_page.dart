@@ -27,7 +27,15 @@ class MenuReaderPage extends StatefulWidget {
 
 class _MenuReaderPageState extends State<MenuReaderPage> {
   final ImagePicker _picker = ImagePicker();
+  final TextEditingController _urlController = TextEditingController();
   File? _selectedImage;
+  bool _showUrlInput = false;
+
+  @override
+  void dispose() {
+    _urlController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -109,10 +117,16 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
             _buildAnalyzeButton(context),
             const SizedBox(height: BarzSpacing.md),
             _buildRetakeButton(),
+          ] else if (_showUrlInput) ...[
+            _buildUrlInput(context),
+            const SizedBox(height: BarzSpacing.md),
+            _buildBackToOptionsButton(),
           ] else ...[
             _buildCameraOption(context),
             const SizedBox(height: BarzSpacing.md),
             _buildGalleryOption(context),
+            const SizedBox(height: BarzSpacing.md),
+            _buildUrlOption(context),
           ],
           const SizedBox(height: BarzSpacing.xl),
           _buildTips(),
@@ -223,6 +237,144 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
       title: 'Choose from Gallery',
       subtitle: 'Select an existing photo of your menu',
       onTap: () => _pickImage(ImageSource.gallery),
+    );
+  }
+
+  Widget _buildUrlOption(BuildContext context) {
+    return _buildOptionCard(
+      icon: Icons.link_rounded,
+      title: 'Paste Menu URL',
+      subtitle: 'Have an online menu? Paste the link',
+      onTap: () => setState(() => _showUrlInput = true),
+    );
+  }
+
+  Widget _buildUrlInput(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(BarzSpacing.lg),
+      decoration: BoxDecoration(
+        color: surfaceWhite,
+        borderRadius: BorderRadius.circular(BarzRadii.lg),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(BarzSpacing.sm),
+                decoration: BoxDecoration(
+                  color: barzGold.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(BarzRadii.sm),
+                ),
+                child: const Icon(Icons.link_rounded, color: barzGold, size: 24),
+              ),
+              const SizedBox(width: BarzSpacing.md),
+              Text(
+                'Menu URL',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: BarzSpacing.md),
+          TextField(
+            controller: _urlController,
+            decoration: InputDecoration(
+              hintText: 'https://yourmenu.com/menu.pdf',
+              filled: true,
+              fillColor: barzGoldSoft,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(BarzRadii.md),
+                borderSide: BorderSide.none,
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(BarzRadii.md),
+                borderSide: const BorderSide(color: barzGold, width: 2),
+              ),
+              prefixIcon: const Icon(Icons.public, color: textTertiary),
+            ),
+            keyboardType: TextInputType.url,
+            autocorrect: false,
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: BarzSpacing.sm),
+          Text(
+            'Supports: PDF menus, images (JPG, PNG), and web pages',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: textTertiary,
+            ),
+          ),
+          const SizedBox(height: BarzSpacing.lg),
+          ElevatedButton.icon(
+            onPressed: _urlController.text.trim().isEmpty 
+                ? null 
+                : () => _extractFromUrl(context),
+            icon: const Icon(Icons.auto_awesome),
+            label: const Text('Analyze Menu'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: barzGold,
+              foregroundColor: barzDark,
+              disabledBackgroundColor: textTertiary.withValues(alpha: 0.3),
+              padding: const EdgeInsets.symmetric(vertical: BarzSpacing.md),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(BarzRadii.md),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBackToOptionsButton() {
+    return OutlinedButton.icon(
+      onPressed: () => setState(() {
+        _showUrlInput = false;
+        _urlController.clear();
+      }),
+      icon: const Icon(Icons.arrow_back),
+      label: const Text('Back to Options'),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: textSecondary,
+        side: const BorderSide(color: textTertiary),
+        padding: const EdgeInsets.symmetric(vertical: BarzSpacing.md),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(BarzRadii.md),
+        ),
+      ),
+    );
+  }
+
+  void _extractFromUrl(BuildContext context) {
+    final url = _urlController.text.trim();
+    if (url.isEmpty) return;
+    
+    final uri = Uri.tryParse(url);
+    if (uri == null || !uri.hasScheme) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please enter a valid URL'),
+          backgroundColor: errorRed,
+        ),
+      );
+      return;
+    }
+    
+    context.read<MenuReaderBloc>().add(
+      ExtractMenuFromUrl(
+        menuUrl: url,
+        barId: widget.barId,
+        languageHint: 'pt-BR',
+      ),
     );
   }
 

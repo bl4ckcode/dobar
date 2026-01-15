@@ -1,6 +1,14 @@
+import 'package:barz/core/design/design_system.dart';
+import 'package:barz/core/network/dio_network.dart';
+import 'package:barz/core/utils/injections.dart';
+import 'package:barz/features/authentication/domain/usecases/login_usecase.dart';
+import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
+import 'package:barz/features/session/presentation/bloc/session_state.dart';
 import 'package:barz/shared/domain/models/bottom_nav_bar/menu_model.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 
 class SideBar extends StatefulWidget {
   const SideBar({super.key});
@@ -11,6 +19,69 @@ class SideBar extends StatefulWidget {
 
 class _SideBarState extends State<SideBar> {
   Menu selectedSideMenu = sidebarMenus.first;
+
+  void _handleMenuTap(Menu menu) {
+    setState(() {
+      selectedSideMenu = menu;
+    });
+
+    switch (menu.page) {
+      case 'Home':
+        Navigator.of(context).pop();
+        break;
+      case 'Search':
+        Navigator.of(context).pop();
+        break;
+      case 'Favorites':
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Favorites coming soon!')),
+        );
+        break;
+      case 'Help':
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Help & Support coming soon!')),
+        );
+        break;
+      case 'History':
+        context.push('/orders');
+        break;
+      case 'Notifications':
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Notifications coming soon!')),
+        );
+        break;
+    }
+  }
+
+  Future<void> _handleLogout() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: errorRed),
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await getItInjector<LoginUsecase>().logout();
+      await DioNetwork.clearTokens();
+      
+      if (mounted) {
+        context.go('/login');
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +99,7 @@ class _SideBarState extends State<SideBar> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const InfoCard(name: "Carlos Alves", bio: "iOS Developer"),
+              _buildUserCard(),
               Padding(
                   padding: const EdgeInsets.only(left: 24, top: 32, bottom: 16),
                   child: Text(
@@ -42,11 +113,7 @@ class _SideBarState extends State<SideBar> {
                 (menu) => SideMenu(
                   menu: menu,
                   selectedMenu: selectedSideMenu,
-                  press: () {
-                    setState(() {
-                      selectedSideMenu = menu;
-                    });
-                  },
+                  press: () => _handleMenuTap(menu),
                 ),
               ),
               Padding(
@@ -63,17 +130,47 @@ class _SideBarState extends State<SideBar> {
                 (menu) => SideMenu(
                   menu: menu,
                   selectedMenu: selectedSideMenu,
-                  press: () {
-                    setState(() {
-                      selectedSideMenu = menu;
-                    });
-                  },
+                  press: () => _handleMenuTap(menu),
+                ),
+              ),
+              const Spacer(),
+              Padding(
+                padding: const EdgeInsets.all(24),
+                child: ListTile(
+                  onTap: _handleLogout,
+                  leading: Container(
+                    height: 36,
+                    width: 36,
+                    decoration: BoxDecoration(
+                      color: errorRed.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(Icons.logout, color: Colors.white70, size: 20),
+                  ),
+                  title: const Text(
+                    'Logout',
+                    style: TextStyle(color: Colors.white70),
+                  ),
                 ),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildUserCard() {
+    return BlocBuilder<SessionBloc, SessionState>(
+      builder: (context, state) {
+        final session = state.currentSession;
+        final user = session?.user;
+        
+        return InfoCard(
+          name: user?.displayName ?? 'Guest',
+          bio: user?.email ?? 'Welcome to Barz',
+        );
+      },
     );
   }
 }

@@ -18,13 +18,13 @@ class MenuReaderRepositoryImpl implements MenuReaderRepository {
   });
 
   @override
-  Future<Either<Failure, MenuExtraction>> extractMenu({
+  Future<Either<Failure, MenuExtraction>> extractMenuFromImage({
     required File imageFile,
     required int barId,
     String? languageHint,
   }) async {
     try {
-      final result = await datasource.extractMenu(
+      final result = await datasource.extractMenuFromImage(
         imageFile: imageFile,
         barId: barId,
         languageHint: languageHint,
@@ -34,6 +34,26 @@ class MenuReaderRepositoryImpl implements MenuReaderRepository {
       return Left(ServerFailure(e.message, e.statusCode));
     } catch (e) {
       return Left(ServerFailure('Failed to extract menu: $e', null));
+    }
+  }
+
+  @override
+  Future<Either<Failure, MenuExtraction>> extractMenuFromUrl({
+    required String menuUrl,
+    required int barId,
+    String? languageHint,
+  }) async {
+    try {
+      final result = await datasource.extractMenuFromUrl(
+        menuUrl: menuUrl,
+        barId: barId,
+        languageHint: languageHint,
+      );
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message, e.statusCode));
+    } catch (e) {
+      return Left(ServerFailure('Failed to extract menu from URL: $e', null));
     }
   }
 

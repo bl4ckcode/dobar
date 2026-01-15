@@ -8,7 +8,8 @@ class MenuReaderBloc extends Bloc<MenuReaderEvent, MenuReaderState> {
   final MenuReaderRepository repository;
 
   MenuReaderBloc({required this.repository}) : super(const MenuReaderState()) {
-    on<ExtractMenuFromImage>(_onExtractMenu);
+    on<ExtractMenuFromImage>(_onExtractFromImage);
+    on<ExtractMenuFromUrl>(_onExtractFromUrl);
     on<ToggleItemSelection>(_onToggleItem);
     on<UpdateItemDetails>(_onUpdateItem);
     on<UpdateCategoryName>(_onUpdateCategory);
@@ -16,14 +17,40 @@ class MenuReaderBloc extends Bloc<MenuReaderEvent, MenuReaderState> {
     on<ResetMenuReader>(_onReset);
   }
 
-  Future<void> _onExtractMenu(
+  Future<void> _onExtractFromImage(
     ExtractMenuFromImage event,
     Emitter<MenuReaderState> emit,
   ) async {
     emit(state.copyWith(status: MenuReaderStatus.extracting));
 
-    final result = await repository.extractMenu(
+    final result = await repository.extractMenuFromImage(
       imageFile: event.imageFile,
+      barId: event.barId,
+      languageHint: event.languageHint,
+    );
+
+    result.fold(
+      (failure) => emit(state.copyWith(
+        status: MenuReaderStatus.error,
+        errorMessage: failure.errorMessage,
+      )),
+      (extraction) => emit(state.copyWith(
+        status: MenuReaderStatus.extracted,
+        extraction: extraction,
+        editableCategories: extraction.categories,
+        confidence: extraction.confidence,
+      )),
+    );
+  }
+
+  Future<void> _onExtractFromUrl(
+    ExtractMenuFromUrl event,
+    Emitter<MenuReaderState> emit,
+  ) async {
+    emit(state.copyWith(status: MenuReaderStatus.extracting));
+
+    final result = await repository.extractMenuFromUrl(
+      menuUrl: event.menuUrl,
       barId: event.barId,
       languageHint: event.languageHint,
     );
