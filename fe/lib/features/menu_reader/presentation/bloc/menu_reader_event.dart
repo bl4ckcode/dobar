@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:equatable/equatable.dart';
 
 abstract class MenuReaderEvent extends Equatable {
@@ -8,18 +8,20 @@ abstract class MenuReaderEvent extends Equatable {
 }
 
 class ExtractMenuFromImage extends MenuReaderEvent {
-  final File imageFile;
+  final Uint8List imageBytes;
+  final String fileName;
   final int barId;
   final String? languageHint;
 
   const ExtractMenuFromImage({
-    required this.imageFile,
+    required this.imageBytes,
+    required this.fileName,
     required this.barId,
     this.languageHint,
   });
 
   @override
-  List<Object?> get props => [imageFile.path, barId, languageHint];
+  List<Object?> get props => [fileName, barId, languageHint];
 }
 
 class ExtractMenuFromUrl extends MenuReaderEvent {

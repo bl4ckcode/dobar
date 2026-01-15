@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:barz/core/api/api_endpoints.dart';
 import 'package:barz/core/network/exceptions.dart';
 import 'package:barz/features/menu_reader/domain/models/menu_extraction.dart';
@@ -6,7 +6,8 @@ import 'package:dio/dio.dart';
 
 abstract class MenuReaderDatasource {
   Future<MenuExtraction> extractMenuFromImage({
-    required File imageFile,
+    required Uint8List imageBytes,
+    required String fileName,
     required int barId,
     String? languageHint,
   });
@@ -25,15 +26,16 @@ class MenuReaderNetworkDatasource implements MenuReaderDatasource {
 
   @override
   Future<MenuExtraction> extractMenuFromImage({
-    required File imageFile,
+    required Uint8List imageBytes,
+    required String fileName,
     required int barId,
     String? languageHint,
   }) async {
     try {
       final formData = FormData.fromMap({
-        'image': await MultipartFile.fromFile(
-          imageFile.path,
-          filename: 'menu_${DateTime.now().millisecondsSinceEpoch}.jpg',
+        'image': MultipartFile.fromBytes(
+          imageBytes,
+          filename: fileName,
         ),
         'bar_id': barId,
         if (languageHint != null) 'language_hint': languageHint,

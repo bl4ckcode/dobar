@@ -1,4 +1,4 @@
-import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -30,7 +30,8 @@ class MenuReaderPage extends StatefulWidget {
 class _MenuReaderPageState extends State<MenuReaderPage> {
   final ImagePicker _picker = ImagePicker();
   final TextEditingController _urlController = TextEditingController();
-  File? _selectedImage;
+  Uint8List? _selectedImageBytes;
+  String? _selectedImageName;
   bool _showUrlInput = false;
 
   @override
@@ -142,7 +143,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
         children: [
           _buildHeader(),
           const SizedBox(height: BarzSpacing.xl),
-          if (_selectedImage != null) ...[
+          if (_selectedImageBytes != null) ...[
             _buildImagePreview(),
             const SizedBox(height: BarzSpacing.lg),
             _buildAnalyzeButton(context),
@@ -204,8 +205,8 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
   Widget _buildImagePreview() {
     return ClipRRect(
       borderRadius: BorderRadius.circular(BarzRadii.lg),
-      child: Image.file(
-        _selectedImage!,
+      child: Image.memory(
+        _selectedImageBytes!,
         height: 300,
         width: double.infinity,
         fit: BoxFit.cover,
@@ -218,7 +219,8 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
       onPressed: () {
         context.read<MenuReaderBloc>().add(
           ExtractMenuFromImage(
-            imageFile: _selectedImage!,
+            imageBytes: _selectedImageBytes!,
+            fileName: _selectedImageName ?? 'menu_${DateTime.now().millisecondsSinceEpoch}.jpg',
             barId: widget.barId,
             languageHint: 'pt-BR',
           ),
@@ -239,7 +241,10 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
 
   Widget _buildRetakeButton() {
     return OutlinedButton.icon(
-      onPressed: () => setState(() => _selectedImage = null),
+      onPressed: () => setState(() {
+        _selectedImageBytes = null;
+        _selectedImageName = null;
+      }),
       icon: const Icon(Icons.refresh),
       label: const Text('Choose Different Photo'),
       style: OutlinedButton.styleFrom(
@@ -527,7 +532,11 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
       );
       
       if (image != null) {
-        setState(() => _selectedImage = File(image.path));
+        final bytes = await image.readAsBytes();
+        setState(() {
+          _selectedImageBytes = bytes;
+          _selectedImageName = image.name;
+        });
       }
     } catch (e) {
       if (mounted) {

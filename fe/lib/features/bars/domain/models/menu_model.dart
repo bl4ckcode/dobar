@@ -55,11 +55,17 @@ class MenuItemModel {
 class MenuModel {
   final int id;
   final int barId;
+  final String? name;
+  final String? description;
+  final bool isActive;
   final List<MenuItemModel> items;
 
   MenuModel({
     required this.id,
     required this.barId,
+    this.name,
+    this.description,
+    this.isActive = true,
     required this.items,
   });
 
@@ -67,6 +73,9 @@ class MenuModel {
     return MenuModel(
       id: json['id'],
       barId: json['bar_id'],
+      name: json['name'],
+      description: json['description'],
+      isActive: json['is_active'] ?? true,
       items: (json['items'] as List<dynamic>?)
               ?.map((e) => MenuItemModel.fromJson(e))
               .toList() ??
@@ -78,6 +87,9 @@ class MenuModel {
     return {
       'id': id,
       'bar_id': barId,
+      if (name != null) 'name': name,
+      if (description != null) 'description': description,
+      'is_active': isActive,
       'items': items.map((e) => e.toJson()).toList(),
     };
   }

@@ -15,6 +15,7 @@ class BusinessMenuBloc extends Bloc<BusinessMenuEvent, BusinessMenuState> {
     on<DeleteMenuItem>(_onDeleteMenuItem);
     on<UpdateMenuItem>(_onUpdateMenuItem);
     on<ToggleItemAvailability>(_onToggleItemAvailability);
+    on<DeleteMenu>(_onDeleteMenu);
   }
 
   Future<void> _onLoadMenus(LoadMenus event, Emitter<BusinessMenuState> emit) async {
@@ -83,6 +84,17 @@ class BusinessMenuBloc extends Bloc<BusinessMenuEvent, BusinessMenuState> {
       }
     } catch (e) {
       emit(state.copyWith(errorMessage: 'Failed to update item: $e'));
+    }
+  }
+
+  Future<void> _onDeleteMenu(DeleteMenu event, Emitter<BusinessMenuState> emit) async {
+    try {
+      await _dataSource.deleteMenu(event.menuId);
+      if (state.barId != null) {
+        add(LoadMenus(state.barId!));
+      }
+    } catch (e) {
+      emit(state.copyWith(errorMessage: 'Failed to delete menu: $e'));
     }
   }
 }

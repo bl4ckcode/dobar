@@ -97,6 +97,9 @@ class BarNetworkDataSource {
       menusWithItems.add(MenuModel(
         id: menu.id,
         barId: menu.barId,
+        name: menu.name,
+        description: menu.description,
+        isActive: menu.isActive,
         items: items,
       ));
     }
@@ -289,6 +292,18 @@ class BarNetworkDataSource {
     } on DioException catch (e) {
       throw ServerException(
           e.response?.data?['detail'] ?? 'Failed to update menu item',
+          e.response?.statusCode);
+    }
+  }
+
+  Future<void> deleteMenu(int menuId) async {
+    try {
+      await dio.delete(
+        '${ApiEndpoints.baseUrl}/menus/$menuId',
+      );
+    } on DioException catch (e) {
+      throw ServerException(
+          e.response?.data?['detail'] ?? 'Failed to delete menu',
           e.response?.statusCode);
     }
   }

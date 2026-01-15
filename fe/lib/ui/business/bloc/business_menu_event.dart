@@ -40,3 +40,8 @@ class ToggleItemAvailability extends BusinessMenuEvent {
 }
 
 class RefreshMenus extends BusinessMenuEvent {}
+
+class DeleteMenu extends BusinessMenuEvent {
+  final int menuId;
+  DeleteMenu({required this.menuId});
+}

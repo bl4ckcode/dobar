@@ -24,7 +24,8 @@ class MenuReaderBloc extends Bloc<MenuReaderEvent, MenuReaderState> {
     emit(state.copyWith(status: MenuReaderStatus.extracting));
 
     final result = await repository.extractMenuFromImage(
-      imageFile: event.imageFile,
+      imageBytes: event.imageBytes,
+      fileName: event.fileName,
       barId: event.barId,
       languageHint: event.languageHint,
     );
