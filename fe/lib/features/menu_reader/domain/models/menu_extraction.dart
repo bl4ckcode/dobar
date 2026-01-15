@@ -5,12 +5,14 @@ class MenuExtraction extends Equatable {
   final List<ExtractedCategory> categories;
   final String rawText;
   final String currencyDetected;
+  final String? extractionMethod;
 
   const MenuExtraction({
     required this.confidence,
     required this.categories,
     required this.rawText,
     required this.currencyDetected,
+    this.extractionMethod,
   });
 
   factory MenuExtraction.fromJson(Map<String, dynamic> json) {
@@ -21,13 +23,14 @@ class MenuExtraction extends Equatable {
           .toList(),
       rawText: json['raw_text'] ?? '',
       currencyDetected: json['currency_detected'] ?? 'BRL',
+      extractionMethod: json['extraction_method'],
     );
   }
 
   int get totalItems => categories.fold(0, (sum, c) => sum + c.items.length);
 
   @override
-  List<Object?> get props => [confidence, categories, rawText, currencyDetected];
+  List<Object?> get props => [confidence, categories, rawText, currencyDetected, extractionMethod];
 }
 
 class ExtractedCategory extends Equatable {
