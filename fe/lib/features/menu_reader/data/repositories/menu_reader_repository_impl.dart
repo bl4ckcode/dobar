@@ -70,36 +70,33 @@ class MenuReaderRepositoryImpl implements MenuReaderRepository {
         return const Left(ServerFailure('Failed to get or create menu', null));
       }
 
-      int successCount = 0;
-      int totalItems = 0;
-
+      final items = <Map<String, dynamic>>[];
       for (final category in categories) {
         for (final item in category.items) {
           if (!item.isSelected) continue;
-          totalItems++;
-          
-          await dio.post(
-            '${ApiEndpoints.baseUrl}${ApiEndpoints.menuItems(menuId)}',
-            data: {
-              'name': item.name,
-              'description': item.description,
-              'price': item.price,
-              'category': category.name,
-              'is_available': true,
-            },
-          );
-          successCount++;
+          items.add({
+            'name': item.name,
+            'description': item.description,
+            'price': item.price,
+            'category': category.name,
+            'available': true,
+          });
         }
       }
 
-      if (successCount == 0 && totalItems > 0) {
-        return const Left(ServerFailure('Failed to save any menu items', null));
+      if (items.isEmpty) {
+        return const Left(ServerFailure('No items selected', null));
       }
+
+      await dio.post(
+        '${ApiEndpoints.baseUrl}/menus/$menuId/items/bulk',
+        data: {'items': items},
+      );
 
       return const Right(true);
     } on DioException catch (e) {
       return Left(ServerFailure(
-        e.response?.data?['detail'] ?? 'Failed to save menu items',
+        e.response?.data?['message'] ?? 'Failed to save menu items',
         e.response?.statusCode,
       ));
     } catch (e) {
