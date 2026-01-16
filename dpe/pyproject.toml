@@ -25,7 +25,7 @@ classifiers = [
 ]
 requires-python = ">=3.10"
 dependencies = [
-    "pydantic>=2.0",
+    "pydantic[email]>=2.0",
     "python-dotenv>=1.0",
     "stripe>=7.0",
     "paypal-server-sdk>=1.0",
@@ -46,6 +46,15 @@ dev = [
 ]
 redis = [
     "redis>=5.0",
+]
+api = [
+    "fastapi>=0.109",
+    "uvicorn>=0.27",
+]
+all = [
+    "redis>=5.0",
+    "fastapi>=0.109",
+    "uvicorn>=0.27",
 ]
 
 [project.urls]

@@ -1,6 +1,6 @@
 ---
 description: Beast Mode 3.1
-tools: ['extensions', 'codebase', 'usages', 'vscodeAPI', 'problems', 'changes', 'testFailure', 'terminalSelection', 'terminalLastCommand', 'openSimpleBrowser', 'fetch', 'findTestFiles', 'searchResults', 'githubRepo', 'runCommands', 'runTasks', 'editFiles', 'runNotebooks', 'search', 'new']
+tools: ['vscode', 'execute/runNotebookCell', 'execute/testFailure', 'execute/getTerminalOutput', 'execute/runTask', 'execute/createAndRunTask', 'execute/runInTerminal', 'read', 'edit/editFiles', 'search', 'web', 'copilot-container-tools/*', 'dart-code.dart-code/get_dtd_uri', 'dart-code.dart-code/dart_format', 'dart-code.dart-code/dart_fix', 'ms-python.python/getPythonEnvironmentInfo', 'ms-python.python/getPythonExecutableCommand', 'ms-python.python/installPythonPackage', 'ms-python.python/configurePythonEnvironment', 'todo']
 ---
 
 # Beast Mode 3.1
@@ -147,7 +147,85 @@ If you are not writing the prompt in a file, you should always wrap the prompt i
 
 Remember that todo lists must always be written in markdown format and must always be wrapped in triple backticks.
 
+# Barz-backend terminal command lines execution
+Remember that syntax commands through terminal such as:
+
+```
+fly postgres connect -a barzdb -d barz_db -c "SELECT id, firebase_uid, phone_number, email, google_id FROM users WHERE email LIKE '%carlos%' OR phone_number LIKE '%55%' ORDER BY id;"
+```
+
+doesn't work, you must add the following approach where you select the exact value you want:
+
+```
+psql -d barz_db -c "DELETE FROM menu_items;" && psql -d barz_db -c "DELETE FROM menus;" && psql -d barz_db -c "SELECT setval('menus_id_seq', 1, false);" && psql -d barz_db -c "SELECT setval('menu_items_id_seq', 1, false);"
+```
+
+The following command doesn't work either:
+
+```
+(venv) ➜  barz-backend git:(main) ✗ fly postgres connect -a barzdb -d barz_db -c "SELECT colum
+n_name FROM information_schema.columns WHERE table_name='menus' ORDER BY column_name;"
+
+Unmanaged Fly Postgres is not supported by Fly.io Support and users are responsible for operations, management, and disaster recovery. If you'd like a managed, supported solution, try 'fly mpg' (Managed Postgres).
+Please visit https://fly.io/docs/mpg/overview/ for more information about Managed Postgres.
+
+Connecting to fdaa:14:b85e:a7b:516:3200:d93f:2... complete
+psql (17.7 (Ubuntu 17.7-3.pgdg24.04+1))
+Type "help" for help.
+
+barz_db=# 
+```
+
+I'll have to copy and paste what inside -c "" and then do /q for your terminal command to complete. Always try to run postgres related commands via psql interactive.
+
+# Dobar Philosophy and Culture when it comes to coding
+We never make comments or use docstrings, we always want to build our product international. We value so much keeping our product clean and efficient, that dobar principles are: keep it clean, conscise, reusable, scalable and efficient. Always follow these principles when writing code.
+
+# Searching directories inside my computer 
+When searching for directories inside my computer, always use the following format, via Terminal command lines:
+
+cd .. (Pdev)
+drwxr-xr-x@  9 carlosalves  635061173    288 Jan  8 00:13 .
+drwx------+  8 carlosalves  635061173    256 Dec 16 17:00 ..
+-rw-r--r--@  1 carlosalves  635061173  14340 Jan  8 00:13 .DS_Store
+drwxr-xr-x@ 18 carlosalves  635061173    576 Jun 29  2025 api
+drwxr-xr-x@ 31 carlosalves  635061173    992 Dec 31 10:19 app-openfisio
+drwxr-xr-x@ 32 carlosalves  635061173   1024 Jan 11 17:16 barz
+drwxr-xr-x@ 40 carlosalves  635061173   1280 Jan 11 17:04 barz-backend
+drwxr-xr-x   3 carlosalves  635061173     96 Apr 19  2025 barz.bfg-report
+drwxr-xr-x  16 carlosalves  635061173    512 Jan  8 10:27 dobar-payment-engine
+
+cd /Users/carlosalves/Downloads/foodly_ui
+
+You can take inspiration and look at the patterns of app-openfisio and foodle_ui app, they are prod and example restaurant bar app, in this order, that we can take inspiration from.
+
+# FE_BE_COMMUNICATION.md and API_ERROR_CONTRACT.MD
+
+Always keep FE_BE_COMMUNICATION.MD clean, with the last update only and respecting our principles of clean code.
+Always refer to API_ERROR_CONTRACT.MD when creating new error handling in the backend.
+
 # Git 
 If the user tells you to stage and commit, you may do so. 
 
-You are NEVER allowed to stage and commit files automatically.
+You are NEVER allowed to stage and commit files automatically, YOU DO NOT NEED TO WORRY ABOUT UNSTAING OR STAING FILES, OR COMMITING FILES, it is my responsibility to do that.
+
+You are not allowed to deploy to Fly IO as well, we have automations and crendentials for this.
+
+.github/workflows/deploy.yml always run tests and deploy, so we must ensure our unit tests are covering new codes always too otherwise it's gonna fail.
+
+# When to Use [migrate] in Commit Messages
+
+## ✅ USE [migrate] when:
+- You created a NEW migration file in `migrations/versions/`
+- The migration adds/removes tables, columns, indexes, or constraints
+- The Alembic chain has been updated (new revision ID at head)
+
+## ❌ DO NOT use [migrate] when:
+- Only code changes (routes, services, schemas, tests)
+- Database changes were applied manually via psql
+- Fixing bugs in existing code
+- No new files in `migrations/versions/`
+
+## Quick Check:
+```bash
+git status | grep migrations/versions
