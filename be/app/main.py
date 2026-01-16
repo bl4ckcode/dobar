@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from app.bars_and_restaurants.models.nosql_models import create_geo_index
 from app.errors import APIError, ErrorResponse, ErrorCode
+from app.redis_client import get_redis, close_redis
 from .database import engine, Base, database
 from fastapi import FastAPI, Request
 from .auth.routes import auth_router
@@ -62,7 +63,16 @@ async def lifespan(app: FastAPI):
         print(f"   Error: {type(e).__name__}: {str(e)}")
         print(f"   Hint: Check MongoDB Atlas network access whitelist for IP: Check Fly.io machine IPs")
     
+    try:
+        redis = await get_redis()
+        await redis.ping()
+        print("✅ Redis connected successfully")
+    except Exception as e:
+        print(f"⚠️  Redis connection failed (wallet locking disabled):")
+        print(f"   Error: {type(e).__name__}: {str(e)}")
+    
     yield
+    await close_redis()
     await database.disconnect()
 
 app = FastAPI(

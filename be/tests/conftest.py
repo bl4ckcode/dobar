@@ -333,9 +333,7 @@ def create_test_token(user_id: int) -> str:
 @pytest.fixture
 def db_session():
     """Create a synchronous database session for wallet tests."""
-    from sqlalchemy.orm import Session
-    
-    session = sessionmaker(bind=test_engine)(class_=Session)
+    session = sessionmaker(bind=test_engine)()
     yield session
     session.rollback()
     session.close()

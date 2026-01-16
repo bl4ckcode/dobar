@@ -91,3 +91,4 @@ google-cloud-vision>=3.7.0
 openai>=1.0.0
 pymupdf>=1.24.0
 beautifulsoup4
+redis>=5.0.0

@@ -1,13 +1,15 @@
-from fastapi import APIRouter, Depends, status, Query
+from fastapi import APIRouter, Depends, status, Query, Header
 from sqlalchemy.orm import Session
 from typing import Optional
 from decimal import Decimal
+import uuid
 
 from app.database import get_db
 from app.auth.middleware import get_current_user
 from app.auth.auth_models import User
 from app.auth.admin import require_internal_or_admin, verify_admin_api_key
 from app.errors import APIError
+from app.redis_client import WalletLock
 from app.bars_and_restaurants.services.wallet_service import WalletService
 from app.bars_and_restaurants.schemas.wallet import (
     WalletBalanceResponse,
@@ -139,6 +141,7 @@ async def redeem_cashback_for_order(
     request: RedeemCashbackRequest,
     bar_id: int = Query(..., description="Bar where cashback is being used"),
     order_id: Optional[int] = Query(None, description="Order ID if already created"),
+    x_idempotency_key: Optional[str] = Header(None, alias="X-Idempotency-Key"),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
@@ -147,14 +150,18 @@ async def redeem_cashback_for_order(
     This is typically called during order creation/checkout.
     
     Creates a REDEEM transaction and deducts from available balance.
+    Uses distributed locking to prevent double-spend on concurrent requests.
     """
-    transaction, wallet = WalletService.redeem_cashback(
-        db=db,
-        user_id=current_user.id,
-        amount=request.amount,
-        bar_id=bar_id,
-        order_id=order_id
-    )
+    idempotency_key = x_idempotency_key or str(uuid.uuid4())
+    
+    async with WalletLock(current_user.id, idempotency_key):
+        transaction, wallet = WalletService.redeem_cashback(
+            db=db,
+            user_id=current_user.id,
+            amount=request.amount,
+            bar_id=bar_id,
+            order_id=order_id
+        )
     
     return {
         "transaction_id": str(transaction.id),
