@@ -46,3 +46,41 @@ class TestBars:
     async def test_get_bar_not_found(self, client: AsyncClient):
         response = await client.get("/bars/999999")
         assert response.status_code == 404
+
+
+@pytest.mark.asyncio
+class TestBulkMenuItems:
+    async def test_bulk_create_menu_items(self, auth_client, test_menu_in_db):
+        client, headers, _ = auth_client
+        menu_id = test_menu_in_db["id"]
+        items = [
+            {"name": "Item 1", "price": 10.50, "description": "First item", "category": "Drinks", "available": True},
+            {"name": "Item 2", "price": 15.00, "description": "Second item", "category": "Food", "available": True},
+            {"name": "Item 3", "price": 8.25, "description": "Third item", "category": "Drinks", "available": False}
+        ]
+        response = await client.post(f"/menus/{menu_id}/items/bulk", json={"items": items}, headers=headers)
+        assert response.status_code == 200
+        data = response.json()
+        assert data["created_count"] == 3
+        assert len(data["items"]) == 3
+        assert data["items"][0]["name"] == "Item 1"
+        assert data["items"][0]["price"] == 10.50
+        assert data["items"][1]["category"] == "Food"
+
+    async def test_bulk_create_empty_list_fails(self, auth_client, test_menu_in_db):
+        client, headers, _ = auth_client
+        menu_id = test_menu_in_db["id"]
+        response = await client.post(f"/menus/{menu_id}/items/bulk", json={"items": []}, headers=headers)
+        assert response.status_code == 422
+
+    async def test_bulk_create_menu_not_found(self, auth_client):
+        client, headers, _ = auth_client
+        items = [{"name": "Item 1", "price": 10.50}]
+        response = await client.post("/menus/999999/items/bulk", json={"items": items}, headers=headers)
+        assert response.status_code == 404
+
+    async def test_bulk_create_requires_auth(self, client: AsyncClient, test_menu_in_db):
+        menu_id = test_menu_in_db["id"]
+        items = [{"name": "Item 1", "price": 10.50}]
+        response = await client.post(f"/menus/{menu_id}/items/bulk", json={"items": items})
+        assert response.status_code in [401, 403]

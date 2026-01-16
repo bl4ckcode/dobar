@@ -359,8 +359,22 @@ def test_user(db_session):
 
 
 @pytest.fixture
+async def test_menu_in_db(test_bar_in_db):
+    from app.bars_and_restaurants.models.relational_models import Menu
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    menu_data = {
+        "name": "Test Menu",
+        "bar_id": test_bar_in_db["id"],
+        "created_at": now,
+        "updated_at": now
+    }
+    menu_id = await test_database.execute(Menu.__table__.insert().values(**menu_data))
+    return {"id": menu_id, **menu_data}
+
+
+@pytest.fixture
 def test_bar(db_session):
-    """Create a test bar for wallet tests."""
     from app.bars_and_restaurants.models.relational_models import Bar, BarOwner
     
     # Create bar owner first

@@ -31,6 +31,15 @@ class MenuItemCreateViaURL(MenuItemBase):
     pass
 
 
+class BulkMenuItemCreate(BaseModel):
+    items: List[MenuItemCreateViaURL] = Field(..., min_length=1, max_length=500)
+
+
+class BulkMenuItemResponse(BaseModel):
+    created_count: int
+    items: List[dict]
+
+
 class MenuItemUpdate(BaseModel):
     """Schema for updating a menu item (all fields optional)."""
     name: Optional[str] = Field(None, min_length=1, max_length=200)

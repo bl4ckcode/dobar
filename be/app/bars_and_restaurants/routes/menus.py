@@ -4,7 +4,7 @@ Menu and Menu Items Routes
 All menu data is now stored in PostgreSQL for referential integrity with orders.
 MongoDB support is deprecated but kept for legacy data migration.
 """
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 from fastapi import APIRouter, Query, UploadFile, File, Form, Depends, Request
 from sqlalchemy import and_
@@ -15,7 +15,8 @@ from ..models.nosql_models import menus_collection  # Legacy - for migration onl
 from ..schemas.menus import (
     MenuCreate, MenuUpdate, Menu, MenuWithItems,
     MenuItemCreate, MenuItemCreateViaURL, MenuItemUpdate, MenuItem,
-    LegacyMenuItem, MenuExtractionResponse, MenuExtractionURLRequest
+    LegacyMenuItem, MenuExtractionResponse, MenuExtractionURLRequest,
+    BulkMenuItemCreate, BulkMenuItemResponse
 )
 from app.database import database
 from app.errors import APIError
@@ -190,6 +191,36 @@ async def create_menu_item(menu_id: int, item: MenuItemCreateViaURL):
     return await database.fetch_one(
         MenuItemModel.__table__.select().where(MenuItemModel.id == item_id)
     )
+
+
+@menus_router.post("/{menu_id}/items/bulk", response_model=BulkMenuItemResponse)
+async def create_menu_items_bulk(
+    menu_id: int,
+    bulk: BulkMenuItemCreate,
+    current_user: User = Depends(get_current_active_user)
+):
+    menu = await get_menu_by_id(menu_id)
+    if not menu:
+        raise APIError.not_found("Menu not found")
+    
+    now = datetime.now(timezone.utc)
+    created_items = []
+    
+    for item in bulk.items:
+        item_data = item.model_dump()
+        item_data["menu_id"] = menu_id
+        item_data["created_at"] = now
+        item_data["updated_at"] = now
+        
+        query = MenuItemModel.__table__.insert().values(**item_data)
+        item_id = await database.execute(query)
+        
+        created = await database.fetch_one(
+            MenuItemModel.__table__.select().where(MenuItemModel.id == item_id)
+        )
+        created_items.append(dict(created))
+    
+    return BulkMenuItemResponse(created_count=len(created_items), items=created_items)
 
 
 @menus_router.get("/{menu_id}/items/{item_id}", response_model=MenuItem)
