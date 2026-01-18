@@ -35,8 +35,10 @@ MAX_STATEMENT_DESCRIPTOR = 13
 def _get_pagarme_client() -> PagarmeapisdkClient:
     username = os.getenv("PAGARME_USERNAME")
     password = os.getenv("PAGARME_PASSWORD", "")
+    
     if not username:
         raise ValueError("PAGARME_USERNAME not configured")
+    
     return PagarmeapisdkClient(
         basic_auth_credentials=BasicAuthCredentials(username=username, password=password),
         environment=Environment.PRODUCTION

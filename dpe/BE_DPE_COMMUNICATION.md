@@ -431,14 +431,22 @@ DPE automatically routes payments to the appropriate gateway based on country:
 DPE_SERVICE_SECRET=<shared_secret_with_BE>
 DPE_ENV=production
 
-STONE_API_KEY=<stone_key>
-STONE_CLIENT_ID=<stone_client>
+# PagarMe/Stone (Brazil)
+# Use sk_test_* for sandbox/testing
+# Use sk_live_* for production
+PAGARME_USERNAME=sk_test_xxx  # or sk_live_xxx for production
+PAGARME_PASSWORD=            # optional
+
 STRIPE_API_KEY=<stripe_key>
 PAYPAL_CLIENT_ID=<paypal_client>
 PAYPAL_CLIENT_SECRET=<paypal_secret>
 
 REDIS_URL=redis://localhost:6379
 ```
+
+**Note:** PagarMe differentiates sandbox vs production via API key prefix:
+- `sk_test_*` → Sandbox environment (test transactions)
+- `sk_live_*` → Production environment (real transactions)
 
 ---
 
@@ -515,6 +523,8 @@ All payment operations logged with:
 
 | Date | Change |
 |------|--------|
+| 2026-01-18 | ✅ Clarified PagarMe env: Uses API key prefix (sk_test_ vs sk_live_), not env var |
+| 2026-01-18 | ✅ Added 4 new tests for PagarMe client configuration - 193 tests passing |
 | 2026-01-18 | ✅ Fixed PIX BR Code parameter names (key, receiver_name, receiver_city, txid) |
 | 2026-01-18 | ✅ Added customer_info to ChargeRequestAPI (name, email, document, phone) |
 | 2026-01-18 | ✅ Added 18 new unit tests (customer validation + PIX BR Code) - 189 tests passing |

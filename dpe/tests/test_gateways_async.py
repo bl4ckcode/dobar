@@ -97,3 +97,33 @@ class TestCurrencyUtils:
         assert currency.from_cents(1000) == 10.00
         assert currency.from_cents(9999) == 99.99
         assert currency.from_cents(1) == 0.01
+
+
+class TestPagarmeEnvironmentConfiguration:
+    
+    @patch.dict('os.environ', {'PAGARME_USERNAME': 'sk_test_xxx'}, clear=False)
+    def test_pagarme_client_test_key(self):
+        from dobar_payment.gateways.stone import _get_pagarme_client, Environment
+        client = _get_pagarme_client()
+        assert client.config.environment == Environment.PRODUCTION
+        assert client.config.basic_auth_credentials.username == 'sk_test_xxx'
+    
+    @patch.dict('os.environ', {'PAGARME_USERNAME': 'sk_live_xxx'}, clear=False)
+    def test_pagarme_client_live_key(self):
+        from dobar_payment.gateways.stone import _get_pagarme_client, Environment
+        client = _get_pagarme_client()
+        assert client.config.environment == Environment.PRODUCTION
+        assert client.config.basic_auth_credentials.username == 'sk_live_xxx'
+    
+    @patch.dict('os.environ', {'PAGARME_USERNAME': 'sk_test_xxx', 'PAGARME_PASSWORD': 'test_pass'}, clear=False)
+    def test_pagarme_client_with_password(self):
+        from dobar_payment.gateways.stone import _get_pagarme_client
+        client = _get_pagarme_client()
+        assert client.config.basic_auth_credentials.username == 'sk_test_xxx'
+        assert client.config.basic_auth_credentials.password == 'test_pass'
+    
+    @patch.dict('os.environ', {}, clear=True)
+    def test_pagarme_requires_username(self):
+        from dobar_payment.gateways.stone import _get_pagarme_client
+        with pytest.raises(ValueError, match="PAGARME_USERNAME not configured"):
+            _get_pagarme_client()
