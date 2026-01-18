@@ -28,6 +28,52 @@ from .routes import PaymentRoutes, PixRoutes, HealthRoutes
 from .dependencies import gateway_registry
 
 
+def _load_gateways_from_env() -> dict:
+    gateways = {}
+    
+    if os.getenv("PAGARME_USERNAME") or os.getenv("PAGARME_API_KEY"):
+        try:
+            from dobar_payment.gateways.stone import StonePaymentGateway
+            config = {
+                "PAGARME_USERNAME": os.getenv("PAGARME_USERNAME") or os.getenv("PAGARME_API_KEY"),
+                "PAGARME_PASSWORD": os.getenv("PAGARME_PASSWORD", ""),
+            }
+            gateway = StonePaymentGateway(config)
+            if gateway.is_configured:
+                gateways["stone"] = gateway
+                logger.info("Stone gateway loaded from environment")
+        except Exception as e:
+            logger.warning(f"Failed to load Stone gateway: {e}")
+    
+    if os.getenv("STRIPE_API_KEY"):
+        try:
+            from dobar_payment.gateways.stripe import StripePaymentGateway
+            config = {"STRIPE_API_KEY": os.getenv("STRIPE_API_KEY")}
+            gateway = StripePaymentGateway(config)
+            if gateway.is_configured:
+                gateways["stripe"] = gateway
+                logger.info("Stripe gateway loaded from environment")
+        except Exception as e:
+            logger.warning(f"Failed to load Stripe gateway: {e}")
+    
+    if os.getenv("PAYPAL_CLIENT_ID") and os.getenv("PAYPAL_CLIENT_SECRET"):
+        try:
+            from dobar_payment.gateways.paypal import PaypalPaymentGateway
+            config = {
+                "PAYPAL_CLIENT_ID": os.getenv("PAYPAL_CLIENT_ID"),
+                "PAYPAL_CLIENT_SECRET": os.getenv("PAYPAL_CLIENT_SECRET"),
+                "PAYPAL_ENV": os.getenv("PAYPAL_ENV", "sandbox"),
+            }
+            gateway = PaypalPaymentGateway(config)
+            if gateway.is_configured:
+                gateways["paypal"] = gateway
+                logger.info("PayPal gateway loaded from environment")
+        except Exception as e:
+            logger.warning(f"Failed to load PayPal gateway: {e}")
+    
+    return gateways
+
+
 def create_app(
     enable_auth: bool = True,
     gateways: dict | None = None,
@@ -58,9 +104,13 @@ def create_app(
         allow_headers=["*"],
     )
     
+    if gateways is None:
+        gateways = _load_gateways_from_env()
+    
     if gateways:
         for name, gateway in gateways.items():
             gateway_registry.register(name, gateway)
+            logger.info(f"Registered gateway: {name}")
     
     @app.middleware("http")
     async def request_middleware(request: Request, call_next: Callable) -> Response:
