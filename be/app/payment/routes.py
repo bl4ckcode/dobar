@@ -215,7 +215,7 @@ async def create_charge_v2(
                 gateway_code=error_code,
             )
         elif http_status == 503:
-            raise APIError.service_unavailable(
+            raise APIError.server_error(
                 message=result.get("message", "Payment service unavailable")
             )
         else:
