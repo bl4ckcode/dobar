@@ -26,7 +26,8 @@ from .auth.profile import profile_router
 from fastapi.openapi.utils import get_openapi
 from contextlib import asynccontextmanager
 from firebase_admin import initialize_app, credentials
-from .payment.routes import payment_router
+from .payment.routes import payment_router, pix_router
+from .payment import close_dpe_client
 from .advertising.routes import advertising_router
 
 IS_PRODUCTION = os.getenv("FLY_APP_NAME") is not None or os.getenv("ENVIRONMENT", "development") == "production"
@@ -72,6 +73,7 @@ async def lifespan(app: FastAPI):
         print(f"   Error: {type(e).__name__}: {str(e)}")
     
     yield
+    await close_dpe_client()
     await close_redis()
     await database.disconnect()
 
@@ -155,6 +157,7 @@ app.include_router(promotions_router)
 app.include_router(ws_router)
 app.include_router(bar_owners_router)
 app.include_router(payment_router)
+app.include_router(pix_router)
 app.include_router(wallet_router)
 app.include_router(staff_router)
 app.include_router(my_bars_router)

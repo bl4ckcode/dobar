@@ -1,15 +1,10 @@
-"""
-Payment module for barz-backend.
-
-STUB: dobar-payment-engine is WIP. This provides minimal interface for cart.py and routes.py to work.
-TODO: Replace with actual dobar-payment-engine when ready.
-"""
-
+import os
 from typing import Any, Dict, Optional
+
+USE_DPE = os.getenv("USE_DPE", "false").lower() == "true"
 
 
 class PaymentGateway:
-    """Stub payment gateway - returns mock successful payments."""
     
     def create_charge(
         self,
@@ -18,7 +13,6 @@ class PaymentGateway:
         customer: Dict[str, Any],
         payment_method: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Mock charge - always succeeds for now."""
         return {
             "id": f"stub_charge_{amount}",
             "status": "succeeded",
@@ -28,7 +22,6 @@ class PaymentGateway:
         }
     
     def refund_charge(self, **kwargs) -> Dict[str, Any]:
-        """Mock refund - always succeeds."""
         return {
             "id": f"stub_refund_{kwargs.get('charge_id', 'unknown')}",
             "status": "succeeded",
@@ -36,7 +29,6 @@ class PaymentGateway:
         }
     
     def capture_charge(self, payment_intent_id: str, amount: Optional[float] = None) -> Dict[str, Any]:
-        """Mock capture - always succeeds."""
         return {
             "id": payment_intent_id,
             "status": "succeeded",
@@ -44,7 +36,6 @@ class PaymentGateway:
         }
     
     def create_checkout_session(self, success_url: str, cancel_url: str) -> Dict[str, Any]:
-        """Mock checkout session."""
         return {
             "id": "stub_checkout_session",
             "url": success_url,
@@ -53,7 +44,6 @@ class PaymentGateway:
         }
     
     def create_setup_intent(self, customer_id: str) -> Dict[str, Any]:
-        """Mock setup intent."""
         return {
             "id": f"stub_setup_{customer_id}",
             "client_secret": "stub_secret",
@@ -63,8 +53,17 @@ class PaymentGateway:
 
 
 def get_payment_gateway() -> PaymentGateway:
-    """FastAPI dependency that returns a PaymentGateway instance."""
     return PaymentGateway()
 
 
-__all__ = ["PaymentGateway", "get_payment_gateway"]
+from .dpe_client import DPEClient, get_dpe_client, close_dpe_client
+
+__all__ = [
+    "PaymentGateway", 
+    "get_payment_gateway",
+    "DPEClient",
+    "get_dpe_client",
+    "close_dpe_client",
+    "USE_DPE",
+]
+

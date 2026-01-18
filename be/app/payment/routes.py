@@ -2,14 +2,21 @@ from fastapi import APIRouter, Depends, Query, Header
 from typing import Optional
 from datetime import datetime, timedelta
 import json
+import uuid
 
 from app.errors import APIError, map_gateway_error
 from app.auth.dependencies import get_current_user
 from app.auth.auth_models import User
 from app.database import database
-from .schemas import PaymentRequest, RefundRequest
+from .schemas import (
+    PaymentRequest, RefundRequest,
+    DPEChargeRequest, DPEChargeResponse,
+    DPERefundRequest, DPERefundResponse,
+    DPEPaymentStatusResponse,
+    PixGenerateRequest, PixGenerateResponse,
+)
 from .models import IdempotencyKey
-from . import get_payment_gateway, PaymentGateway
+from . import get_payment_gateway, PaymentGateway, get_dpe_client, DPEClient
 
 payment_router = APIRouter(prefix="/payments", tags=["Payments"])
 
@@ -163,3 +170,161 @@ async def setup_payment_method(
             gateway_code=response.get("code")
         )
     return response
+
+
+@payment_router.post("/v2/charge", response_model=DPEChargeResponse, tags=["Payments V2 (DPE)"])
+async def create_charge_v2(
+    request: DPEChargeRequest,
+    current_user: User = Depends(get_current_user),
+    x_idempotency_key: Optional[str] = Header(None, alias="X-Idempotency-Key"),
+):
+    dpe = get_dpe_client()
+    idempotency_key = x_idempotency_key or str(uuid.uuid4())
+    
+    payment_method = {
+        "type": request.payment_method.type.value,
+        "installments": request.payment_method.installments,
+    }
+    if request.payment_method.token:
+        payment_method["token"] = request.payment_method.token
+    if request.payment_method.provider:
+        payment_method["provider"] = request.payment_method.provider.value
+    if request.payment_method.pix_key:
+        payment_method["pix_key"] = request.payment_method.pix_key
+    
+    result = await dpe.charge(
+        order_id=request.order_id,
+        user_id=current_user.id,
+        bar_id=request.bar_id,
+        amount=request.amount,
+        currency=request.currency,
+        country=request.country,
+        payment_method=payment_method,
+        idempotency_key=idempotency_key,
+        metadata=request.metadata,
+        description=request.description,
+    )
+    
+    if result.get("status") == "error":
+        error_code = result.get("error_code", "PAYMENT_DECLINED")
+        http_status = result.get("http_status", 402)
+        
+        if http_status == 402:
+            raise APIError.payment_declined(
+                message=result.get("message", "Payment declined"),
+                gateway_code=error_code,
+            )
+        elif http_status == 503:
+            raise APIError.service_unavailable(
+                message=result.get("message", "Payment service unavailable")
+            )
+        else:
+            raise APIError.payment_declined(
+                message=result.get("message", "Payment failed"),
+                gateway_code=error_code,
+            )
+    
+    return DPEChargeResponse(
+        payment_id=result["payment_id"],
+        status=result["status"],
+        gateway=result["gateway"],
+        gateway_id=result["gateway_id"],
+        amount=result["amount"],
+        currency=result["currency"],
+        created_at=result["created_at"],
+        pix_qr_code=result.get("pix_qr_code"),
+        pix_copia_e_cola=result.get("pix_copia_e_cola"),
+        pix_expires_at=result.get("pix_expires_at"),
+        card_last_four=result.get("card_last_four"),
+        card_brand=result.get("card_brand"),
+    )
+
+
+@payment_router.post("/v2/refund", response_model=DPERefundResponse, tags=["Payments V2 (DPE)"])
+async def create_refund_v2(
+    request: DPERefundRequest,
+    current_user: User = Depends(get_current_user),
+    x_idempotency_key: Optional[str] = Header(None, alias="X-Idempotency-Key"),
+):
+    dpe = get_dpe_client()
+    idempotency_key = x_idempotency_key or str(uuid.uuid4())
+    
+    result = await dpe.refund(
+        payment_id=request.payment_id,
+        amount=request.amount,
+        reason=request.reason,
+        idempotency_key=idempotency_key,
+    )
+    
+    if result.get("status") == "error":
+        if result.get("http_status") == 404:
+            raise APIError.not_found(f"Payment {request.payment_id} not found")
+        raise APIError.refund_failed(
+            message=result.get("message", "Refund failed"),
+        )
+    
+    return DPERefundResponse(
+        refund_id=result["refund_id"],
+        payment_id=result["payment_id"],
+        status=result["status"],
+        amount=result["amount"],
+        created_at=result["created_at"],
+    )
+
+
+@payment_router.get("/v2/{payment_id}", response_model=DPEPaymentStatusResponse, tags=["Payments V2 (DPE)"])
+async def get_payment_status(
+    payment_id: str,
+    current_user: User = Depends(get_current_user),
+):
+    dpe = get_dpe_client()
+    
+    result = await dpe.get_payment(payment_id)
+    
+    if result.get("status") == "error":
+        raise APIError.not_found(f"Payment {payment_id} not found")
+    
+    return DPEPaymentStatusResponse(
+        payment_id=result["payment_id"],
+        status=result["payment_status"],
+        amount=result["amount"],
+        currency=result["currency"],
+        gateway=result["gateway"],
+        refunded_amount=result.get("refunded_amount", 0.0),
+        created_at=result["created_at"],
+    )
+
+
+pix_router = APIRouter(prefix="/pix", tags=["PIX (Brazil)"])
+
+
+@pix_router.post("/generate", response_model=PixGenerateResponse)
+async def generate_pix_code(
+    request: PixGenerateRequest,
+    current_user: User = Depends(get_current_user),
+):
+    dpe = get_dpe_client()
+    
+    description = request.description or f"Pedido #{request.order_id}"
+    
+    result = await dpe.generate_pix(
+        order_id=request.order_id,
+        amount=request.amount,
+        description=description,
+        payer_name=request.payer_name,
+        payer_document=request.payer_document,
+        expires_in=request.expires_in,
+    )
+    
+    if result.get("status") == "error":
+        raise APIError.service_unavailable(
+            message=result.get("message", "PIX generation failed")
+        )
+    
+    return PixGenerateResponse(
+        pix_id=result["pix_id"],
+        brcode=result["brcode"],
+        qr_code_base64=result["qr_code_base64"],
+        expires_at=result["expires_at"],
+        status=result.get("pix_status", "pending"),
+    )
