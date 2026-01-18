@@ -24,10 +24,10 @@ class TestAPISchemas:
     
     def test_charge_request_validation(self):
         request = schemas.ChargeRequestAPI(
-            order_id=12345,
-            user_id=67890,
-            bar_id=111,
-            amount=45.50,
+            order_id="order_12345",
+            user_id="user_67890",
+            bar_id="bar_111",
+            amount_cents=4550,
             currency="BRL",
             country="BR",
             payment_method=schemas.PaymentMethodAPI(
@@ -37,7 +37,7 @@ class TestAPISchemas:
             idempotency_key=str(uuid.uuid4()),
         )
         
-        assert request.amount == 45.50
+        assert request.amount_cents == 4550
         assert request.currency == "BRL"
         assert request.payment_method.type == schemas.PaymentMethodTypeAPI.CARD
     
@@ -46,10 +46,10 @@ class TestAPISchemas:
         
         with pytest.raises(ValidationError):
             schemas.ChargeRequestAPI(
-                order_id=12345,
-                user_id=67890,
-                bar_id=111,
-                amount=-10.0,
+                order_id="order_12345",
+                user_id="user_67890",
+                bar_id="bar_111",
+                amount_cents=-10,
                 currency="BRL",
                 country="BR",
                 payment_method=schemas.PaymentMethodAPI(type=schemas.PaymentMethodTypeAPI.CARD),
@@ -58,25 +58,24 @@ class TestAPISchemas:
     
     def test_pix_generate_request(self):
         request = schemas.PixGenerateRequest(
-            amount=100.00,
-            merchant_name="BARZ CAFE",
-            merchant_city="SAO PAULO",
-            pix_key="cafe@barz.com",
+            order_id="order_12345",
+            amount_cents=10000,
+            description="Mesa 5 - Bar do Zé",
         )
         
-        assert request.amount == 100.00
-        assert request.expires_in == 3600
+        assert request.amount_cents == 10000
+        assert request.expiration_seconds == 3600
     
     def test_refund_request_validation(self):
         request = schemas.RefundRequestAPI(
             payment_id="pay_123",
-            amount=25.00,
+            amount_cents=2500,
             reason="order_cancelled",
             idempotency_key=str(uuid.uuid4()),
         )
         
         assert request.payment_id == "pay_123"
-        assert request.amount == 25.00
+        assert request.amount_cents == 2500
 
 
 class TestAPIMiddleware:
@@ -148,7 +147,7 @@ class TestAPIDependencies:
         
         store.store_payment("pay_123", {
             "status": "succeeded",
-            "amount": 100.00,
+            "amount_cents": 10000,
         })
         
         payment = store.get_payment("pay_123")
@@ -172,6 +171,23 @@ class TestAPIDependencies:
         cached = store.check_idempotency(key)
         assert cached is not None
         assert cached["payment_id"] == "pay_456"
+    
+    def test_pix_store_operations(self):
+        store = dependencies.InMemoryPaymentStore()
+        
+        store.store_pix("pix_123", {
+            "status": "pending",
+            "amount_cents": 5000,
+            "brcode": "00020126...",
+        })
+        
+        pix = store.get_pix("pix_123")
+        assert pix is not None
+        assert pix["status"] == "pending"
+        
+        store.update_pix("pix_123", {"status": "paid"})
+        pix = store.get_pix("pix_123")
+        assert pix["status"] == "paid"
     
     def test_gateway_registry(self):
         registry = dependencies.GatewayRegistry()
@@ -221,6 +237,10 @@ class TestAPIDependencies:
         refund_id = dependencies.generate_refund_id()
         assert refund_id.startswith("ref_")
         assert len(refund_id) == 20
+        
+        pix_id = dependencies.generate_pix_id()
+        assert pix_id.startswith("pix_")
+        assert len(pix_id) == 20
 
 
 class TestErrorResponse:
@@ -229,12 +249,14 @@ class TestErrorResponse:
         error = schemas.ErrorResponse(
             error_code="PAYMENT_DECLINED",
             message="Card declined by issuer",
-            details={"provider": "stone", "provider_code": "insufficient_funds"},
+            details={"gateway": "stone", "gateway_code": "insufficient_funds"},
+            request_id="req_123",
         )
         
         assert error.error_code == "PAYMENT_DECLINED"
         assert error.message == "Card declined by issuer"
-        assert error.details["provider"] == "stone"
+        assert error.details["gateway"] == "stone"
+        assert error.request_id == "req_123"
 
 
 class TestHealthResponse:
@@ -243,13 +265,12 @@ class TestHealthResponse:
         health = schemas.HealthResponse(
             status="healthy",
             version="2.0.0",
-            gateways={"stone": True, "stripe": True},
-            timestamp=datetime.now(timezone.utc),
+            gateways={"stone": "healthy", "stripe": "healthy"},
         )
         
         assert health.status == "healthy"
+        assert health.gateways["stone"] == "healthy"
         assert health.version == "2.0.0"
-        assert health.gateways["stone"] is True
 
 
 if __name__ == "__main__":

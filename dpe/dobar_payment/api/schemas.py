@@ -7,7 +7,6 @@ from enum import Enum
 class PaymentMethodTypeAPI(str, Enum):
     CARD = "card"
     PIX = "pix"
-    BOLETO = "boleto"
 
 
 class TokenProvider(str, Enum):
@@ -26,10 +25,10 @@ class PaymentMethodAPI(BaseModel):
 
 
 class ChargeRequestAPI(BaseModel):
-    order_id: int
-    user_id: int
-    bar_id: int
-    amount: float = Field(..., gt=0)
+    order_id: str
+    user_id: str
+    bar_id: str
+    amount_cents: int = Field(..., gt=0)
     currency: str = Field(default="BRL", pattern="^[A-Z]{3}$")
     country: str = Field(default="BR", pattern="^[A-Z]{2}$")
     payment_method: PaymentMethodAPI
@@ -41,9 +40,9 @@ class ChargeRequestAPI(BaseModel):
 class ChargeResponseAPI(BaseModel):
     payment_id: str
     status: str
-    provider: str
-    provider_id: str
-    amount: float
+    gateway: str
+    gateway_id: str
+    amount_cents: int
     currency: str
     created_at: datetime
     pix_qr_code: Optional[str] = None
@@ -55,7 +54,7 @@ class ChargeResponseAPI(BaseModel):
 
 class RefundRequestAPI(BaseModel):
     payment_id: str
-    amount: Optional[float] = Field(None, gt=0)
+    amount_cents: Optional[int] = Field(None, gt=0)
     reason: Optional[str] = None
     idempotency_key: str
 
@@ -64,46 +63,56 @@ class RefundResponseAPI(BaseModel):
     refund_id: str
     payment_id: str
     status: str
-    amount: float
+    amount_cents: int
     created_at: datetime
 
 
 class PaymentStatusResponse(BaseModel):
     payment_id: str
     status: str
-    amount: float
+    amount_cents: int
     currency: str
-    provider: str
-    refunded_amount: float = 0.0
+    gateway: str
+    refunded_amount_cents: int = 0
     created_at: datetime
 
 
+class PayerInfo(BaseModel):
+    name: str
+    document: str
+
+
 class PixGenerateRequest(BaseModel):
-    amount: float = Field(..., gt=0)
-    currency: str = Field(default="BRL")
-    merchant_name: str
-    merchant_city: str
-    pix_key: str
-    description: Optional[str] = None
-    reference_id: Optional[str] = None
-    expires_in: int = Field(default=3600, ge=60, le=86400)
+    order_id: str
+    amount_cents: int = Field(..., gt=0)
+    description: str
+    expiration_seconds: int = Field(default=3600, ge=60, le=86400)
+    payer_info: Optional[PayerInfo] = None
 
 
 class PixGenerateResponse(BaseModel):
-    qr_code: str
-    copia_e_cola: str
+    pix_id: str
+    brcode: str
+    qr_code_base64: str
     expires_at: datetime
-    reference_id: str
+    status: Literal["pending", "paid", "expired"] = "pending"
 
 
 class ErrorResponse(BaseModel):
     error_code: str
     message: str
     details: Optional[Dict[str, Any]] = None
+    request_id: Optional[str] = None
+
+
+class GatewayStatus(str, Enum):
+    HEALTHY = "healthy"
+    DEGRADED = "degraded"
+    UNHEALTHY = "unhealthy"
 
 
 class HealthResponse(BaseModel):
     status: Literal["healthy", "degraded", "unhealthy"]
     version: str
-    gateways: Dict[str, bool]
-    timestamp: datetime
+    gateways: Dict[str, str]
+    timestamp: Optional[datetime] = None

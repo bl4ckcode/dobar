@@ -12,6 +12,7 @@ class InMemoryPaymentStore:
         self._payments: Dict[str, Dict[str, Any]] = {}
         self._idempotency: Dict[str, Dict[str, Any]] = {}
         self._refunds: Dict[str, Dict[str, Any]] = {}
+        self._pix: Dict[str, Dict[str, Any]] = {}
     
     def store_payment(self, payment_id: str, data: Dict[str, Any]) -> None:
         self._payments[payment_id] = {
@@ -57,6 +58,21 @@ class InMemoryPaymentStore:
     
     def get_refund(self, refund_id: str) -> Optional[Dict[str, Any]]:
         return self._refunds.get(refund_id)
+    
+    def store_pix(self, pix_id: str, data: Dict[str, Any]) -> None:
+        self._pix[pix_id] = {
+            **data,
+            "stored_at": datetime.now(timezone.utc).isoformat(),
+        }
+    
+    def get_pix(self, pix_id: str) -> Optional[Dict[str, Any]]:
+        return self._pix.get(pix_id)
+    
+    def update_pix(self, pix_id: str, updates: Dict[str, Any]) -> bool:
+        if pix_id not in self._pix:
+            return False
+        self._pix[pix_id].update(updates)
+        return True
 
 
 class GatewayRegistry:
@@ -109,3 +125,7 @@ def generate_payment_id() -> str:
 
 def generate_refund_id() -> str:
     return f"ref_{uuid.uuid4().hex[:16]}"
+
+
+def generate_pix_id() -> str:
+    return f"pix_{uuid.uuid4().hex[:16]}"

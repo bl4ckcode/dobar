@@ -1,7 +1,7 @@
 # BARZ Backend ↔ Dobar Payment Engine Communication
 
-Last Updated: January 16, 2026
-Status: API Layer Implemented
+Last Updated: January 18, 2026
+Status: BE Integration Complete ✅
 barz-backend: https://barz-backend-bold-sun-5691.fly.dev
 dobar-payment-engine: TBD (pending deployment)
 
@@ -96,7 +96,7 @@ Users pay the exact menu price. No platform fee on transactions.
 
 | Region | Gateway | Payment Methods |
 |--------|---------|-----------------|
-| Brazil | Stone / Pagar.me | Pix, Credit, Debit, Boleto |
+| Brazil | Stone / Pagar.me | Pix, Credit, Debit |
 | LATAM (AR, CL, CO, PE) | Stripe | Credit, Debit |
 | Mexico | Stripe | Credit, Debit, OXXO |
 | North America (US, CA) | PayPal | Credit, Debit |
@@ -395,6 +395,9 @@ DPE automatically routes payments to the appropriate gateway based on country:
 - [x] DPE API layer implemented
 - [x] Gateway routing logic
 - [x] Request/response contracts defined
+- [x] BE DPE client implemented (dpe_client.py)
+- [x] BE v2 payment endpoints ready
+- [x] PIX endpoint ready
 - [ ] Deploy DPE as separate service
 - [ ] Configure shared secret for BE ↔ DPE auth
 
@@ -501,6 +504,8 @@ All payment operations logged with:
 
 | Date | Change |
 |------|--------|
+| 2026-01-18 | BE integration complete (dpe_client.py, v2 endpoints, PIX) |
+| 2026-01-18 | Fixed amount_cents vs amount, provider vs gateway field names |
 | 2026-01-16 | API layer implemented (schemas, routes, middleware) |
 | 2026-01-16 | Decision: Wallet stays in barz-backend |
 | 2026-01-16 | Added PIX BR Code generation endpoint |
