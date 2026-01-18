@@ -53,6 +53,7 @@ class DPEClient:
         idempotency_key: str,
         metadata: Dict[str, Any] = None,
         description: str = None,
+        customer_info: Dict[str, Any] = None,
     ) -> Dict[str, Any]:
         client = await self._get_client()
         
@@ -69,6 +70,8 @@ class DPEClient:
         }
         if description:
             payload["description"] = description
+        if customer_info:
+            payload["customer_info"] = customer_info
         
         response = await client.post(
             "/payments/charge",

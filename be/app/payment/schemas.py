@@ -59,6 +59,13 @@ class DPEPaymentMethod(BaseModel):
     installments: int = Field(default=1, ge=1, le=24)
 
 
+class CustomerInfo(BaseModel):
+    name: str
+    email: str
+    document: str
+    phone: Optional[str] = None
+
+
 class DPEChargeRequest(BaseModel):
     order_id: int
     bar_id: int
@@ -66,6 +73,7 @@ class DPEChargeRequest(BaseModel):
     currency: str = Field(default="BRL")
     country: str = Field(default="BR")
     payment_method: DPEPaymentMethod
+    customer_info: Optional[CustomerInfo] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
     description: Optional[str] = None
 

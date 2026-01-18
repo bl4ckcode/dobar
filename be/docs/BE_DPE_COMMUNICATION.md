@@ -1,9 +1,9 @@
 # BARZ Backend ↔ Dobar Payment Engine Communication
 
 Last Updated: January 18, 2026
-Status: BE Integration Complete ✅
-barz-backend: https://barz-backend-bold-sun-5691.fly.dev
-dobar-payment-engine: TBD (pending deployment)
+Status: Integration Tested Locally ✅
+barz-backend: https://barz-backend-bold-sun-5691.fly.dev (port 8000 locally)
+dobar-payment-engine: TBD (port 8001 locally, gateways loaded)
 
 ---
 
@@ -170,6 +170,12 @@ Request:
     "type": "card",
     "token": "tok_xxx",
     "provider": "apple_pay"
+  },
+  "customer_info": {
+    "name": "Carlos Alves",
+    "email": "carlos@example.com",
+    "document": "12345678901",
+    "phone": "+5511999999999"
   },
   "idempotency_key": "uuid-xxx",
   "metadata": {"table": "5"}
@@ -390,16 +396,23 @@ DPE automatically routes payments to the appropriate gateway based on country:
 
 ## DEPLOYMENT PHASES
 
-### Phase 1: Current (In Progress)
+### Phase 1: Integration Complete ✅
 
 - [x] DPE API layer implemented
 - [x] Gateway routing logic
 - [x] Request/response contracts defined
 - [x] BE DPE client implemented (dpe_client.py)
 - [x] BE v2 payment endpoints ready
-- [x] PIX endpoint ready
-- [ ] Deploy DPE as separate service
+- [x] PIX endpoint ready and working end-to-end
+- [x] Deploy DPE as separate service (tested locally)
+- [x] DPE auto-loads gateways from environment variables
+- [x] Stone & Stripe gateways registered and healthy
+- [x] Full HTTP flow tested: BE → DPE → Stone gateway
+- [x] Added customer_info to BE schemas and DPE client
+- [x] PIX BR Code generation working
+- [x] PagarMe sandbox configuration (detects sk_test_ prefix)
 - [ ] Configure shared secret for BE ↔ DPE auth
+- [ ] Deploy to production (Fly.io)
 
 ### Phase 2: Integration
 
@@ -420,14 +433,22 @@ DPE automatically routes payments to the appropriate gateway based on country:
 DPE_SERVICE_SECRET=<shared_secret_with_BE>
 DPE_ENV=production
 
-STONE_API_KEY=<stone_key>
-STONE_CLIENT_ID=<stone_client>
+# PagarMe/Stone (Brazil)
+# Use sk_test_* for sandbox/testing
+# Use sk_live_* for production
+PAGARME_USERNAME=sk_test_xxx  # or sk_live_xxx for production
+PAGARME_PASSWORD=            # optional
+
 STRIPE_API_KEY=<stripe_key>
 PAYPAL_CLIENT_ID=<paypal_client>
 PAYPAL_CLIENT_SECRET=<paypal_secret>
 
 REDIS_URL=redis://localhost:6379
 ```
+
+**Note:** PagarMe differentiates sandbox vs production via API key prefix:
+- `sk_test_*` → Sandbox environment (test transactions)
+- `sk_live_*` → Production environment (real transactions)
 
 ---
 
@@ -504,6 +525,19 @@ All payment operations logged with:
 
 | Date | Change |
 |------|--------|
+| 2026-01-18 | 📁 Moved all .md docs to ./docs folder (except README.md) for better organization |
+| 2026-01-18 | ✅ DPE sandbox environment working - auto-detects sk_test_ vs sk_live_ prefix |
+| 2026-01-18 | 🎉 **END-TO-END INTEGRATION COMPLETE** - PIX working, full BE→DPE→Gateway flow tested |
+| 2026-01-18 | ✅ Added CustomerInfo to BE schemas (name, email, document, phone) |
+| 2026-01-18 | ✅ Updated dpe_client.py and routes.py to pass customer_info to DPE |
+| 2026-01-18 | ✅ Clarified PagarMe env: Uses API key prefix (sk_test_ vs sk_live_), not env var |
+| 2026-01-18 | ✅ Added 4 new tests for PagarMe client configuration - 193 tests passing |
+| 2026-01-18 | ✅ Fixed PIX BR Code parameter names (key, receiver_name, receiver_city, txid) |
+| 2026-01-18 | ✅ Added customer_info to ChargeRequestAPI (name, email, document, phone) |
+| 2026-01-18 | ✅ Added 18 new unit tests (customer validation + PIX BR Code) - 189 tests passing |
+| 2026-01-18 | ✅ Local integration tested: BE→DPE→Stone gateway communication working |
+| 2026-01-18 | ✅ DPE auto-loads gateways from env (PAGARME_USERNAME, STRIPE_API_KEY) |
+| 2026-01-18 | ✅ Fixed amount_cents→amount conversion in DPE routes.py |
 | 2026-01-18 | BE integration complete (dpe_client.py, v2 endpoints, PIX) |
 | 2026-01-18 | Fixed amount_cents vs amount, provider vs gateway field names |
 | 2026-01-16 | API layer implemented (schemas, routes, middleware) |

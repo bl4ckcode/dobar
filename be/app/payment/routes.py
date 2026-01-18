@@ -192,6 +192,16 @@ async def create_charge_v2(
     if request.payment_method.pix_key:
         payment_method["pix_key"] = request.payment_method.pix_key
     
+    customer_info = None
+    if request.customer_info:
+        customer_info = {
+            "name": request.customer_info.name,
+            "email": request.customer_info.email,
+            "document": request.customer_info.document,
+        }
+        if request.customer_info.phone:
+            customer_info["phone"] = request.customer_info.phone
+    
     result = await dpe.charge(
         order_id=request.order_id,
         user_id=current_user.id,
@@ -203,6 +213,7 @@ async def create_charge_v2(
         idempotency_key=idempotency_key,
         metadata=request.metadata,
         description=request.description,
+        customer_info=customer_info,
     )
     
     if result.get("status") == "error":
