@@ -24,6 +24,13 @@ class PaymentMethodAPI(BaseModel):
     installments: int = Field(default=1, ge=1, le=24)
 
 
+class CustomerInfoAPI(BaseModel):
+    name: str = Field(..., min_length=1, max_length=255)
+    email: str = Field(..., pattern=r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
+    document: str = Field(..., min_length=11, max_length=14)
+    phone: Optional[str] = None
+
+
 class ChargeRequestAPI(BaseModel):
     order_id: str
     user_id: str
@@ -32,6 +39,7 @@ class ChargeRequestAPI(BaseModel):
     currency: str = Field(default="BRL", pattern="^[A-Z]{3}$")
     country: str = Field(default="BR", pattern="^[A-Z]{2}$")
     payment_method: PaymentMethodAPI
+    customer_info: Optional[CustomerInfoAPI] = None
     idempotency_key: str
     metadata: Dict[str, Any] = Field(default_factory=dict)
     description: Optional[str] = None

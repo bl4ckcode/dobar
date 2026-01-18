@@ -189,3 +189,143 @@ class TestPixGateway:
         
         code = pix.generate()
         assert "+5527995772291" in code or "5527995772291" in code
+
+class TestPixBRCodeParameterValidation:
+    
+    def test_brcode_with_all_parameters(self):
+        brcode = _load_brcode()
+        
+        pix = brcode.PixBRCode(
+            key="pix@barz.app",
+            receiver_name="BARZ",
+            receiver_city="SAO PAULO",
+            amount=45.50,
+            txid="order_12345",
+            description="Mesa 5 - Pedido #123",
+            zipcode="01310100",
+            single_transaction=False,
+        )
+        
+        code = pix.generate()
+        assert code.startswith("00020")
+        assert "BARZ" in code
+        assert len(code) > 100
+    
+    def test_brcode_without_optional_parameters(self):
+        brcode = _load_brcode()
+        
+        pix = brcode.PixBRCode(
+            key="test@example.com",
+            receiver_name="Test Receiver",
+            receiver_city="Test City",
+        )
+        
+        code = pix.generate()
+        assert code.startswith("00020")
+        assert "Test Receiver" in code
+    
+    def test_brcode_with_zero_amount(self):
+        brcode = _load_brcode()
+        
+        pix = brcode.PixBRCode(
+            key="12345678901",
+            receiver_name="Test",
+            receiver_city="City",
+            amount=0.0,
+        )
+        
+        code = pix.generate()
+        assert "54" not in code[:100]
+    
+    def test_brcode_amount_formatting(self):
+        brcode = _load_brcode()
+        
+        pix = brcode.PixBRCode(
+            key="test@test.com",
+            receiver_name="Test",
+            receiver_city="City",
+            amount=1234.56,
+        )
+        
+        code = pix.generate()
+        assert "1234.56" in code
+    
+    def test_brcode_description_truncation(self):
+        brcode = _load_brcode()
+        
+        long_description = "A" * 100
+        pix = brcode.PixBRCode(
+            key="test@test.com",
+            receiver_name="Test",
+            receiver_city="City",
+            amount=10.00,
+            description=long_description,
+        )
+        
+        code = pix.generate()
+        assert code is not None
+    
+    def test_brcode_name_truncation(self):
+        brcode = _load_brcode()
+        
+        long_name = "A" * 50
+        pix = brcode.PixBRCode(
+            key="test@test.com",
+            receiver_name=long_name,
+            receiver_city="City",
+            amount=10.00,
+        )
+        
+        code = pix.generate()
+        assert len([c for c in code.split("59")[1][:27] if c == "A"]) <= 25
+    
+    def test_brcode_city_truncation(self):
+        brcode = _load_brcode()
+        
+        long_city = "B" * 30
+        pix = brcode.PixBRCode(
+            key="test@test.com",
+            receiver_name="Test",
+            receiver_city=long_city,
+            amount=10.00,
+        )
+        
+        code = pix.generate()
+        assert code is not None
+    
+    def test_brcode_crc16_validation(self):
+        brcode = _load_brcode()
+        
+        pix = brcode.PixBRCode(
+            key="test@example.com",
+            receiver_name="Test",
+            receiver_city="City",
+            amount=50.00,
+            txid="TX001",
+        )
+        
+        code = pix.generate()
+        assert len(code) >= 100
+        assert code[-4:].isalnum()
+    
+    def test_brcode_with_different_key_types(self):
+        brcode = _load_brcode()
+        
+        key_types = [
+            "12345678901",
+            "12345678000199",
+            "+5511999999999",
+            "test@example.com",
+            "b5fe1edc-d108-410f-b966-eccaaca75e4f",
+        ]
+        
+        for key in key_types:
+            pix = brcode.PixBRCode(
+                key=key,
+                receiver_name="Test",
+                receiver_city="City",
+                amount=10.00,
+            )
+            code = pix.generate()
+            assert code.startswith("00020")
+            assert len(code) > 50

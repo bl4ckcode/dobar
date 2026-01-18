@@ -273,6 +273,114 @@ class TestHealthResponse:
         assert health.version == "2.0.0"
 
 
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
+class TestCustomerInfoAPI:
+    
+    def test_valid_customer_info(self):
+        customer = schemas.CustomerInfoAPI(
+            name="Carlos Alves",
+            email="carlos@example.com",
+            document="12345678901",
+        )
+        assert customer.name == "Carlos Alves"
+        assert customer.email == "carlos@example.com"
+        assert customer.document == "12345678901"
+    
+    def test_customer_with_phone(self):
+        customer = schemas.CustomerInfoAPI(
+            name="Carlos Alves",
+            email="carlos@example.com",
+            document="12345678901",
+            phone="+5511999999999",
+        )
+        assert customer.phone == "+5511999999999"
+    
+    def test_invalid_email(self):
+        from pydantic import ValidationError
+        
+        with pytest.raises(ValidationError):
+            schemas.CustomerInfoAPI(
+                name="Carlos",
+                email="invalid-email",
+                document="12345678901",
+            )
+    
+    def test_empty_name(self):
+        from pydantic import ValidationError
+        
+        with pytest.raises(ValidationError):
+            schemas.CustomerInfoAPI(
+                name="",
+                email="carlos@example.com",
+                document="12345678901",
+            )
+    
+    def test_document_too_short(self):
+        from pydantic import ValidationError
+        
+        with pytest.raises(ValidationError):
+            schemas.CustomerInfoAPI(
+                name="Carlos",
+                email="carlos@example.com",
+                document="123",
+            )
+    
+    def test_cpf_document(self):
+        customer = schemas.CustomerInfoAPI(
+            name="Carlos",
+            email="carlos@example.com",
+            document="12345678901",
+        )
+        assert len(customer.document) == 11
+    
+    def test_cnpj_document(self):
+        customer = schemas.CustomerInfoAPI(
+            name="Empresa LTDA",
+            email="empresa@example.com",
+            document="12345678000199",
+        )
+        assert len(customer.document) == 14
+
+
+class TestChargeRequestWithCustomer:
+    
+    def test_charge_request_with_customer_info(self):
+        request = schemas.ChargeRequestAPI(
+            order_id="order_12345",
+            user_id="user_67890",
+            bar_id="bar_111",
+            amount_cents=4550,
+            currency="BRL",
+            country="BR",
+            payment_method=schemas.PaymentMethodAPI(
+                type=schemas.PaymentMethodTypeAPI.CARD,
+                token="tok_xxx",
+            ),
+            customer_info=schemas.CustomerInfoAPI(
+                name="Carlos Alves",
+                email="carlos@example.com",
+                document="12345678901",
+            ),
+            idempotency_key=str(uuid.uuid4()),
+        )
+        
+        assert request.customer_info is not None
+        assert request.customer_info.name == "Carlos Alves"
+        assert request.customer_info.email == "carlos@example.com"
+    
+    def test_charge_request_without_customer_info(self):
+        request = schemas.ChargeRequestAPI(
+            order_id="order_12345",
+            user_id="user_67890",
+            bar_id="bar_111",
+            amount_cents=4550,
+            currency="BRL",
+            payment_method=schemas.PaymentMethodAPI(
+                type=schemas.PaymentMethodTypeAPI.CARD,
+                token="tok_xxx",
+            ),
+            idempotency_key=str(uuid.uuid4()),
+        )
+        
+        assert request.customer_info is None
+
 

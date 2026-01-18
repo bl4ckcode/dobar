@@ -70,6 +70,16 @@ class PaymentRoutes:
                 },
             }
             
+            if request.customer_info:
+                charge_kwargs["customer"] = {
+                    "name": request.customer_info.name,
+                    "email": request.customer_info.email,
+                    "document": request.customer_info.document,
+                    "document_type": "CPF" if len(request.customer_info.document) == 11 else "CNPJ",
+                }
+                if request.customer_info.phone:
+                    charge_kwargs["customer"]["phone"] = request.customer_info.phone
+            
             if payment_method.type == PaymentMethodTypeAPI.CARD:
                 charge_kwargs["payment_method"] = {
                     "type": "card",
@@ -269,11 +279,11 @@ class PixRoutes:
             pix_key = "pix@barz.app"
             
             brcode = PixBRCode(
-                pix_key=pix_key,
-                merchant_name=merchant_name,
-                merchant_city=merchant_city,
-                amount=request.amount_cents / 100,
-                reference_id=request.order_id,
+                key=pix_key,
+                receiver_name=merchant_name,
+                receiver_city=merchant_city,
+                amount=request.amount_cents / 100.0,
+                txid=request.order_id,
                 description=request.description,
             )
             

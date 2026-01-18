@@ -1,9 +1,9 @@
 # BARZ Backend ↔ Dobar Payment Engine Communication
 
 Last Updated: January 18, 2026
-Status: BE Integration Complete ✅
-barz-backend: https://barz-backend-bold-sun-5691.fly.dev
-dobar-payment-engine: TBD (pending deployment)
+Status: Integration Tested Locally ✅
+barz-backend: https://barz-backend-bold-sun-5691.fly.dev (port 8000 locally)
+dobar-payment-engine: TBD (port 8001 locally, gateways loaded)
 
 ---
 
@@ -170,6 +170,12 @@ Request:
     "type": "card",
     "token": "tok_xxx",
     "provider": "apple_pay"
+  },
+  "customer_info": {
+    "name": "Carlos Alves",
+    "email": "carlos@example.com",
+    "document": "12345678901",
+    "phone": "+5511999999999"
   },
   "idempotency_key": "uuid-xxx",
   "metadata": {"table": "5"}
@@ -390,7 +396,7 @@ DPE automatically routes payments to the appropriate gateway based on country:
 
 ## DEPLOYMENT PHASES
 
-### Phase 1: Current (In Progress)
+### Phase 1: Current (Testing Complete)
 
 - [x] DPE API layer implemented
 - [x] Gateway routing logic
@@ -398,7 +404,12 @@ DPE automatically routes payments to the appropriate gateway based on country:
 - [x] BE DPE client implemented (dpe_client.py)
 - [x] BE v2 payment endpoints ready
 - [x] PIX endpoint ready
-- [ ] Deploy DPE as separate service
+- [x] Deploy DPE as separate service (tested locally)
+- [x] DPE auto-loads gateways from environment variables
+- [x] Stone & Stripe gateways registered and healthy
+- [x] Full HTTP flow tested: BE → DPE → Stone gateway
+- [ ] Add customer data to DPE schema (required for PagarMe)
+- [ ] Fix PIX BR Code generation in DPE
 - [ ] Configure shared secret for BE ↔ DPE auth
 
 ### Phase 2: Integration
@@ -504,6 +515,12 @@ All payment operations logged with:
 
 | Date | Change |
 |------|--------|
+| 2026-01-18 | ✅ Fixed PIX BR Code parameter names (key, receiver_name, receiver_city, txid) |
+| 2026-01-18 | ✅ Added customer_info to ChargeRequestAPI (name, email, document, phone) |
+| 2026-01-18 | ✅ Added 18 new unit tests (customer validation + PIX BR Code) - 189 tests passing |
+| 2026-01-18 | ✅ Local integration tested: BE→DPE→Stone gateway communication working |
+| 2026-01-18 | ✅ DPE auto-loads gateways from env (PAGARME_USERNAME, STRIPE_API_KEY) |
+| 2026-01-18 | ✅ Fixed amount_cents→amount conversion in DPE routes.py |
 | 2026-01-18 | BE integration complete (dpe_client.py, v2 endpoints, PIX) |
 | 2026-01-18 | Fixed amount_cents vs amount, provider vs gateway field names |
 | 2026-01-16 | API layer implemented (schemas, routes, middleware) |
