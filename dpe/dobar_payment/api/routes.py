@@ -59,7 +59,7 @@ class PaymentRoutes:
         try:
             payment_method = request.payment_method
             charge_kwargs: Dict[str, Any] = {
-                "amount_cents": request.amount_cents,
+                "amount": request.amount_cents / 100.0,
                 "currency": request.currency,
                 "idempotency_key": request.idempotency_key,
                 "metadata": {
@@ -181,7 +181,7 @@ class PaymentRoutes:
         try:
             result = await gateway.refund_charge(
                 charge_id=payment.get("gateway_id"),
-                amount_cents=refund_amount_cents,
+                amount=refund_amount_cents / 100.0,
                 idempotency_key=request.idempotency_key,
             )
             
