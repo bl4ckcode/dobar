@@ -5,7 +5,7 @@ FROM nginx:alpine
 RUN rm -rf /usr/share/nginx/html/*
 
 # Copy Flutter web build to nginx html directory
-COPY web /usr/share/nginx/html
+COPY build/web /usr/share/nginx/html
 
 # Copy custom nginx config (optional, see below)
 # COPY nginx.conf /etc/nginx/nginx.conf
