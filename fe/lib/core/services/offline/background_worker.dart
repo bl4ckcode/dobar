@@ -173,7 +173,7 @@ class BackgroundWorker {
         networkType: NetworkType.connected,
         requiresBatteryNotLow: true,
       ),
-      existingWorkPolicy: ExistingWorkPolicy.keep,
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
     );
     
     debugPrint('[BackgroundWorker] Periodic sync registered');
@@ -203,11 +203,11 @@ class BackgroundWorker {
       cleanupCacheTask,
       frequency: const Duration(days: 1),
       constraints: Constraints(
-        networkType: NetworkType.not_required,
+        networkType: NetworkType.notRequired,
         requiresBatteryNotLow: true,
         requiresCharging: true,
       ),
-      existingWorkPolicy: ExistingWorkPolicy.keep,
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.keep,
     );
     
     debugPrint('[BackgroundWorker] Cache cleanup scheduled');
