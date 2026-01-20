@@ -92,8 +92,9 @@ def create_app(
         title="Dobar Payment Engine",
         description="Enterprise-grade payment processing API",
         version=DPE_VERSION,
-        docs_url="/docs",
-        redoc_url="/redoc",
+        docs_url=None,
+        redoc_url=None,
+        openapi_url=None,
     )
     
     app.add_middleware(

@@ -2,15 +2,13 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Copy dependency files
+# Copy all source files first
 COPY pyproject.toml ./
-
-# Install dependencies
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir .
-
-# Copy application code
 COPY dobar_payment ./dobar_payment
+
+# Install the package (includes uvicorn from dependencies)
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir ".[api]"
 
 EXPOSE 8080
 
