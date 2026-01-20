@@ -87,7 +87,11 @@ app = FastAPI(
 # CORS middleware - allow all origins for now (Flutter web, mobile, etc.)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # In production, restrict to specific domains
+    allow_origins=[
+        "https://dobar.app",
+        "https://www.dobar.app",
+        "https://dobar-app.fly.dev",
+    ],  # keep this for internal Fly.io domain],  # In production, restrict to specific domains
     allow_credentials=True,
     allow_methods=["*"],  # Allow all methods including OPTIONS
     allow_headers=["*"],  # Allow all headers including Authorization
