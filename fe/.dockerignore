@@ -1,11 +1,10 @@
-build/
+# build/
 ios/
 android/
 macos/
 windows/
 linux/
 test/
-web/.dart_tool/
 web/.packages
 web/test/
 *.md
