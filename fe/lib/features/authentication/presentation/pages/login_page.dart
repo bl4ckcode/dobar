@@ -68,7 +68,7 @@ class _LoginPageState extends State<LoginPage> {
               // Priority 1: Check if user needs onboarding (role + country selection)
               if (state.needsOnboarding) {
                 context.go('/onboarding', extra: {
-                  'phoneNumber': state.phoneNumber,
+                  'phone': state.phoneNumber,
                 });
                 return;
               }

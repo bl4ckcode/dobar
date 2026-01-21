@@ -22,6 +22,14 @@ class LocationUsecase {
     return _repository.checkLocationPermission();
   }
 
+  Future<Either<Failure, bool>> requestLocationService() {
+    return _repository.requestLocationService();
+  }
+
+  Future<Either<Failure, bool>> checkLocationService() {
+    return _repository.checkLocationService();
+  }
+
   Future<Either<Failure, List<PartnerProximity>>> getNearbyPartners(
     LocationModel location, {
     double radiusInMeters = 100,

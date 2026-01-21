@@ -7,6 +7,8 @@ abstract class LocationRepository {
   Future<Either<Failure, LocationModel>> getCurrentLocation();
   Future<Either<Failure, bool>> requestLocationPermission();
   Future<Either<Failure, bool>> checkLocationPermission();
+  Future<Either<Failure, bool>> requestLocationService();
+  Future<Either<Failure, bool>> checkLocationService();
   Future<Either<Failure, List<PartnerProximity>>> getNearbyPartners(LocationModel location, {double radiusInMeters = 100});
   Future<Either<Failure, void>> updateUserLocation(LocationModel location);
   Stream<LocationModel> getLocationStream();

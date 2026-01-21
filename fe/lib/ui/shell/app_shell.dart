@@ -17,6 +17,7 @@ class AppShell extends StatefulWidget {
 
 class _AppShellState extends State<AppShell> {
   late final SessionBloc _sessionBloc;
+  bool _redirectedToOnboarding = false;
 
   @override
   void initState() {
@@ -44,6 +45,15 @@ class _AppShellState extends State<AppShell> {
             initial: () => const _LoadingView(),
             loading: () => const _LoadingView(),
             ready: (session, forceClientMode) {
+              if (!_redirectedToOnboarding && !session.user.hasCompletedOnboarding) {
+                _redirectedToOnboarding = true;
+                final phone = session.user.phoneNumber;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  context.go('/onboarding', extra: {'phone': phone});
+                });
+                return const _LoadingView();
+              }
+
               if (forceClientMode) {
                 return const WireframeShell();
               }

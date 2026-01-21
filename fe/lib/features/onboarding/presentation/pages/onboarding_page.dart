@@ -4,6 +4,8 @@ import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/onboarding/presentation/bloc/onboarding_bloc.dart';
 import 'package:barz/features/onboarding/presentation/bloc/onboarding_event.dart';
 import 'package:barz/features/onboarding/presentation/bloc/onboarding_state.dart';
+import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
+import 'package:barz/features/session/presentation/bloc/session_event.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -45,8 +47,14 @@ class _OnboardingView extends StatelessWidget {
     return BlocConsumer<OnboardingBloc, OnboardingState>(
       listener: (context, state) {
         if (state.isComplete) {
+          // Refresh the session so AppShell sees the updated profile (country_code/user_type)
+          // and doesn't redirect back to onboarding with a fresh empty state.
+          getItInjector<SessionBloc>().add(const SessionEvent.initialize());
+
           // Navigate to home after successful onboarding
-          context.go('/');
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            context.go('/');
+          });
         }
         if (state.error != null) {
           ScaffoldMessenger.of(context).showSnackBar(

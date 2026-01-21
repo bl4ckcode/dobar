@@ -9,6 +9,8 @@ abstract class LocationDatasource {
   Future<LocationModel> getCurrentLocation();
   Future<bool> requestLocationPermission();
   Future<bool> checkLocationPermission();
+  Future<bool> requestLocationService();
+  Future<bool> checkLocationService();
   Future<List<PartnerProximity>> getNearbyPartners(LocationModel location, {double radiusInMeters = 100});
   Future<void> updateUserLocation(LocationModel location);
   Stream<LocationModel> getLocationStream();
@@ -25,10 +27,34 @@ class LocationDatasourceImpl implements LocationDatasource {
 
   @override
   Future<LocationModel> getCurrentLocation() async {
-    final locationData = await _location.getLocation();
+    // Check if location services are enabled first
+    final serviceEnabled = await _location.serviceEnabled();
+    if (!serviceEnabled) {
+      throw Exception("Location services are disabled. Please enable location services in Settings.");
+    }
+
+    // Check permission again just to be sure
+    final permissionGranted = await _location.hasPermission();
+    if (permissionGranted == PermissionStatus.denied || permissionGranted == PermissionStatus.deniedForever) {
+      throw Exception("Location permission denied. Please grant location permission.");
+    }
+
+    // Add timeout to prevent hanging
+    final locationData = await _location.getLocation().timeout(
+      const Duration(seconds: 10),
+      onTimeout: () {
+        throw Exception("Location request timed out. Please check your location settings.");
+      },
+    );
+
+    // Validate that we got actual coordinates
+    if (locationData.latitude == null || locationData.longitude == null) {
+      throw Exception("Invalid location data received: latitude or longitude is null");
+    }
+
     return LocationModel(
-      latitude: locationData.latitude ?? 0,
-      longitude: locationData.longitude ?? 0,
+      latitude: locationData.latitude!,
+      longitude: locationData.longitude!,
       accuracy: locationData.accuracy,
       altitude: locationData.altitude,
       speed: locationData.speed,
@@ -48,6 +74,18 @@ class LocationDatasourceImpl implements LocationDatasource {
     final permission = await _location.hasPermission();
     return permission == PermissionStatus.granted ||
         permission == PermissionStatus.grantedLimited;
+  }
+
+  @override
+  Future<bool> requestLocationService() async {
+    final result = await _location.requestService();
+    return result;
+  }
+
+  @override
+  Future<bool> checkLocationService() async {
+    final result = await _location.serviceEnabled();
+    return result;
   }
 
   @override

@@ -62,7 +62,8 @@ final appRouter = GoRouter(
       name: 'onboarding',
       builder: (context, state) {
         final extra = state.extra as Map<String, String?>?;
-        return OnboardingPage(phoneNumber: extra?['phone']);
+        final phone = extra?['phone'] ?? extra?['phoneNumber'];
+        return OnboardingPage(phoneNumber: phone);
       },
     ),
     GoRoute(

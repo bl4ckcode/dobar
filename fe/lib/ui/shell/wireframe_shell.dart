@@ -7,16 +7,13 @@ import 'package:barz/features/bars/presentation/bloc/bar_bloc.dart';
 import 'package:barz/features/bars/presentation/bloc/bar_event.dart';
 import 'package:barz/features/promotions/presentation/bloc/promotions_bloc.dart';
 import 'package:barz/features/promotions/presentation/bloc/promotions_event.dart';
+import 'package:barz/features/location/domain/models/location_model.dart';
 import 'package:barz/features/location/presentation/bloc/location_bloc.dart';
 import 'package:barz/features/location/presentation/bloc/location_event.dart';
 import 'package:barz/features/location/presentation/bloc/location_state.dart';
 import '../screens/home_connected.dart';
 import '../screens/find_connected.dart';
 import '../screens/profile_wireframe.dart';
-
-/// Default fallback coordinates (São Paulo city center)
-const double _defaultLat = -23.5505;
-const double _defaultLng = -46.6333;
 
 /// Bottom navigation constants for consistent sizing across the app
 /// 
@@ -46,6 +43,7 @@ class WireframeShell extends StatefulWidget {
 class _WireframeShellState extends State<WireframeShell> {
   int _selectedIndex = 0;
   bool _dataLoaded = false;
+  LocationModel? _lastLocation;
 
   /// Pages wrapped in IndexedStack to preserve state across tab switches
   /// Using view widgets that don't create their own BlocProviders
@@ -62,17 +60,30 @@ class _WireframeShellState extends State<WireframeShell> {
   }
 
   void _loadDataWithLocation(BuildContext context, LocationState locationState) {
-    if (_dataLoaded) return;
-    
-    final lat = locationState.currentLocation?.latitude ?? _defaultLat;
-    final lng = locationState.currentLocation?.longitude ?? _defaultLng;
-    
+    // Only load once we actually have permission; avoid falling back to São Paulo
+    // so we don't show wrong results while waiting for the user to grant access.
+    if (!locationState.hasPermission) return;
+
+    final current = locationState.currentLocation;
+    if (current == null) return; // wait for the first real fix
+
+    final lat = current.latitude;
+    final lng = current.longitude;
+
+    final locationChanged = _lastLocation == null ||
+        _lastLocation!.latitude != lat ||
+        _lastLocation!.longitude != lng;
+    final shouldLoad = !_dataLoaded || locationChanged;
+    if (!shouldLoad) return;
+
+    _lastLocation = current;
+    _dataLoaded = true;
+
     context.read<BarBloc>().add(LoadNearbyBars(lat: lat, lng: lng));
     context.read<PromotionsBloc>().add(LoadPromotions(
       latitude: lat,
       longitude: lng,
     ));
-    _dataLoaded = true;
   }
 
   @override
@@ -89,7 +100,7 @@ class _WireframeShellState extends State<WireframeShell> {
           create: (_) => getItInjector<PromotionsBloc>(),
         ),
       ],
-      child: BlocListener<LocationBloc, LocationState>(
+        child: BlocListener<LocationBloc, LocationState>(
         listener: (context, state) {
           // When location is obtained (either success or after loading completes), load data
           if (!state.isLoading) {
@@ -97,55 +108,55 @@ class _WireframeShellState extends State<WireframeShell> {
           }
         },
         child: Scaffold(
-          body: IndexedStack(
-            index: _selectedIndex,
-            children: _pages,
-          ),
-          floatingActionButton: _CenterDockedFab(
-            onPressed: () => context.push('/checkin'),
-          ),
-          floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-          bottomNavigationBar: BottomAppBar(
-            height: _NavBarMetrics.barHeight,
-            color: barzDark,
-            shape: const CircularNotchedRectangle(),
-            notchMargin: _NavBarMetrics.notchMargin,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _NavItem(
-                  icon: Icons.home_outlined,
-                  selectedIcon: Icons.home,
-                  label: 'Home',
-                  isSelected: _selectedIndex == 0,
-                  onTap: () => _onItemTapped(0),
-                ),
-                _NavItem(
-                  icon: Icons.search_outlined,
-                  selectedIcon: Icons.search,
-                  label: 'Find',
-                  isSelected: _selectedIndex == 1,
-                  onTap: () => _onItemTapped(1),
-                ),
-              // Spacer for the FAB notch
-              SizedBox(width: _NavBarMetrics.notchWidth),
-              _NavItem(
-                icon: Icons.shopping_cart_outlined,
-                selectedIcon: Icons.shopping_cart,
-                label: 'Cart',
-                isSelected: false,
-                onTap: () => context.push('/cart'),
+              body: IndexedStack(
+                index: _selectedIndex,
+                children: _pages,
               ),
-              _NavItem(
-                icon: Icons.person_outline,
-                selectedIcon: Icons.person,
-                label: 'Profile',
-                isSelected: _selectedIndex == 2,
-                onTap: () => _onItemTapped(2),
+              floatingActionButton: _CenterDockedFab(
+                onPressed: () => context.push('/checkin'),
               ),
-            ],
-          ),
-        ),
+              floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+              bottomNavigationBar: BottomAppBar(
+                height: _NavBarMetrics.barHeight,
+                color: barzDark,
+                shape: const CircularNotchedRectangle(),
+                notchMargin: _NavBarMetrics.notchMargin,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _NavItem(
+                      icon: Icons.home_outlined,
+                      selectedIcon: Icons.home,
+                      label: 'Home',
+                      isSelected: _selectedIndex == 0,
+                      onTap: () => _onItemTapped(0),
+                    ),
+                    _NavItem(
+                      icon: Icons.search_outlined,
+                      selectedIcon: Icons.search,
+                      label: 'Find',
+                      isSelected: _selectedIndex == 1,
+                      onTap: () => _onItemTapped(1),
+                    ),
+                    // Spacer for the FAB notch
+                    SizedBox(width: _NavBarMetrics.notchWidth),
+                    _NavItem(
+                      icon: Icons.shopping_cart_outlined,
+                      selectedIcon: Icons.shopping_cart,
+                      label: 'Cart',
+                      isSelected: false,
+                      onTap: () => context.push('/cart'),
+                    ),
+                    _NavItem(
+                      icon: Icons.person_outline,
+                      selectedIcon: Icons.person,
+                      label: 'Profile',
+                      isSelected: _selectedIndex == 2,
+                      onTap: () => _onItemTapped(2),
+                    ),
+                  ],
+                ),
+              ),
         ),
       ),
     );

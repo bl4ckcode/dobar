@@ -7,13 +7,11 @@ import 'package:barz/features/bars/presentation/bloc/bar_bloc.dart';
 import 'package:barz/features/bars/presentation/bloc/bar_event.dart';
 import 'package:barz/features/promotions/presentation/bloc/promotions_bloc.dart';
 import 'package:barz/features/promotions/presentation/bloc/promotions_event.dart';
+import 'package:barz/features/location/domain/models/location_model.dart';
 import 'package:barz/features/location/presentation/bloc/location_bloc.dart';
 import 'package:barz/features/location/presentation/bloc/location_event.dart';
 import 'package:barz/features/location/presentation/bloc/location_state.dart';
 import 'package:barz/core/router/app_routes.dart';
-
-const double _defaultLat = -23.5505;
-const double _defaultLng = -46.6333;
 
 class _NavBarMetrics {
   static const double barHeight = 56.0;
@@ -33,19 +31,31 @@ class ClientRootShell extends StatefulWidget {
 
 class _ClientRootShellState extends State<ClientRootShell> {
   bool _dataLoaded = false;
+  LocationModel? _lastLocation;
 
   void _loadDataWithLocation(BuildContext context, LocationState locationState) {
-    if (_dataLoaded) return;
-    
-    final lat = locationState.currentLocation?.latitude ?? _defaultLat;
-    final lng = locationState.currentLocation?.longitude ?? _defaultLng;
-    
+    if (!locationState.hasPermission) return;
+
+    final current = locationState.currentLocation;
+    if (current == null) return;
+
+    final lat = current.latitude;
+    final lng = current.longitude;
+
+    final locationChanged = _lastLocation == null ||
+        _lastLocation!.latitude != lat ||
+        _lastLocation!.longitude != lng;
+    final shouldLoad = !_dataLoaded || locationChanged;
+    if (!shouldLoad) return;
+
+    _lastLocation = current;
+    _dataLoaded = true;
+
     context.read<BarBloc>().add(LoadNearbyBars(lat: lat, lng: lng));
     context.read<PromotionsBloc>().add(LoadPromotions(
       latitude: lat,
       longitude: lng,
     ));
-    _dataLoaded = true;
   }
 
   int _getSelectedIndex(BuildContext context) {

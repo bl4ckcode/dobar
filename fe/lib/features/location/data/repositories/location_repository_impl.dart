@@ -42,6 +42,26 @@ class LocationRepositoryImpl implements LocationRepository {
   }
 
   @override
+  Future<Either<Failure, bool>> requestLocationService() async {
+    try {
+      final result = await _datasource.requestLocationService();
+      return Right(result);
+    } catch (e) {
+      return Left(ServerFailure(e.toString(), null));
+    }
+  }
+
+  @override
+  Future<Either<Failure, bool>> checkLocationService() async {
+    try {
+      final result = await _datasource.checkLocationService();
+      return Right(result);
+    } catch (e) {
+      return Left(ServerFailure(e.toString(), null));
+    }
+  }
+
+  @override
   Future<Either<Failure, List<PartnerProximity>>> getNearbyPartners(
     LocationModel location, {
     double radiusInMeters = 100,

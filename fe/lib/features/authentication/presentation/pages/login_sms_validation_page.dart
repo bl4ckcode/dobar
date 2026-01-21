@@ -109,7 +109,13 @@ class _LoginValidatePhoneNumberPageState
         bloc: widget.loginBloc,
         listener: (context, state) {
           if (state is Success) {
-            // Check if profile is complete
+            if (state.needsOnboarding) {
+              context.go('/onboarding', extra: {
+                'phone': state.phoneNumber,
+              });
+              return;
+            }
+
             if (state.isProfileComplete) {
               context.go('/');
             } else {
