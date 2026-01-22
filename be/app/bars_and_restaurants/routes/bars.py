@@ -388,19 +388,21 @@ async def read_bar(bar_id: int):
 async def get_bars(
     latitude: float = Query(..., description="Latitude of the location"),
     longitude: float = Query(..., description="Longitude of the location"),
-    max_distance: float = Query(5000, description="Max distance in meters (default: 5000m)")
+    max_distance: float = Query(5000, description="Max distance in meters (default: 5000m)"),
+    category: Optional[str] = Query(None, description="Filter by category: bar, night_club, restaurant_bar, cafe_bar, hotel_bar, casino")
 ):
-    # Perform a geospatial query in MongoDB to find bars near the given location
     bar_ids = await find_bars_near_location(latitude, longitude, max_distance)
     
     if not bar_ids:
-        return []  # Return empty array for Flutter - no bars nearby is a valid state
+        return []
     
-    # Fetch bar details from PostgreSQL using the bar IDs
     bars = await get_bars_by_ids(bar_ids)
     
     if not bars:
-        return []  # Return empty array for Flutter
+        return []
+    
+    if category:
+        bars = [b for b in bars if b.get("category") == category]
 
     return bars
 

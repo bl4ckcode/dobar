@@ -38,6 +38,9 @@ class Bar(Base):
     # 🆕 Operating hours (stored as JSON for flexibility)
     operating_hours = Column(JSON, nullable=True)
     
+    category = Column(String(50), index=True, nullable=True)
+    google_types = Column(JSON, nullable=True)
+    
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

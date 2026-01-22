@@ -140,12 +140,34 @@ def extract_coordinates(geometry: dict) -> tuple[Optional[float], Optional[float
     return (location.get("lat"), location.get("lng"))
 
 
+def _derive_category(google_types: List[str]) -> str:
+    types_set = set(google_types)
+    
+    if "night_club" in types_set:
+        return "night_club"
+    if "casino" in types_set:
+        return "casino"
+    if "lodging" in types_set and "bar" in types_set:
+        return "hotel_bar"
+    if "cafe" in types_set:
+        return "cafe_bar"
+    if "restaurant" in types_set and "bar" in types_set:
+        return "restaurant_bar"
+    if "bar" in types_set:
+        return "bar"
+    if "restaurant" in types_set:
+        return "restaurant_bar"
+    
+    return "bar"
+
+
 def parse_place_for_bar_creation(place_details: dict) -> dict:
     result = place_details.get("result", place_details)
     
     address_components = result.get("address_components", [])
     geometry = result.get("geometry", {})
     lat, lng = extract_coordinates(geometry)
+    google_types = result.get("types", [])
     
     return {
         "name": result.get("name"),
@@ -156,4 +178,6 @@ def parse_place_for_bar_creation(place_details: dict) -> dict:
         "country_code": extract_country_code(address_components),
         "google_place_id": result.get("place_id"),
         "_raw_opening_hours": result.get("opening_hours"),
+        "category": _derive_category(google_types),
+        "google_types": google_types,
     }

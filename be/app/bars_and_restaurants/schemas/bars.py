@@ -72,6 +72,8 @@ class Bar(BarBase):
     # Operating hours
     operating_hours: Optional[dict] = None
     
+    category: Optional[str] = None
+    
     # Timestamps
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
