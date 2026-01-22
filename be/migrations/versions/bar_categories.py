@@ -8,7 +8,7 @@ from alembic import op
 import sqlalchemy as sa
 
 revision = 'bar_categories_001'
-down_revision = 'bar_wizard_001'
+down_revision = 'idempotency_001'
 branch_labels = None
 depends_on = None
 
