@@ -52,7 +52,6 @@ class MenuItemUpdate(BaseModel):
 
 
 class MenuItem(MenuItemBase):
-    """Full menu item response with ID."""
     id: int
     menu_id: int
     created_at: datetime
@@ -60,6 +59,21 @@ class MenuItem(MenuItemBase):
     
     class Config:
         from_attributes = True
+
+
+class TrendingDrink(BaseModel):
+    id: int
+    name: str
+    price_avg: float
+    bar_name: str
+    bar_id: int
+    image_url: Optional[str] = None
+    order_count: int
+    is_promoted: bool = False
+
+
+class TrendingDrinksResponse(BaseModel):
+    drinks: List[TrendingDrink]
 
 
 # =============================================================================

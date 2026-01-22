@@ -16,7 +16,7 @@ from ..schemas.menus import (
     MenuCreate, MenuUpdate, Menu, MenuWithItems,
     MenuItemCreate, MenuItemCreateViaURL, MenuItemUpdate, MenuItem,
     LegacyMenuItem, MenuExtractionResponse, MenuExtractionURLRequest,
-    BulkMenuItemCreate, BulkMenuItemResponse
+    BulkMenuItemCreate, BulkMenuItemResponse, TrendingDrink, TrendingDrinksResponse
 )
 from app.database import database
 from app.errors import APIError
@@ -304,44 +304,73 @@ async def toggle_item_availability(menu_id: int, item_id: int, available: bool):
 # POPULAR/TRENDING ITEMS ROUTES (for "Most Desired Drinks" FE feature)
 # =============================================================================
 
-@menus_router.get("/trending/drinks", response_model=List[MenuItem])
+@menus_router.get("/trending/drinks", response_model=TrendingDrinksResponse)
 async def get_trending_drinks(
-    limit: int = Query(default=20, le=50, description="Maximum items to return"),
-    categories: Optional[str] = Query(
-        default="drinks_trending,cachaça_cocktails,drinks_classicos",
-        description="Comma-separated list of drink categories to include"
-    )
+    latitude: Optional[float] = Query(None, description="User latitude for regional filtering"),
+    longitude: Optional[float] = Query(None, description="User longitude for regional filtering"),
+    type: str = Query(default="most_wanted", description="most_wanted or hottest"),
+    limit: int = Query(default=10, le=50, description="Maximum items to return")
 ):
+    from ..routes.bars import find_bars_near_location
+    from ..models.cart_models import OrderItem as OrderItemModel
+    from ..models.relational_models import Promotion
+    
+    nearby_bar_ids = None
+    if latitude is not None and longitude is not None:
+        bars_nearby = await find_bars_near_location(latitude, longitude, 10000)
+        if bars_nearby:
+            nearby_bar_ids = [b["bar_id"] for b in bars_nearby]
+    
+    if nearby_bar_ids:
+        bar_filter = f"AND b.id IN ({','.join(str(id) for id in nearby_bar_ids)})"
+    else:
+        bar_filter = ""
+    
+    query = f"""
+        SELECT 
+            mi.id,
+            mi.name,
+            AVG(mi.price) as price_avg,
+            b.name as bar_name,
+            b.id as bar_id,
+            mi.picture as image_url,
+            COUNT(oi.id) as order_count,
+            CASE WHEN p.id IS NOT NULL AND p.end_date > NOW() THEN TRUE ELSE FALSE END as is_promoted
+        FROM order_items oi
+        JOIN menu_items mi ON oi.menu_item_id = mi.id
+        JOIN menus m ON mi.menu_id = m.id
+        JOIN bars b ON m.bar_id = b.id
+        LEFT JOIN promotions p ON p.bar_id = b.id AND p.is_active = TRUE AND p.end_date > NOW()
+        WHERE oi.created_at > NOW() - INTERVAL '7 days'
+          AND mi.available = TRUE
+          {bar_filter}
+        GROUP BY mi.id, mi.name, b.name, b.id, mi.picture, p.id, p.end_date
+        ORDER BY 
+            {"is_promoted DESC, " if type == "hottest" else ""}
+            order_count DESC
+        LIMIT :limit
     """
-    Get trending/popular drinks across all bars.
-    Used for "Most Desired Drinks" feature in FE.
     
-    Categories available:
-    - drinks_trending: Moscow Mule, Aperol Spritz, Espresso Martini, Negroni
-    - cachaça_cocktails: Caipirinha, Rabo de Galo, Batidas
-    - drinks_classicos: Mojito, Margarita, Piña Colada, Cuba Libre
-    - batidas: Batida de Coco, Maracujá, Amendoim
-    - cervejas: All beers (chopp, long necks, craft)
-    - destilados: Shots and spirits
-    """
-    category_list = [c.strip() for c in categories.split(",") if c.strip()]
+    results = await database.fetch_all(query, {"limit": limit})
     
-    # Get items from specified categories across all menus
-    from sqlalchemy import or_
+    if not results:
+        return TrendingDrinksResponse(drinks=[])
     
-    conditions = [MenuItemModel.category == cat for cat in category_list]
-    query = MenuItemModel.__table__.select().where(
-        and_(
-            MenuItemModel.available == True,
-            or_(*conditions) if conditions else True
+    drinks = [
+        TrendingDrink(
+            id=r["id"],
+            name=r["name"],
+            price_avg=float(r["price_avg"]) if r["price_avg"] else 0.0,
+            bar_name=r["bar_name"],
+            bar_id=r["bar_id"],
+            image_url=r["image_url"],
+            order_count=r["order_count"],
+            is_promoted=r["is_promoted"]
         )
-    ).order_by(
-        MenuItemModel.display_order, 
-        MenuItemModel.name
-    ).limit(limit)
+        for r in results
+    ]
     
-    items = await database.fetch_all(query)
-    return items if items else []
+    return TrendingDrinksResponse(drinks=drinks)
 
 
 @menus_router.get("/trending/categories", response_model=dict)
