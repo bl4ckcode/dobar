@@ -105,6 +105,8 @@ class Order(Base):
     
     # Order type
     order_type = Column(String, nullable=True)  # delivery, pickup, dine_in
+    delivery_address = Column(String, nullable=True)
+    special_instructions = Column(String, nullable=True)
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)

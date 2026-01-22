@@ -67,7 +67,9 @@ class CheckoutRequest(BaseModel):
     tip: Optional[float] = Field(0.0, ge=0, description="Tip amount")
     coupon_code: Optional[str] = None
     delivery_address_id: Optional[int] = None
+    delivery_address: Optional[str] = None
     notes: Optional[str] = None
+    special_instructions: Optional[str] = None
     
     # Payment details (will be encrypted/tokenized in production)
     payment_details: Optional[dict] = None
@@ -89,5 +91,7 @@ class CheckoutResponse(BaseModel):
     order_id: int
     status: str
     payment_status: str
+    payment_id: Optional[str] = None
     total: float
+    estimated_ready_time: Optional[datetime] = None
     message: str = "Order created successfully"

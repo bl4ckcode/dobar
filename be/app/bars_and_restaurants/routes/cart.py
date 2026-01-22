@@ -216,11 +216,20 @@ async def checkout(
     # Calculate totals
     subtotal = sum(Decimal(str(item["quantity"] * item["unit_price"])) for item in cart_items)
     
-    # Apply discount if coupon provided
-    discount = Decimal("0.00")
+    from ..services.discounts import calculate_progressive_discount
+    
+    # Calculate Progressive Discount
+    progressive_data = await calculate_progressive_discount(current_user["id"], bar_id)
+    progressive_pct = Decimal(str(progressive_data["percentage"]))
+    progressive_discount_amount = subtotal * progressive_pct
+    
+    # Apply discount if coupon provided (Max of coupon vs progressive)
+    coupon_discount = Decimal("0.00")
     if checkout_request.coupon_code:
         # TODO: Implement coupon validation and discount calculation
         pass
+        
+    discount = max(coupon_discount, progressive_discount_amount)
     
     # Calculate tax (assuming 10% tax rate - should come from bar/location settings)
     tax_rate = Decimal("0.10")
@@ -255,7 +264,7 @@ async def checkout(
             "tip": float(tip),
             "delivery_fee": float(delivery_fee),
             "discount": float(discount),
-            "total": float(total),
+            "total_price": float(total),
             "payment_method": checkout_request.payment_method,
             "payment_status": "pending",
             "estimated_ready_time": estimated_ready_time,
@@ -273,8 +282,7 @@ async def checkout(
                 "menu_item_name": cart_item["menu_item_name"],
                 "quantity": cart_item["quantity"],
                 "unit_price": cart_item["unit_price"],
-                "subtotal": cart_item["quantity"] * cart_item["unit_price"],
-                "special_instructions": cart_item.get("special_instructions")
+                "total_price": cart_item["quantity"] * cart_item["unit_price"],
             }
             await database.execute(OrderItemModel.__table__.insert().values(**order_item_data))
         
@@ -381,7 +389,7 @@ async def checkout(
             status=order["status"],
             payment_status=order["payment_status"],
             payment_id=order.get("payment_id"),
-            total=order["total"],
+            total=order["total_price"],
             estimated_ready_time=order["estimated_ready_time"]
         )
         

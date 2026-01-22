@@ -112,6 +112,10 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
     cart_routes.database = test_database
     wallet_routes.database = test_database
     
+    # Patch new discounts service
+    import app.bars_and_restaurants.services.discounts as discounts_service
+    discounts_service.database = test_database
+    
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
@@ -128,6 +132,7 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
     menus_routes.database = original_db
     cart_routes.database = original_db
     wallet_routes.database = original_db
+    discounts_service.database = original_db
 
 
 @pytest.fixture
