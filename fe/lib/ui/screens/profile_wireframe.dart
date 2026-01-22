@@ -8,6 +8,7 @@ import '../primitives/barz_app_bar.dart';
 import '../primitives/barz_card.dart';
 import '../../core/utils/constant/styles.dart';
 import '../../core/utils/constant/colors.dart';
+import '../../core/design/tokens/colors.dart' as design;
 
 class ProfileWireframe extends StatefulWidget {
   const ProfileWireframe({super.key});
@@ -41,7 +42,7 @@ class _ProfileWireframeState extends State<ProfileWireframe> {
       // Clear token from storage and network client
       await getItInjector<LoginUsecase>().logout();
       await DioNetwork.clearTokens();
-      
+
       if (mounted) {
         // Navigate to login page (router will handle auth guard)
         context.go('/login');
@@ -53,70 +54,66 @@ class _ProfileWireframeState extends State<ProfileWireframe> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const BarzAppBar(title: 'Profile'),
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: yellowBackgroundGradient,
-        ),
-        child: ListView(
-          padding: const EdgeInsets.all(BarzSpacing.lg),
-          children: [
-            // Profile Header
-            _buildProfileHeader().animate().fadeIn().scale(
-              begin: const Offset(0.95, 0.95),
-              end: const Offset(1, 1),
+      backgroundColor: design.surfacePrimary,
+      body: ListView(
+        padding: const EdgeInsets.all(BarzSpacing.lg),
+        children: [
+          // Profile Header
+          _buildProfileHeader().animate().fadeIn().scale(
+            begin: const Offset(0.95, 0.95),
+            end: const Offset(1, 1),
+          ),
+          const SizedBox(height: 24),
+
+          _buildSectionTitle('Activity'),
+          const SizedBox(height: 12),
+          BarzCard(
+            child: _buildMenuItem(
+              icon: Icons.history,
+              title: 'Past Activities',
+              subtitle: 'View your order history',
             ),
-            const SizedBox(height: 24),
-            
-            _buildSectionTitle('Activity'),
-            const SizedBox(height: 12),
-            BarzCard(
+          ).animate().fadeIn(delay: 100.ms).slideX(begin: -0.1, end: 0),
+          BarzCard(
+            child: _buildMenuItem(
+              icon: Icons.card_giftcard,
+              title: 'Cashback/Rewards',
+              subtitle: 'Track your earnings',
+              trailing: _buildBadge('3'),
+            ),
+          ).animate().fadeIn(delay: 150.ms).slideX(begin: -0.1, end: 0),
+          const SizedBox(height: 24),
+          _buildSectionTitle('Settings'),
+          const SizedBox(height: 12),
+          BarzCard(
+            child: _buildMenuItem(
+              icon: Icons.settings_outlined,
+              title: 'Settings',
+              subtitle: 'Preferences & notifications',
+            ),
+          ).animate().fadeIn(delay: 200.ms).slideX(begin: -0.1, end: 0),
+          BarzCard(
+            child: _buildMenuItem(
+              icon: Icons.help_outline,
+              title: 'Help/Support',
+              subtitle: 'Get assistance',
+            ),
+          ).animate().fadeIn(delay: 250.ms).slideX(begin: -0.1, end: 0),
+          const SizedBox(height: 24),
+
+          // Logout button
+          GestureDetector(
+            onTap: _handleLogout,
+            child: BarzCard(
               child: _buildMenuItem(
-                icon: Icons.history,
-                title: 'Past Activities',
-                subtitle: 'View your order history',
+                icon: Icons.logout,
+                title: 'Logout',
+                subtitle: 'Sign out of your account',
+                isDestructive: true,
               ),
-            ).animate().fadeIn(delay: 100.ms).slideX(begin: -0.1, end: 0),
-            BarzCard(
-              child: _buildMenuItem(
-                icon: Icons.card_giftcard,
-                title: 'Cashback/Rewards',
-                subtitle: 'Track your earnings',
-                trailing: _buildBadge('3'),
-              ),
-            ).animate().fadeIn(delay: 150.ms).slideX(begin: -0.1, end: 0),
-            const SizedBox(height: 24),
-            _buildSectionTitle('Settings'),
-            const SizedBox(height: 12),
-            BarzCard(
-              child: _buildMenuItem(
-                icon: Icons.settings_outlined,
-                title: 'Settings',
-                subtitle: 'Preferences & notifications',
-              ),
-            ).animate().fadeIn(delay: 200.ms).slideX(begin: -0.1, end: 0),
-            BarzCard(
-              child: _buildMenuItem(
-                icon: Icons.help_outline,
-                title: 'Help/Support',
-                subtitle: 'Get assistance',
-              ),
-            ).animate().fadeIn(delay: 250.ms).slideX(begin: -0.1, end: 0),
-            const SizedBox(height: 24),
-            
-            // Logout button
-            GestureDetector(
-              onTap: _handleLogout,
-              child: BarzCard(
-                child: _buildMenuItem(
-                  icon: Icons.logout,
-                  title: 'Logout',
-                  subtitle: 'Sign out of your account',
-                    isDestructive: true,
-                  ),
-                ),
-              ).animate().fadeIn(delay: 300.ms).slideX(begin: -0.1, end: 0),
-          ],
-        ),
+            ),
+          ).animate().fadeIn(delay: 300.ms).slideX(begin: -0.1, end: 0),
+        ],
       ),
     );
   }
@@ -165,18 +162,12 @@ class _ProfileWireframeState extends State<ProfileWireframe> {
                 const SizedBox(height: 4),
                 Text(
                   'user@email.com',
-                  style: TextStyle(
-                    color: textSecondary,
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: textSecondary, fontSize: 14),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '+55 11 99999-9999',
-                  style: TextStyle(
-                    color: textTertiary,
-                    fontSize: 13,
-                  ),
+                  style: TextStyle(color: textTertiary, fontSize: 13),
                 ),
               ],
             ),
@@ -213,7 +204,7 @@ class _ProfileWireframeState extends State<ProfileWireframe> {
     bool isDestructive = false,
   }) {
     final color = isDestructive ? errorColor : barzYellowDark;
-    
+
     return Padding(
       padding: const EdgeInsets.all(4),
       child: Row(
@@ -222,7 +213,7 @@ class _ProfileWireframeState extends State<ProfileWireframe> {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: isDestructive 
+              color: isDestructive
                   ? errorColor.withValues(alpha: 0.1)
                   : barzYellowSoft,
               borderRadius: BorderRadius.circular(12),
@@ -245,10 +236,7 @@ class _ProfileWireframeState extends State<ProfileWireframe> {
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: TextStyle(
-                    color: textSecondary,
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: textSecondary, fontSize: 14),
                 ),
               ],
             ),

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
 /// Barz Color System
-/// 
+///
 /// Based on perceptual color science and accessibility standards:
 /// - Primary yellow chosen for warmth and energy (hospitality industry)
 /// - Contrast ratios meet WCAG AA standards (4.5:1 for normal text)
 /// - Opacity levels follow Material Design 3 state layers
-/// 
+///
 /// Color Psychology:
 /// - Yellow/Gold: Energy, optimism, warmth, appetite stimulation
 /// - Black/Dark: Sophistication, elegance, premium feel
@@ -21,17 +21,23 @@ import 'package:flutter/material.dart';
 const Color barzGold = Color(0xFFFFC107);
 
 /// Softer gold variants for backgrounds and subtle elements
-const Color barzGoldLight = Color(0xFFFFE082);   // 60% lightness
-const Color barzGoldSoft = Color(0xFFFFF8E1);    // 96% lightness - main backgrounds
-const Color barzGoldMuted = Color(0xFFFFF3CD);   // 90% lightness - input backgrounds
-const Color barzGoldDark = Color(0xFFFFB300);    // Darker for accents/pressed states
+const Color barzGoldLight = Color(0xFFFFE082); // 60% lightness
+const Color barzGoldSoft = Color(
+  0xFFFFF8E1,
+); // 96% lightness - main backgrounds
+const Color barzGoldMuted = Color(
+  0xFFFFF3CD,
+); // 90% lightness - input backgrounds
+const Color barzGoldDark = Color(
+  0xFFFFB300,
+); // Darker for accents/pressed states
 
 /// Primary dark color - sophisticated near-black
-const Color barzDark = Color(0xFF1A1A2E);        // Slight blue undertone for depth
+const Color barzDark = Color(0xFF1A1A2E); // Slight blue undertone for depth
 
 /// Dark variants
-const Color barzDarkLight = Color(0xFF2D2D44);   // Elevated surfaces in dark mode
-const Color barzDarkMuted = Color(0xFF4A4A5C);   // Secondary text, icons
+const Color barzDarkLight = Color(0xFF2D2D44); // Elevated surfaces in dark mode
+const Color barzDarkMuted = Color(0xFF4A4A5C); // Secondary text, icons
 
 // =============================================================================
 // SEMANTIC COLORS - Meaning-driven
@@ -51,19 +57,22 @@ const Color infoBlueLight = Color(0xFFD1ECF1);
 // =============================================================================
 
 const Color surfaceWhite = Color(0xFFFFFFFF);
-const Color surfaceLight = Color(0xFFFAFAFA);    // Slightly off-white
-const Color surfaceMuted = Color(0xFFF5F5F5);    // Cards, elevated surfaces
-const Color surfaceDim = Color(0xFFEEEEEE);      // Dividers, borders
+const Color surfaceLight = Color(0xFFFAFAFA); // Slightly off-white
+const Color surfaceMuted = Color(0xFFF5F5F5); // Cards, elevated surfaces
+const Color surfaceDim = Color(0xFFEEEEEE); // Dividers, borders
+const Color surfacePrimary = Color(
+  0xFFFFFBF5,
+); // Main scaffold - subtle warm off-white
 
 // =============================================================================
 // TEXT COLORS - Readable at all sizes
 // =============================================================================
 
-const Color textPrimary = Color(0xFF1A1A2E);     // Main body text
-const Color textSecondary = Color(0xFF6B6B7B);   // Secondary, captions
-const Color textTertiary = Color(0xFF9E9E9E);    // Hints, placeholders
-const Color textOnDark = Color(0xFFFFFFFF);      // Text on dark backgrounds
-const Color textOnGold = Color(0xFF1A1A2E);      // Text on gold backgrounds
+const Color textPrimary = Color(0xFF1A1A2E); // Main body text
+const Color textSecondary = Color(0xFF6B6B7B); // Secondary, captions
+const Color textTertiary = Color(0xFF9E9E9E); // Hints, placeholders
+const Color textOnDark = Color(0xFFFFFFFF); // Text on dark backgrounds
+const Color textOnGold = Color(0xFF1A1A2E); // Text on gold backgrounds
 
 // =============================================================================
 // STATE COLORS - Interaction feedback
@@ -97,15 +106,14 @@ const Color barzCream = barzGoldSoft;
 extension BarzColors on ColorScheme {
   /// Soft primary color for backgrounds (7% opacity)
   Color get primarySoft => primary.withValues(alpha: 0.07);
-  
+
   /// Muted primary for subtle highlights (15% opacity)
   Color get primaryMuted => primary.withValues(alpha: 0.15);
-  
+
   /// Surface for inputs/text fields
-  Color get inputSurface => brightness == Brightness.light 
-      ? barzGoldMuted 
-      : barzDarkLight;
-  
+  Color get inputSurface =>
+      brightness == Brightness.light ? barzGoldMuted : barzDarkLight;
+
   /// Border color for inputs
   Color get inputBorder => brightness == Brightness.light
       ? barzDark.withValues(alpha: 0.2)

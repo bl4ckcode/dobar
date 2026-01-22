@@ -12,8 +12,17 @@ class TrendingRepositoryImpl implements TrendingRepository {
   Future<List<TrendingDrink>> getTrendingDrinks({
     int limit = 10,
     List<String>? categories,
+    String type = 'most_wanted',
+    double? latitude,
+    double? longitude,
   }) {
-    return _datasource.getTrendingDrinks(limit: limit, categories: categories);
+    return _datasource.getTrendingDrinks(
+      limit: limit,
+      categories: categories,
+      type: type,
+      latitude: latitude,
+      longitude: longitude,
+    );
   }
 
   @override

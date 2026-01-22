@@ -5,7 +5,7 @@ import '../tokens/radii.dart';
 import '../tokens/spacing.dart';
 
 /// Barz Theme Configuration
-/// 
+///
 /// Complete theme setup for the Barz app following Material Design 3.
 /// Provides both light and dark themes with consistent styling.
 
@@ -16,8 +16,8 @@ ThemeData getBarzLightTheme() {
     brightness: Brightness.light,
     colorScheme: barzLightColorScheme,
     textTheme: barzTextTheme,
-    scaffoldBackgroundColor: barzGoldSoft,
-    
+    scaffoldBackgroundColor: surfacePrimary,
+
     // App Bar
     appBarTheme: AppBarTheme(
       backgroundColor: barzGoldSoft,
@@ -25,12 +25,10 @@ ThemeData getBarzLightTheme() {
       elevation: 0,
       scrolledUnderElevation: 1,
       centerTitle: true,
-      titleTextStyle: barzTextTheme.titleLarge?.copyWith(
-        color: textPrimary,
-      ),
+      titleTextStyle: barzTextTheme.titleLarge?.copyWith(color: textPrimary),
       iconTheme: const IconThemeData(color: textPrimary),
     ),
-    
+
     // Bottom Navigation
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
       backgroundColor: surfaceWhite,
@@ -39,7 +37,7 @@ ThemeData getBarzLightTheme() {
       type: BottomNavigationBarType.fixed,
       elevation: 8,
     ),
-    
+
     // Navigation Bar (M3)
     navigationBarTheme: NavigationBarThemeData(
       backgroundColor: surfaceWhite,
@@ -47,7 +45,7 @@ ThemeData getBarzLightTheme() {
       labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
       elevation: 2,
     ),
-    
+
     // Floating Action Button
     floatingActionButtonTheme: const FloatingActionButtonThemeData(
       backgroundColor: barzGold,
@@ -57,7 +55,7 @@ ThemeData getBarzLightTheme() {
         borderRadius: BorderRadius.all(Radius.circular(BarzRadii.lg)),
       ),
     ),
-    
+
     // Cards
     cardTheme: CardThemeData(
       color: surfaceWhite,
@@ -68,7 +66,7 @@ ThemeData getBarzLightTheme() {
       ),
       margin: EdgeInsets.zero,
     ),
-    
+
     // Buttons
     filledButtonTheme: FilledButtonThemeData(
       style: ButtonStyle(
@@ -99,12 +97,10 @@ ThemeData getBarzLightTheme() {
           ),
         ),
         elevation: WidgetStateProperty.all(0),
-        textStyle: WidgetStateProperty.all(
-          barzTextTheme.labelLarge,
-        ),
+        textStyle: WidgetStateProperty.all(barzTextTheme.labelLarge),
       ),
     ),
-    
+
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: ButtonStyle(
         foregroundColor: WidgetStateProperty.resolveWith((states) {
@@ -136,12 +132,10 @@ ThemeData getBarzLightTheme() {
           }
           return const BorderSide(color: barzDark, width: 2);
         }),
-        textStyle: WidgetStateProperty.all(
-          barzTextTheme.labelLarge,
-        ),
+        textStyle: WidgetStateProperty.all(barzTextTheme.labelLarge),
       ),
     ),
-    
+
     textButtonTheme: TextButtonThemeData(
       style: ButtonStyle(
         foregroundColor: WidgetStateProperty.resolveWith((states) {
@@ -159,12 +153,10 @@ ThemeData getBarzLightTheme() {
             vertical: ButtonSpacing.paddingVertical,
           ),
         ),
-        textStyle: WidgetStateProperty.all(
-          barzTextTheme.labelLarge,
-        ),
+        textStyle: WidgetStateProperty.all(barzTextTheme.labelLarge),
       ),
     ),
-    
+
     // Input Decoration
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
@@ -197,7 +189,7 @@ ThemeData getBarzLightTheme() {
       labelStyle: barzTextTheme.bodyLarge?.copyWith(color: textSecondary),
       errorStyle: barzTextTheme.bodySmall?.copyWith(color: errorRed),
     ),
-    
+
     // Dialog
     dialogTheme: DialogThemeData(
       backgroundColor: surfaceWhite,
@@ -206,9 +198,11 @@ ThemeData getBarzLightTheme() {
         borderRadius: BorderRadius.circular(BarzRadii.lg),
       ),
       titleTextStyle: barzTextTheme.headlineSmall?.copyWith(color: textPrimary),
-      contentTextStyle: barzTextTheme.bodyMedium?.copyWith(color: textSecondary),
+      contentTextStyle: barzTextTheme.bodyMedium?.copyWith(
+        color: textSecondary,
+      ),
     ),
-    
+
     // Bottom Sheet
     bottomSheetTheme: const BottomSheetThemeData(
       backgroundColor: surfaceWhite,
@@ -219,7 +213,7 @@ ThemeData getBarzLightTheme() {
       showDragHandle: true,
       dragHandleColor: surfaceDim,
     ),
-    
+
     // Snackbar
     snackBarTheme: SnackBarThemeData(
       backgroundColor: barzDark,
@@ -229,14 +223,14 @@ ThemeData getBarzLightTheme() {
         borderRadius: BorderRadius.circular(BarzRadii.sm),
       ),
     ),
-    
+
     // Divider
     dividerTheme: DividerThemeData(
       color: surfaceDim,
       thickness: 1,
       space: BarzSpacing.lg,
     ),
-    
+
     // Chip
     chipTheme: ChipThemeData(
       backgroundColor: surfaceMuted,
@@ -246,7 +240,7 @@ ThemeData getBarzLightTheme() {
         borderRadius: BorderRadius.circular(BarzRadii.full),
       ),
     ),
-    
+
     // Switch
     switchTheme: SwitchThemeData(
       thumbColor: WidgetStateProperty.resolveWith((states) {
@@ -262,7 +256,7 @@ ThemeData getBarzLightTheme() {
         return surfaceDim;
       }),
     ),
-    
+
     // Checkbox
     checkboxTheme: CheckboxThemeData(
       fillColor: WidgetStateProperty.resolveWith((states) {
@@ -277,7 +271,7 @@ ThemeData getBarzLightTheme() {
       ),
       side: const BorderSide(color: barzDark, width: 2),
     ),
-    
+
     // Radio
     radioTheme: RadioThemeData(
       fillColor: WidgetStateProperty.resolveWith((states) {
@@ -287,14 +281,14 @@ ThemeData getBarzLightTheme() {
         return textSecondary;
       }),
     ),
-    
+
     // Progress Indicator
     progressIndicatorTheme: const ProgressIndicatorThemeData(
       color: barzGold,
       linearTrackColor: surfaceDim,
       circularTrackColor: surfaceDim,
     ),
-    
+
     // Tab Bar
     tabBarTheme: TabBarThemeData(
       labelColor: barzDark,
@@ -305,7 +299,7 @@ ThemeData getBarzLightTheme() {
       labelStyle: barzTextTheme.labelLarge,
       unselectedLabelStyle: barzTextTheme.labelLarge,
     ),
-    
+
     // List Tile
     listTileTheme: ListTileThemeData(
       contentPadding: const EdgeInsets.symmetric(
@@ -332,10 +326,9 @@ ThemeData getBarzDarkTheme() {
       displayColor: textOnDark,
     ),
     scaffoldBackgroundColor: barzDark,
-    
+
     // Similar customizations for dark theme...
     // (Abbreviated for brevity - would mirror light theme with dark colors)
-    
     appBarTheme: const AppBarTheme(
       backgroundColor: barzDark,
       foregroundColor: textOnDark,

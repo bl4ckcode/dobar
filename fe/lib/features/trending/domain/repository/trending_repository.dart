@@ -2,10 +2,12 @@ import '../models/models.dart';
 
 /// Repository interface for trending drinks feature.
 abstract class TrendingRepository {
-  /// Get trending drinks for home carousel.
   Future<List<TrendingDrink>> getTrendingDrinks({
     int limit = 10,
     List<String>? categories,
+    String type = 'most_wanted',
+    double? latitude,
+    double? longitude,
   });
 
   /// Get all available categories with metadata.
