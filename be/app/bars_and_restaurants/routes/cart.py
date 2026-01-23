@@ -25,7 +25,7 @@ async def get_or_create_cart(user_id: int) -> CartModel:
     cart = await database.fetch_one(query)
     
     if not cart:
-        now = datetime.now(timezone.utc)
+        now = datetime.utcnow()
         cart_data = {"user_id": user_id, "created_at": now, "updated_at": now}
         cart_id = await database.execute(CartModel.__table__.insert().values(**cart_data))
         cart = await database.fetch_one(CartModel.__table__.select().where(CartModel.id == cart_id))
