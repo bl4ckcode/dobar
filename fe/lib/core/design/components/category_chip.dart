@@ -23,16 +23,16 @@ class CategoryChip extends StatelessWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? barzDark : surfaceWhite,
+          color: isSelected ? barzGold : surfaceWhite,
           borderRadius: BorderRadius.circular(24),
           border: Border.all(
-            color: isSelected ? barzDark : surfaceDim,
+            color: isSelected ? barzGold : surfaceDim,
             width: 1.5,
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: barzDark.withValues(alpha: 0.15),
+                    color: barzGold.withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 2),
                   ),
@@ -42,14 +42,14 @@ class CategoryChip extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 18, color: isSelected ? barzGold : textSecondary),
+            Icon(icon, size: 18, color: isSelected ? barzDark : textSecondary),
             const SizedBox(width: 8),
             Text(
               label,
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: isSelected ? surfaceWhite : textPrimary,
+                color: isSelected ? barzDark : textPrimary,
               ),
             ),
           ],

@@ -7,7 +7,7 @@ import 'package:barz/core/utils/constant/colors.dart';
 import 'package:barz/core/design/components/bar_icon_card.dart';
 import 'package:barz/core/design/components/category_chip.dart';
 import 'package:barz/core/design/components/drink_card.dart';
-import 'package:barz/ui/primitives/barz_app_bar.dart';
+import 'package:barz/core/design/components/dobar_app_bar.dart';
 import 'package:barz/ui/primitives/barz_card.dart';
 import 'package:barz/features/bars/presentation/bloc/bar_bloc.dart';
 import 'package:barz/features/bars/presentation/bloc/bar_event.dart';
@@ -72,7 +72,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
     // Data loading is handled by WireframeShell
     // This view just displays the data from shared blocs
     return Scaffold(
-      appBar: const BarzAppBar(title: 'Home'),
+      appBar: const DobarAppBar(),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'home_create_bar_fab',
         onPressed: () => context.push('/create-bar'),
@@ -354,7 +354,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
             return _buildEmptyCard('No bars nearby', Icons.store);
           }
           return SizedBox(
-            height: 110,
+            height: 180,
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: state.bars.length > 10 ? 10 : state.bars.length,
@@ -368,10 +368,20 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
                       onTap: () => context.push('/bar/${bar.id}'),
                     )
                     .animate()
-                    .fadeIn(delay: (30 * index).ms)
+                    .fadeIn(delay: (50 * index).ms, duration: 400.ms)
+                    .slideX(
+                      begin: 0.2,
+                      end: 0,
+                      duration: 400.ms,
+                      delay: (50 * index).ms,
+                      curve: Curves.easeOutCubic,
+                    )
                     .scale(
-                      begin: const Offset(0.9, 0.9),
+                      begin: const Offset(0.8, 0.8),
                       end: const Offset(1, 1),
+                      duration: 400.ms,
+                      delay: (50 * index).ms,
+                      curve: Curves.easeOutBack,
                     );
               },
             ),
@@ -430,18 +440,23 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
   }
 
   Widget _buildEmptyCard(String message, IconData icon) {
-    return BarzCard(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            Icon(icon, color: textTertiary, size: 48),
-            const SizedBox(height: 12),
-            Text(message, style: TextStyle(color: textSecondary, fontSize: 14)),
-          ],
-        ),
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
+      child: Column(
+        children: [
+          Icon(icon, color: textTertiary.withValues(alpha: 0.4), size: 40),
+          const SizedBox(height: 12),
+          Text(
+            message,
+            style: TextStyle(
+              color: textSecondary.withValues(alpha: 0.6),
+              fontSize: 13,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
-    );
+    ).animate().fadeIn(duration: 400.ms);
   }
 
   Widget _buildMostWantedDrinksSection(BuildContext context) {
@@ -454,7 +469,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
           return _buildEmptyCard('No drinks available', Icons.local_bar);
         }
         return SizedBox(
-          height: 160,
+          height: 150,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: state.mostWantedDrinks.length > 10
@@ -490,7 +505,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
           return _buildEmptyCard('No hot deals', Icons.whatshot);
         }
         return SizedBox(
-          height: 170,
+          height: 150,
           child: ListView.separated(
             scrollDirection: Axis.horizontal,
             itemCount: state.hottestDrinks.length > 10
@@ -504,7 +519,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
                     price: drink.priceAvg ?? drink.price,
                     imageUrl: drink.imageUrl ?? drink.picture,
                     barName: drink.barName,
-                    isHot: drink.isPromoted,
+                    showHotBadge: drink.isPromoted,
                     onTap: () {},
                   )
                   .animate()

@@ -387,7 +387,7 @@ class _DrinksHomePageState extends State<DrinksHomePage> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Text(
-                          drink.category,
+                          drink.category ?? '',
                           style: TextStyle(
                             color: barzGold.withValues(alpha: 0.9),
                             fontSize: 12,

@@ -7,8 +7,8 @@ class DrinkCard extends StatelessWidget {
   final String name;
   final String? barName;
   final double? price;
+  final bool showHotBadge;
   final VoidCallback? onTap;
-  final bool isHot;
 
   const DrinkCard({
     super.key,
@@ -16,8 +16,8 @@ class DrinkCard extends StatelessWidget {
     required this.name,
     this.barName,
     this.price,
+    this.showHotBadge = false,
     this.onTap,
-    this.isHot = false,
   });
 
   @override
@@ -26,95 +26,44 @@ class DrinkCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         width: 120,
-        decoration: BoxDecoration(
-          color: surfaceWhite,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: barzDark.withValues(alpha: 0.08),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
           children: [
-            Stack(
-              children: [
-                ClipRRect(
-                  borderRadius: const BorderRadius.vertical(
-                    top: Radius.circular(16),
+            Container(
+              width: 120,
+              height: 120,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: barzDark.withValues(alpha: 0.12),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
-                  child: Container(
-                    height: 80,
-                    width: double.infinity,
-                    color: barzGoldMuted,
-                    child: imageUrl != null && imageUrl!.isNotEmpty
-                        ? CachedNetworkImage(
-                            imageUrl: imageUrl!,
-                            fit: BoxFit.cover,
-                            placeholder: (_, __) => _buildPlaceholder(),
-                            errorWidget: (_, __, ___) => _buildPlaceholder(),
-                          )
-                        : _buildPlaceholder(),
-                  ),
-                ),
-                if (isHot)
-                  Positioned(
-                    top: 6,
-                    right: 6,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.redAccent,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: const Text('🔥', style: TextStyle(fontSize: 10)),
-                    ),
-                  ),
-              ],
-            ),
-            Padding(
-              padding: const EdgeInsets.all(10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    name,
-                    style: const TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: textPrimary,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  if (barName != null) ...[
-                    const SizedBox(height: 2),
-                    Text(
-                      barName!,
-                      style: TextStyle(fontSize: 10, color: textTertiary),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                  if (price != null) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      'R\$ ${price!.toStringAsFixed(0)}',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        color: barzGoldDark,
-                      ),
-                    ),
-                  ],
                 ],
               ),
+              child: ClipOval(
+                child: imageUrl != null && imageUrl!.isNotEmpty
+                    ? CachedNetworkImage(
+                        imageUrl: imageUrl!,
+                        fit: BoxFit.cover,
+                        placeholder: (_, __) => _buildPlaceholder(),
+                        errorWidget: (_, __, ___) => _buildPlaceholder(),
+                      )
+                    : _buildPlaceholder(),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              name,
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: textPrimary,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
             ),
           ],
         ),
@@ -126,7 +75,7 @@ class DrinkCard extends StatelessWidget {
     return Container(
       color: barzGoldMuted,
       child: const Center(
-        child: Icon(Icons.local_bar, color: barzGoldDark, size: 28),
+        child: Icon(Icons.local_bar, color: barzGoldDark, size: 40),
       ),
     );
   }

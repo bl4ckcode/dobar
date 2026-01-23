@@ -20,28 +20,28 @@ class BarIconCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        width: 80,
-        padding: const EdgeInsets.symmetric(vertical: 8),
+      child: SizedBox(
+        width: 160,
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              width: 56,
-              height: 56,
+              width: 160,
+              height: 130,
               decoration: BoxDecoration(
                 color: surfaceWhite,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
-                    color: barzDark.withValues(alpha: 0.08),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                    color: barzDark.withValues(alpha: 0.1),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
                   ),
                 ],
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(20),
                 child: logoUrl != null && logoUrl!.isNotEmpty
                     ? CachedNetworkImage(
                         imageUrl: logoUrl!,
@@ -53,30 +53,27 @@ class BarIconCard extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 6),
-            Text(
-              name,
-              style: const TextStyle(
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-                color: textPrimary,
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: Text(
+                name,
+                style: const TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: textPrimary,
+                ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
             ),
-            const SizedBox(height: 2),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: barzGold.withValues(alpha: 0.15),
-                borderRadius: BorderRadius.circular(8),
-              ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
               child: Text(
                 distance,
-                style: TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.w600,
-                  color: barzGoldDark,
+                style: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w400,
+                  color: textSecondary,
                 ),
               ),
             ),
@@ -89,7 +86,9 @@ class BarIconCard extends StatelessWidget {
   Widget _buildPlaceholder() {
     return Container(
       color: barzGoldMuted,
-      child: const Icon(Icons.store, color: barzGoldDark, size: 24),
+      child: const Center(
+        child: Icon(Icons.store, color: barzGoldDark, size: 40),
+      ),
     );
   }
 }
