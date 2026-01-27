@@ -27,6 +27,7 @@ import 'package:barz/features/onboarding/presentation/pages/onboarding_page.dart
 import 'package:barz/features/menu_reader/presentation/bloc/menu_reader_bloc.dart';
 import 'package:barz/features/menu_reader/presentation/pages/menu_reader_page.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
+import 'package:barz/features/showcase/showcase_screen.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 final _businessShellNavigatorKey = GlobalKey<NavigatorState>();
@@ -194,6 +195,11 @@ final appRouter = GoRouter(
       path: '/cart',
       name: 'cart',
       builder: (context, state) => const CartPage(),
+    ),
+    GoRoute(
+      path: '/showcase',
+      name: 'showcase',
+      builder: (context, state) => const ShowcaseScreen(),
     ),
   ],
 );

@@ -18,26 +18,28 @@ import 'package:flutter/material.dart';
 
 /// Primary brand gold - warmer, more approachable than pure yellow
 /// HSL: 45°, 100%, 50% - optimized for eye comfort
-const Color barzGold = Color(0xFFFFC107);
+const Color barzGold = Color(0xFFFFD700); // Electric Yellow
 
 /// Softer gold variants for backgrounds and subtle elements
-const Color barzGoldLight = Color(0xFFFFE082); // 60% lightness
+const Color barzGoldLight = Color(0xFFFFE57F); // Lighter variant
 const Color barzGoldSoft = Color(
-  0xFFFFF8E1,
-); // 96% lightness - main backgrounds
+  0xFFFFFDE7,
+); // Very pale yellow - main backgrounds (Light Mode)
 const Color barzGoldMuted = Color(
-  0xFFFFF3CD,
-); // 90% lightness - input backgrounds
+  0xFFFFF8E1,
+); // Muted yellow - input backgrounds
 const Color barzGoldDark = Color(
-  0xFFFFB300,
+  0xFFFFC400,
 ); // Darker for accents/pressed states
 
 /// Primary dark color - sophisticated near-black
-const Color barzDark = Color(0xFF1A1A2E); // Slight blue undertone for depth
+const Color barzDark = Color(0xFF0A0A0A); // Deep Onyx Black
 
 /// Dark variants
-const Color barzDarkLight = Color(0xFF2D2D44); // Elevated surfaces in dark mode
-const Color barzDarkMuted = Color(0xFF4A4A5C); // Secondary text, icons
+const Color barzDarkLight = Color(
+  0xFF121212,
+); // Elevated surfaces in dark mode (Matte)
+const Color barzDarkMuted = Color(0xFF2C2C2C); // Secondary text, icons, borders
 
 // =============================================================================
 // SEMANTIC COLORS - Meaning-driven

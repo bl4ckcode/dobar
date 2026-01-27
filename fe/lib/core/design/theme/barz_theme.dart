@@ -16,8 +16,7 @@ ThemeData getBarzLightTheme() {
     brightness: Brightness.light,
     colorScheme: barzLightColorScheme,
     textTheme: barzTextTheme,
-    scaffoldBackgroundColor: surfacePrimary,
-
+    scaffoldBackgroundColor: barzGoldSoft, // Warmer/softer white for light mode
     // App Bar
     appBarTheme: AppBarTheme(
       backgroundColor: barzGoldSoft,
@@ -32,7 +31,8 @@ ThemeData getBarzLightTheme() {
     // Bottom Navigation
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
       backgroundColor: surfaceWhite,
-      selectedItemColor: barzGold,
+      selectedItemColor:
+          barzGoldDark, // Darker gold for better contrast on white
       unselectedItemColor: textSecondary,
       type: BottomNavigationBarType.fixed,
       elevation: 8,
@@ -60,7 +60,7 @@ ThemeData getBarzLightTheme() {
     cardTheme: CardThemeData(
       color: surfaceWhite,
       elevation: 2,
-      shadowColor: barzDark.withValues(alpha: 0.1),
+      shadowColor: barzDark.withValues(alpha: 0.05), // Lighter shadow
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(BarzRadii.md),
       ),
@@ -325,16 +325,56 @@ ThemeData getBarzDarkTheme() {
       bodyColor: textOnDark,
       displayColor: textOnDark,
     ),
-    scaffoldBackgroundColor: barzDark,
-
-    // Similar customizations for dark theme...
-    // (Abbreviated for brevity - would mirror light theme with dark colors)
+    scaffoldBackgroundColor: barzDark, // Deep Onyx
+    // App Bar
     appBarTheme: const AppBarTheme(
       backgroundColor: barzDark,
       foregroundColor: textOnDark,
       elevation: 0,
       scrolledUnderElevation: 1,
       centerTitle: true,
+    ),
+
+    // Bottom Nav
+    bottomNavigationBarTheme: const BottomNavigationBarThemeData(
+      backgroundColor: barzDarkLight, // Slightly lighter for contrast
+      selectedItemColor: barzGold,
+      unselectedItemColor: textSecondary,
+      type: BottomNavigationBarType.fixed,
+      elevation: 0, // Flat in dark mode usually looks better
+    ),
+
+    // Cards - Dark Mode
+    cardTheme: CardThemeData(
+      color: barzDarkLight, // Matte surface
+      elevation: 0, // Flat style for industrial vibe
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(BarzRadii.md),
+        side: const BorderSide(color: barzDarkMuted, width: 1), // Thin border
+      ),
+      margin: EdgeInsets.zero,
+    ),
+
+    // Input Decoration - Dark Mode
+    inputDecorationTheme: InputDecorationTheme(
+      filled: true,
+      fillColor: barzDarkLight,
+      contentPadding: const EdgeInsets.symmetric(
+        horizontal: InputSpacing.paddingHorizontal,
+        vertical: InputSpacing.paddingVertical,
+      ),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(BarzRadii.md),
+        borderSide: const BorderSide(color: barzDarkMuted),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(BarzRadii.md),
+        borderSide: const BorderSide(color: barzDarkMuted),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(BarzRadii.md),
+        borderSide: const BorderSide(color: barzGold, width: 1),
+      ),
     ),
   );
 }

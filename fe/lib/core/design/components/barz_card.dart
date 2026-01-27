@@ -1,10 +1,11 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../tokens/colors.dart';
 import '../tokens/spacing.dart';
 import '../tokens/radii.dart';
 
 /// Barz Card Component
-/// 
+///
 /// A versatile container for grouping related content.
 /// Uses subtle shadows and warm colors for a friendly feel.
 
@@ -17,9 +18,10 @@ class BarzCard extends StatelessWidget {
   final double? borderWidth;
   final double? borderRadius;
   final double? elevation;
+  final bool enableGlass;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
-  
+
   const BarzCard({
     super.key,
     required this.child,
@@ -30,11 +32,42 @@ class BarzCard extends StatelessWidget {
     this.borderWidth,
     this.borderRadius,
     this.elevation,
+    this.enableGlass = false,
     this.onTap,
     this.onLongPress,
   });
-  
-  /// Elevated card with shadow
+
+  /// Sharp card with border (Industrial default)
+  const BarzCard.sharp({
+    super.key,
+    required this.child,
+    this.padding = const EdgeInsets.all(CardSpacing.padding),
+    this.margin,
+    this.backgroundColor = barzDarkLight, // Matte dark
+    this.onTap,
+    this.onLongPress,
+  }) : borderColor = barzDarkMuted,
+       borderWidth = 1.0,
+       borderRadius = BarzRadii.md,
+       elevation = 0.0,
+       enableGlass = false;
+
+  /// Glassmorphism card
+  const BarzCard.glass({
+    super.key,
+    required this.child,
+    this.padding = const EdgeInsets.all(CardSpacing.padding),
+    this.margin,
+    this.onTap,
+    this.onLongPress,
+  }) : backgroundColor = const Color(0xCC121212), // 80% opacity dark
+       borderColor = const Color(0x1AFFD700), // 10% opacity gold
+       borderWidth = 1.0,
+       borderRadius = BarzRadii.md,
+       elevation = 0.0,
+       enableGlass = true;
+
+  /// Elevated card with shadow (Legacy/Standard)
   const BarzCard.elevated({
     super.key,
     required this.child,
@@ -43,11 +76,12 @@ class BarzCard extends StatelessWidget {
     this.backgroundColor,
     this.onTap,
     this.onLongPress,
-  })  : borderColor = null,
-        borderWidth = null,
-        borderRadius = BarzRadii.md,
-        elevation = 2.0;
-  
+  }) : borderColor = null,
+       borderWidth = null,
+       borderRadius = BarzRadii.md,
+       elevation = 2.0,
+       enableGlass = false;
+
   /// Outlined card with border
   const BarzCard.outlined({
     super.key,
@@ -58,10 +92,11 @@ class BarzCard extends StatelessWidget {
     this.borderColor,
     this.onTap,
     this.onLongPress,
-  })  : borderWidth = 1.0,
-        borderRadius = BarzRadii.md,
-        elevation = 0.0;
-  
+  }) : borderWidth = 1.0,
+       borderRadius = BarzRadii.md,
+       elevation = 0.0,
+       enableGlass = false;
+
   /// Filled card with background color
   const BarzCard.filled({
     super.key,
@@ -71,18 +106,20 @@ class BarzCard extends StatelessWidget {
     this.backgroundColor = barzGoldMuted,
     this.onTap,
     this.onLongPress,
-  })  : borderColor = null,
-        borderWidth = null,
-        borderRadius = BarzRadii.md,
-        elevation = 0.0;
-  
+  }) : borderColor = null,
+       borderWidth = null,
+       borderRadius = BarzRadii.md,
+       elevation = 0.0,
+       enableGlass = false;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final effectiveBorderRadius = borderRadius ?? BarzRadii.md;
-    final effectiveBackgroundColor = backgroundColor ?? theme.colorScheme.surface;
+    final effectiveBackgroundColor =
+        backgroundColor ?? theme.colorScheme.surface;
     final effectiveBorderColor = borderColor ?? theme.colorScheme.outline;
-    
+
     Widget card = Container(
       margin: margin,
       decoration: BoxDecoration(
@@ -101,12 +138,17 @@ class BarzCard extends StatelessWidget {
               ]
             : null,
       ),
-      child: Padding(
-        padding: padding ?? EdgeInsets.zero,
-        child: child,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(effectiveBorderRadius),
+        child: BackdropFilter(
+          filter: enableGlass
+              ? ImageFilter.blur(sigmaX: 12, sigmaY: 12)
+              : ImageFilter.blur(sigmaX: 0, sigmaY: 0),
+          child: Padding(padding: padding ?? EdgeInsets.zero, child: child),
+        ),
       ),
     );
-    
+
     if (onTap != null || onLongPress != null) {
       card = Material(
         color: Colors.transparent,
@@ -118,7 +160,7 @@ class BarzCard extends StatelessWidget {
         ),
       );
     }
-    
+
     return card;
   }
 }
@@ -133,7 +175,7 @@ class BarzListTile extends StatelessWidget {
   final VoidCallback? onTap;
   final bool showChevron;
   final bool isDestructive;
-  
+
   const BarzListTile({
     super.key,
     this.leadingIcon,
@@ -145,13 +187,13 @@ class BarzListTile extends StatelessWidget {
     this.showChevron = true,
     this.isDestructive = false,
   });
-  
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textColor = isDestructive ? errorRed : textPrimary;
     final iconColor = isDestructive ? errorRed : barzGold;
-    
+
     return BarzCard.elevated(
       onTap: onTap,
       padding: const EdgeInsets.all(CardSpacing.padding),
@@ -168,16 +210,12 @@ class BarzListTile extends StatelessWidget {
                 color: iconColor.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(BarzRadii.sm),
               ),
-              child: Icon(
-                leadingIcon,
-                color: iconColor,
-                size: 22,
-              ),
+              child: Icon(leadingIcon, color: iconColor, size: 22),
             ),
-          
+
           if (leadingIcon != null || leading != null)
             const SizedBox(width: BarzSpacing.md),
-          
+
           // Content
           Expanded(
             child: Column(
@@ -201,16 +239,12 @@ class BarzListTile extends StatelessWidget {
               ],
             ),
           ),
-          
+
           // Trailing
           if (trailing != null)
             trailing!
           else if (showChevron && onTap != null)
-            Icon(
-              Icons.chevron_right,
-              color: textTertiary,
-              size: 24,
-            ),
+            Icon(Icons.chevron_right, color: textTertiary, size: 24),
         ],
       ),
     );

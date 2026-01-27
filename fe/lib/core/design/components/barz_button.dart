@@ -4,10 +4,10 @@ import '../tokens/spacing.dart';
 import '../tokens/radii.dart';
 
 /// Barz Button Component
-/// 
+///
 /// A versatile button following Material Design 3 with Barz branding.
 /// Supports multiple variants for different use cases.
-/// 
+///
 /// Accessibility:
 /// - Minimum touch target of 44px (WCAG 2.5.5)
 /// - High contrast ratios for text
@@ -16,22 +16,18 @@ import '../tokens/radii.dart';
 enum BarzButtonVariant {
   /// Primary action - filled with brand color
   primary,
-  
+
   /// Secondary action - outlined
   secondary,
-  
+
   /// Tertiary action - text only
   tertiary,
-  
+
   /// Destructive action - red
   destructive,
 }
 
-enum BarzButtonSize {
-  small,
-  medium,
-  large,
-}
+enum BarzButtonSize { small, medium, large }
 
 class BarzButton extends StatelessWidget {
   final String label;
@@ -42,7 +38,7 @@ class BarzButton extends StatelessWidget {
   final IconData? trailingIcon;
   final bool isLoading;
   final bool isFullWidth;
-  
+
   const BarzButton({
     super.key,
     required this.label,
@@ -54,7 +50,7 @@ class BarzButton extends StatelessWidget {
     this.isLoading = false,
     this.isFullWidth = false,
   });
-  
+
   /// Primary button factory
   const BarzButton.primary({
     super.key,
@@ -66,7 +62,7 @@ class BarzButton extends StatelessWidget {
     this.isLoading = false,
     this.isFullWidth = false,
   }) : variant = BarzButtonVariant.primary;
-  
+
   /// Secondary button factory
   const BarzButton.secondary({
     super.key,
@@ -78,7 +74,7 @@ class BarzButton extends StatelessWidget {
     this.isLoading = false,
     this.isFullWidth = false,
   }) : variant = BarzButtonVariant.secondary;
-  
+
   /// Tertiary button factory
   const BarzButton.tertiary({
     super.key,
@@ -90,25 +86,25 @@ class BarzButton extends StatelessWidget {
     this.isLoading = false,
     this.isFullWidth = false,
   }) : variant = BarzButtonVariant.tertiary;
-  
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isEnabled = onPressed != null && !isLoading;
-    
+
     final (height, horizontalPadding, fontSize, iconSize) = switch (size) {
       BarzButtonSize.small => (36.0, 16.0, 13.0, 16.0),
       BarzButtonSize.medium => (48.0, 24.0, 14.0, 20.0),
       BarzButtonSize.large => (56.0, 32.0, 16.0, 24.0),
     };
-    
+
     final buttonStyle = _getButtonStyle(
       theme: theme,
       isEnabled: isEnabled,
       height: height,
       horizontalPadding: horizontalPadding,
     );
-    
+
     final content = Row(
       mainAxisSize: MainAxisSize.min,
       mainAxisAlignment: MainAxisAlignment.center,
@@ -129,10 +125,7 @@ class BarzButton extends StatelessWidget {
         ],
         Text(
           label,
-          style: TextStyle(
-            fontSize: fontSize,
-            fontWeight: FontWeight.w600,
-          ),
+          style: TextStyle(fontSize: fontSize, fontWeight: FontWeight.w600),
         ),
         if (trailingIcon != null && !isLoading) ...[
           const SizedBox(width: ButtonSpacing.iconGap),
@@ -140,7 +133,7 @@ class BarzButton extends StatelessWidget {
         ],
       ],
     );
-    
+
     Widget button = switch (variant) {
       BarzButtonVariant.primary => FilledButton(
         onPressed: isEnabled ? onPressed : null,
@@ -170,14 +163,14 @@ class BarzButton extends StatelessWidget {
         child: content,
       ),
     };
-    
+
     if (isFullWidth) {
       button = SizedBox(width: double.infinity, child: button);
     }
-    
+
     return button;
   }
-  
+
   ButtonStyle _getButtonStyle({
     required ThemeData theme,
     required bool isEnabled,
@@ -199,19 +192,24 @@ class BarzButton extends StatelessWidget {
           ? WidgetStateProperty.resolveWith((states) {
               if (states.contains(WidgetState.disabled)) {
                 return BorderSide(
-                  color: barzDark.withValues(alpha: stateDisabledOpacity),
-                  width: 2,
+                  color: theme.colorScheme.outline.withValues(
+                    alpha: stateDisabledOpacity,
+                  ),
+                  width: 1,
                 );
               }
-              return const BorderSide(color: barzDark, width: 2);
+              // Use outline color (typically barzDarkMuted in dark mode) for visibility
+              return BorderSide(color: theme.colorScheme.outline, width: 1);
             })
           : null,
     );
   }
-  
+
   Color _getContentColor(ThemeData theme, bool isEnabled) {
     if (!isEnabled) {
-      return theme.colorScheme.onSurface.withValues(alpha: stateDisabledOpacity);
+      return theme.colorScheme.onSurface.withValues(
+        alpha: stateDisabledOpacity,
+      );
     }
     return switch (variant) {
       BarzButtonVariant.primary => theme.colorScheme.onPrimary,

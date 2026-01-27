@@ -1,4 +1,10 @@
+import 'package:barz/core/design/components/menu_category_pills.dart';
+import 'package:barz/core/design/components/menu_header.dart';
+import 'package:barz/core/design/components/menu_item_card.dart';
+import 'package:barz/core/design/components/popular_item_card.dart';
+import 'package:barz/core/design/tokens/colors.dart';
 import 'package:barz/core/utils/injections.dart';
+import 'package:barz/core/utils/services/color_extraction_service.dart';
 import 'package:barz/features/bars/domain/models/menu_model.dart';
 import 'package:barz/features/bars/presentation/bloc/bar_bloc.dart';
 import 'package:barz/features/bars/presentation/bloc/bar_event.dart';
@@ -10,7 +16,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
-/// Enhanced bar detail page with category tabs and better menu display
 class BarDetailPage extends StatelessWidget {
   final int barId;
 
@@ -20,7 +25,10 @@ class BarDetailPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider(create: (_) => getItInjector<BarBloc>()..add(LoadBarMenus(barId: barId))),
+        BlocProvider(
+          create: (_) =>
+              getItInjector<BarBloc>()..add(LoadBarMenus(barId: barId)),
+        ),
         BlocProvider(create: (_) => getItInjector<CartBloc>()),
       ],
       child: _BarDetailContent(barId: barId),
@@ -41,18 +49,21 @@ class _BarDetailContent extends StatelessWidget {
       builder: (context, state) {
         if (state is BarLoading) {
           return Scaffold(
-            appBar: AppBar(title: Text(l10n.menu_title)),
-            body: const Center(child: CircularProgressIndicator()),
+            backgroundColor: surfacePrimary,
+            body: const Center(
+              child: CircularProgressIndicator(color: barzGold),
+            ),
           );
         }
         if (state is BarError) {
           return Scaffold(
+            backgroundColor: surfacePrimary,
             appBar: AppBar(title: Text(l10n.menu_title)),
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                  const Icon(Icons.error_outline, size: 64, color: errorRed),
                   const SizedBox(height: 16),
                   Text(state.message),
                   const SizedBox(height: 16),
@@ -71,12 +82,17 @@ class _BarDetailContent extends StatelessWidget {
           final menus = state.menus;
           if (menus.isEmpty) {
             return Scaffold(
+              backgroundColor: surfacePrimary,
               appBar: AppBar(title: Text(l10n.menu_title)),
               body: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.restaurant_menu, size: 64),
+                    const Icon(
+                      Icons.restaurant_menu,
+                      size: 64,
+                      color: textTertiary,
+                    ),
                     const SizedBox(height: 16),
                     Text(l10n.no_results),
                   ],
@@ -85,15 +101,19 @@ class _BarDetailContent extends StatelessWidget {
             );
           }
 
-          // Build category map
           final categories = _buildCategoryMap(menus);
-          
-          return _MenuWithCategories(
+          final allItems = menus.expand((m) => m.items).toList();
+
+          return _MenuPageView(
             barId: barId,
+            barName: state.barName ?? 'Menu',
+            barImageUrl: state.barImageUrl,
             categories: categories,
+            allItems: allItems,
           );
         }
         return Scaffold(
+          backgroundColor: surfacePrimary,
           appBar: AppBar(title: Text(l10n.menu_title)),
           body: const SizedBox.shrink(),
         );
@@ -113,233 +133,92 @@ class _BarDetailContent extends StatelessWidget {
   }
 }
 
-/// Menu page with category tabs
-class _MenuWithCategories extends StatefulWidget {
+class _MenuPageView extends StatefulWidget {
   final int barId;
+  final String barName;
+  final String? barImageUrl;
   final Map<String, List<MenuItemModel>> categories;
+  final List<MenuItemModel> allItems;
 
-  const _MenuWithCategories({
+  const _MenuPageView({
     required this.barId,
+    required this.barName,
+    this.barImageUrl,
     required this.categories,
+    required this.allItems,
   });
 
   @override
-  State<_MenuWithCategories> createState() => _MenuWithCategoriesState();
+  State<_MenuPageView> createState() => _MenuPageViewState();
 }
 
-class _MenuWithCategoriesState extends State<_MenuWithCategories>
-    with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+class _MenuPageViewState extends State<_MenuPageView> {
   final _searchController = TextEditingController();
   String _searchQuery = '';
+  int _selectedCategoryIndex = 0;
+  Color _headerColor = ColorExtractionService.defaultHeaderColor;
+
+  List<String> get _categoryList => ['All', ...widget.categories.keys.toList()];
+
+  List<MenuItemModel> get _popularItems {
+    return widget.allItems.take(6).toList();
+  }
+
+  List<MenuItemModel> get _filteredItems {
+    List<MenuItemModel> items;
+    if (_selectedCategoryIndex == 0) {
+      items = widget.allItems;
+    } else {
+      final category = _categoryList[_selectedCategoryIndex];
+      items = widget.categories[category] ?? [];
+    }
+
+    if (_searchQuery.isNotEmpty) {
+      items = items.where((item) {
+        return item.itemName.toLowerCase().contains(_searchQuery) ||
+            (item.description?.toLowerCase().contains(_searchQuery) ?? false);
+      }).toList();
+    }
+
+    return items;
+  }
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(
-      length: widget.categories.length,
-      vsync: this,
-    );
+    _extractHeaderColor();
+  }
+
+  Future<void> _extractHeaderColor() async {
+    if (widget.barImageUrl != null) {
+      final color = await ColorExtractionService.instance.extractDominantColor(
+        widget.barImageUrl,
+      );
+      if (mounted) {
+        setState(() {
+          _headerColor = color;
+        });
+      }
+    }
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
+  void _addToCart(MenuItemModel item) {
     final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-    final categoryList = widget.categories.keys.toList();
-
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.menu_title),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.shopping_cart),
-            onPressed: () => context.push('/cart'),
-          ),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(100),
-          child: Column(
-            children: [
-              // Search bar
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: TextField(
-                  controller: _searchController,
-                  decoration: InputDecoration(
-                    hintText: l10n.menu_search,
-                    prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    filled: true,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16),
-                    suffixIcon: _searchQuery.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              _searchController.clear();
-                              setState(() => _searchQuery = '');
-                            },
-                          )
-                        : null,
-                  ),
-                  onChanged: (value) {
-                    setState(() => _searchQuery = value.toLowerCase());
-                  },
-                ),
-              ),
-              // Category tabs
-              TabBar(
-                controller: _tabController,
-                isScrollable: true,
-                tabs: categoryList.map((category) {
-                  return Tab(text: category);
-                }).toList(),
-              ),
-            ],
-          ),
-        ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: categoryList.map((category) {
-          final items = widget.categories[category]!;
-          final filteredItems = _searchQuery.isEmpty
-              ? items
-              : items.where((item) {
-                  return item.itemName.toLowerCase().contains(_searchQuery) ||
-                      (item.description?.toLowerCase().contains(_searchQuery) ?? false);
-                }).toList();
-
-          if (filteredItems.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.search_off,
-                    size: 64,
-                    color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(l10n.no_results),
-                ],
-              ),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.only(bottom: 100),
-            itemCount: filteredItems.length,
-            itemBuilder: (context, index) {
-              return _MenuItemCard(
-                item: filteredItems[index],
-                barId: widget.barId,
-              );
-            },
-          );
-        }).toList(),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'bar_detail_cart_fab',
-        onPressed: () => context.push('/cart'),
-        icon: const Icon(Icons.shopping_cart),
-        label: Text(l10n.cart_checkout),
+    context.read<CartBloc>().add(
+      AddToCart(
+        menuItemId: item.id ?? 0,
+        barId: widget.barId,
+        menuItemName: item.itemName,
+        quantity: 1,
+        unitPrice: item.price,
       ),
     );
-  }
-}
-
-/// Individual menu item card
-class _MenuItemCard extends StatelessWidget {
-  final MenuItemModel item;
-  final int barId;
-
-  const _MenuItemCard({
-    required this.item,
-    required this.barId,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => _showItemDetails(context),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Item info
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      item.itemName,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    if (item.description != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        item.description!,
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.onSurfaceVariant,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                    const SizedBox(height: 8),
-                    Text(
-                      '\$${item.price.toStringAsFixed(2)}',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: theme.colorScheme.primary,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 16),
-              // Add button
-              FilledButton.tonal(
-                onPressed: () => _addToCart(context),
-                style: FilledButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                ),
-                child: const Icon(Icons.add),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _addToCart(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    context.read<CartBloc>().add(AddToCart(
-          menuItemId: item.id ?? 0,
-          barId: barId,
-          menuItemName: item.itemName,
-          quantity: 1,
-          unitPrice: item.price,
-        ));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(l10n.menu_item_added),
@@ -352,44 +231,187 @@ class _MenuItemCard extends StatelessWidget {
     );
   }
 
-  void _showItemDetails(BuildContext context) {
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+
+    return Scaffold(
+      backgroundColor: surfacePrimary,
+      body: Column(
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 400),
+            child: MenuHeader(
+              barName: widget.barName,
+              headerColor: _headerColor,
+              searchController: _searchController,
+              searchHint: l10n.menu_search,
+              onSearchChanged: (value) {
+                setState(() => _searchQuery = value.toLowerCase());
+              },
+              onBackTap: () => context.pop(),
+              onCartTap: () => context.push('/cart'),
+            ),
+          ),
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                const SizedBox(height: 16),
+                MenuCategoryPills(
+                  categories: _categoryList,
+                  selectedIndex: _selectedCategoryIndex,
+                  onCategorySelected: (index) {
+                    setState(() => _selectedCategoryIndex = index);
+                  },
+                ),
+                if (_popularItems.isNotEmpty && _searchQuery.isEmpty) ...[
+                  const SizedBox(height: 24),
+                  _buildSectionTitle('⭐ Popular'),
+                  const SizedBox(height: 12),
+                  _buildPopularSection(),
+                ],
+                const SizedBox(height: 24),
+                _buildSectionTitle('Full Menu'),
+                const SizedBox(height: 8),
+                _buildMenuList(),
+                const SizedBox(height: 100),
+              ],
+            ),
+          ),
+        ],
+      ),
+      floatingActionButton: FloatingActionButton.extended(
+        heroTag: 'bar_detail_checkout_fab',
+        onPressed: () => context.push('/cart'),
+        backgroundColor: barzGold,
+        icon: const Icon(Icons.shopping_cart, color: textOnGold),
+        label: Text(
+          l10n.cart_checkout,
+          style: const TextStyle(
+            color: textOnGold,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
+    );
+  }
+
+  Widget _buildSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Text(
+        title,
+        style: const TextStyle(
+          color: textPrimary,
+          fontSize: 18,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPopularSection() {
+    return SizedBox(
+      height: 180,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        itemCount: _popularItems.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemBuilder: (context, index) {
+          final item = _popularItems[index];
+          return PopularItemCard(
+            imageUrl: item.picture,
+            name: item.itemName,
+            price: item.price,
+            onTap: () => _addToCart(item),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildMenuList() {
+    if (_filteredItems.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.all(40),
+          child: Column(
+            children: [
+              Icon(
+                Icons.search_off,
+                size: 64,
+                color: textTertiary.withValues(alpha: 0.5),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                AppLocalizations.of(context)!.no_results,
+                style: TextStyle(color: textSecondary),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      children: _filteredItems.map((item) {
+        return MenuItemCard(
+          imageUrl: item.picture,
+          name: item.itemName,
+          description: item.description,
+          price: item.price,
+          isPopular: _popularItems.contains(item),
+          onAddTap: () => _addToCart(item),
+          onTap: () => _showItemDetails(item),
+        );
+      }).toList(),
+    );
+  }
+
+  void _showItemDetails(MenuItemModel item) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
 
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: surfaceWhite,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
       builder: (ctx) => Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Handle
             Center(
               child: Container(
                 width: 40,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                  color: textTertiary.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
             ),
             const SizedBox(height: 24),
-            // Item name
             Text(
               item.itemName,
               style: theme.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
+                color: textPrimary,
               ),
             ),
             const SizedBox(height: 8),
-            // Price
             Text(
               '\$${item.price.toStringAsFixed(2)}',
-              style: theme.textTheme.titleLarge?.copyWith(
-                color: theme.colorScheme.primary,
+              style: const TextStyle(
+                color: barzGold,
+                fontSize: 22,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -397,22 +419,26 @@ class _MenuItemCard extends StatelessWidget {
               const SizedBox(height: 16),
               Text(
                 item.description!,
-                style: theme.textTheme.bodyMedium,
+                style: TextStyle(color: textSecondary, fontSize: 15),
               ),
             ],
             const SizedBox(height: 24),
-            // Add to cart button
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
                 onPressed: () {
                   Navigator.pop(ctx);
-                  _addToCart(context);
+                  _addToCart(item);
                 },
                 icon: const Icon(Icons.add_shopping_cart),
                 label: Text(l10n.menu_item_add),
                 style: FilledButton.styleFrom(
+                  backgroundColor: barzGold,
+                  foregroundColor: textOnGold,
                   padding: const EdgeInsets.all(16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(14),
+                  ),
                 ),
               ),
             ),

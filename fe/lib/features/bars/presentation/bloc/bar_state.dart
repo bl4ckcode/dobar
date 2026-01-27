@@ -33,11 +33,13 @@ class BarLoaded extends BarState {
 
 class MenusLoaded extends BarState {
   final List<MenuModel> menus;
+  final String? barName;
+  final String? barImageUrl;
 
-  const MenusLoaded({required this.menus});
+  const MenusLoaded({required this.menus, this.barName, this.barImageUrl});
 
   @override
-  List<Object?> get props => [menus];
+  List<Object?> get props => [menus, barName, barImageUrl];
 }
 
 class BarError extends BarState {

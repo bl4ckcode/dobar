@@ -13,10 +13,15 @@ class BarBloc extends Bloc<BarEvent, BarState> {
   }
 
   Future<void> _onLoadNearbyBars(
-      LoadNearbyBars event, Emitter<BarState> emit) async {
+    LoadNearbyBars event,
+    Emitter<BarState> emit,
+  ) async {
     emit(BarLoading());
-    final result =
-        await barUsecase.getNearbyBars(event.lat, event.lng, event.maxDistance);
+    final result = await barUsecase.getNearbyBars(
+      event.lat,
+      event.lng,
+      event.maxDistance,
+    );
     result.fold(
       (failure) => emit(BarError(message: failure.errorMessage)),
       (bars) => emit(BarsLoaded(bars: bars)),
@@ -33,12 +38,25 @@ class BarBloc extends Bloc<BarEvent, BarState> {
   }
 
   Future<void> _onLoadBarMenus(
-      LoadBarMenus event, Emitter<BarState> emit) async {
+    LoadBarMenus event,
+    Emitter<BarState> emit,
+  ) async {
     emit(BarLoading());
+
+    String? barName;
+    String? barImageUrl;
+    final barResult = await barUsecase.getBar(event.barId);
+    barResult.fold((failure) {}, (bar) {
+      barName = bar.name;
+      barImageUrl = bar.imageUrl;
+    });
+
     final result = await barUsecase.getBarMenus(event.barId);
     result.fold(
       (failure) => emit(BarError(message: failure.errorMessage)),
-      (menus) => emit(MenusLoaded(menus: menus)),
+      (menus) => emit(
+        MenusLoaded(menus: menus, barName: barName, barImageUrl: barImageUrl),
+      ),
     );
   }
 }
