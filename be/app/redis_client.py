@@ -1,6 +1,8 @@
 import os
+import json
 import redis.asyncio as redis
-from typing import Optional
+from typing import Optional, Any, Callable
+from functools import wraps
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 
@@ -17,6 +19,65 @@ async def close_redis():
     if _redis_client:
         await _redis_client.close()
         _redis_client = None
+
+class CacheTTL:
+    MENU = 300
+    BAR = 300
+    CATEGORIES = 3600
+    PROMOTIONS = 60
+    USER_SESSION = 86400
+    SHORT = 60
+    MEDIUM = 300
+    LONG = 3600
+
+class CacheService:
+    @staticmethod
+    async def get(key: str) -> Optional[Any]:
+        client = await get_redis()
+        try:
+            data = await client.get(f"cache:{key}")
+            return json.loads(data) if data else None
+        except Exception:
+            return None
+
+    @staticmethod
+    async def set(key: str, value: Any, ttl: int = CacheTTL.MEDIUM):
+        client = await get_redis()
+        try:
+            await client.setex(f"cache:{key}", ttl, json.dumps(value, default=str))
+        except Exception:
+            pass
+
+    @staticmethod
+    async def delete(key: str):
+        client = await get_redis()
+        try:
+            await client.delete(f"cache:{key}")
+        except Exception:
+            pass
+
+    @staticmethod
+    async def delete_pattern(pattern: str):
+        client = await get_redis()
+        try:
+            cursor = 0
+            while True:
+                cursor, keys = await client.scan(cursor, match=f"cache:{pattern}", count=100)
+                if keys:
+                    await client.delete(*keys)
+                if cursor == 0:
+                    break
+        except Exception:
+            pass
+
+    @staticmethod
+    async def invalidate_bar(bar_id: int):
+        await CacheService.delete_pattern(f"bar:{bar_id}:*")
+        await CacheService.delete(f"bar:{bar_id}")
+
+    @staticmethod
+    async def invalidate_menu(bar_id: int):
+        await CacheService.delete_pattern(f"menu:{bar_id}:*")
 
 class WalletLock:
     LOCK_TTL = 5

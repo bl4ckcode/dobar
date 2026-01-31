@@ -1,9 +1,10 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, status, Query
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, status, Query, BackgroundTasks
 from sqlalchemy import and_, or_, desc
 from typing import Optional, List
 from datetime import datetime, timezone
 
 from app.errors import APIError
+from app.order_queue import OrderQueue
 from ..services.realtime_updates import stream_order_changes
 from ..models.relational_models import Order as OrderModel
 from ..models.cart_models import OrderItem as OrderItemModel, OrderStatusHistory as OrderStatusHistoryModel
@@ -48,6 +49,13 @@ async def create_order(
     
     query = OrderModel.__table__.select().where(OrderModel.id == order_id)
     db_order = await database.fetch_one(query)
+    
+    await OrderQueue.publish_new_order(
+        order_id=order_id,
+        bar_id=order.bar_id,
+        user_id=order.user_id,
+        total=float(order.total_price) if order.total_price else 0
+    )
     
     return db_order
 
@@ -188,13 +196,16 @@ async def cancel_order(
         
         await transaction.commit()
         
-        # Fetch updated order
         updated_order = await database.fetch_one(
             OrderModel.__table__.select().where(OrderModel.id == order_id)
         )
         
-        # TODO: Trigger refund if payment was completed
-        # TODO: Trigger WebSocket notification
+        await OrderQueue.publish_cancellation(
+            order_id=order_id,
+            bar_id=db_order["bar_id"],
+            user_id=current_user["id"],
+            reason="Cancelled by customer"
+        )
         
         return updated_order
         
@@ -275,12 +286,16 @@ async def update_order_status(
         
         await transaction.commit()
         
-        # Fetch updated order
         updated_order = await database.fetch_one(
             OrderModel.__table__.select().where(OrderModel.id == order_id)
         )
         
-        # TODO: Trigger WebSocket notification
+        await OrderQueue.publish_status_change(
+            order_id=order_id,
+            bar_id=db_order["bar_id"],
+            old_status=db_order["status"],
+            new_status=status_update.status
+        )
         
         return updated_order
         

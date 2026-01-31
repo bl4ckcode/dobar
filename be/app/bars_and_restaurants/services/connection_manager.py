@@ -5,80 +5,133 @@ import json
 from jose import jwt, JWTError
 import os
 import asyncio
-from typing import Dict, Set
+from typing import Dict, Set, Optional
 
 from app.errors import APIError
+from app.redis_client import get_redis
 from ..models.nosql_models import menus_collection, orders_collection
 from app.database import database
 from app.bars_and_restaurants.models.relational_models import Order, Bar, BarOwner
 
 ws_router = APIRouter(tags=["WebSocket"])
 
-# JWT settings
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-here")
 ALGORITHM = "HS256"
 
+class RedisPubSub:
+    def __init__(self):
+        self._subscriber: Optional[asyncio.Task] = None
+        self._running = False
+    
+    async def start(self, manager: "ConnectionManager"):
+        if self._running:
+            return
+        self._running = True
+        self._subscriber = asyncio.create_task(self._subscribe_loop(manager))
+    
+    async def stop(self):
+        self._running = False
+        if self._subscriber:
+            self._subscriber.cancel()
+            try:
+                await self._subscriber
+            except asyncio.CancelledError:
+                pass
+    
+    async def _subscribe_loop(self, manager: "ConnectionManager"):
+        try:
+            redis = await get_redis()
+            pubsub = redis.pubsub()
+            await pubsub.psubscribe("ws:bar:*", "ws:order:*")
+            
+            async for message in pubsub.listen():
+                if not self._running:
+                    break
+                if message["type"] == "pmessage":
+                    channel = message["channel"]
+                    data = json.loads(message["data"])
+                    
+                    if channel.startswith("ws:bar:"):
+                        bar_id = int(channel.split(":")[-1])
+                        await manager._local_notify_bar(bar_id, data)
+                    elif channel.startswith("ws:order:"):
+                        order_id = int(channel.split(":")[-1])
+                        await manager._local_notify_order(order_id, data)
+        except Exception as e:
+            print(f"Redis pub/sub error: {e}")
+            self._running = False
+    
+    async def publish_bar(self, bar_id: int, message: dict):
+        try:
+            redis = await get_redis()
+            await redis.publish(f"ws:bar:{bar_id}", json.dumps(message, default=str))
+        except Exception:
+            pass
+    
+    async def publish_order(self, order_id: int, message: dict):
+        try:
+            redis = await get_redis()
+            await redis.publish(f"ws:order:{order_id}", json.dumps(message, default=str))
+        except Exception:
+            pass
+
+_pubsub = RedisPubSub()
 
 class ConnectionManager:
-    """
-    Manages WebSocket connections for different contexts:
-    - User order tracking: individual order status updates
-    - Bar owner dashboard: all orders for their bar(s)
-    """
-    
     def __init__(self):
-        # General connections (legacy)
         self.active_connections: list[WebSocket] = []
-        # Bar-specific connections: {bar_id: set of websockets}
         self.bar_connections: Dict[int, Set[WebSocket]] = {}
-        # Order-specific connections: {order_id: set of websockets}
         self.order_connections: Dict[int, Set[WebSocket]] = {}
+        self._pubsub_started = False
+
+    async def _ensure_pubsub(self):
+        if not self._pubsub_started:
+            await _pubsub.start(self)
+            self._pubsub_started = True
 
     async def connect(self, websocket: WebSocket):
-        """Legacy: Accept and store a general connection."""
         await websocket.accept()
         self.active_connections.append(websocket)
 
     def disconnect(self, websocket: WebSocket):
-        """Legacy: Remove a general connection."""
         if websocket in self.active_connections:
             self.active_connections.remove(websocket)
 
     async def connect_to_bar(self, websocket: WebSocket, bar_id: int):
-        """Connect a bar owner to receive updates for their bar."""
+        await self._ensure_pubsub()
         await websocket.accept()
         if bar_id not in self.bar_connections:
             self.bar_connections[bar_id] = set()
         self.bar_connections[bar_id].add(websocket)
 
     def disconnect_from_bar(self, websocket: WebSocket, bar_id: int):
-        """Disconnect a bar owner from their bar's updates."""
         if bar_id in self.bar_connections:
             self.bar_connections[bar_id].discard(websocket)
             if not self.bar_connections[bar_id]:
                 del self.bar_connections[bar_id]
 
     async def connect_to_order(self, websocket: WebSocket, order_id: int):
-        """Connect a user to receive updates for a specific order."""
+        await self._ensure_pubsub()
         await websocket.accept()
         if order_id not in self.order_connections:
             self.order_connections[order_id] = set()
         self.order_connections[order_id].add(websocket)
 
     def disconnect_from_order(self, websocket: WebSocket, order_id: int):
-        """Disconnect a user from order updates."""
         if order_id in self.order_connections:
             self.order_connections[order_id].discard(websocket)
             if not self.order_connections[order_id]:
                 del self.order_connections[order_id]
 
     async def send_json_message(self, message: str):
-        """Legacy: Broadcast to all general connections."""
         for connection in self.active_connections:
             await connection.send_text(message)
 
     async def notify_bar(self, bar_id: int, message: dict):
-        """Send a message to all connections watching a specific bar."""
+        await _pubsub.publish_bar(bar_id, message)
+        await self._local_notify_bar(bar_id, message)
+
+    async def _local_notify_bar(self, bar_id: int, message: dict):
         if bar_id in self.bar_connections:
             disconnected = []
             for websocket in self.bar_connections[bar_id]:
@@ -86,12 +139,14 @@ class ConnectionManager:
                     await websocket.send_json(message)
                 except Exception:
                     disconnected.append(websocket)
-            # Cleanup disconnected sockets
             for ws in disconnected:
                 self.bar_connections[bar_id].discard(ws)
 
     async def notify_order(self, order_id: int, message: dict):
-        """Send a message to all connections watching a specific order."""
+        await _pubsub.publish_order(order_id, message)
+        await self._local_notify_order(order_id, message)
+
+    async def _local_notify_order(self, order_id: int, message: dict):
         if order_id in self.order_connections:
             disconnected = []
             for websocket in self.order_connections[order_id]:
@@ -99,16 +154,13 @@ class ConnectionManager:
                     await websocket.send_json(message)
                 except Exception:
                     disconnected.append(websocket)
-            # Cleanup disconnected sockets
             for ws in disconnected:
                 self.order_connections[order_id].discard(ws)
 
     def get_bar_connection_count(self, bar_id: int) -> int:
-        """Get number of active connections for a bar."""
         return len(self.bar_connections.get(bar_id, set()))
 
     def get_order_connection_count(self, order_id: int) -> int:
-        """Get number of active connections for an order."""
         return len(self.order_connections.get(order_id, set()))
 
 

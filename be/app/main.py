@@ -7,6 +7,9 @@ from fastapi.exceptions import RequestValidationError
 from app.bars_and_restaurants.models.nosql_models import create_geo_index
 from app.errors import APIError, ErrorResponse, ErrorCode
 from app.redis_client import get_redis, close_redis
+from app.rate_limiter import limiter
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from .database import engine, Base, database
 from fastapi import FastAPI, Request
 from .auth.routes import auth_router
@@ -84,25 +87,60 @@ app = FastAPI(
     openapi_url="/openapi.json" if ENABLE_DOCS else None,
 )
 
-# CORS middleware - allow all origins for now (Flutter web, mobile, etc.)
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://dobar.app",
         "https://www.dobar.app",
         "https://dobar-app.fly.dev",
-    ],  # keep this for internal Fly.io domain],  # In production, restrict to specific domains
+    ],
     allow_credentials=True,
-    allow_methods=["*"],  # Allow all methods including OPTIONS
-    allow_headers=["*"],  # Allow all headers including Authorization
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
-# 🏥 Health check endpoint for Fly.io (responds fast, no database calls)
 @app.get("/health", tags=["Health"])
 async def health_check():
-    """Simple health check endpoint for Fly.io proxy."""
     return {"status": "healthy", "app": "barz-backend"}
+
+
+@app.get("/metrics", tags=["Health"])
+async def metrics():
+    from app.bars_and_restaurants.services.connection_manager import manager
+    from app.database import engine
+    
+    pool = engine.pool
+    pool_stats = {
+        "size": pool.size(),
+        "checked_in": pool.checkedin(),
+        "checked_out": pool.checkedout(),
+        "overflow": pool.overflow(),
+    }
+    
+    redis_status = "unknown"
+    try:
+        redis_client = await get_redis()
+        await redis_client.ping()
+        redis_status = "connected"
+    except Exception:
+        redis_status = "disconnected"
+    
+    ws_stats = {
+        "bar_channels": len(manager.bar_connections),
+        "order_channels": len(manager.order_connections),
+        "total_bar_connections": sum(len(v) for v in manager.bar_connections.values()),
+        "total_order_connections": sum(len(v) for v in manager.order_connections.values()),
+    }
+    
+    return {
+        "database_pool": pool_stats,
+        "redis": redis_status,
+        "websockets": ws_stats,
+    }
 
 
 # Register the custom exception handler for APIError
