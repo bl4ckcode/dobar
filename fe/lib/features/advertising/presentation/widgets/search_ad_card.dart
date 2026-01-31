@@ -5,19 +5,14 @@ import '../../domain/models/search_ad.dart';
 import 'featured_ad_card.dart';
 
 /// Card widget for displaying sponsored search results.
-/// 
+///
 /// Shows at top of search results with subtle "Patrocinado" badge.
 class SearchAdCard extends StatelessWidget {
   final SearchAd ad;
   final VoidCallback? onTap;
   final VoidCallback? onVisible;
 
-  const SearchAdCard({
-    super.key,
-    required this.ad,
-    this.onTap,
-    this.onVisible,
-  });
+  const SearchAdCard({super.key, required this.ad, this.onTap, this.onVisible});
 
   @override
   Widget build(BuildContext context) {
@@ -71,10 +66,7 @@ class SearchAdCard extends StatelessWidget {
                     // Tagline
                     Text(
                       ad.tagline,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: textSecondary,
-                      ),
+                      style: TextStyle(fontSize: 13, color: textSecondary),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -82,10 +74,7 @@ class SearchAdCard extends StatelessWidget {
                 ),
               ),
               // Arrow indicator
-              Icon(
-                Icons.chevron_right,
-                color: textTertiary,
-              ),
+              Icon(Icons.chevron_right, color: textTertiary),
             ],
           ),
         ),
@@ -107,8 +96,8 @@ class SearchAdCard extends StatelessWidget {
             ? CachedNetworkImage(
                 imageUrl: ad.logoUrl!,
                 fit: BoxFit.cover,
-                placeholder: (_, __) => _buildLogoPlaceholder(),
-                errorWidget: (_, __, ___) => _buildLogoPlaceholder(),
+                placeholder: (_, _) => _buildLogoPlaceholder(),
+                errorWidget: (_, _, _) => _buildLogoPlaceholder(),
               )
             : _buildLogoPlaceholder(),
       ),
@@ -118,11 +107,7 @@ class SearchAdCard extends StatelessWidget {
   Widget _buildLogoPlaceholder() {
     return Container(
       color: barzGoldLight,
-      child: const Icon(
-        Icons.storefront,
-        color: barzGoldDark,
-        size: 28,
-      ),
+      child: const Icon(Icons.storefront, color: barzGoldDark, size: 28),
     );
   }
 }

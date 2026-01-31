@@ -16,12 +16,12 @@ import 'package:flutter/material.dart';
 // BRAND COLORS - Core identity
 // =============================================================================
 
-/// Primary brand gold - warmer, more approachable than pure yellow
-/// HSL: 45°, 100%, 50% - optimized for eye comfort
-const Color barzGold = Color(0xFFFFD700); // Electric Yellow
+/// Primary brand gold - dobar identity yellow
+/// HSL: 50°, 100%, 68% - warm golden yellow from logo
+const Color barzGold = Color(0xFFFFDE59); // Dobar Yellow
 
 /// Softer gold variants for backgrounds and subtle elements
-const Color barzGoldLight = Color(0xFFFFE57F); // Lighter variant
+const Color barzGoldLight = Color(0xFFFFEB85); // Lighter variant (10% lighter)
 const Color barzGoldSoft = Color(
   0xFFFFFDE7,
 ); // Very pale yellow - main backgrounds (Light Mode)
@@ -29,8 +29,8 @@ const Color barzGoldMuted = Color(
   0xFFFFF8E1,
 ); // Muted yellow - input backgrounds
 const Color barzGoldDark = Color(
-  0xFFFFC400,
-); // Darker for accents/pressed states
+  0xFFE5C74F,
+); // Darker for accents/pressed states (10% darker)
 
 /// Primary dark color - sophisticated near-black
 const Color barzDark = Color(0xFF0A0A0A); // Deep Onyx Black

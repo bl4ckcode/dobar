@@ -158,7 +158,7 @@ class _MenuPageViewState extends State<_MenuPageView> {
   int _selectedCategoryIndex = 0;
   Color _headerColor = ColorExtractionService.defaultHeaderColor;
 
-  List<String> get _categoryList => ['All', ...widget.categories.keys.toList()];
+  List<String> get _categoryList => ['All', ...widget.categories.keys];
 
   List<MenuItemModel> get _popularItems {
     return widget.allItems.take(6).toList();
@@ -319,7 +319,7 @@ class _MenuPageViewState extends State<_MenuPageView> {
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: _popularItems.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        separatorBuilder: (_, _) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
           final item = _popularItems[index];
           return PopularItemCard(

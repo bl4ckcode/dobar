@@ -19,6 +19,8 @@ export 'components/barz_text_field.dart';
 export 'components/barz_card.dart';
 export 'components/bar_card.dart';
 export 'components/happening_now_card.dart';
+export 'components/live_pulse.dart';
+export 'components/venue_card.dart';
 export 'components/barz_stepper_touch.dart';
 export 'components/barz_phone_field.dart';
 export 'components/barz_address_field.dart';

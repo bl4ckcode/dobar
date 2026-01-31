@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../core/design/design_system.dart';
-import '../../core/design/components/bar_card.dart';
-import '../../core/design/components/happening_now_card.dart';
 
 class ShowcaseScreen extends StatelessWidget {
   const ShowcaseScreen({super.key});
@@ -187,6 +185,45 @@ class ShowcaseScreen extends StatelessWidget {
                   rating: 4.7,
                   imageUrl:
                       'https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=300&h=300&fit=crop',
+                  onTap: () {},
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: BarzSpacing.xl),
+          _buildSection(
+            title: 'Live Pulse (Lovable)',
+            child: LivePulse(
+              venueName: 'The Foundry',
+              energyLevel: 78,
+              waitTime: '5 min',
+              trendingSince: '11PM',
+            ),
+          ),
+          const SizedBox(height: BarzSpacing.xl),
+          _buildSection(
+            title: 'Venue Cards (Lovable)',
+            child: Column(
+              children: [
+                VenueCard(
+                  name: 'The Foundry',
+                  type: 'Industrial Bar',
+                  distance: '0.3 mi',
+                  crowd: 'Busy',
+                  isLive: true,
+                  imageUrl:
+                      'https://images.unsplash.com/photo-1571266028243-e4733b0f0bb0?w=800&h=600&fit=crop',
+                  onTap: () {},
+                ),
+                const SizedBox(height: BarzSpacing.md),
+                VenueCard(
+                  name: 'Skyline Rooftop',
+                  type: 'Cocktail Lounge',
+                  distance: '1.2 mi',
+                  crowd: 'Moderate',
+                  isLive: false,
+                  imageUrl:
+                      'https://images.unsplash.com/photo-1514933651103-005eec06c04b?w=800&h=600&fit=crop',
                   onTap: () {},
                 ),
               ],

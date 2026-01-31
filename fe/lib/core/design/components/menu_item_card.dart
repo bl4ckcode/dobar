@@ -63,8 +63,8 @@ class MenuItemCard extends StatelessWidget {
             ? CachedNetworkImage(
                 imageUrl: imageUrl!,
                 fit: BoxFit.cover,
-                placeholder: (_, __) => _buildPlaceholder(),
-                errorWidget: (_, __, ___) => _buildPlaceholder(),
+                placeholder: (_, _) => _buildPlaceholder(),
+                errorWidget: (_, _, _) => _buildPlaceholder(),
               )
             : _buildPlaceholder(),
       ),

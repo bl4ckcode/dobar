@@ -43,7 +43,7 @@ class _ProfileHomePageState extends State<ProfileHomePage> {
     if (confirmed == true) {
       await getItInjector<LoginUsecase>().logout();
       await DioNetwork.clearTokens();
-      
+
       if (mounted) {
         context.go('/login');
       }
@@ -63,7 +63,10 @@ class _ProfileHomePageState extends State<ProfileHomePage> {
             }
 
             final user = session.user;
-            final currencyFormat = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
+            final currencyFormat = NumberFormat.currency(
+              locale: 'pt_BR',
+              symbol: 'R\$',
+            );
 
             return Container(
               decoration: const BoxDecoration(
@@ -76,15 +79,14 @@ class _ProfileHomePageState extends State<ProfileHomePage> {
               child: ListView(
                 padding: const EdgeInsets.all(BarzSpacing.lg),
                 children: [
-                  _buildProfileHeader(user)
-                      .animate()
-                      .fadeIn()
-                      .scale(begin: const Offset(0.95, 0.95)),
+                  _buildProfileHeader(
+                    user,
+                  ).animate().fadeIn().scale(begin: const Offset(0.95, 0.95)),
                   const SizedBox(height: 24),
-                  _buildWalletCard(user, currencyFormat)
-                      .animate()
-                      .fadeIn(delay: 50.ms)
-                      .slideY(begin: 0.1, end: 0),
+                  _buildWalletCard(
+                    user,
+                    currencyFormat,
+                  ).animate().fadeIn(delay: 50.ms).slideY(begin: 0.1, end: 0),
                   const SizedBox(height: 24),
                   _buildSectionTitle('Activity'),
                   const SizedBox(height: 12),
@@ -98,7 +100,9 @@ class _ProfileHomePageState extends State<ProfileHomePage> {
                     icon: Icons.card_giftcard,
                     title: 'Cashback & Rewards',
                     subtitle: 'Track your earnings',
-                    trailing: _buildBadge(currencyFormat.format(user.totalCashback)),
+                    trailing: _buildBadge(
+                      currencyFormat.format(user.totalCashback),
+                    ),
                     onTap: () {},
                   ).animate().fadeIn(delay: 150.ms).slideX(begin: -0.1, end: 0),
                   const SizedBox(height: 24),
@@ -163,7 +167,7 @@ class _ProfileHomePageState extends State<ProfileHomePage> {
                     child: Image.network(
                       user.profilePictureUrl!,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) =>
+                      errorBuilder: (_, _, _) =>
                           const Icon(Icons.person, color: barzGold, size: 36),
                     ),
                   )

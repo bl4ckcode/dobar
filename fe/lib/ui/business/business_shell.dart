@@ -141,7 +141,7 @@ class _BusinessShellState extends State<BusinessShell> {
   ) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: barzBlack,
+        backgroundColor: barzDark,
         foregroundColor: Colors.white,
         title: _buildBarSelector(context, bars, activeBar),
         actions: [
@@ -162,8 +162,8 @@ class _BusinessShellState extends State<BusinessShell> {
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
         type: BottomNavigationBarType.fixed,
-        backgroundColor: barzBlack,
-        selectedItemColor: barzYellow,
+        backgroundColor: barzDark,
+        selectedItemColor: barzGold,
         unselectedItemColor: Colors.white60,
         items: navItems.map((item) => BottomNavigationBarItem(
           icon: Icon(item.icon),
@@ -254,7 +254,7 @@ class _BusinessShellState extends State<BusinessShell> {
           value: bar.barId,
           child: ListTile(
             leading: bar.barId == activeBar.barId
-                ? Icon(Icons.check, color: barzYellow)
+                ? Icon(Icons.check, color: barzGold)
                 : const SizedBox(width: 24),
             title: Text(bar.barName),
             subtitle: Text(bar.role.displayName),

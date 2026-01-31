@@ -1,20 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:barz/core/utils/constant/colors.dart';
+import 'package:barz/core/design/design_system.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
 
 /// Order status for filtering
-enum OrderFilter {
-  all,
-  pending,
-  preparing,
-  ready,
-  completed,
-}
+enum OrderFilter { all, pending, preparing, ready, completed }
 
 /// Cashier page for managing orders in real-time.
-/// 
+///
 /// This is the main view for cashiers and staff who process orders.
 /// Shows:
 /// - Live order feed with WebSocket updates
@@ -27,7 +21,8 @@ class CashierPage extends StatefulWidget {
   State<CashierPage> createState() => _CashierPageState();
 }
 
-class _CashierPageState extends State<CashierPage> with SingleTickerProviderStateMixin {
+class _CashierPageState extends State<CashierPage>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
   @override
@@ -56,7 +51,7 @@ class _CashierPageState extends State<CashierPage> with SingleTickerProviderStat
         }
 
         return Scaffold(
-          backgroundColor: barzCream,
+          backgroundColor: barzGoldSoft,
           body: Column(
             children: [
               _buildOrderTabs(),
@@ -73,9 +68,9 @@ class _CashierPageState extends State<CashierPage> with SingleTickerProviderStat
       color: Colors.white,
       child: TabBar(
         controller: _tabController,
-        labelColor: barzBlack,
+        labelColor: barzDark,
         unselectedLabelColor: Colors.grey,
-        indicatorColor: barzYellow,
+        indicatorColor: barzGold,
         tabs: [
           _buildTab('Pending', 0, Colors.orange),
           _buildTab('Preparing', 0, Colors.blue),
@@ -128,11 +123,7 @@ class _CashierPageState extends State<CashierPage> with SingleTickerProviderStat
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.receipt_long,
-            size: 64,
-            color: Colors.grey[400],
-          ),
+          Icon(Icons.receipt_long, size: 64, color: Colors.grey[400]),
           const SizedBox(height: 16),
           Text(
             'No $filter orders',
@@ -205,7 +196,10 @@ class _CashierPageState extends State<CashierPage> with SingleTickerProviderStat
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
                   decoration: BoxDecoration(
                     color: statusColor.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(8),
@@ -222,15 +216,14 @@ class _CashierPageState extends State<CashierPage> with SingleTickerProviderStat
               ],
             ),
             const SizedBox(height: 8),
-            Text(
-              customerName,
-              style: TextStyle(color: Colors.grey[600]),
-            ),
+            Text(customerName, style: TextStyle(color: Colors.grey[600])),
             const Divider(),
-            ...items.map((item) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 2),
-              child: Text(item),
-            )),
+            ...items.map(
+              (item) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Text(item),
+              ),
+            ),
             const Divider(),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -270,8 +263,8 @@ class _CashierPageState extends State<CashierPage> with SingleTickerProviderStat
                           // TODO: Complete order
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: barzYellow,
-                          foregroundColor: barzBlack,
+                          backgroundColor: barzGold,
+                          foregroundColor: barzDark,
                         ),
                         child: const Text('Complete'),
                       ),

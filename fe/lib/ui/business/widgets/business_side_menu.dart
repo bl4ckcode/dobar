@@ -10,7 +10,7 @@ import 'package:barz/l10n/app_localizations.dart';
 import '../business_shell.dart';
 
 /// Side navigation menu for web/tablet layout of BusinessShell.
-/// 
+///
 /// Features:
 /// - Bar selector at top (with multi-bar support)
 /// - Navigation items with icons and labels
@@ -40,7 +40,7 @@ class BusinessSideMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: 260,
-      color: barzBlack,
+      color: barzDark,
       child: Column(
         children: [
           // App branding
@@ -77,14 +77,10 @@ class BusinessSideMenu extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: barzYellow,
+              color: barzGold,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: Icon(
-              Icons.local_bar,
-              color: barzBlack,
-              size: 24,
-            ),
+            child: Icon(Icons.local_bar, color: barzDark, size: 24),
           ),
           const SizedBox(width: 12),
           Text(
@@ -111,14 +107,10 @@ class BusinessSideMenu extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: barzYellow.withValues(alpha: 0.15),
+                color: barzGold.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(
-                Icons.store,
-                color: barzYellow,
-                size: 24,
-              ),
+              child: Icon(Icons.store, color: barzGold, size: 24),
             ),
             const SizedBox(width: 12),
             Expanded(
@@ -138,20 +130,13 @@ class BusinessSideMenu extends StatelessWidget {
                   const SizedBox(height: 2),
                   Text(
                     activeBar.role.displayName,
-                    style: TextStyle(
-                      color: Colors.grey[400],
-                      fontSize: 13,
-                    ),
+                    style: TextStyle(color: Colors.grey[400], fontSize: 13),
                   ),
                 ],
               ),
             ),
             if (bars.length > 1)
-              Icon(
-                Icons.unfold_more,
-                color: Colors.grey[400],
-                size: 20,
-              ),
+              Icon(Icons.unfold_more, color: Colors.grey[400], size: 20),
           ],
         ),
       ),
@@ -160,8 +145,9 @@ class BusinessSideMenu extends StatelessWidget {
 
   void _showBarSelectorMenu(BuildContext context) {
     final RenderBox button = context.findRenderObject() as RenderBox;
-    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
-    
+    final RenderBox overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
+
     final menuItems = <PopupMenuEntry<int>>[
       ...bars.map((bar) {
         final isActive = bar.barId == activeBar.barId;
@@ -171,7 +157,7 @@ class BusinessSideMenu extends StatelessWidget {
             children: [
               Icon(
                 isActive ? Icons.check_circle : Icons.radio_button_unchecked,
-                color: isActive ? barzYellow : Colors.grey,
+                color: isActive ? barzGold : Colors.grey,
                 size: 20,
               ),
               const SizedBox(width: 12),
@@ -182,10 +168,7 @@ class BusinessSideMenu extends StatelessWidget {
                     Text(bar.barName),
                     Text(
                       bar.role.displayName,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
                   ],
                 ),
@@ -201,12 +184,15 @@ class BusinessSideMenu extends StatelessWidget {
           children: [
             Icon(Icons.add_business_rounded, color: barzGold, size: 20),
             const SizedBox(width: 12),
-            Text('Add Bar', style: TextStyle(color: barzGold, fontWeight: FontWeight.w600)),
+            Text(
+              'Add Bar',
+              style: TextStyle(color: barzGold, fontWeight: FontWeight.w600),
+            ),
           ],
         ),
       ),
     ];
-    
+
     showMenu<int>(
       context: context,
       position: RelativeRect.fromRect(
@@ -217,7 +203,9 @@ class BusinessSideMenu extends StatelessWidget {
     ).then((value) {
       if (value == null) return;
       if (value == -1) {
-        _navigateToCreateBar(context);
+        if (context.mounted) {
+          _navigateToCreateBar(context);
+        }
       } else if (value != activeBar.barId) {
         onBarSelected(value);
       }
@@ -233,11 +221,13 @@ class BusinessSideMenu extends StatelessWidget {
 
   Widget _buildNavItem(BusinessNavItem item, int index) {
     final isSelected = index == selectedIndex;
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       child: Material(
-        color: isSelected ? barzYellow.withValues(alpha: 0.15) : Colors.transparent,
+        color: isSelected
+            ? barzGold.withValues(alpha: 0.15)
+            : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
         child: InkWell(
           onTap: () => onNavItemSelected(index),
@@ -249,7 +239,7 @@ class BusinessSideMenu extends StatelessWidget {
               children: [
                 Icon(
                   item.icon,
-                  color: isSelected ? barzYellow : Colors.grey[400],
+                  color: isSelected ? barzGold : Colors.grey[400],
                   size: 22,
                 ),
                 const SizedBox(width: 14),
@@ -257,9 +247,11 @@ class BusinessSideMenu extends StatelessWidget {
                   child: Text(
                     item.label,
                     style: TextStyle(
-                      color: isSelected ? barzYellow : Colors.grey[300],
+                      color: isSelected ? barzGold : Colors.grey[300],
                       fontSize: 15,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                      fontWeight: isSelected
+                          ? FontWeight.w600
+                          : FontWeight.normal,
                     ),
                   ),
                 ),
@@ -268,7 +260,7 @@ class BusinessSideMenu extends StatelessWidget {
                     width: 6,
                     height: 6,
                     decoration: BoxDecoration(
-                      color: barzYellow,
+                      color: barzGold,
                       shape: BoxShape.circle,
                     ),
                   ),
@@ -300,18 +292,11 @@ class BusinessSideMenu extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.person_outline,
-                  color: Colors.grey[400],
-                  size: 20,
-                ),
+                Icon(Icons.person_outline, color: Colors.grey[400], size: 20),
                 const SizedBox(width: 8),
                 Text(
                   l10n.business_client_mode,
-                  style: TextStyle(
-                    color: Colors.grey[300],
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: Colors.grey[300], fontSize: 14),
                 ),
               ],
             ),

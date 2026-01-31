@@ -9,20 +9,28 @@ import 'package:flutter/material.dart';
 // BRAND COLORS
 // =============================================================================
 
-/// Primary brand yellow - slightly softened for better eye comfort
-/// Original was #FFD600, now using a warmer, less harsh tone
-const Color barzYellow = Color(0xFFFFC107); // Amber-gold, easier on eyes
+/// Primary brand yellow - dobar identity yellow
+/// Matches the new dobar logo (#FFDE59)
+const Color barzYellow = Color(0xFFFFDE59); // Dobar Yellow
 
 /// Primary brand yellow with variations for different states
-const Color barzYellowLight = Color(0xFFFFE082); // 60% lighter - for backgrounds
-const Color barzYellowSoft = Color(0xFFFFF3CD); // Very soft - for subtle backgrounds
-const Color barzYellowDark = Color(0xFFFFB300); // Darker shade for accents
+const Color barzYellowLight = Color(
+  0xFFFFEB85,
+); // Lighter variant (10% lighter)
+const Color barzYellowSoft = Color(
+  0xFFFFF3CD,
+); // Very soft - for subtle backgrounds
+const Color barzYellowDark = Color(
+  0xFFE5C74F,
+); // Darker shade for accents (10% darker)
 
-/// Main black with slight warmth for better readability
-const Color barzBlack = Color(0xFF1A1A2E); // Softer dark with slight blue undertone
+/// Main black - Deep Onyx Black for premium feel
+const Color barzBlack = Color(0xFF0A0A0A); // Deep Onyx Black
 
 /// Cream background - warm and soft for main app background
-const Color barzCream = Color(0xFFFFF8E1); // Soft cream, same as backgroundYellow
+const Color barzCream = Color(
+  0xFFFFF8E1,
+); // Soft cream, same as backgroundYellow
 
 // =============================================================================
 // SEMANTIC COLORS
@@ -71,7 +79,9 @@ const Color backgroundColor2 = Color(0xFF17203A);
 const Color textPrimary = Color(0xFF1A1A2E);
 const Color textSecondary = Color(0xFF5C5C6E);
 const Color textTertiary = Color(0xFF8E8E9A);
-const Color textOnYellow = Color(0xFF1A1A2E); // Dark text on yellow for contrast
+const Color textOnYellow = Color(
+  0xFF1A1A2E,
+); // Dark text on yellow for contrast
 const Color textOnDark = Color(0xFFFFFBF5); // Off-white text on dark
 
 // =============================================================================
@@ -114,10 +124,7 @@ const LinearGradient yellowBackgroundGradient = LinearGradient(
 const LinearGradient darkBackgroundGradient = LinearGradient(
   begin: Alignment.topCenter,
   end: Alignment.bottomCenter,
-  colors: [
-    Color(0xFF1A1A2E),
-    Color(0xFF0D0D1A),
-  ],
+  colors: [Color(0xFF1A1A2E), Color(0xFF0D0D1A)],
 );
 
 // =============================================================================
@@ -128,4 +135,5 @@ const LinearGradient darkBackgroundGradient = LinearGradient(
 Color overlayColor(double opacity) => Colors.black.withValues(alpha: opacity);
 
 /// Get yellow with opacity for subtle effects
-Color yellowWithOpacity(double opacity) => barzYellow.withValues(alpha: opacity);
+Color yellowWithOpacity(double opacity) =>
+    barzYellow.withValues(alpha: opacity);

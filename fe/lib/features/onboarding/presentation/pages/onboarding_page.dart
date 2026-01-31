@@ -12,7 +12,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 
 /// Onboarding page shown to new users after authentication
-/// 
+///
 /// Flow:
 /// 1. Select role (client/business)
 /// 2. Confirm/select country (auto-detected from phone)
@@ -58,10 +58,7 @@ class _OnboardingView extends StatelessWidget {
         }
         if (state.error != null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.error!),
-              backgroundColor: Colors.red,
-            ),
+            SnackBar(content: Text(state.error!), backgroundColor: Colors.red),
           );
         }
       },
@@ -77,20 +74,20 @@ class _OnboardingView extends StatelessWidget {
                   const Spacer(),
                   _buildHeader().animate().fadeIn().slideY(begin: -0.2, end: 0),
                   const SizedBox(height: 48),
-                  _buildRoleSelection(context, state)
-                      .animate(delay: 200.ms)
-                      .fadeIn()
-                      .slideY(begin: 0.2, end: 0),
+                  _buildRoleSelection(
+                    context,
+                    state,
+                  ).animate(delay: 200.ms).fadeIn().slideY(begin: 0.2, end: 0),
                   const SizedBox(height: 32),
-                  _buildCountrySelection(context, state)
-                      .animate(delay: 400.ms)
-                      .fadeIn()
-                      .slideY(begin: 0.2, end: 0),
+                  _buildCountrySelection(
+                    context,
+                    state,
+                  ).animate(delay: 400.ms).fadeIn().slideY(begin: 0.2, end: 0),
                   const Spacer(),
-                  _buildContinueButton(context, state)
-                      .animate(delay: 600.ms)
-                      .fadeIn()
-                      .slideY(begin: 0.2, end: 0),
+                  _buildContinueButton(
+                    context,
+                    state,
+                  ).animate(delay: 600.ms).fadeIn().slideY(begin: 0.2, end: 0),
                   const SizedBox(height: 24),
                 ],
               ),
@@ -111,11 +108,7 @@ class _OnboardingView extends StatelessWidget {
             color: barzDark,
             borderRadius: BorderRadius.circular(20),
           ),
-          child: const Icon(
-            Icons.local_bar,
-            size: 40,
-            color: barzGold,
-          ),
+          child: const Icon(Icons.local_bar, size: 40, color: barzGold),
         ),
         const SizedBox(height: 24),
         Text(
@@ -129,9 +122,7 @@ class _OnboardingView extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           'Let\'s get you set up',
-          style: barzTextTheme.bodyLarge?.copyWith(
-            color: textSecondary,
-          ),
+          style: barzTextTheme.bodyLarge?.copyWith(color: textSecondary),
           textAlign: TextAlign.center,
         ),
       ],
@@ -159,8 +150,8 @@ class _OnboardingView extends StatelessWidget {
                 subtitle: 'Browse bars & order drinks',
                 isSelected: state.selectedUserType == 'client',
                 onTap: () => context.read<OnboardingBloc>().add(
-                      const SelectUserType('client'),
-                    ),
+                  const SelectUserType('client'),
+                ),
               ),
             ),
             const SizedBox(width: 16),
@@ -171,8 +162,8 @@ class _OnboardingView extends StatelessWidget {
                 subtitle: 'Manage my bar',
                 isSelected: state.selectedUserType == 'business',
                 onTap: () => context.read<OnboardingBloc>().add(
-                      const SelectUserType('business'),
-                    ),
+                  const SelectUserType('business'),
+                ),
               ),
             ),
           ],
@@ -211,7 +202,7 @@ class _OnboardingView extends StatelessWidget {
             ],
           ),
           child: DropdownButtonFormField<SupportedCountry>(
-            value: selectedCountry,
+            initialValue: selectedCountry,
             decoration: InputDecoration(
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
@@ -250,9 +241,7 @@ class _OnboardingView extends StatelessWidget {
             },
             onChanged: (country) {
               if (country != null) {
-                context.read<OnboardingBloc>().add(
-                      SelectCountry(country.code),
-                    );
+                context.read<OnboardingBloc>().add(SelectCountry(country.code));
               }
             },
           ),
@@ -321,11 +310,7 @@ class _RoleCard extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Icon(
-              icon,
-              size: 40,
-              color: isSelected ? barzGold : barzDark,
-            ),
+            Icon(icon, size: 40, color: isSelected ? barzGold : barzDark),
             const SizedBox(height: 12),
             Text(
               title,

@@ -131,9 +131,11 @@ class _DrinksHomePageState extends State<DrinksHomePage> {
   }
 
   Widget _buildContent(
-      BuildContext context, List<ParallaxRecipeUiModel> partners) {
+    BuildContext context,
+    List<ParallaxRecipeUiModel> partners,
+  ) {
     final l10n = AppLocalizations.of(context)!;
-    
+
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -144,10 +146,7 @@ class _DrinksHomePageState extends State<DrinksHomePage> {
             child: Text(
               l10n.app_title,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontFamily: 'JuliusSansOne',
-                fontSize: 24.sp,
-              ),
+              style: TextStyle(fontFamily: 'JuliusSansOne', fontSize: 24.sp),
             ).animate().fade().scale(),
           ),
           _buildFeaturedAdsCarousel(),
@@ -159,10 +158,12 @@ class _DrinksHomePageState extends State<DrinksHomePage> {
             list: partners,
             cardsType: CardType.rectangular,
             onCardTap: (ParallaxRecipeUiModel selectedBar) {
-              AppRouter.route(RouteSettings(
-                name: AppRouter.partnerMenu,
-                arguments: selectedBar.id,
-              ));
+              AppRouter.route(
+                RouteSettings(
+                  name: AppRouter.partnerMenu,
+                  arguments: selectedBar.id,
+                ),
+              );
             },
           ),
           TitleSubtitleWidget(
@@ -189,7 +190,7 @@ class _DrinksHomePageState extends State<DrinksHomePage> {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: state.drinkCategories.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 8),
+              separatorBuilder: (_, _) => const SizedBox(width: 8),
               itemBuilder: (context, index) {
                 final category = state.drinkCategories[index];
                 final isSelected = state.selectedCategory == category.category;
@@ -201,7 +202,9 @@ class _DrinksHomePageState extends State<DrinksHomePage> {
                   checkmarkColor: barzDark,
                   backgroundColor: Colors.grey.shade200,
                   onSelected: (_) {
-                    _trendingBloc.add(TrendingEvent.loadCategory(category: category.category));
+                    _trendingBloc.add(
+                      TrendingEvent.loadCategory(category: category.category),
+                    );
                   },
                 );
               },
@@ -223,8 +226,8 @@ class _DrinksHomePageState extends State<DrinksHomePage> {
           );
         }
 
-        final drinks = state.selectedCategory != null 
-            ? state.categoryDrinks 
+        final drinks = state.selectedCategory != null
+            ? state.categoryDrinks
             : state.trendingDrinks;
 
         if (drinks.isEmpty) {
@@ -240,11 +243,15 @@ class _DrinksHomePageState extends State<DrinksHomePage> {
         }
 
         return HorizontalSlidingCards(
-          list: drinks.map((drink) => ParallaxRecipeUiModel(
-            id: drink.id,
-            imageUrl: drink.picture ?? 'default_drink.png',
-            name: drink.name,
-          )).toList(),
+          list: drinks
+              .map(
+                (drink) => ParallaxRecipeUiModel(
+                  id: drink.id,
+                  imageUrl: drink.picture ?? 'default_drink.png',
+                  name: drink.name,
+                ),
+              )
+              .toList(),
           cardsType: CardType.circle,
           onCardTap: (ParallaxRecipeUiModel selected) {
             final drink = drinks.firstWhere((d) => d.id == selected.id);
@@ -268,9 +275,9 @@ class _DrinksHomePageState extends State<DrinksHomePage> {
               padding: const EdgeInsets.only(left: 16, top: 16, bottom: 8),
               child: Text(
                 AppLocalizations.of(context)!.featured,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               ),
             ),
             SizedBox(
@@ -310,8 +317,11 @@ class _DrinksHomePageState extends State<DrinksHomePage> {
   }
 
   void _showDrinkDetails(BuildContext context, TrendingDrink drink) {
-    final currencyFormat = NumberFormat.currency(locale: 'pt_BR', symbol: 'R\$');
-    
+    final currencyFormat = NumberFormat.currency(
+      locale: 'pt_BR',
+      symbol: 'R\$',
+    );
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -347,14 +357,18 @@ class _DrinksHomePageState extends State<DrinksHomePage> {
                       width: 80,
                       height: 80,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => Container(
+                      errorBuilder: (_, _, _) => Container(
                         width: 80,
                         height: 80,
                         decoration: BoxDecoration(
                           color: barzGold.withValues(alpha: 0.2),
                           borderRadius: BorderRadius.circular(12),
                         ),
-                        child: const Icon(Icons.local_bar, color: barzGold, size: 40),
+                        child: const Icon(
+                          Icons.local_bar,
+                          color: barzGold,
+                          size: 40,
+                        ),
                       ),
                     ),
                   )
@@ -366,7 +380,11 @@ class _DrinksHomePageState extends State<DrinksHomePage> {
                       color: barzGold.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(Icons.local_bar, color: barzGold, size: 40),
+                    child: const Icon(
+                      Icons.local_bar,
+                      color: barzGold,
+                      size: 40,
+                    ),
                   ),
                 const SizedBox(width: 16),
                 Expanded(
@@ -381,7 +399,10 @@ class _DrinksHomePageState extends State<DrinksHomePage> {
                       ),
                       const SizedBox(height: 4),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: barzGold.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(8),
@@ -411,9 +432,9 @@ class _DrinksHomePageState extends State<DrinksHomePage> {
               const SizedBox(height: 16),
               Text(
                 drink.description!,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: textSecondary,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyMedium?.copyWith(color: textSecondary),
               ),
             ],
             const SizedBox(height: 24),
@@ -426,8 +447,8 @@ class _DrinksHomePageState extends State<DrinksHomePage> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  drink.available 
-                      ? 'Available' 
+                  drink.available
+                      ? 'Available'
                       : AppLocalizations.of(context)!.menu_item_unavailable,
                   style: TextStyle(
                     color: drink.available ? successGreen : errorRed,

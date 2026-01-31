@@ -117,7 +117,24 @@ class _WireframeShellState extends State<WireframeShell> {
           }
         },
         child: Scaffold(
-          body: IndexedStack(index: _selectedIndex, children: _pages),
+          body: Stack(
+            children: [
+              IndexedStack(index: _selectedIndex, children: _pages),
+              if (const bool.fromEnvironment('dart.vm.product') == false)
+                Positioned(
+                  top: 48,
+                  right: 16,
+                  child: FloatingActionButton.small(
+                    heroTag: 'debug_showcase_fab',
+                    onPressed: () => context.push('/showcase'),
+                    backgroundColor: barzGold.withValues(alpha: 0.9),
+                    foregroundColor: barzDark,
+                    tooltip: 'Design System Showcase (Debug)',
+                    child: const Icon(Icons.palette, size: 20),
+                  ),
+                ),
+            ],
+          ),
           floatingActionButton: _CenterDockedFab(
             onPressed: () => context.push('/checkin'),
           ),
@@ -206,7 +223,7 @@ class _CenterDockedFab extends StatelessWidget {
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w600,
-              color: barzDark,
+              color: textOnDark,
             ),
           ),
         ],

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:barz/core/design/design_system.dart';
 import 'package:barz/core/rbac/rbac.dart';
-import 'package:barz/core/utils/constant/colors.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
 
 /// Staff management page for bar owners/admins.
-/// 
+///
 /// Features:
 /// - View all staff members
 /// - Invite new staff via email or phone
@@ -29,14 +29,14 @@ class StaffManagementPage extends StatelessWidget {
         }
 
         return Scaffold(
-          backgroundColor: barzCream,
+          backgroundColor: barzGoldSoft,
           floatingActionButton: FloatingActionButton.extended(
             heroTag: 'staff_invite_fab',
             onPressed: () => _showInviteDialog(context),
             icon: const Icon(Icons.person_add),
             label: const Text('Invite'),
-            backgroundColor: barzYellow,
-            foregroundColor: barzBlack,
+            backgroundColor: barzGold,
+            foregroundColor: barzDark,
           ),
           body: _buildStaffList(context),
         );
@@ -82,34 +82,39 @@ class StaffManagementPage extends StatelessWidget {
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
             const SizedBox(height: 12),
-            ...BarRole.values.map((role) => Padding(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              child: Row(
-                children: [
-                  Icon(
-                    _getRoleIcon(role),
-                    size: 20,
-                    color: _getRoleColor(role),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          role.displayName,
-                          style: const TextStyle(fontWeight: FontWeight.w500),
-                        ),
-                        Text(
-                          role.description,
-                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                        ),
-                      ],
+            ...BarRole.values.map(
+              (role) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  children: [
+                    Icon(
+                      _getRoleIcon(role),
+                      size: 20,
+                      color: _getRoleColor(role),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            role.displayName,
+                            style: const TextStyle(fontWeight: FontWeight.w500),
+                          ),
+                          Text(
+                            role.description,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            )),
+            ),
           ],
         ),
       ),
@@ -180,7 +185,9 @@ class _InviteStaffSheetState extends State<_InviteStaffSheet> {
   Widget build(BuildContext context) {
     return Padding(
       padding: EdgeInsets.fromLTRB(
-        16, 16, 16,
+        16,
+        16,
+        16,
         MediaQuery.of(context).viewInsets.bottom + 16,
       ),
       child: Form(
@@ -225,15 +232,15 @@ class _InviteStaffSheetState extends State<_InviteStaffSheet> {
             const SizedBox(height: 8),
             DropdownButtonFormField<BarRole>(
               initialValue: _selectedRole,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(),
-              ),
+              decoration: const InputDecoration(border: OutlineInputBorder()),
               items: BarRole.values
                   .where((role) => role != BarRole.owner)
-                  .map((role) => DropdownMenuItem(
-                        value: role,
-                        child: Text(role.displayName),
-                      ))
+                  .map(
+                    (role) => DropdownMenuItem(
+                      value: role,
+                      child: Text(role.displayName),
+                    ),
+                  )
                   .toList(),
               onChanged: (value) {
                 if (value != null) {
@@ -247,8 +254,8 @@ class _InviteStaffSheetState extends State<_InviteStaffSheet> {
               child: ElevatedButton(
                 onPressed: _submitInvitation,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: barzYellow,
-                  foregroundColor: barzBlack,
+                  backgroundColor: barzGold,
+                  foregroundColor: barzDark,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
                 child: const Text('Send Invitation'),
@@ -264,9 +271,9 @@ class _InviteStaffSheetState extends State<_InviteStaffSheet> {
     if (_formKey.currentState!.validate()) {
       // TODO: Send invitation via API
       Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invitation sent!')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Invitation sent!')));
     }
   }
 }

@@ -4,7 +4,7 @@ import 'package:barz/core/design/design_system.dart';
 import '../../domain/models/featured_ad.dart';
 
 /// Card widget for displaying featured ads in home carousel.
-/// 
+///
 /// Features:
 /// - Gradient overlay for text readability
 /// - Distance badge
@@ -54,17 +54,9 @@ class FeaturedAdCard extends StatelessWidget {
               // Content
               _buildContent(),
               // Sponsored badge
-              const Positioned(
-                top: 12,
-                left: 12,
-                child: SponsoredBadge(),
-              ),
+              const Positioned(top: 12, left: 12, child: SponsoredBadge()),
               // Distance badge
-              Positioned(
-                top: 12,
-                right: 12,
-                child: _buildDistanceBadge(),
-              ),
+              Positioned(top: 12, right: 12, child: _buildDistanceBadge()),
             ],
           ),
         ),
@@ -78,8 +70,8 @@ class FeaturedAdCard extends StatelessWidget {
         child: CachedNetworkImage(
           imageUrl: ad.logoUrl!,
           fit: BoxFit.cover,
-          placeholder: (_, __) => Container(color: barzGoldLight),
-          errorWidget: (_, __, ___) => _buildFallbackBackground(),
+          placeholder: (_, _) => Container(color: barzGoldLight),
+          errorWidget: (_, _, _) => _buildFallbackBackground(),
         ),
       );
     }

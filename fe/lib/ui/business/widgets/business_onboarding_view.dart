@@ -19,7 +19,7 @@ class BusinessOnboardingView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: barzCream,
+      backgroundColor: barzGoldSoft,
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -70,11 +70,11 @@ class BusinessOnboardingView extends StatelessWidget {
           width: 100,
           height: 100,
           decoration: BoxDecoration(
-            color: barzBlack,
+            color: barzDark,
             borderRadius: BorderRadius.circular(24),
             boxShadow: [
               BoxShadow(
-                color: barzBlack.withValues(alpha: 0.2),
+                color: barzDark.withValues(alpha: 0.2),
                 blurRadius: 20,
                 offset: const Offset(0, 8),
               ),
@@ -83,7 +83,7 @@ class BusinessOnboardingView extends StatelessWidget {
           child: Icon(
             Icons.store_rounded,
             size: 48,
-            color: barzYellow,
+            color: barzGold,
           ),
         ),
         const SizedBox(height: 32),
@@ -91,7 +91,7 @@ class BusinessOnboardingView extends StatelessWidget {
           l10n.business_welcome_title,
           style: barzTextTheme.headlineMedium?.copyWith(
             fontWeight: FontWeight.bold,
-            color: barzBlack,
+            color: barzDark,
           ),
           textAlign: TextAlign.center,
         ),
@@ -111,8 +111,8 @@ class BusinessOnboardingView extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     return _ActionCard(
       icon: Icons.add_business_rounded,
-      iconColor: barzYellow,
-      backgroundColor: barzBlack,
+      iconColor: barzGold,
+      backgroundColor: barzDark,
       title: l10n.business_create_bar,
       subtitle: l10n.business_create_bar_subtitle,
       onTap: () async {
@@ -128,9 +128,9 @@ class BusinessOnboardingView extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     return _ActionCard(
       icon: Icons.mail_outline_rounded,
-      iconColor: barzBlack,
+      iconColor: barzDark,
       backgroundColor: surfaceWhite,
-      textColor: barzBlack,
+      textColor: barzDark,
       title: l10n.business_accept_invitation,
       subtitle: l10n.business_accept_invitation_subtitle,
       onTap: () {
@@ -166,11 +166,11 @@ class BusinessOnboardingView extends StatelessWidget {
       onPressed: () {
         context.read<SessionBloc>().add(const SessionEvent.switchToClientMode());
       },
-      icon: Icon(Icons.person_outline, color: barzBlack),
+      icon: Icon(Icons.person_outline, color: barzDark),
       label: Text(
         l10n.business_switch_to_client,
         style: barzTextTheme.bodyLarge?.copyWith(
-          color: barzBlack,
+          color: barzDark,
           fontWeight: FontWeight.w500,
         ),
       ),
@@ -220,13 +220,13 @@ class BusinessOnboardingView extends StatelessWidget {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(l10n.business_coming_soon),
-                  backgroundColor: barzBlack,
+                  backgroundColor: barzDark,
                 ),
               );
             },
             style: FilledButton.styleFrom(
-              backgroundColor: barzYellow,
-              foregroundColor: barzBlack,
+              backgroundColor: barzGold,
+              foregroundColor: barzDark,
             ),
             child: Text(l10n.business_join_team),
           ),

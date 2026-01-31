@@ -53,7 +53,7 @@ Integrated marketing that lives where the consumption happens. Growth driven by 
 
 To further enhance the branding, use the following prompts in Krea AI. **Use these prompts separately** (copy-paste one at a time):
 
-- **Primary Logo (Symmetrical):** `Flat vector wordmark logo for 'dobar'. The letters 'd' and 'b' are perfectly symmetrical mirror images. The letter 'o' features a unique vertical split or geometric gap in the center. Pure vibrant yellow on a solid deep black background. Minimalist, high contrast.`
+- **Primary Logo (Symmetrical):** `Flat vector wordmark logo for 'dobar'. The letters 'd' and 'b' are perfectly symmetrical mirror images and unique. The letter 'o' features a unique vertical split or geometric gap in the center. Pure vibrant yellow on a solid deep black background. Minimalist, high contrast.`
 - **Atmospheric Mockup:** `A vertical billboard outside a modern craft brewery at night, vibrant yellow and black advertisement for 'dobar' reflecting on rain-slicked pavement.`
 - **Dashboard UI:** `UI mockup of a marketing dashboard for a bar owner. Black dark mode theme with yellow accents, neon yellow line charts.`
 

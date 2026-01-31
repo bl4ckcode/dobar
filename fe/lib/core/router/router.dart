@@ -29,10 +29,9 @@ class AppRouter {
         return _buildRouteWithAnimation(const partners.MenusPage());
       case bars:
         final args = settings.arguments as Map<String, double>;
-        return _buildRouteWithAnimation(BarsPage(
-          latitude: args['latitude']!,
-          longitude: args['longitude']!,
-        ));
+        return _buildRouteWithAnimation(
+          BarsPage(latitude: args['latitude']!, longitude: args['longitude']!),
+        );
       case barDetail:
         final barId = settings.arguments as int;
         return _buildRouteWithAnimation(BarDetailPage(barId: barId));
@@ -49,12 +48,14 @@ class AppRouter {
   }
 
   static Route<dynamic> _errorRoute() {
-    return MaterialPageRoute(builder: (_) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Error')),
-        body: const Center(child: Text('Page not found')),
-      );
-    });
+    return MaterialPageRoute(
+      builder: (_) {
+        return Scaffold(
+          appBar: AppBar(title: const Text('Error')),
+          body: const Center(child: Text('Page not found')),
+        );
+      },
+    );
   }
 
   static PageRouteBuilder _buildRouteWithAnimation(Widget page) {
@@ -65,16 +66,15 @@ class AppRouter {
         const end = Offset.zero;
         const curve = Curves.ease;
 
-        var tween =
-            Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+        var tween = Tween(
+          begin: begin,
+          end: end,
+        ).chain(CurveTween(curve: curve));
         var offsetAnimation = animation.drive(tween);
 
         return SlideTransition(
           position: offsetAnimation,
-          child: FadeTransition(
-            opacity: animation,
-            child: child,
-          ),
+          child: FadeTransition(opacity: animation, child: child),
         );
       },
       transitionDuration: const Duration(milliseconds: 1500),
