@@ -86,9 +86,17 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
             const SizedBox(height: BarzSpacing.md),
             _buildCategoriesSection(context),
             const SizedBox(height: BarzSpacing.lg),
-            _buildBarsGrid(context),
+            _buildSectionTitleWithSubtitle(
+              'Conheça nossos parceiros',
+              'Dê uma olhada no menu dos parceiros mais próximos de você :)',
+            ),
+            const SizedBox(height: BarzSpacing.md),
+            _buildBarsCarousel(context),
             const SizedBox(height: BarzSpacing.xl),
-            _buildSectionTitle('Most Wanted'),
+            _buildSectionTitleWithSubtitle(
+              'Mais procurados',
+              'Com sede daquela bebida específica? Selecione-a e descubra onde ir!',
+            ),
             const SizedBox(height: BarzSpacing.md),
             _buildMostWantedDrinksSection(context),
             const SizedBox(height: BarzSpacing.xl),
@@ -115,6 +123,30 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
             fontSize: 18,
             fontWeight: FontWeight.bold,
             color: textOnDark,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionTitleWithSubtitle(String title, String subtitle) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: textOnDark,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          subtitle,
+          style: TextStyle(
+            fontSize: 14,
+            color: textOnDark.withValues(alpha: 0.7),
           ),
         ),
       ],
@@ -312,7 +344,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
     return 'Bar';
   }
 
-  Widget _buildBarsGrid(BuildContext context) {
+  Widget _buildBarsCarousel(BuildContext context) {
     return BlocBuilder<BarBloc, BarState>(
       builder: (context, state) {
         if (state is BarLoading) return _buildLoadingCard();
@@ -323,37 +355,40 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
           if (state.bars.isEmpty) {
             return _buildEmptyCard('No bars nearby', Icons.store);
           }
-          final displayBars = state.bars.length > 6
-              ? state.bars.sublist(0, 6)
+          final displayBars = state.bars.length > 10
+              ? state.bars.sublist(0, 10)
               : state.bars;
-          return GridView.count(
-            crossAxisCount: 2,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            mainAxisSpacing: BarzSpacing.sm,
-            crossAxisSpacing: BarzSpacing.sm,
-            childAspectRatio: 0.85,
-            children: displayBars.asMap().entries.map((entry) {
-              final index = entry.key;
-              final bar = entry.value;
-              return BarCard(
-                    name: bar.name,
-                    type: _getBarType(bar),
-                    distance: _formatDistance(bar.approximateLocation),
-                    rating: 4.5,
-                    imageUrl: bar.imageUrl,
-                    onTap: () => AppRoute.pushBar(context, bar.id),
-                  )
-                  .animate()
-                  .fadeIn(delay: (50 * index).ms, duration: 400.ms)
-                  .scale(
-                    begin: const Offset(0.9, 0.9),
-                    end: const Offset(1, 1),
-                    duration: 400.ms,
-                    delay: (50 * index).ms,
-                    curve: Curves.easeOutBack,
-                  );
-            }).toList(),
+          return SizedBox(
+            height: 200,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: displayBars.length,
+              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              itemBuilder: (context, index) {
+                final bar = displayBars[index];
+                return SizedBox(
+                  width: 160,
+                  child:
+                      BarCard(
+                            name: bar.name,
+                            type: _getBarType(bar),
+                            distance: _formatDistance(bar.approximateLocation),
+                            rating: 4.5,
+                            imageUrl: bar.imageUrl,
+                            onTap: () => AppRoute.pushBar(context, bar.id),
+                          )
+                          .animate()
+                          .fadeIn(delay: (50 * index).ms, duration: 400.ms)
+                          .slideX(
+                            begin: 0.1,
+                            end: 0,
+                            duration: 400.ms,
+                            delay: (50 * index).ms,
+                            curve: Curves.easeOut,
+                          ),
+                );
+              },
+            ),
           );
         }
         return _buildEmptyCard('Pull to refresh', Icons.refresh);

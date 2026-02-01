@@ -227,15 +227,28 @@ class _LoginPageState extends State<LoginPage> {
 
                             const Spacer(),
 
-                            Opacity(
-                              opacity: 0.15,
-                              child: Image.asset(
-                                'assets/login/barz_cup_icon.png',
-                                width: MediaQuery.of(context).size.width * 0.5,
-                                fit: BoxFit.contain,
+                            SizedBox(
+                              height: 100,
+                              child: Stack(
+                                clipBehavior: Clip.none,
+                                alignment: Alignment.bottomCenter,
+                                children: [
+                                  Positioned(
+                                    bottom: -80,
+                                    child: Opacity(
+                                      opacity: 0.2,
+                                      child: Image.asset(
+                                        'assets/login/barz_cup_icon.png',
+                                        width:
+                                            MediaQuery.of(context).size.width *
+                                            0.8,
+                                        fit: BoxFit.contain,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            const SizedBox(height: 24),
                           ],
                         ),
                       ),
