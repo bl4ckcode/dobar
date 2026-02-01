@@ -1,10 +1,9 @@
-import 'package:barz/core/design/components/menu_category_pills.dart';
-import 'package:barz/core/design/components/menu_header.dart';
-import 'package:barz/core/design/components/menu_item_card.dart';
-import 'package:barz/core/design/components/popular_item_card.dart';
+import 'package:barz/core/design/components/bar_menu_card.dart';
+import 'package:barz/core/design/components/category_pill.dart';
+import 'package:barz/core/design/components/glow_button.dart';
 import 'package:barz/core/design/tokens/colors.dart';
+import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/core/utils/injections.dart';
-import 'package:barz/core/utils/services/color_extraction_service.dart';
 import 'package:barz/features/bars/domain/models/menu_model.dart';
 import 'package:barz/features/bars/presentation/bloc/bar_bloc.dart';
 import 'package:barz/features/bars/presentation/bloc/bar_event.dart';
@@ -49,7 +48,7 @@ class _BarDetailContent extends StatelessWidget {
       builder: (context, state) {
         if (state is BarLoading) {
           return Scaffold(
-            backgroundColor: surfacePrimary,
+            backgroundColor: barzDark,
             body: const Center(
               child: CircularProgressIndicator(color: barzGold),
             ),
@@ -57,20 +56,31 @@ class _BarDetailContent extends StatelessWidget {
         }
         if (state is BarError) {
           return Scaffold(
-            backgroundColor: surfacePrimary,
-            appBar: AppBar(title: Text(l10n.menu_title)),
+            backgroundColor: barzDark,
+            appBar: AppBar(
+              backgroundColor: barzDark,
+              foregroundColor: Colors.white,
+              title: Text(l10n.menu_title),
+            ),
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   const Icon(Icons.error_outline, size: 64, color: errorRed),
                   const SizedBox(height: 16),
-                  Text(state.message),
+                  Text(
+                    state.message,
+                    style: const TextStyle(color: Colors.white),
+                  ),
                   const SizedBox(height: 16),
                   OutlinedButton(
                     onPressed: () {
                       context.read<BarBloc>().add(LoadBarMenus(barId: barId));
                     },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: barzGold,
+                      side: const BorderSide(color: barzGold),
+                    ),
                     child: Text(l10n.error_retry),
                   ),
                 ],
@@ -82,19 +92,26 @@ class _BarDetailContent extends StatelessWidget {
           final menus = state.menus;
           if (menus.isEmpty) {
             return Scaffold(
-              backgroundColor: surfacePrimary,
-              appBar: AppBar(title: Text(l10n.menu_title)),
+              backgroundColor: barzDark,
+              appBar: AppBar(
+                backgroundColor: barzDark,
+                foregroundColor: Colors.white,
+                title: Text(l10n.menu_title),
+              ),
               body: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(
+                    Icon(
                       Icons.restaurant_menu,
                       size: 64,
-                      color: textTertiary,
+                      color: Colors.white.withValues(alpha: 0.4),
                     ),
                     const SizedBox(height: 16),
-                    Text(l10n.no_results),
+                    Text(
+                      l10n.no_results,
+                      style: const TextStyle(color: Colors.white70),
+                    ),
                   ],
                 ),
               ),
@@ -107,14 +124,17 @@ class _BarDetailContent extends StatelessWidget {
           return _MenuPageView(
             barId: barId,
             barName: state.barName ?? 'Menu',
-            barImageUrl: state.barImageUrl,
             categories: categories,
             allItems: allItems,
           );
         }
         return Scaffold(
-          backgroundColor: surfacePrimary,
-          appBar: AppBar(title: Text(l10n.menu_title)),
+          backgroundColor: barzDark,
+          appBar: AppBar(
+            backgroundColor: barzDark,
+            foregroundColor: Colors.white,
+            title: Text(l10n.menu_title),
+          ),
           body: const SizedBox.shrink(),
         );
       },
@@ -136,14 +156,12 @@ class _BarDetailContent extends StatelessWidget {
 class _MenuPageView extends StatefulWidget {
   final int barId;
   final String barName;
-  final String? barImageUrl;
   final Map<String, List<MenuItemModel>> categories;
   final List<MenuItemModel> allItems;
 
   const _MenuPageView({
     required this.barId,
     required this.barName,
-    this.barImageUrl,
     required this.categories,
     required this.allItems,
   });
@@ -153,63 +171,45 @@ class _MenuPageView extends StatefulWidget {
 }
 
 class _MenuPageViewState extends State<_MenuPageView> {
-  final _searchController = TextEditingController();
-  String _searchQuery = '';
-  int _selectedCategoryIndex = 0;
-  Color _headerColor = ColorExtractionService.defaultHeaderColor;
+  String _selectedCategory = 'All';
+  final Map<int, int> _cart = {};
 
   List<String> get _categoryList => ['All', ...widget.categories.keys];
 
-  List<MenuItemModel> get _popularItems {
-    return widget.allItems.take(6).toList();
+  IconData _getCategoryIcon(String category) {
+    switch (category.toLowerCase()) {
+      case 'all':
+        return Icons.grid_view;
+      case 'beer':
+      case 'beers':
+        return Icons.sports_bar;
+      case 'cocktails':
+      case 'drinks':
+        return Icons.local_bar;
+      case 'food':
+      case 'snacks':
+        return Icons.restaurant;
+      case 'wine':
+      case 'wines':
+        return Icons.wine_bar;
+      default:
+        return Icons.local_cafe;
+    }
   }
 
   List<MenuItemModel> get _filteredItems {
-    List<MenuItemModel> items;
-    if (_selectedCategoryIndex == 0) {
-      items = widget.allItems;
-    } else {
-      final category = _categoryList[_selectedCategoryIndex];
-      items = widget.categories[category] ?? [];
+    if (_selectedCategory == 'All') {
+      return widget.allItems;
     }
-
-    if (_searchQuery.isNotEmpty) {
-      items = items.where((item) {
-        return item.itemName.toLowerCase().contains(_searchQuery) ||
-            (item.description?.toLowerCase().contains(_searchQuery) ?? false);
-      }).toList();
-    }
-
-    return items;
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    _extractHeaderColor();
-  }
-
-  Future<void> _extractHeaderColor() async {
-    if (widget.barImageUrl != null) {
-      final color = await ColorExtractionService.instance.extractDominantColor(
-        widget.barImageUrl,
-      );
-      if (mounted) {
-        setState(() {
-          _headerColor = color;
-        });
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
+    return widget.categories[_selectedCategory] ?? [];
   }
 
   void _addToCart(MenuItemModel item) {
-    final l10n = AppLocalizations.of(context)!;
+    setState(() {
+      final id = item.id ?? 0;
+      _cart[id] = (_cart[id] ?? 0) + 1;
+    });
+
     context.read<CartBloc>().add(
       AddToCart(
         menuItemId: item.id ?? 0,
@@ -219,116 +219,165 @@ class _MenuPageViewState extends State<_MenuPageView> {
         unitPrice: item.price,
       ),
     );
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(l10n.menu_item_added),
-        behavior: SnackBarBehavior.floating,
-        action: SnackBarAction(
-          label: l10n.cart_title,
-          onPressed: () => context.push('/cart'),
-        ),
-      ),
-    );
+  }
+
+  void _removeFromCart(MenuItemModel item) {
+    setState(() {
+      final id = item.id ?? 0;
+      if (_cart.containsKey(id) && _cart[id]! > 0) {
+        _cart[id] = _cart[id]! - 1;
+        if (_cart[id] == 0) {
+          _cart.remove(id);
+        }
+      }
+    });
+
+    context.read<CartBloc>().add(RemoveFromCart(itemId: item.id ?? 0));
+  }
+
+  int _getItemQuantity(MenuItemModel item) {
+    return _cart[item.id ?? 0] ?? 0;
+  }
+
+  int get _totalItems => _cart.values.fold(0, (sum, qty) => sum + qty);
+
+  double get _totalPrice {
+    double total = 0;
+    for (final item in widget.allItems) {
+      final qty = _cart[item.id ?? 0] ?? 0;
+      total += item.price * qty;
+    }
+    return total;
   }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-
     return Scaffold(
-      backgroundColor: surfacePrimary,
-      body: Column(
+      backgroundColor: barzDark,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHeader(),
+            const SizedBox(height: 16),
+            _buildCategoryTabs(),
+            const SizedBox(height: 8),
+            Expanded(child: _buildMenuList()),
+            _buildViewTabButton(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Row(
         children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 400),
-            child: MenuHeader(
-              barName: widget.barName,
-              headerColor: _headerColor,
-              searchController: _searchController,
-              searchHint: l10n.menu_search,
-              onSearchChanged: (value) {
-                setState(() => _searchQuery = value.toLowerCase());
-              },
-              onBackTap: () => context.pop(),
-              onCartTap: () => context.push('/cart'),
+          GestureDetector(
+            onTap: () => context.pop(),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: barzDarkLight,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.arrow_back,
+                color: Colors.white,
+                size: 20,
+              ),
             ),
           ),
+          const SizedBox(width: 16),
           Expanded(
-            child: ListView(
-              padding: EdgeInsets.zero,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SizedBox(height: 16),
-                MenuCategoryPills(
-                  categories: _categoryList,
-                  selectedIndex: _selectedCategoryIndex,
-                  onCategorySelected: (index) {
-                    setState(() => _selectedCategoryIndex = index);
-                  },
+                Text(
+                  widget.barName,
+                  style: const TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: barzGold,
+                  ),
                 ),
-                if (_popularItems.isNotEmpty && _searchQuery.isEmpty) ...[
-                  const SizedBox(height: 24),
-                  _buildSectionTitle('⭐ Popular'),
-                  const SizedBox(height: 12),
-                  _buildPopularSection(),
-                ],
-                const SizedBox(height: 24),
-                _buildSectionTitle('Full Menu'),
-                const SizedBox(height: 8),
-                _buildMenuList(),
-                const SizedBox(height: 100),
+                Text(
+                  'Menu & Order',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.white.withValues(alpha: 0.6),
+                  ),
+                ),
               ],
+            ),
+          ),
+          GestureDetector(
+            onTap: () => AppRoute.cart.push(context),
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: barzDarkLight,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Stack(
+                children: [
+                  const Center(
+                    child: Icon(
+                      Icons.shopping_cart_outlined,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                  if (_totalItems > 0)
+                    Positioned(
+                      right: 4,
+                      top: 4,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: barzGold,
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          '$_totalItems',
+                          style: const TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: barzDark,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
             ),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        heroTag: 'bar_detail_checkout_fab',
-        onPressed: () => context.push('/cart'),
-        backgroundColor: barzGold,
-        icon: const Icon(Icons.shopping_cart, color: textOnGold),
-        label: Text(
-          l10n.cart_checkout,
-          style: const TextStyle(
-            color: textOnGold,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Padding(
+  Widget _buildCategoryTabs() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
       padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Text(
-        title,
-        style: const TextStyle(
-          color: textPrimary,
-          fontSize: 18,
-          fontWeight: FontWeight.w700,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPopularSection() {
-    return SizedBox(
-      height: 180,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: _popularItems.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 12),
-        itemBuilder: (context, index) {
-          final item = _popularItems[index];
-          return PopularItemCard(
-            imageUrl: item.picture,
-            name: item.itemName,
-            price: item.price,
-            onTap: () => _addToCart(item),
+      child: Row(
+        children: _categoryList.map((category) {
+          final isSelected = _selectedCategory == category;
+          return Padding(
+            padding: const EdgeInsets.only(right: 10),
+            child: CategoryPill(
+              icon: _getCategoryIcon(category),
+              label: category,
+              isSelected: isSelected,
+              onTap: () => setState(() => _selectedCategory = category),
+            ),
           );
-        },
+        }).toList(),
       ),
     );
   }
@@ -336,116 +385,83 @@ class _MenuPageViewState extends State<_MenuPageView> {
   Widget _buildMenuList() {
     if (_filteredItems.isEmpty) {
       return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(40),
-          child: Column(
-            children: [
-              Icon(
-                Icons.search_off,
-                size: 64,
-                color: textTertiary.withValues(alpha: 0.5),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                AppLocalizations.of(context)!.no_results,
-                style: TextStyle(color: textSecondary),
-              ),
-            ],
-          ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.search_off,
+              size: 64,
+              color: Colors.white.withValues(alpha: 0.3),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              AppLocalizations.of(context)!.no_results,
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
+            ),
+          ],
         ),
       );
     }
 
-    return Column(
-      children: _filteredItems.map((item) {
-        return MenuItemCard(
-          imageUrl: item.picture,
-          name: item.itemName,
-          description: item.description,
-          price: item.price,
-          isPopular: _popularItems.contains(item),
-          onAddTap: () => _addToCart(item),
-          onTap: () => _showItemDetails(item),
+    return ListView.builder(
+      padding: EdgeInsets.zero,
+      itemCount: _filteredItems.length,
+      itemBuilder: (context, index) {
+        final item = _filteredItems[index];
+        final quantity = _getItemQuantity(item);
+
+        return TweenAnimationBuilder<double>(
+          duration: Duration(milliseconds: 200 + (index * 30)),
+          tween: Tween(begin: 0.0, end: 1.0),
+          curve: Curves.easeOut,
+          builder: (context, value, child) {
+            return Opacity(
+              opacity: value,
+              child: Transform.translate(
+                offset: Offset(0, 20 * (1 - value)),
+                child: child,
+              ),
+            );
+          },
+          child: BarMenuCard(
+            name: item.itemName,
+            description: item.description,
+            price: item.price,
+            quantity: quantity,
+            onAdd: () => _addToCart(item),
+            onRemove: () => _removeFromCart(item),
+          ),
         );
-      }).toList(),
+      },
     );
   }
 
-  void _showItemDetails(MenuItemModel item) {
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: surfaceWhite,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: textTertiary.withValues(alpha: 0.3),
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              item.itemName,
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: textPrimary,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              '\$${item.price.toStringAsFixed(2)}',
-              style: const TextStyle(
-                color: barzGold,
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            if (item.description != null) ...[
-              const SizedBox(height: 16),
-              Text(
-                item.description!,
-                style: TextStyle(color: textSecondary, fontSize: 15),
-              ),
-            ],
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  _addToCart(item);
-                },
-                icon: const Icon(Icons.add_shopping_cart),
-                label: Text(l10n.menu_item_add),
-                style: FilledButton.styleFrom(
-                  backgroundColor: barzGold,
-                  foregroundColor: textOnGold,
-                  padding: const EdgeInsets.all(16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(14),
+  Widget _buildViewTabButton() {
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      padding: const EdgeInsets.all(16),
+      child: _totalItems > 0
+          ? GlowButton(
+              label: 'View Tab',
+              badgeCount: _totalItems,
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '\$${_totalPrice.toStringAsFixed(2)}',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: barzDark,
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 4),
+                  const Icon(Icons.chevron_right, color: barzDark, size: 20),
+                ],
               ),
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
+              onPressed: () => AppRoute.cart.push(context),
+            )
+          : const SizedBox.shrink(),
     );
   }
 }

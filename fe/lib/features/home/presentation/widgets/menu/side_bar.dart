@@ -8,7 +8,7 @@ import 'package:barz/shared/domain/models/bottom_nav_bar/menu_model.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
+import 'package:barz/core/router/app_routes.dart';
 
 class SideBar extends StatefulWidget {
   const SideBar({super.key});
@@ -33,9 +33,9 @@ class _SideBarState extends State<SideBar> {
         Navigator.of(context).pop();
         break;
       case 'Favorites':
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Favorites coming soon!')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Favorites coming soon!')));
         break;
       case 'Help':
         ScaffoldMessenger.of(context).showSnackBar(
@@ -43,7 +43,7 @@ class _SideBarState extends State<SideBar> {
         );
         break;
       case 'History':
-        context.push('/orders');
+        AppRoute.orders.push(context);
         break;
       case 'Notifications':
         ScaffoldMessenger.of(context).showSnackBar(
@@ -76,9 +76,9 @@ class _SideBarState extends State<SideBar> {
     if (confirmed == true) {
       await getItInjector<LoginUsecase>().logout();
       await DioNetwork.clearTokens();
-      
+
       if (mounted) {
-        context.go('/login');
+        AppRoute.login.go(context);
       }
     }
   }
@@ -90,10 +90,9 @@ class _SideBarState extends State<SideBar> {
         width: 288,
         height: double.infinity,
         decoration: const BoxDecoration(
-            color: Color(0xFF17203A),
-            borderRadius: BorderRadius.all(
-              Radius.circular(30),
-            )),
+          color: Color(0xFF17203A),
+          borderRadius: BorderRadius.all(Radius.circular(30)),
+        ),
         child: DefaultTextStyle(
           style: const TextStyle(color: Colors.white),
           child: Column(
@@ -101,14 +100,14 @@ class _SideBarState extends State<SideBar> {
             children: [
               _buildUserCard(),
               Padding(
-                  padding: const EdgeInsets.only(left: 24, top: 32, bottom: 16),
-                  child: Text(
-                    "Browse".toUpperCase(),
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium!
-                        .copyWith(color: Colors.white70),
-                  )),
+                padding: const EdgeInsets.only(left: 24, top: 32, bottom: 16),
+                child: Text(
+                  "Browse".toUpperCase(),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleMedium!.copyWith(color: Colors.white70),
+                ),
+              ),
               ...sidebarMenus.map(
                 (menu) => SideMenu(
                   menu: menu,
@@ -120,10 +119,9 @@ class _SideBarState extends State<SideBar> {
                 padding: const EdgeInsets.only(left: 24, top: 40, bottom: 16),
                 child: Text(
                   "History".toUpperCase(),
-                  style: Theme.of(context)
-                      .textTheme
-                      .titleMedium!
-                      .copyWith(color: Colors.white70),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleMedium!.copyWith(color: Colors.white70),
                 ),
               ),
               ...sidebarMenus2.map(
@@ -145,7 +143,11 @@ class _SideBarState extends State<SideBar> {
                       color: errorRed.withValues(alpha: 0.2),
                       borderRadius: BorderRadius.circular(8),
                     ),
-                    child: const Icon(Icons.logout, color: Colors.white70, size: 20),
+                    child: const Icon(
+                      Icons.logout,
+                      color: Colors.white70,
+                      size: 20,
+                    ),
                   ),
                   title: const Text(
                     'Logout',
@@ -165,7 +167,7 @@ class _SideBarState extends State<SideBar> {
       builder: (context, state) {
         final session = state.currentSession;
         final user = session?.user;
-        
+
         return InfoCard(
           name: user?.displayName ?? 'Guest',
           bio: user?.email ?? 'Welcome to Barz',
@@ -176,11 +178,7 @@ class _SideBarState extends State<SideBar> {
 }
 
 class InfoCard extends StatelessWidget {
-  const InfoCard({
-    super.key,
-    required this.name,
-    required this.bio,
-  });
+  const InfoCard({super.key, required this.name, required this.bio});
 
   final String name, bio;
 
@@ -189,19 +187,10 @@ class InfoCard extends StatelessWidget {
     return ListTile(
       leading: const CircleAvatar(
         backgroundColor: Colors.white24,
-        child: Icon(
-          CupertinoIcons.person,
-          color: Colors.white,
-        ),
+        child: Icon(CupertinoIcons.person, color: Colors.white),
       ),
-      title: Text(
-        name,
-        style: const TextStyle(color: Colors.white),
-      ),
-      subtitle: Text(
-        bio,
-        style: const TextStyle(color: Colors.white70),
-      ),
+      title: Text(name, style: const TextStyle(color: Colors.white)),
+      subtitle: Text(bio, style: const TextStyle(color: Colors.white70)),
     );
   }
 }
@@ -222,7 +211,7 @@ class SideMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     final isSelected = selectedMenu == menu;
     final navItem = menu.navItem;
-    
+
     return Column(
       children: [
         const Padding(

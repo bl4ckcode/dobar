@@ -5,14 +5,11 @@ import 'package:barz/features/cart/presentation/pages/cart_page.dart';
 import 'package:barz/features/home/presentation/pages/home_page.dart';
 import 'package:barz/features/orders/presentation/pages/order_detail_page.dart';
 import 'package:barz/features/orders/presentation/pages/orders_page.dart';
-import 'package:barz/features/partners/presentation/pages/menu/menus_page.dart'
-    as partners;
 import 'package:flutter/material.dart';
 
 class AppRouter {
   static const String login = '/login';
   static const String home = '/home';
-  static const String partnerMenu = '/partner_menu';
   static const String cart = '/cart';
   static const String orders = '/orders';
   static const String orderDetail = '/order_detail';
@@ -25,8 +22,6 @@ class AppRouter {
         return _buildRouteWithAnimation(const LoginPage());
       case home:
         return _buildRouteWithAnimation(const HomePage());
-      case partnerMenu:
-        return _buildRouteWithAnimation(const partners.MenusPage());
       case bars:
         final args = settings.arguments as Map<String, double>;
         return _buildRouteWithAnimation(

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
+import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/bars/presentation/bloc/bar_bloc.dart';
@@ -126,7 +126,7 @@ class _WireframeShellState extends State<WireframeShell> {
                   right: 16,
                   child: FloatingActionButton.small(
                     heroTag: 'debug_showcase_fab',
-                    onPressed: () => context.push('/showcase'),
+                    onPressed: () => AppRoute.showcase.push(context),
                     backgroundColor: barzGold.withValues(alpha: 0.9),
                     foregroundColor: barzDark,
                     tooltip: 'Design System Showcase (Debug)',
@@ -136,7 +136,7 @@ class _WireframeShellState extends State<WireframeShell> {
             ],
           ),
           floatingActionButton: _CenterDockedFab(
-            onPressed: () => context.push('/checkin'),
+            onPressed: () => AppRoute.checkin.push(context),
           ),
           floatingActionButtonLocation:
               FloatingActionButtonLocation.centerDocked,
@@ -169,7 +169,7 @@ class _WireframeShellState extends State<WireframeShell> {
                   selectedIcon: Icons.shopping_cart,
                   label: 'Cart',
                   isSelected: false,
-                  onTap: () => context.push('/cart'),
+                  onTap: () => AppRoute.cart.push(context),
                 ),
                 _NavItem(
                   icon: Icons.person_outline,

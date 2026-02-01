@@ -1,3 +1,4 @@
+import 'package:barz/core/design/components/glow_button.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/authentication/presentation/widgets/login_buttons_widget.dart';
@@ -8,7 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
+import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/features/authentication/presentation/bloc/login_bloc.dart';
 import 'package:barz/features/authentication/presentation/bloc/login_event.dart';
 import 'package:barz/features/authentication/presentation/bloc/login_state.dart';
@@ -25,6 +26,7 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   late LoginBloc _loginBloc;
+  String? _phoneNumber;
 
   @override
   void initState() {
@@ -42,16 +44,16 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _handleLogin(String? phoneNumber) {
-    if (phoneNumber != null) {
-      _loginBloc.add(LoginEvent.loginButtonPressed(phoneNumber: phoneNumber));
+  void _handleLogin() {
+    if (_phoneNumber != null) {
+      _loginBloc.add(LoginEvent.loginButtonPressed(phoneNumber: _phoneNumber!));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: barzGoldSoft,
+      backgroundColor: barzDark,
       body: PopScope(
         onPopInvokedWithResult: (left, right) {},
         child: BlocListener<LoginBloc, LoginState>(
@@ -60,35 +62,27 @@ class _LoginPageState extends State<LoginPage> {
             if (state is Loading) {
               LoadingUtil.showLoadingDialog(context);
             } else if (state is Success) {
-              // Dismiss loading dialog if showing
               if (Navigator.of(context).canPop()) {
                 Navigator.of(context).pop();
               }
-              
-              // Priority 1: Check if user needs onboarding (role + country selection)
+
               if (state.needsOnboarding) {
-                context.go('/onboarding', extra: {
-                  'phone': state.phoneNumber,
-                });
+                AppRoute.goOnboarding(context, phone: state.phoneNumber);
                 return;
               }
-              
-              // Priority 2: Check if profile is complete
+
               if (state.isProfileComplete) {
-                // Navigate to home
-                context.go('/');
+                AppRoute.home.go(context);
               } else {
-                // Navigate to complete registration
-                context.go('/complete-registration', extra: {
-                  'email': state.email,
-                  'name': state.displayName,
-                });
+                AppRoute.goCompleteRegistration(
+                  context,
+                  email: state.email,
+                  name: state.displayName,
+                );
               }
             } else if (state is CodeSent) {
-              // Dismiss the loading dialog
               Navigator.of(context).pop();
 
-              // Navigate to the phone number validation page
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -100,15 +94,13 @@ class _LoginPageState extends State<LoginPage> {
                 ),
               );
             } else if (state is Failure) {
-              // Dismiss the loading dialog
               if (Navigator.of(context).canPop()) {
                 Navigator.of(context).pop();
               }
 
-              // Show an error message
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(state.error)),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(state.error)));
             }
           },
           child: SafeArea(
@@ -121,101 +113,129 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     child: IntrinsicHeight(
                       child: Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 24,
+                        ),
                         child: Column(
                           children: [
-                            // Logo
                             SizedBox(
-                              height: 100,
+                              height: 180,
                               child: Image.asset(
-                                'assets/login/barz_text_icon.png',
+                                'assets/dobar/1.png',
                                 fit: BoxFit.contain,
                               ),
                             ),
-                            const SizedBox(height: 24),
-                            
-                            // Phone login
-                            LoginFieldsWidget(onLoginPressed: _handleLogin),
-                            
+                            const SizedBox(height: 32),
+
+                            LoginFieldsWidget(
+                              onLoginPressed: (phone) {
+                                setState(() => _phoneNumber = phone);
+                              },
+                            ),
+
                             const SizedBox(height: 20),
-                            
-                            // Divider
+
+                            GlowButton(
+                              label: 'Continue',
+                              enabled: _phoneNumber != null,
+                              trailing: const Icon(
+                                Icons.arrow_forward,
+                                color: barzDark,
+                                size: 20,
+                              ),
+                              onPressed: _handleLogin,
+                            ),
+
+                            const SizedBox(height: 24),
+
                             Row(
                               children: [
-                                Expanded(child: Divider(color: barzDark.withValues(alpha: 0.3))),
+                                Expanded(
+                                  child: Divider(
+                                    color: Colors.white.withValues(alpha: 0.2),
+                                  ),
+                                ),
                                 Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                  ),
                                   child: Text(
                                     "or continue with",
                                     style: TextStyle(
-                                      color: barzDark.withValues(alpha: 0.6),
+                                      color: Colors.white.withValues(
+                                        alpha: 0.6,
+                                      ),
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                 ),
-                                Expanded(child: Divider(color: barzDark.withValues(alpha: 0.3))),
+                                Expanded(
+                                  child: Divider(
+                                    color: Colors.white.withValues(alpha: 0.2),
+                                  ),
+                                ),
                               ],
                             ),
-                            
-                            const SizedBox(height: 20),
-                            
-                            // Social login buttons
+
+                            const SizedBox(height: 12),
+
                             LoginButtonsWidget(loginBloc: _loginBloc),
-                            
-                            const SizedBox(height: 24),
-                            
-                            // Terms text
+
+                            const SizedBox(height: 12),
+
                             RichText(
                               textAlign: TextAlign.center,
                               text: TextSpan(
                                 text: 'By continuing, you agree to our ',
                                 style: TextStyle(
-                                  color: barzDark.withValues(alpha: 0.7),
+                                  color: Colors.white.withValues(alpha: 0.6),
                                   fontSize: 13,
                                 ),
                                 children: <TextSpan>[
                                   TextSpan(
                                     text: 'Terms of Service',
                                     style: const TextStyle(
-                                      color: barzDark,
+                                      color: barzGold,
                                       fontWeight: FontWeight.bold,
                                       decoration: TextDecoration.underline,
                                     ),
                                     recognizer: TapGestureRecognizer()
-                                      ..onTap = () {
-                                        // Handle Terms of Service tap
-                                      },
+                                      ..onTap = () {},
                                   ),
                                   TextSpan(
                                     text: ' and ',
-                                    style: TextStyle(color: barzDark.withValues(alpha: 0.7)),
+                                    style: TextStyle(
+                                      color: Colors.white.withValues(
+                                        alpha: 0.6,
+                                      ),
+                                    ),
                                   ),
                                   TextSpan(
                                     text: 'Privacy Policy',
                                     style: const TextStyle(
-                                      color: barzDark,
+                                      color: barzGold,
                                       fontWeight: FontWeight.bold,
                                       decoration: TextDecoration.underline,
                                     ),
                                     recognizer: TapGestureRecognizer()
-                                      ..onTap = () {
-                                        // Handle Privacy Policy tap
-                                      },
+                                      ..onTap = () {},
                                   ),
                                 ],
                               ),
                             ),
-                            
-                            // Spacer to push illustration to bottom
+
                             const Spacer(),
-                            
-                            // Bottom illustration
-                            Image.asset(
-                              'assets/login/barz_cup_icon.png',
-                              width: MediaQuery.of(context).size.width * 0.5,
-                              fit: BoxFit.contain,
+
+                            Opacity(
+                              opacity: 0.15,
+                              child: Image.asset(
+                                'assets/login/barz_cup_icon.png',
+                                width: MediaQuery.of(context).size.width * 0.5,
+                                fit: BoxFit.contain,
+                              ),
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 24),
                           ],
                         ),
                       ),

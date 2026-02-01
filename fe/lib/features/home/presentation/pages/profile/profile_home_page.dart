@@ -8,7 +8,7 @@ import 'package:barz/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
+import 'package:barz/core/router/app_routes.dart';
 import 'package:intl/intl.dart';
 
 class ProfileHomePage extends StatefulWidget {
@@ -45,7 +45,7 @@ class _ProfileHomePageState extends State<ProfileHomePage> {
       await DioNetwork.clearTokens();
 
       if (mounted) {
-        context.go('/login');
+        AppRoute.login.go(context);
       }
     }
   }
@@ -94,7 +94,7 @@ class _ProfileHomePageState extends State<ProfileHomePage> {
                     icon: Icons.history,
                     title: 'Order History',
                     subtitle: 'View your past orders',
-                    onTap: () => context.push('/orders'),
+                    onTap: () => AppRoute.orders.push(context),
                   ).animate().fadeIn(delay: 100.ms).slideX(begin: -0.1, end: 0),
                   _buildMenuItem(
                     icon: Icons.card_giftcard,

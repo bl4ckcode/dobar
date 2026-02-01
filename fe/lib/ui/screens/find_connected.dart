@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
+import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/core/utils/constant/colors.dart';
 import 'package:barz/ui/primitives/barz_app_bar.dart';
@@ -31,14 +31,11 @@ class FindConnected extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(
-          create: (_) => getItInjector<LocationBloc>()..add(GetCurrentLocation()),
+          create: (_) =>
+              getItInjector<LocationBloc>()..add(GetCurrentLocation()),
         ),
-        BlocProvider(
-          create: (_) => getItInjector<BarBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => getItInjector<PromotionsBloc>(),
-        ),
+        BlocProvider(create: (_) => getItInjector<BarBloc>()),
+        BlocProvider(create: (_) => getItInjector<PromotionsBloc>()),
       ],
       child: const FindConnectedView(),
     );
@@ -68,13 +65,12 @@ class _FindConnectedViewState extends State<FindConnectedView> {
     final locationState = context.read<LocationBloc>().state;
     final lat = locationState.currentLocation?.latitude ?? _defaultLat;
     final lng = locationState.currentLocation?.longitude ?? _defaultLng;
-    
+
     context.read<LocationBloc>().add(GetCurrentLocation());
     context.read<BarBloc>().add(LoadNearbyBars(lat: lat, lng: lng));
-    context.read<PromotionsBloc>().add(LoadPromotions(
-      latitude: lat,
-      longitude: lng,
-    ));
+    context.read<PromotionsBloc>().add(
+      LoadPromotions(latitude: lat, longitude: lng),
+    );
   }
 
   @override
@@ -89,7 +85,9 @@ class _FindConnectedViewState extends State<FindConnectedView> {
           children: [
             _buildSearchBar(),
             _buildViewToggle(),
-            Expanded(child: _showMapView ? _buildMapPlaceholder() : _buildBarsList()),
+            Expanded(
+              child: _showMapView ? _buildMapPlaceholder() : _buildBarsList(),
+            ),
           ],
         ),
       ),
@@ -122,7 +120,10 @@ class _FindConnectedViewState extends State<FindConnectedView> {
               onPressed: () {},
             ),
             border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
           ),
         ),
       ),
@@ -169,12 +170,18 @@ class _FindConnectedViewState extends State<FindConnectedView> {
         decoration: BoxDecoration(
           color: isSelected ? barzBlack : Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isSelected ? barzBlack : Colors.grey.shade300),
+          border: Border.all(
+            color: isSelected ? barzBlack : Colors.grey.shade300,
+          ),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: isSelected ? barzYellow : textSecondary, size: 20),
+            Icon(
+              icon,
+              color: isSelected ? barzYellow : textSecondary,
+              size: 20,
+            ),
             const SizedBox(width: 8),
             Text(
               label,
@@ -197,11 +204,13 @@ class _FindConnectedViewState extends State<FindConnectedView> {
         for (final promo in promoState.promotions) {
           barsWithPromos.add(promo.barId);
         }
-        
+
         return BlocBuilder<BarBloc, BarState>(
           builder: (context, state) {
             if (state is BarLoading) {
-              return const Center(child: CircularProgressIndicator(color: barzYellow));
+              return const Center(
+                child: CircularProgressIndicator(color: barzYellow),
+              );
             }
             if (state is BarError) {
               return _buildErrorState(state.message, () {
@@ -236,124 +245,145 @@ class _FindConnectedViewState extends State<FindConnectedView> {
 
   Widget _buildBarCard(BarModel bar, int index, {bool hasPromo = false}) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: BarzCard(
-        child: InkWell(
-          onTap: () => context.push('/bar/${bar.id}'),
-          child: Padding(
-            padding: const EdgeInsets.all(4),
-            child: Row(
-              children: [
-                // Image with optional promo badge and auto URL refresh
-                Stack(
+          padding: const EdgeInsets.only(bottom: 12),
+          child: BarzCard(
+            child: InkWell(
+              onTap: () => AppRoute.pushBar(context, bar.id),
+              child: Padding(
+                padding: const EdgeInsets.all(4),
+                child: Row(
                   children: [
-                    BarImage(
-                      barId: bar.id,
-                      imageUrl: bar.imageUrl,
-                      imageUrlExpiration: bar.imageUrlExpiration,
-                      width: 64,
-                      height: 64,
-                      fit: BoxFit.cover,
-                      borderRadius: BorderRadius.circular(12),
-                      errorWidget: Container(
-                        width: 64,
-                        height: 64,
-                        decoration: BoxDecoration(
-                          color: barzYellowSoft,
+                    // Image with optional promo badge and auto URL refresh
+                    Stack(
+                      children: [
+                        BarImage(
+                          barId: bar.id,
+                          imageUrl: bar.imageUrl,
+                          imageUrlExpiration: bar.imageUrlExpiration,
+                          width: 64,
+                          height: 64,
+                          fit: BoxFit.cover,
                           borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(Icons.store, color: barzYellowDark, size: 32),
-                      ),
-                    ),
-                    if (hasPromo)
-                      Positioned(
-                        top: 0,
-                        right: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(
-                            color: barzBlack,
-                            borderRadius: BorderRadius.only(
-                              topRight: Radius.circular(12),
-                              bottomLeft: Radius.circular(8),
+                          errorWidget: Container(
+                            width: 64,
+                            height: 64,
+                            decoration: BoxDecoration(
+                              color: barzYellowSoft,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.store,
+                              color: barzYellowDark,
+                              size: 32,
                             ),
                           ),
-                          child: const Icon(
-                            Icons.local_offer,
-                            size: 14,
-                            color: barzYellow,
-                          ),
                         ),
-                      ),
-                  ],
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              bar.name,
-                              style: TextStyle(
-                                color: textPrimary,
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          if (hasPromo)
-                            Container(
-                              margin: const EdgeInsets.only(left: 8),
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: barzYellow,
-                                borderRadius: BorderRadius.circular(4),
-                              ),
-                              child: const Text(
-                                'PROMO',
-                                style: TextStyle(
-                                  color: barzBlack,
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.bold,
+                        if (hasPromo)
+                          Positioned(
+                            top: 0,
+                            right: 0,
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: const BoxDecoration(
+                                color: barzBlack,
+                                borderRadius: BorderRadius.only(
+                                  topRight: Radius.circular(12),
+                                  bottomLeft: Radius.circular(8),
                                 ),
                               ),
+                              child: const Icon(
+                                Icons.local_offer,
+                                size: 14,
+                                color: barzYellow,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  bar.name,
+                                  style: TextStyle(
+                                    color: textPrimary,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              if (hasPromo)
+                                Container(
+                                  margin: const EdgeInsets.only(left: 8),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: barzYellow,
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Text(
+                                    'PROMO',
+                                    style: TextStyle(
+                                      color: barzBlack,
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            bar.address,
+                            style: TextStyle(
+                              color: textSecondary,
+                              fontSize: 14,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          if (bar.approximateLocation != null)
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.location_on,
+                                  size: 14,
+                                  color: barzYellowDark,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${(bar.approximateLocation! / 1000).toStringAsFixed(1)} km',
+                                  style: TextStyle(
+                                    color: barzYellowDark,
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
                             ),
                         ],
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        bar.address,
-                        style: TextStyle(color: textSecondary, fontSize: 14),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      if (bar.approximateLocation != null)
-                        Row(
-                          children: [
-                            Icon(Icons.location_on, size: 14, color: barzYellowDark),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${(bar.approximateLocation! / 1000).toStringAsFixed(1)} km',
-                              style: TextStyle(color: barzYellowDark, fontSize: 12, fontWeight: FontWeight.w500),
-                            ),
-                          ],
-                        ),
-                    ],
-                  ),
+                    ),
+                    Icon(Icons.chevron_right, color: textTertiary),
+                  ],
                 ),
-                Icon(Icons.chevron_right, color: textTertiary),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
-    ).animate().fadeIn(delay: Duration(milliseconds: index * 50)).slideX(begin: 0.05, end: 0);
+        )
+        .animate()
+        .fadeIn(delay: Duration(milliseconds: index * 50))
+        .slideX(begin: 0.05, end: 0);
   }
 
   Widget _buildMapPlaceholder() {
@@ -367,7 +397,11 @@ class _FindConnectedViewState extends State<FindConnectedView> {
             const SizedBox(height: 16),
             Text(
               'Map View',
-              style: TextStyle(color: textPrimary, fontSize: 18, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 8),
             Text(
@@ -390,11 +424,18 @@ class _FindConnectedViewState extends State<FindConnectedView> {
           children: [
             Icon(Icons.error_outline, size: 64, color: Colors.red),
             const SizedBox(height: 16),
-            Text(message, style: TextStyle(color: textSecondary), textAlign: TextAlign.center),
+            Text(
+              message,
+              style: TextStyle(color: textSecondary),
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: 16),
             ElevatedButton(
               onPressed: onRetry,
-              style: ElevatedButton.styleFrom(backgroundColor: barzYellow, foregroundColor: barzBlack),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: barzYellow,
+                foregroundColor: barzBlack,
+              ),
               child: const Text('Retry'),
             ),
           ],
@@ -414,7 +455,11 @@ class _FindConnectedViewState extends State<FindConnectedView> {
             const SizedBox(height: 16),
             Text(
               'No bars found nearby',
-              style: TextStyle(color: textPrimary, fontSize: 18, fontWeight: FontWeight.w600),
+              style: TextStyle(
+                color: textPrimary,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
             ),
             const SizedBox(height: 8),
             Text(

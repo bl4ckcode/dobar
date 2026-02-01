@@ -6,7 +6,7 @@ import 'package:barz/l10n/app_localizations.dart';
 import 'package:barz/shared/presentation/widget/bar_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
+import 'package:barz/core/router/app_routes.dart';
 import 'package:location/location.dart';
 
 /// Main check-in page with QR scan and geo-location options
@@ -16,7 +16,8 @@ class CheckinPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => getItInjector<CheckinBloc>()..add(const LoadActiveCheckin()),
+      create: (_) =>
+          getItInjector<CheckinBloc>()..add(const LoadActiveCheckin()),
       child: const _CheckinPageContent(),
     );
   }
@@ -30,9 +31,7 @@ class _CheckinPageContent extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.checkin_title),
-      ),
+      appBar: AppBar(title: Text(l10n.checkin_title)),
       body: BlocConsumer<CheckinBloc, CheckinState>(
         listener: (context, state) {
           if (state.error != null) {
@@ -123,9 +122,7 @@ class _InitialView extends StatelessWidget {
               },
               icon: const Icon(Icons.qr_code_scanner),
               label: Text(l10n.checkin_scan_qr),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.all(20),
-              ),
+              style: FilledButton.styleFrom(padding: const EdgeInsets.all(20)),
             ),
           ),
           const SizedBox(height: 16),
@@ -167,10 +164,12 @@ class _InitialView extends StatelessWidget {
     final locationData = await location.getLocation();
     if (locationData.latitude != null && locationData.longitude != null) {
       if (context.mounted) {
-        context.read<CheckinBloc>().add(FindNearbyBars(
-              latitude: locationData.latitude!,
-              longitude: locationData.longitude!,
-            ));
+        context.read<CheckinBloc>().add(
+          FindNearbyBars(
+            latitude: locationData.latitude!,
+            longitude: locationData.longitude!,
+          ),
+        );
       }
     }
   }
@@ -192,10 +191,7 @@ class _ScanningView extends StatelessWidget {
             width: 280,
             height: 280,
             decoration: BoxDecoration(
-              border: Border.all(
-                color: theme.colorScheme.primary,
-                width: 3,
-              ),
+              border: Border.all(color: theme.colorScheme.primary, width: 3),
               borderRadius: BorderRadius.circular(24),
             ),
             child: Center(
@@ -229,8 +225,8 @@ class _ScanningView extends StatelessWidget {
             onPressed: () {
               // Simulate scanning a bar QR code
               context.read<CheckinBloc>().add(
-                    const QrCodeScanned('barz://bar/1?table=5'),
-                  );
+                const QrCodeScanned('barz://bar/1?table=5'),
+              );
             },
             child: const Text('Demo: Simulate QR Scan'),
           ),
@@ -269,10 +265,7 @@ class _NearbyBarsView extends StatelessWidget {
               color: theme.colorScheme.onSurfaceVariant,
             ),
             const SizedBox(height: 16),
-            Text(
-              'No bars found nearby',
-              style: theme.textTheme.titleMedium,
-            ),
+            Text('No bars found nearby', style: theme.textTheme.titleMedium),
             const SizedBox(height: 8),
             Text(
               'Try scanning a QR code instead',
@@ -297,10 +290,7 @@ class _NearbyBarsView extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.all(16),
-          child: Text(
-            'Bars near you',
-            style: theme.textTheme.titleLarge,
-          ),
+          child: Text('Bars near you', style: theme.textTheme.titleLarge),
         ),
         Expanded(
           child: ListView.builder(
@@ -420,9 +410,7 @@ class _ConfirmCheckinViewState extends State<_ConfirmCheckinView> {
               },
               icon: const Icon(Icons.check),
               label: Text(l10n.checkin_confirm),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.all(20),
-              ),
+              style: FilledButton.styleFrom(padding: const EdgeInsets.all(20)),
             ),
           ),
           const SizedBox(height: 16),
@@ -481,9 +469,7 @@ class _ActiveCheckinView extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             l10n.checkin_success,
-            style: theme.textTheme.bodyLarge?.copyWith(
-              color: Colors.green,
-            ),
+            style: theme.textTheme.bodyLarge?.copyWith(color: Colors.green),
           ),
 
           if (checkin.tableNumber != null) ...[
@@ -532,13 +518,11 @@ class _ActiveCheckinView extends StatelessWidget {
             width: double.infinity,
             child: FilledButton.icon(
               onPressed: () {
-                context.push('/bar/${checkin.barId}');
+                AppRoute.pushBar(context, checkin.barId);
               },
               icon: const Icon(Icons.restaurant_menu),
               label: Text(l10n.checkin_browse_menu),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.all(20),
-              ),
+              style: FilledButton.styleFrom(padding: const EdgeInsets.all(20)),
             ),
           ),
           const SizedBox(height: 16),
@@ -548,7 +532,7 @@ class _ActiveCheckinView extends StatelessWidget {
             width: double.infinity,
             child: OutlinedButton.icon(
               onPressed: () {
-                context.push('/cart');
+                AppRoute.cart.push(context);
               },
               icon: const Icon(Icons.shopping_cart),
               label: Text(l10n.cart_title),
@@ -565,10 +549,7 @@ class _ActiveCheckinView extends StatelessWidget {
               _showCheckoutDialog(context);
             },
             icon: const Icon(Icons.logout, color: Colors.red),
-            label: const Text(
-              'Check out',
-              style: TextStyle(color: Colors.red),
-            ),
+            label: const Text('Check out', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -580,7 +561,9 @@ class _ActiveCheckinView extends StatelessWidget {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Check out?'),
-        content: const Text('Are you sure you want to check out from this bar?'),
+        content: const Text(
+          'Are you sure you want to check out from this bar?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),

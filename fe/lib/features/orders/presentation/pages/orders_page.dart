@@ -1,11 +1,11 @@
 import 'package:barz/core/utils/injections.dart';
+import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/features/orders/presentation/bloc/order_bloc.dart';
 import 'package:barz/features/orders/presentation/bloc/order_event.dart';
 import 'package:barz/features/orders/presentation/bloc/order_state.dart';
 import 'package:barz/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 
 class OrdersPage extends StatelessWidget {
   const OrdersPage({super.key});
@@ -13,7 +13,7 @@ class OrdersPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    
+
     return BlocProvider(
       create: (_) => getItInjector<OrderBloc>()..add(const LoadMyOrders()),
       child: Scaffold(
@@ -57,7 +57,9 @@ class OrdersPage extends StatelessWidget {
                       Icon(
                         Icons.receipt_long_outlined,
                         size: 64,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
                       ),
                       const SizedBox(height: 16),
                       Text(
@@ -106,12 +108,12 @@ class _OrderCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => context.push('/order/${order.id}'),
+        onTap: () => AppRoute.pushOrder(context, order.id),
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -141,7 +143,9 @@ class _OrderCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    order.orderType == 'dine_in' ? l10n.order_dine_in : l10n.order_takeout,
+                    order.orderType == 'dine_in'
+                        ? l10n.order_dine_in
+                        : l10n.order_takeout,
                     style: theme.textTheme.bodySmall,
                   ),
                   Text(
@@ -169,7 +173,7 @@ class _OrderStatusChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (color, icon) = _getStatusStyle(status);
-    
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -216,8 +220,14 @@ class _OrderStatusChip extends StatelessWidget {
   }
 
   String _formatStatus(String status) {
-    return status.replaceAll('_', ' ').split(' ').map((word) =>
-      word.isNotEmpty ? '${word[0].toUpperCase()}${word.substring(1)}' : ''
-    ).join(' ');
+    return status
+        .replaceAll('_', ' ')
+        .split(' ')
+        .map(
+          (word) => word.isNotEmpty
+              ? '${word[0].toUpperCase()}${word.substring(1)}'
+              : '',
+        )
+        .join(' ');
   }
 }

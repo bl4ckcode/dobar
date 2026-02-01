@@ -1,72 +1,99 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../tokens/colors.dart';
+import '../design_system.dart';
 
-class DobarAppBar extends StatelessWidget implements PreferredSizeWidget {
-  final VoidCallback? onMenuTap;
-  final List<Widget>? actions;
+class DobarHomeHeader extends StatelessWidget {
+  final VoidCallback? onNotificationTap;
 
-  const DobarAppBar({super.key, this.onMenuTap, this.actions});
-
-  @override
-  Size get preferredSize => const Size.fromHeight(56);
+  const DobarHomeHeader({super.key, this.onNotificationTap});
 
   @override
   Widget build(BuildContext context) {
-    return AppBar(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      centerTitle: true,
-      leading: onMenuTap != null
-          ? Container(
-              margin: const EdgeInsets.only(left: 8),
-              child: IconButton(
-                icon: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.08),
-                        offset: const Offset(0, 2),
-                        blurRadius: 6,
-                      ),
-                    ],
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildAppBarRow(),
+        const SizedBox(height: 16),
+        _buildWelcomeCard(),
+      ],
+    );
+  }
+
+  Widget _buildAppBarRow() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          'dobar',
+          style: GoogleFonts.poppins(
+            color: barzGold,
+            fontSize: 26,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.5,
+          ),
+        ),
+        if (onNotificationTap != null)
+          GestureDetector(
+            onTap: onNotificationTap,
+            child: Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: barzGold,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(Icons.notifications_outlined, color: barzDark),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildWelcomeCard() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: barzDarkLight,
+        borderRadius: BorderRadius.circular(BarzRadii.md),
+        border: Border.all(color: barzDarkMuted, width: 1),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: barzGold,
+              borderRadius: BorderRadius.circular(BarzRadii.sm),
+            ),
+            child: const Icon(Icons.waving_hand, color: barzDark),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Welcome back!',
+                  style: TextStyle(
+                    color: textOnDark,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
                   ),
-                  child: const Icon(Icons.menu, color: barzDark, size: 22),
                 ),
-                onPressed: onMenuTap,
-              ),
-            )
-          : null,
-      title:
-          Text(
-                'dobar',
-                style: GoogleFonts.poppins(
-                  color: barzDark,
-                  fontSize: 26,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 1.5,
+                const SizedBox(height: 4),
+                Text(
+                  'Ready to order?',
+                  style: TextStyle(
+                    color: textOnDark.withValues(alpha: 0.7),
+                    fontSize: 14,
+                  ),
                 ),
-              )
-              .animate(onPlay: (controller) => controller.repeat(reverse: true))
-              .fadeIn(duration: 600.ms, delay: 100.ms)
-              .slideY(
-                begin: -0.2,
-                end: 0,
-                duration: 600.ms,
-                delay: 100.ms,
-                curve: Curves.easeOutCubic,
-              )
-              .then(delay: 2000.ms)
-              .shimmer(
-                duration: 1200.ms,
-                color: barzGold.withValues(alpha: 0.3),
-              ),
-      actions: actions,
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1,14 +1,17 @@
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/cart/presentation/bloc/cart_bloc.dart';
-import 'package:barz/features/cart/presentation/bloc/cart_event.dart' as cart_event;
+import 'package:barz/features/cart/presentation/bloc/cart_event.dart'
+    as cart_event;
 import 'package:barz/features/cart/presentation/bloc/cart_state.dart';
 import 'package:barz/features/checkin/presentation/bloc/checkin_bloc.dart';
-import 'package:barz/features/checkin/presentation/bloc/checkin_event.dart' as checkin_event;
+import 'package:barz/features/checkin/presentation/bloc/checkin_event.dart'
+    as checkin_event;
 import 'package:barz/features/checkin/presentation/bloc/checkin_state.dart';
 import 'package:barz/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:barz/core/router/app_routes.dart';
 
 /// Enhanced cart page with table number and special instructions
 class CartPage extends StatefulWidget {
@@ -41,7 +44,9 @@ class _CartPageState extends State<CartPage> {
           create: (_) => getItInjector<CartBloc>()..add(cart_event.LoadCart()),
         ),
         BlocProvider(
-          create: (_) => getItInjector<CheckinBloc>()..add(const checkin_event.LoadActiveCheckin()),
+          create: (_) =>
+              getItInjector<CheckinBloc>()
+                ..add(const checkin_event.LoadActiveCheckin()),
         ),
       ],
       child: Scaffold(
@@ -81,10 +86,7 @@ class _CartPageState extends State<CartPage> {
               return const Center(child: CircularProgressIndicator());
             }
             if (state is CartError) {
-              return _EmptyCartView(
-                message: state.message,
-                isError: true,
-              );
+              return _EmptyCartView(message: state.message, isError: true);
             }
             if (state is CartLoaded) {
               final cart = state.cart;
@@ -140,17 +142,17 @@ class _CartPageState extends State<CartPage> {
 
   void _handleCheckout(BuildContext context) {
     context.read<CartBloc>().add(
-          cart_event.Checkout(
-            orderType: _selectedOrderType,
-            paymentMethod: _selectedPaymentMethod,
-            tableNumber: _tableController.text.isNotEmpty
-                ? _tableController.text
-                : null,
-            specialInstructions: _instructionsController.text.isNotEmpty
-                ? _instructionsController.text
-                : null,
-          ),
-        );
+      cart_event.Checkout(
+        orderType: _selectedOrderType,
+        paymentMethod: _selectedPaymentMethod,
+        tableNumber: _tableController.text.isNotEmpty
+            ? _tableController.text
+            : null,
+        specialInstructions: _instructionsController.text.isNotEmpty
+            ? _instructionsController.text
+            : null,
+      ),
+    );
   }
 
   void _showOrderSuccessDialog(BuildContext context, int orderId) {
@@ -166,11 +168,7 @@ class _CartPageState extends State<CartPage> {
             color: Colors.green.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
-          child: const Icon(
-            Icons.check_circle,
-            size: 48,
-            color: Colors.green,
-          ),
+          child: const Icon(Icons.check_circle, size: 48, color: Colors.green),
         ),
         title: Text(l10n.checkout_success),
         content: Column(
@@ -180,9 +178,9 @@ class _CartPageState extends State<CartPage> {
             const SizedBox(height: 8),
             Text(
               'Order #$orderId',
-              style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
           ],
         ),
@@ -197,7 +195,7 @@ class _CartPageState extends State<CartPage> {
           FilledButton(
             onPressed: () {
               Navigator.pop(ctx);
-              context.go('/order/$orderId');
+              AppRoute.goOrder(context, orderId);
             },
             child: Text(l10n.order_tracking),
           ),
@@ -212,10 +210,7 @@ class _EmptyCartView extends StatelessWidget {
   final String message;
   final bool isError;
 
-  const _EmptyCartView({
-    required this.message,
-    this.isError = false,
-  });
+  const _EmptyCartView({required this.message, this.isError = false});
 
   @override
   Widget build(BuildContext context) {
@@ -303,7 +298,9 @@ class _CartContentView extends StatelessWidget {
                       ),
                     ),
                     const Divider(height: 1),
-                    ...cart.items.map<Widget>((item) => _CartItemTile(item: item)),
+                    ...cart.items.map<Widget>(
+                      (item) => _CartItemTile(item: item),
+                    ),
                   ],
                 ),
               ),
@@ -315,7 +312,8 @@ class _CartContentView extends StatelessWidget {
                   if (state.isCheckedIn && state.activeCheckin != null) {
                     final checkin = state.activeCheckin!;
                     // Pre-fill table number from check-in
-                    if (tableController.text.isEmpty && checkin.tableNumber != null) {
+                    if (tableController.text.isEmpty &&
+                        checkin.tableNumber != null) {
                       WidgetsBinding.instance.addPostFrameCallback((_) {
                         tableController.text = checkin.tableNumber!;
                       });
@@ -438,7 +436,9 @@ class _CartContentView extends StatelessWidget {
                       const SizedBox(height: 8),
                       RadioGroup<String>(
                         groupValue: selectedPaymentMethod,
-                        onChanged: (value) => onPaymentMethodChanged(value ?? selectedPaymentMethod),
+                        onChanged: (value) => onPaymentMethodChanged(
+                          value ?? selectedPaymentMethod,
+                        ),
                         child: Column(
                           children: [
                             _PaymentMethodRadio(
@@ -505,15 +505,15 @@ class _CartItemTile extends StatelessWidget {
             onPressed: () {
               if (item.quantity > 1) {
                 context.read<CartBloc>().add(
-                      cart_event.UpdateCartItem(
-                        itemId: item.id,
-                        quantity: item.quantity - 1,
-                      ),
-                    );
+                  cart_event.UpdateCartItem(
+                    itemId: item.id,
+                    quantity: item.quantity - 1,
+                  ),
+                );
               } else {
                 context.read<CartBloc>().add(
-                      cart_event.RemoveFromCart(itemId: item.id),
-                    );
+                  cart_event.RemoveFromCart(itemId: item.id),
+                );
               }
             },
           ),
@@ -530,11 +530,11 @@ class _CartItemTile extends StatelessWidget {
             iconSize: 20,
             onPressed: () {
               context.read<CartBloc>().add(
-                    cart_event.UpdateCartItem(
-                      itemId: item.id,
-                      quantity: item.quantity + 1,
-                    ),
-                  );
+                cart_event.UpdateCartItem(
+                  itemId: item.id,
+                  quantity: item.quantity + 1,
+                ),
+              );
             },
           ),
           const SizedBox(width: 16),
@@ -572,10 +572,7 @@ class _PaymentMethodRadio extends StatelessWidget {
     final radioGroup = RadioGroup.maybeOf<String>(context);
     final isSelected = radioGroup?.groupValue == value;
     return ListTile(
-      leading: Radio<String>(
-        value: value,
-        groupRegistry: radioGroup,
-      ),
+      leading: Radio<String>(value: value, groupRegistry: radioGroup),
       title: Row(
         children: [
           Icon(icon, size: 20),

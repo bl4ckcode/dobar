@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
+import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/core/design/design_system.dart';
-import 'package:barz/core/design/components/category_chip.dart';
+import 'package:barz/core/design/components/category_pill.dart';
 import 'package:barz/core/design/components/dobar_app_bar.dart';
 import 'package:barz/ui/primitives/barz_card.dart' as legacy;
 import 'package:barz/features/bars/presentation/bloc/bar_bloc.dart';
@@ -49,27 +49,11 @@ class HomeConnectedView extends StatefulWidget {
 
 class _HomeConnectedViewState extends State<HomeConnectedView> {
   final ScrollController _scrollController = ScrollController();
-  double _welcomeOpacity = 1.0;
-
-  @override
-  void initState() {
-    super.initState();
-    _scrollController.addListener(_handleScroll);
-  }
 
   @override
   void dispose() {
-    _scrollController.removeListener(_handleScroll);
     _scrollController.dispose();
     super.dispose();
-  }
-
-  void _handleScroll() {
-    final offset = _scrollController.offset;
-    final newOpacity = (1.0 - (offset / 100)).clamp(0.0, 1.0);
-    if (newOpacity != _welcomeOpacity) {
-      setState(() => _welcomeOpacity = newOpacity);
-    }
   }
 
   void _refreshData(BuildContext context) {
@@ -87,116 +71,53 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const DobarAppBar(),
+      backgroundColor: barzDark,
       body: RefreshIndicator(
         onRefresh: () async => _refreshData(context),
+        color: barzGold,
+        backgroundColor: barzDarkLight,
         child: ListView(
           controller: _scrollController,
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(BarzSpacing.lg),
           children: [
-            if (_welcomeOpacity > 0)
-              Opacity(
-                opacity: _welcomeOpacity,
-                child: Transform.translate(
-                  offset: Offset(0, -20 * (1 - _welcomeOpacity)),
-                  child: _buildWelcomeSection(),
-                ),
-              ),
-            const SizedBox(height: 24),
-            _buildSectionTitle('Promotions'),
-            const SizedBox(height: 12),
-            _buildPromotionsSection(context),
-            const SizedBox(height: 24),
+            const DobarHomeHeader(),
+            const SizedBox(height: BarzSpacing.xl),
             _buildSectionTitle('Browse by Category'),
-            const SizedBox(height: 12),
+            const SizedBox(height: BarzSpacing.md),
             _buildCategoriesSection(context),
-            const SizedBox(height: 16),
-            _buildSectionTitle('Your Spots'),
-            const SizedBox(height: 12),
+            const SizedBox(height: BarzSpacing.lg),
             _buildBarsGrid(context),
-            const SizedBox(height: 24),
+            const SizedBox(height: BarzSpacing.xl),
             _buildSectionTitle('Most Wanted'),
-            const SizedBox(height: 12),
+            const SizedBox(height: BarzSpacing.md),
             _buildMostWantedDrinksSection(context),
-            const SizedBox(height: 24),
+            const SizedBox(height: BarzSpacing.xl),
             _buildSectionTitle('Hottest Drinks 🔥'),
-            const SizedBox(height: 12),
+            const SizedBox(height: BarzSpacing.md),
             _buildHottestDrinksSection(context),
-            const SizedBox(height: 24),
+            const SizedBox(height: BarzSpacing.xl),
+            _buildPromotionsSection(context),
+            const SizedBox(height: BarzSpacing.xl),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildWelcomeSection() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: barzDark,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              color: barzGold,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Icon(Icons.waving_hand, color: barzDark),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Welcome back!',
-                  style: TextStyle(
-                    color: textOnDark,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Ready to order?',
-                  style: TextStyle(
-                    color: textOnDark.withValues(alpha: 0.7),
-                    fontSize: 14,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    ).animate().fadeIn().scale(
-      begin: const Offset(0.95, 0.95),
-      end: const Offset(1, 1),
-    );
-  }
-
   Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 4),
-      child: Text(
-        title,
-        style: TextStyle(
-          color: textPrimary,
-          fontSize: 18,
-          fontWeight: FontWeight.w600,
+    return Row(
+      children: [
+        const Icon(Icons.star, color: barzGold, size: 20),
+        const SizedBox(width: BarzSpacing.xs),
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: textOnDark,
+          ),
         ),
-      ),
+      ],
     );
   }
 
@@ -253,7 +174,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
     }
 
     return GestureDetector(
-      onTap: () => context.push('/promotion/${promo.id}'),
+      onTap: () => AppRoute.pushPromotion(context, promo.id),
       child: Container(
         width: 160,
         height: 224,
@@ -356,19 +277,25 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
   }
 
   Widget _buildCategoriesSection(BuildContext context) {
+    final categories = [
+      (icon: Icons.local_bar, label: 'Bars', id: 'bar'),
+      (icon: Icons.restaurant, label: 'Restaurants', id: 'restaurant'),
+      (icon: Icons.nightlife, label: 'Clubs', id: 'club'),
+    ];
+
     return SizedBox(
       height: 44,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        itemCount: barCategories.length,
+        itemCount: categories.length,
         separatorBuilder: (_, _) => const SizedBox(width: 10),
         itemBuilder: (context, index) {
-          final category = barCategories[index];
-          return CategoryChip(
+          final category = categories[index];
+          return CategoryPill(
             icon: category.icon,
             label: category.label,
             isSelected: false,
-            onTap: () => context.push('/find?category=${category.id}'),
+            onTap: () => AppRoute.pushFind(context, category: category.id),
           ).animate().fadeIn(delay: (50 * index).ms).slideX(begin: 0.1, end: 0);
         },
       ),
@@ -415,7 +342,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
                     distance: _formatDistance(bar.approximateLocation),
                     rating: 4.5,
                     imageUrl: bar.imageUrl,
-                    onTap: () => context.push('/bar/${bar.id}'),
+                    onTap: () => AppRoute.pushBar(context, bar.id),
                   )
                   .animate()
                   .fadeIn(delay: (50 * index).ms, duration: 400.ms)

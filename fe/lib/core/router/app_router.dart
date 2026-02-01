@@ -36,31 +36,31 @@ const _publicRoutes = {'/login'};
 
 final appRouter = GoRouter(
   navigatorKey: rootNavigatorKey,
-  initialLocation: '/',
+  initialLocation: AppRoute.home.path,
   redirect: (context, state) async {
     final isAuthenticated = await DioNetwork.isAuthenticated();
     final currentPath = state.matchedLocation;
     final isPublicRoute = _publicRoutes.contains(currentPath);
 
     if (!isAuthenticated && !isPublicRoute) {
-      return '/login';
+      return AppRoute.login.path;
     }
 
-    if (isAuthenticated && currentPath == '/login') {
-      return '/';
+    if (isAuthenticated && currentPath == AppRoute.login.path) {
+      return AppRoute.home.path;
     }
 
     return null;
   },
   routes: [
     GoRoute(
-      path: '/login',
-      name: 'login',
+      path: AppRoute.login.path,
+      name: AppRoute.login.name,
       builder: (context, state) => const LoginPage(),
     ),
     GoRoute(
-      path: '/onboarding',
-      name: 'onboarding',
+      path: AppRoute.onboarding.path,
+      name: AppRoute.onboarding.name,
       builder: (context, state) {
         final extra = state.extra as Map<String, String?>?;
         final phone = extra?['phone'] ?? extra?['phoneNumber'];
@@ -68,8 +68,8 @@ final appRouter = GoRouter(
       },
     ),
     GoRoute(
-      path: '/complete-registration',
-      name: 'completeRegistration',
+      path: AppRoute.completeRegistration.path,
+      name: AppRoute.completeRegistration.name,
       builder: (context, state) {
         final extra = state.extra as Map<String, String?>?;
         return CompleteRegistrationPage(
@@ -80,7 +80,7 @@ final appRouter = GoRouter(
       },
     ),
     GoRoute(
-      path: '/',
+      path: AppRoute.home.path,
       name: 'appShell',
       builder: (context, state) => const AppShell(),
     ),
@@ -145,60 +145,60 @@ final appRouter = GoRouter(
       ],
     ),
     GoRoute(
-      path: '/bar/:barId',
-      name: 'bar',
+      path: AppRoute.bar.path,
+      name: AppRoute.bar.name,
       builder: (context, state) {
         final barId = int.parse(state.pathParameters['barId']!);
         return BarDetailPage(barId: barId);
       },
     ),
     GoRoute(
-      path: '/promotion/:promotionId',
-      name: 'promotion',
+      path: AppRoute.promotion.path,
+      name: AppRoute.promotion.name,
       builder: (context, state) {
         final promotionId = int.parse(state.pathParameters['promotionId']!);
         return PromotionDetailPage(promotionId: promotionId);
       },
     ),
     GoRoute(
-      path: '/orders',
-      name: 'orders',
+      path: AppRoute.orders.path,
+      name: AppRoute.orders.name,
       builder: (context, state) => const OrdersPage(),
     ),
     GoRoute(
-      path: '/order/:orderId',
-      name: 'order',
+      path: AppRoute.order.path,
+      name: AppRoute.order.name,
       builder: (context, state) {
         final orderId = int.parse(state.pathParameters['orderId']!);
         return OrderTrackingPage(orderId: orderId);
       },
     ),
     GoRoute(
-      path: '/order_detail/:orderId',
-      name: 'orderDetail',
+      path: AppRoute.orderDetail.path,
+      name: AppRoute.orderDetail.name,
       builder: (context, state) {
         final orderId = int.parse(state.pathParameters['orderId']!);
         return OrderDetailPage(orderId: orderId);
       },
     ),
     GoRoute(
-      path: '/create-bar',
-      name: 'createBar',
+      path: AppRoute.createBar.path,
+      name: AppRoute.createBar.name,
       builder: (context, state) => const CreateBarPage(),
     ),
     GoRoute(
-      path: '/checkin',
-      name: 'checkin',
+      path: AppRoute.checkin.path,
+      name: AppRoute.checkin.name,
       builder: (context, state) => const CheckinPage(),
     ),
     GoRoute(
-      path: '/cart',
-      name: 'cart',
+      path: AppRoute.cart.path,
+      name: AppRoute.cart.name,
       builder: (context, state) => const CartPage(),
     ),
     GoRoute(
-      path: '/showcase',
-      name: 'showcase',
+      path: AppRoute.showcase.path,
+      name: AppRoute.showcase.name,
       builder: (context, state) => const ShowcaseScreen(),
     ),
   ],

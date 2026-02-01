@@ -1,4 +1,4 @@
-import 'package:barz/core/router/router.dart';
+import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/core/utils/location_handler.dart';
 import 'package:barz/core/design/design_system.dart';
@@ -158,12 +158,7 @@ class _DrinksHomePageState extends State<DrinksHomePage> {
             list: partners,
             cardsType: CardType.rectangular,
             onCardTap: (ParallaxRecipeUiModel selectedBar) {
-              AppRouter.route(
-                RouteSettings(
-                  name: AppRouter.partnerMenu,
-                  arguments: selectedBar.id,
-                ),
-              );
+              AppRoute.pushBar(context, selectedBar.id);
             },
           ),
           TitleSubtitleWidget(
