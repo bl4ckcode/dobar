@@ -48,6 +48,7 @@ class Bar(Base):
     owner = relationship("BarOwner", back_populates="bars")
     menus = relationship("Menu", back_populates="bar")
     promotions = relationship("Promotion", back_populates="bar")
+    bundle_promotions = relationship("BundlePromotion", back_populates="bar")
     cashback_transactions = relationship("CashbackLedger", back_populates="bar")
     advertising_subscription = relationship("AdvertisingSubscription", back_populates="bar", uselist=False)
 
@@ -142,9 +143,40 @@ class Promotion(Base):
     is_active = Column(Boolean, default=True, index=True)
     image_url = Column(String, nullable=True)
     
-    # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relationship
     bar = relationship("Bar", back_populates="promotions")
+
+
+class BundlePromotion(Base):
+    __tablename__ = "bundle_promotions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    bar_id = Column(Integer, ForeignKey("bars.id"), index=True, nullable=False)
+    
+    name = Column(String(100), nullable=False)
+    description = Column(String(500), nullable=True)
+    
+    bundle_type = Column(String(20), nullable=False, default="quantity")
+    
+    min_quantity = Column(Integer, nullable=True, default=2)
+    target_items = Column(JSON, nullable=True)
+    target_category = Column(String(100), nullable=True)
+    
+    discount_type = Column(String(20), nullable=False, default="percentage")
+    discount_value = Column(Float, nullable=False, default=0.0)
+    
+    start_time = Column(String(5), nullable=True)
+    end_time = Column(String(5), nullable=True)
+    recurring_days = Column(JSON, nullable=True)
+    start_date = Column(DateTime, nullable=True)
+    end_date = Column(DateTime, nullable=True)
+    
+    max_uses_per_user = Column(Integer, nullable=True)
+    is_active = Column(Boolean, default=True, index=True)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    bar = relationship("Bar", back_populates="bundle_promotions")

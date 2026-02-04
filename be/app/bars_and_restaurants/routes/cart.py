@@ -34,9 +34,15 @@ async def get_or_create_cart(user_id: int) -> CartModel:
 
 
 async def get_cart_items(cart_id: int) -> List[CartItemModel]:
-    """Get all items in a cart."""
     query = CartItemModel.__table__.select().where(CartItemModel.cart_id == cart_id)
-    return await database.fetch_all(query)
+    items = await database.fetch_all(query)
+    return [with_total_price(item) for item in items]
+
+
+def with_total_price(item) -> dict:
+    item_dict = dict(item)
+    item_dict["total_price"] = item_dict["quantity"] * item_dict["unit_price"]
+    return item_dict
 
 
 async def calculate_cart_totals(cart_id: int) -> dict:
@@ -54,15 +60,29 @@ async def calculate_cart_totals(cart_id: int) -> dict:
 
 @cart_router.get("/", response_model=Cart)
 async def get_cart(current_user: User = Depends(get_current_active_user)):
-    """Get the current user's cart with all items."""
+    from ..services.bundle_service import get_active_bundles_for_bar, calculate_bundles_for_cart
+    
     cart = await get_or_create_cart(current_user["id"])
     items = await get_cart_items(cart["id"])
     totals = await calculate_cart_totals(cart["id"])
     
+    bundles = []
+    bar_ids = set(item["bar_id"] for item in items)
+    for bar_id in bar_ids:
+        bar_bundles = await get_active_bundles_for_bar(bar_id)
+        bundles.extend(bar_bundles)
+    
+    bundle_result = calculate_bundles_for_cart(items, bundles)
+    subtotal_after_bundles = totals["subtotal"] - bundle_result["bundle_savings"]
+    
     return {
         **dict(cart),
         "items": items,
-        **totals
+        **totals,
+        "applied_bundles": bundle_result["applied_bundles"],
+        "bundle_savings": bundle_result["bundle_savings"],
+        "subtotal_after_bundles": subtotal_after_bundles,
+        "bundle_hint": bundle_result["bundle_hint"]
     }
 
 
@@ -94,9 +114,10 @@ async def add_item_to_cart(
         )
         await database.execute(update_query)
         
-        return await database.fetch_one(
+        item = await database.fetch_one(
             CartItemModel.__table__.select().where(CartItemModel.id == existing_item["id"])
         )
+        return with_total_price(item)
     else:
         now = datetime.utcnow()
         item_data = {
@@ -106,9 +127,10 @@ async def add_item_to_cart(
             "updated_at": now
         }
         item_id = await database.execute(CartItemModel.__table__.insert().values(**item_data))
-        return await database.fetch_one(
+        item = await database.fetch_one(
             CartItemModel.__table__.select().where(CartItemModel.id == item_id)
         )
+        return with_total_price(item)
 
 
 @cart_router.put("/items/{item_id}", response_model=CartItem)
@@ -140,9 +162,10 @@ async def update_cart_item(
     )
     await database.execute(update_query)
     
-    return await database.fetch_one(
+    item = await database.fetch_one(
         CartItemModel.__table__.select().where(CartItemModel.id == item_id)
     )
+    return with_total_price(item)
 
 
 @cart_router.delete("/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)

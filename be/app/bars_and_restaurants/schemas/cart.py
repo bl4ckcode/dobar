@@ -27,32 +27,42 @@ class CartItemUpdate(BaseModel):
 
 
 class CartItem(CartItemBase):
-    """Schema for cart item response."""
     id: int
     cart_id: int
     created_at: datetime
     updated_at: datetime
+    total_price: float = 0.0
 
     class Config:
         from_attributes = True
 
 
 class CartBase(BaseModel):
-    """Base schema for cart."""
     pass
 
 
+class AppliedBundleSummary(BaseModel):
+    bundle_id: int
+    bundle_name: str
+    discount_amount: float
+    message: str
+
+
 class Cart(CartBase):
-    """Schema for cart response."""
     id: int
     user_id: int
     items: List[CartItem] = []
     created_at: datetime
     updated_at: datetime
     
-    # Calculated fields
     total_items: int = 0
     subtotal: float = 0.0
+    
+    applied_bundles: List[AppliedBundleSummary] = []
+    bundle_savings: float = 0.0
+    subtotal_after_bundles: float = 0.0
+    
+    bundle_hint: Optional[str] = None
 
     class Config:
         from_attributes = True

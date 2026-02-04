@@ -32,6 +32,7 @@ from firebase_admin import initialize_app, credentials
 from .payment.routes import payment_router, pix_router
 from .payment import close_dpe_client
 from .advertising.routes import advertising_router
+from .bars_and_restaurants.routes.bundles import bundles_router
 
 IS_PRODUCTION = os.getenv("FLY_APP_NAME") is not None or os.getenv("ENVIRONMENT", "development") == "production"
 ENABLE_DOCS = os.getenv("ENABLE_DOCS", "false").lower() == "true" if IS_PRODUCTION else True
@@ -208,6 +209,7 @@ app.include_router(places_router)
 app.include_router(bank_accounts_router)
 app.include_router(dashboard_router)
 app.include_router(advertising_router)
+app.include_router(bundles_router)
 
 def custom_openapi():
     if not ENABLE_DOCS:
