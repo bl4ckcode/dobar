@@ -9,24 +9,25 @@ class DobarHomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.dobarColors;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildAppBarRow(),
+        _buildAppBarRow(context, colors),
         const SizedBox(height: 16),
-        _buildWelcomeCard(),
+        _buildWelcomeCard(colors),
       ],
     );
   }
 
-  Widget _buildAppBarRow() {
+  Widget _buildAppBarRow(BuildContext context, DobarColors colors) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
           'dobar',
           style: GoogleFonts.poppins(
-            color: barzGold,
+            color: colors.buttonPrimary,
             fontSize: 26,
             fontWeight: FontWeight.w700,
             letterSpacing: 1.5,
@@ -39,23 +40,26 @@ class DobarHomeHeader extends StatelessWidget {
               width: 40,
               height: 40,
               decoration: BoxDecoration(
-                color: barzGold,
+                color: colors.buttonPrimary,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.notifications_outlined, color: barzDark),
+              child: Icon(
+                Icons.notifications_outlined,
+                color: colors.buttonOnPrimary,
+              ),
             ),
           ),
       ],
     );
   }
 
-  Widget _buildWelcomeCard() {
+  Widget _buildWelcomeCard(DobarColors colors) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: barzDarkLight,
+        color: colors.surface,
         borderRadius: BorderRadius.circular(BarzRadii.md),
-        border: Border.all(color: barzDarkMuted, width: 1),
+        border: Border.all(color: colors.surfaceElevated, width: 1),
       ),
       child: Row(
         children: [
@@ -63,20 +67,20 @@ class DobarHomeHeader extends StatelessWidget {
             width: 48,
             height: 48,
             decoration: BoxDecoration(
-              color: barzGold,
+              color: colors.buttonPrimary,
               borderRadius: BorderRadius.circular(BarzRadii.sm),
             ),
-            child: const Icon(Icons.waving_hand, color: barzDark),
+            child: Icon(Icons.waving_hand, color: colors.buttonOnPrimary),
           ),
           const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Welcome back!',
                   style: TextStyle(
-                    color: textOnDark,
+                    color: colors.labelPrimary,
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
                   ),
@@ -84,10 +88,7 @@ class DobarHomeHeader extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   'Ready to order?',
-                  style: TextStyle(
-                    color: textOnDark.withValues(alpha: 0.7),
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: colors.labelSecondary, fontSize: 14),
                 ),
               ],
             ),

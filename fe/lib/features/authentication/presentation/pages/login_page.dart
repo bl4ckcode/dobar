@@ -52,8 +52,9 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.dobarColors;
     return Scaffold(
-      backgroundColor: barzDark,
+      backgroundColor: colors.background,
       body: PopScope(
         onPopInvokedWithResult: (left, right) {},
         child: BlocListener<LoginBloc, LoginState>(
@@ -139,9 +140,9 @@ class _LoginPageState extends State<LoginPage> {
                             GlowButton(
                               label: 'Continue',
                               enabled: _phoneNumber != null,
-                              trailing: const Icon(
+                              trailing: Icon(
                                 Icons.arrow_forward,
-                                color: barzDark,
+                                color: colors.buttonOnPrimary,
                                 size: 20,
                               ),
                               onPressed: _handleLogin,
@@ -153,7 +154,9 @@ class _LoginPageState extends State<LoginPage> {
                               children: [
                                 Expanded(
                                   child: Divider(
-                                    color: Colors.white.withValues(alpha: 0.2),
+                                    color: colors.labelSecondary.withValues(
+                                      alpha: 0.3,
+                                    ),
                                   ),
                                 ),
                                 Padding(
@@ -163,16 +166,16 @@ class _LoginPageState extends State<LoginPage> {
                                   child: Text(
                                     "or continue with",
                                     style: TextStyle(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.6,
-                                      ),
+                                      color: colors.labelSecondary,
                                       fontWeight: FontWeight.w500,
                                     ),
                                   ),
                                 ),
                                 Expanded(
                                   child: Divider(
-                                    color: Colors.white.withValues(alpha: 0.2),
+                                    color: colors.labelSecondary.withValues(
+                                      alpha: 0.3,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -189,14 +192,14 @@ class _LoginPageState extends State<LoginPage> {
                               text: TextSpan(
                                 text: 'By continuing, you agree to our ',
                                 style: TextStyle(
-                                  color: Colors.white.withValues(alpha: 0.6),
+                                  color: colors.labelSecondary,
                                   fontSize: 13,
                                 ),
                                 children: <TextSpan>[
                                   TextSpan(
                                     text: 'Terms of Service',
-                                    style: const TextStyle(
-                                      color: barzGold,
+                                    style: TextStyle(
+                                      color: colors.labelSelected,
                                       fontWeight: FontWeight.bold,
                                       decoration: TextDecoration.underline,
                                     ),
@@ -206,15 +209,13 @@ class _LoginPageState extends State<LoginPage> {
                                   TextSpan(
                                     text: ' and ',
                                     style: TextStyle(
-                                      color: Colors.white.withValues(
-                                        alpha: 0.6,
-                                      ),
+                                      color: colors.labelSecondary,
                                     ),
                                   ),
                                   TextSpan(
                                     text: 'Privacy Policy',
-                                    style: const TextStyle(
-                                      color: barzGold,
+                                    style: TextStyle(
+                                      color: colors.labelSelected,
                                       fontWeight: FontWeight.bold,
                                       decoration: TextDecoration.underline,
                                     ),

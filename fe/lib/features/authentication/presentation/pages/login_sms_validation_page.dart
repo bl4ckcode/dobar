@@ -1,3 +1,4 @@
+import 'package:barz/core/design/components/glow_button.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -26,13 +27,13 @@ class LoginValidatePhoneNumberPage extends StatefulWidget {
 }
 
 class _LoginValidatePhoneNumberPageState
-    extends State<LoginValidatePhoneNumberPage> with CodeAutoFill {
+    extends State<LoginValidatePhoneNumberPage>
+    with CodeAutoFill {
   final TextEditingController _smsCodeController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    // Start listening for SMS autofill codes
     listenForCode();
 
     _smsCodeController.addListener(() {
@@ -49,7 +50,7 @@ class _LoginValidatePhoneNumberPageState
 
   @override
   void dispose() {
-    cancel(); // Stop SMS autofill listening
+    cancel();
     _smsCodeController.dispose();
     super.dispose();
   }
@@ -57,11 +58,13 @@ class _LoginValidatePhoneNumberPageState
   void _handleCodeVerification() {
     final smsCode = _smsCodeController.text.trim();
     if (smsCode.isNotEmpty) {
-      widget.loginBloc.add(VerifyCodeButtonPressed(
-        verificationId: widget.verificationId,
-        smsCode: smsCode,
-        phoneNumber: widget.phoneNumber,
-      ));
+      widget.loginBloc.add(
+        VerifyCodeButtonPressed(
+          verificationId: widget.verificationId,
+          smsCode: smsCode,
+          phoneNumber: widget.phoneNumber,
+        ),
+      );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please enter the verification code.")),
@@ -71,63 +74,62 @@ class _LoginValidatePhoneNumberPageState
 
   @override
   Widget build(BuildContext context) {
-    // Define the pin themes using design system colors
+    final colors = context.dobarColors;
+
     final defaultPinTheme = PinTheme(
       width: 56,
       height: 56,
       textStyle: barzTextTheme.titleLarge?.copyWith(
-        color: barzDark,
+        color: colors.labelSelected,
         fontWeight: FontWeight.w600,
       ),
       decoration: BoxDecoration(
-        color: surfaceWhite,
-        border: Border.all(color: barzDark.withValues(alpha: 0.3)),
+        color: colors.surface,
+        border: Border.all(color: colors.labelSecondary.withValues(alpha: 0.3)),
         borderRadius: BorderRadius.circular(BarzRadii.md),
       ),
     );
 
     final focusedPinTheme = defaultPinTheme.copyDecorationWith(
-      border: Border.all(color: barzGold, width: 2),
+      border: Border.all(color: colors.labelSelected, width: 2),
       borderRadius: BorderRadius.circular(BarzRadii.md),
     );
 
     final submittedPinTheme = defaultPinTheme.copyWith(
       decoration: defaultPinTheme.decoration?.copyWith(
-        color: barzGold.withValues(alpha: 0.2),
-        border: Border.all(color: barzGold, width: 2),
+        color: colors.labelSelected.withValues(alpha: 0.15),
+        border: Border.all(color: colors.labelSelected, width: 2),
       ),
     );
 
     return Scaffold(
-      backgroundColor: barzGoldSoft,
+      backgroundColor: colors.background,
       appBar: AppBar(
-        backgroundColor: barzGoldSoft,
+        backgroundColor: colors.navBackground,
         elevation: 0,
-        iconTheme: const IconThemeData(color: barzDark),
+        iconTheme: IconThemeData(color: colors.labelSelected),
       ),
       body: BlocListener<LoginBloc, LoginState>(
         bloc: widget.loginBloc,
         listener: (context, state) {
           if (state is Success) {
             if (state.needsOnboarding) {
-              context.go('/onboarding', extra: {
-                'phone': state.phoneNumber,
-              });
+              context.go('/onboarding', extra: {'phone': state.phoneNumber});
               return;
             }
 
             if (state.isProfileComplete) {
               context.go('/');
             } else {
-              context.go('/complete-registration', extra: {
-                'email': state.email,
-                'name': state.displayName,
-              });
+              context.go(
+                '/complete-registration',
+                extra: {'email': state.email, 'name': state.displayName},
+              );
             }
           } else if (state is Failure) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(state.error)),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(state.error)));
           }
         },
         child: Padding(
@@ -145,19 +147,21 @@ class _LoginValidatePhoneNumberPageState
                 pinputAutovalidateMode: PinputAutovalidateMode.onSubmit,
                 showCursor: true,
                 onCompleted: (pin) {
-                  // Automatically trigger code verification once complete
                   _handleCodeVerification();
                 },
               ),
-              const SizedBox(height: BarzSpacing.lg),
-              // Using the design system button
-              BarzButton.primary(
-                onPressed: _smsCodeController.text.trim().length == 6 
-                    ? _handleCodeVerification 
-                    : null,
-                label: "Verify Code",
+              const SizedBox(height: BarzSpacing.xl),
+              GlowButton(
+                label: 'Verify Code',
+                enabled: _smsCodeController.text.trim().length == 6,
+                trailing: Icon(
+                  Icons.check,
+                  color: colors.buttonOnPrimary,
+                  size: 20,
+                ),
+                onPressed: _handleCodeVerification,
               ),
-              const SizedBox(height: BarzSpacing.lg),
+              const SizedBox(height: BarzSpacing.xl),
               Center(
                 child: Column(
                   children: [
@@ -165,20 +169,18 @@ class _LoginValidatePhoneNumberPageState
                       "Didn't receive code?",
                       textAlign: TextAlign.center,
                       style: barzTextTheme.bodyMedium?.copyWith(
-                        color: textSecondary,
+                        color: colors.labelSecondary,
                       ),
                     ),
                     const SizedBox(height: BarzSpacing.md),
                     GestureDetector(
-                      onTap: () {
-                        // Handle resend code functionality here.
-                      },
+                      onTap: () {},
                       child: Text(
                         'Resend',
                         textAlign: TextAlign.center,
                         style: barzTextTheme.bodyMedium?.copyWith(
                           decoration: TextDecoration.underline,
-                          color: successGreen,
+                          color: colors.labelSelected,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -195,15 +197,13 @@ class _LoginValidatePhoneNumberPageState
 }
 
 class OtpHeader extends StatelessWidget {
-  const OtpHeader({
-    super.key,
-    required this.phoneNumber,
-  });
+  const OtpHeader({super.key, required this.phoneNumber});
 
   final String phoneNumber;
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.dobarColors;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -211,21 +211,21 @@ class OtpHeader extends StatelessWidget {
           'Confirm your phone number',
           style: barzTextTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w700,
-            color: barzDark,
+            color: colors.labelPrimary,
           ),
         ),
         const SizedBox(height: BarzSpacing.xl),
         Text(
           'Enter the code sent to the number',
           style: barzTextTheme.bodyLarge?.copyWith(
-            color: textSecondary,
+            color: colors.labelSecondary,
           ),
         ),
         const SizedBox(height: BarzSpacing.md),
         Text(
           phoneNumber,
           style: barzTextTheme.bodyLarge?.copyWith(
-            color: barzDark,
+            color: colors.labelSelected,
             fontWeight: FontWeight.w600,
           ),
         ),

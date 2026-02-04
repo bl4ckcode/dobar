@@ -312,6 +312,7 @@ ThemeData getBarzLightTheme() {
       tileColor: Colors.transparent,
       selectedTileColor: barzGold.withValues(alpha: 0.1),
     ),
+    extensions: [dobarLightColors],
   );
 }
 
@@ -376,5 +377,6 @@ ThemeData getBarzDarkTheme() {
         borderSide: const BorderSide(color: barzGold, width: 1),
       ),
     ),
+    extensions: [dobarDarkColors],
   );
 }

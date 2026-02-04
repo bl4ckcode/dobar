@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../tokens/colors.dart';
-import '../tokens/radii.dart';
+import '../design_system.dart';
 
 class HappeningNowCard extends StatelessWidget {
   final String venue;
@@ -24,6 +23,7 @@ class HappeningNowCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.dobarColors;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -31,7 +31,7 @@ class HappeningNowCard extends StatelessWidget {
         height: 224,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(BarzRadii.lg),
-          border: Border.all(color: barzDarkMuted, width: 1),
+          border: Border.all(color: colors.surfaceElevated, width: 1),
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(BarzRadii.lg),
@@ -44,12 +44,12 @@ class HappeningNowCard extends StatelessWidget {
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
                       return Container(
-                        color: const Color(0xFF242424),
-                        child: const Center(
+                        color: colors.surfaceElevated,
+                        child: Center(
                           child: Icon(
                             Icons.music_note,
                             size: 40,
-                            color: textSecondary,
+                            color: colors.labelSecondary,
                           ),
                         ),
                       );
@@ -59,12 +59,12 @@ class HappeningNowCard extends StatelessWidget {
               else
                 Positioned.fill(
                   child: Container(
-                    color: const Color(0xFF242424),
-                    child: const Center(
+                    color: colors.surfaceElevated,
+                    child: Center(
                       child: Icon(
                         Icons.music_note,
                         size: 40,
-                        color: textSecondary,
+                        color: colors.labelSecondary,
                       ),
                     ),
                   ),
@@ -77,8 +77,8 @@ class HappeningNowCard extends StatelessWidget {
                       end: Alignment.bottomCenter,
                       colors: [
                         Colors.transparent,
-                        barzGold.withValues(alpha: 0.2),
-                        barzGold.withValues(alpha: 0.9),
+                        colors.buttonPrimary.withValues(alpha: 0.2),
+                        colors.buttonPrimary.withValues(alpha: 0.9),
                       ],
                       stops: const [0.0, 0.5, 1.0],
                     ),
@@ -95,7 +95,7 @@ class HappeningNowCard extends StatelessWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: barzDark.withValues(alpha: 0.9),
+                      color: colors.navBackground.withValues(alpha: 0.9),
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Row(
@@ -110,12 +110,12 @@ class HappeningNowCard extends StatelessWidget {
                           ),
                         ),
                         const SizedBox(width: 6),
-                        const Text(
+                        Text(
                           'LIVE',
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
-                            color: textOnDark,
+                            color: colors.navLabel,
                             letterSpacing: 0.5,
                           ),
                         ),
@@ -135,18 +135,18 @@ class HappeningNowCard extends StatelessWidget {
                     children: [
                       Row(
                         children: [
-                          const Icon(
+                          Icon(
                             Icons.music_note,
                             size: 12,
-                            color: barzDark,
+                            color: colors.buttonOnPrimary,
                           ),
                           const SizedBox(width: 4),
                           Text(
                             type.toUpperCase(),
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w600,
-                              color: barzDark,
+                              color: colors.buttonOnPrimary,
                               letterSpacing: 0.5,
                             ),
                           ),
@@ -155,10 +155,10 @@ class HappeningNowCard extends StatelessWidget {
                       const SizedBox(height: 4),
                       Text(
                         event,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: barzDark,
+                          color: colors.buttonOnPrimary,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -168,7 +168,7 @@ class HappeningNowCard extends StatelessWidget {
                         venue,
                         style: TextStyle(
                           fontSize: 12,
-                          color: barzDark.withValues(alpha: 0.8),
+                          color: colors.buttonOnPrimary.withValues(alpha: 0.8),
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
@@ -179,14 +179,18 @@ class HappeningNowCard extends StatelessWidget {
                           Icon(
                             Icons.people_outline,
                             size: 12,
-                            color: barzDark.withValues(alpha: 0.7),
+                            color: colors.buttonOnPrimary.withValues(
+                              alpha: 0.7,
+                            ),
                           ),
                           const SizedBox(width: 4),
                           Text(
                             '$attendees there',
                             style: TextStyle(
                               fontSize: 10,
-                              color: barzDark.withValues(alpha: 0.7),
+                              color: colors.buttonOnPrimary.withValues(
+                                alpha: 0.7,
+                              ),
                             ),
                           ),
                         ],

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import '../tokens/colors.dart';
-import '../tokens/radii.dart';
+import '../design_system.dart';
 
 class BarCard extends StatelessWidget {
   final String name;
@@ -22,13 +21,14 @@ class BarCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.dobarColors;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: barzDarkLight,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(BarzRadii.lg),
-          border: Border.all(color: barzDarkMuted, width: 1),
+          border: Border.all(color: colors.surfaceElevated, width: 1),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -38,7 +38,7 @@ class BarCard extends StatelessWidget {
                 Container(
                   height: 96,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF242424),
+                    color: colors.surfaceElevated,
                     borderRadius: const BorderRadius.only(
                       topLeft: Radius.circular(BarzRadii.lg),
                       topRight: Radius.circular(BarzRadii.lg),
@@ -59,7 +59,7 @@ class BarCard extends StatelessWidget {
                       end: Alignment.bottomCenter,
                       colors: [
                         Colors.transparent,
-                        barzDarkLight.withValues(alpha: 0.8),
+                        colors.surface.withValues(alpha: 0.8),
                       ],
                     ),
                     borderRadius: const BorderRadius.only(
@@ -77,20 +77,20 @@ class BarCard extends StatelessWidget {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: barzDark.withValues(alpha: 0.9),
+                      color: colors.navBackground.withValues(alpha: 0.9),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.star, size: 12, color: barzGold),
+                        Icon(Icons.star, size: 12, color: colors.labelSelected),
                         const SizedBox(width: 2),
                         Text(
                           rating.toStringAsFixed(1),
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
-                            color: textOnDark,
+                            color: colors.navLabel,
                           ),
                         ),
                       ],
@@ -106,10 +106,10 @@ class BarCard extends StatelessWidget {
                 children: [
                   Text(
                     name,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.bold,
-                      color: textOnDark,
+                      color: colors.labelPrimary,
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
@@ -117,22 +117,25 @@ class BarCard extends StatelessWidget {
                   const SizedBox(height: 4),
                   Text(
                     type,
-                    style: const TextStyle(fontSize: 12, color: textSecondary),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colors.labelSecondary,
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.location_on_outlined,
                         size: 12,
-                        color: textSecondary,
+                        color: colors.labelSecondary,
                       ),
                       const SizedBox(width: 4),
                       Text(
                         distance,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 10,
-                          color: textSecondary,
+                          color: colors.labelSecondary,
                         ),
                       ),
                     ],

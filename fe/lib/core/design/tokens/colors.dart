@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dobar_colors.dart';
 
 /// Barz Color System
 ///
@@ -188,4 +189,36 @@ const ColorScheme barzDarkColorScheme = ColorScheme(
   inverseSurface: surfaceWhite,
   onInverseSurface: barzDark,
   inversePrimary: barzGold,
+);
+
+const dobarLightColors = DobarColors(
+  labelPrimary: barzDark,
+  labelSecondary: textSecondary,
+  labelSelected: barzGold,
+  labelOnSelected: barzDark,
+  background: barzGoldSoft,
+  surface: surfaceWhite,
+  surfaceElevated: surfaceMuted,
+  navBackground: barzDark,
+  navIcon: Color(0xFFB0B0B0),
+  navIconSelected: barzGold,
+  navLabel: textOnDark,
+  buttonPrimary: barzGold,
+  buttonOnPrimary: barzDark,
+);
+
+const dobarDarkColors = DobarColors(
+  labelPrimary: textOnDark,
+  labelSecondary: Color(0xFFB0B0B0),
+  labelSelected: barzGold,
+  labelOnSelected: textOnDark,
+  background: barzDark,
+  surface: barzDarkLight,
+  surfaceElevated: barzDarkMuted,
+  navBackground: barzDark,
+  navIcon: Color(0xFFB0B0B0),
+  navIconSelected: barzGold,
+  navLabel: textOnDark,
+  buttonPrimary: barzGold,
+  buttonOnPrimary: barzDark,
 );

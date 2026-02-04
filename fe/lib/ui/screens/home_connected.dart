@@ -70,25 +70,27 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.dobarColors;
     return Scaffold(
-      backgroundColor: barzDark,
+      backgroundColor: colors.background,
       body: RefreshIndicator(
         onRefresh: () async => _refreshData(context),
-        color: barzGold,
-        backgroundColor: barzDarkLight,
+        color: colors.buttonPrimary,
+        backgroundColor: colors.surface,
         child: ListView(
           controller: _scrollController,
           padding: const EdgeInsets.all(BarzSpacing.lg),
           children: [
             const DobarHomeHeader(),
             const SizedBox(height: BarzSpacing.xl),
-            _buildSectionTitle('Browse by Category'),
+            _buildSectionTitle('Browse by Category', colors),
             const SizedBox(height: BarzSpacing.md),
             _buildCategoriesSection(context),
             const SizedBox(height: BarzSpacing.lg),
             _buildSectionTitleWithSubtitle(
               'Conheça nossos parceiros',
               'Dê uma olhada no menu dos parceiros mais próximos de você :)',
+              colors,
             ),
             const SizedBox(height: BarzSpacing.md),
             _buildBarsCarousel(context),
@@ -96,11 +98,12 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
             _buildSectionTitleWithSubtitle(
               'Mais procurados',
               'Com sede daquela bebida específica? Selecione-a e descubra onde ir!',
+              colors,
             ),
             const SizedBox(height: BarzSpacing.md),
             _buildMostWantedDrinksSection(context),
             const SizedBox(height: BarzSpacing.xl),
-            _buildSectionTitle('Hottest Drinks 🔥'),
+            _buildSectionTitle('Hottest Drinks 🔥', colors),
             const SizedBox(height: BarzSpacing.md),
             _buildHottestDrinksSection(context),
             const SizedBox(height: BarzSpacing.xl),
@@ -112,42 +115,43 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
     );
   }
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(String title, DobarColors colors) {
     return Row(
       children: [
-        const Icon(Icons.star, color: barzGold, size: 20),
+        Icon(Icons.star, color: colors.labelSelected, size: 20),
         const SizedBox(width: BarzSpacing.xs),
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
-            color: textOnDark,
+            color: colors.labelPrimary,
           ),
         ),
       ],
     );
   }
 
-  Widget _buildSectionTitleWithSubtitle(String title, String subtitle) {
+  Widget _buildSectionTitleWithSubtitle(
+    String title,
+    String subtitle,
+    DobarColors colors,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 20,
             fontWeight: FontWeight.bold,
-            color: textOnDark,
+            color: colors.labelPrimary,
           ),
         ),
         const SizedBox(height: 4),
         Text(
           subtitle,
-          style: TextStyle(
-            fontSize: 14,
-            color: textOnDark.withValues(alpha: 0.7),
-          ),
+          style: TextStyle(fontSize: 14, color: colors.labelSecondary),
         ),
       ],
     );

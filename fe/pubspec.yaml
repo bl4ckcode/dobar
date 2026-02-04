@@ -84,6 +84,7 @@ dependencies:
   # google_places_api_flutter removed - using our backend proxy instead
   location: ^8.0.0
   flutter_polyline_points: ^3.1.0   # Updated
+  map_launcher: ^4.4.3              # Launch external map apps
 
   # --- FIREBASE (CRITICAL - UPDATED) ---
   firebase_core: ^4.3.0             # Latest stable

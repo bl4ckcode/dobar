@@ -40,11 +40,11 @@ class BusinessNavigation extends InheritedWidget {
 }
 
 /// Main shell for business users (bar owners/staff).
-/// 
+///
 /// Responsive design:
 /// - Mobile (< 768px): Bottom navigation bar
 /// - Web/Tablet (≥ 768px): Side navigation menu
-/// 
+///
 /// Provides navigation between:
 /// - Dashboard: Overview and analytics
 /// - Cashier: Order management (main view for cashiers)
@@ -91,7 +91,9 @@ class _BusinessShellState extends State<BusinessShell> {
           // Auto-select first bar
           WidgetsBinding.instance.addPostFrameCallback((_) {
             context.read<SessionBloc>().add(
-              SessionEvent.switchActiveBar(barId: session.barAccess.first.barId),
+              SessionEvent.switchActiveBar(
+                barId: session.barAccess.first.barId,
+              ),
             );
           });
           return const Scaffold(
@@ -106,7 +108,7 @@ class _BusinessShellState extends State<BusinessShell> {
         // Build navigation items based on permissions
         final navItems = _buildNavItems(context, activeBar);
         _currentNavItems = navItems;
-        
+
         // Ensure selected index is valid
         if (_selectedIndex >= navItems.length) {
           _selectedIndex = 0;
@@ -118,12 +120,23 @@ class _BusinessShellState extends State<BusinessShell> {
           currentIndex: _selectedIndex,
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final isWebLayout = constraints.maxWidth >= kBusinessWebBreakpoint;
-              
+              final isWebLayout =
+                  constraints.maxWidth >= kBusinessWebBreakpoint;
+
               if (isWebLayout) {
-                return _buildWebLayout(context, session.barAccess, activeBar, navItems);
+                return _buildWebLayout(
+                  context,
+                  session.barAccess,
+                  activeBar,
+                  navItems,
+                );
               } else {
-                return _buildMobileLayout(context, session.barAccess, activeBar, navItems);
+                return _buildMobileLayout(
+                  context,
+                  session.barAccess,
+                  activeBar,
+                  navItems,
+                );
               }
             },
           ),
@@ -142,14 +155,23 @@ class _BusinessShellState extends State<BusinessShell> {
     return Scaffold(
       appBar: AppBar(
         backgroundColor: barzDark,
-        foregroundColor: Colors.white,
+        foregroundColor: barzGold,
         title: _buildBarSelector(context, bars, activeBar),
         actions: [
           IconButton(
-            icon: const Icon(Icons.person_outline),
+            icon: const Icon(Icons.person_outline, color: barzGold),
             tooltip: AppLocalizations.of(context)!.business_client_mode,
             onPressed: () {
-              context.read<SessionBloc>().add(const SessionEvent.switchToClientMode());
+              context.read<SessionBloc>().add(
+                const SessionEvent.switchToClientMode(),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.logout, color: barzGold),
+            tooltip: 'Logout',
+            onPressed: () {
+              context.read<SessionBloc>().add(const SessionEvent.logout());
             },
           ),
         ],
@@ -165,10 +187,14 @@ class _BusinessShellState extends State<BusinessShell> {
         backgroundColor: barzDark,
         selectedItemColor: barzGold,
         unselectedItemColor: Colors.white60,
-        items: navItems.map((item) => BottomNavigationBarItem(
-          icon: Icon(item.icon),
-          label: item.label,
-        )).toList(),
+        items: navItems
+            .map(
+              (item) => BottomNavigationBarItem(
+                icon: Icon(item.icon),
+                label: item.label,
+              ),
+            )
+            .toList(),
       ),
     );
   }
@@ -189,7 +215,8 @@ class _BusinessShellState extends State<BusinessShell> {
             activeBar: activeBar,
             navItems: navItems,
             selectedIndex: _selectedIndex,
-            onNavItemSelected: (index) => setState(() => _selectedIndex = index),
+            onNavItemSelected: (index) =>
+                setState(() => _selectedIndex = index),
             onBarSelected: (barId) {
               context.read<SessionBloc>().add(
                 SessionEvent.switchActiveBar(barId: barId),
@@ -197,18 +224,15 @@ class _BusinessShellState extends State<BusinessShell> {
               setState(() => _selectedIndex = 0);
             },
             onSwitchToClientMode: () {
-              context.read<SessionBloc>().add(const SessionEvent.switchToClientMode());
+              context.read<SessionBloc>().add(
+                const SessionEvent.switchToClientMode(),
+              );
             },
           ),
           // Vertical divider
-          Container(
-            width: 1,
-            color: Colors.grey[300],
-          ),
+          Container(width: 1, color: Colors.grey[300]),
           // Main content area
-          Expanded(
-            child: navItems[_selectedIndex].page,
-          ),
+          Expanded(child: navItems[_selectedIndex].page),
         ],
       ),
     );
@@ -262,13 +286,18 @@ class _BusinessShellState extends State<BusinessShell> {
         );
       }).toList(),
       onSelected: (barId) {
-        context.read<SessionBloc>().add(SessionEvent.switchActiveBar(barId: barId));
+        context.read<SessionBloc>().add(
+          SessionEvent.switchActiveBar(barId: barId),
+        );
         setState(() => _selectedIndex = 0);
       },
     );
   }
 
-  List<BusinessNavItem> _buildNavItems(BuildContext context, BarAccess activeBar) {
+  List<BusinessNavItem> _buildNavItems(
+    BuildContext context,
+    BarAccess activeBar,
+  ) {
     final l10n = AppLocalizations.of(context)!;
     final items = <BusinessNavItem>[
       BusinessNavItem(
@@ -284,27 +313,33 @@ class _BusinessShellState extends State<BusinessShell> {
     ];
 
     if (activeBar.canEditMenu) {
-      items.add(BusinessNavItem(
-        icon: Icons.restaurant_menu,
-        label: l10n.business_menu,
-        page: const MenuManagementPage(),
-      ));
+      items.add(
+        BusinessNavItem(
+          icon: Icons.restaurant_menu,
+          label: l10n.business_menu,
+          page: const MenuManagementPage(),
+        ),
+      );
     }
 
     if (activeBar.canManageAds) {
-      items.add(BusinessNavItem(
-        icon: Icons.campaign,
-        label: l10n.business_promotions,
-        page: const CampaignsPage(),
-      ));
+      items.add(
+        BusinessNavItem(
+          icon: Icons.campaign,
+          label: l10n.business_promotions,
+          page: const CampaignsPage(),
+        ),
+      );
     }
 
     if (activeBar.canManageStaff) {
-      items.add(BusinessNavItem(
-        icon: Icons.people,
-        label: 'Staff',
-        page: const StaffManagementPage(),
-      ));
+      items.add(
+        BusinessNavItem(
+          icon: Icons.people,
+          label: 'Staff',
+          page: const StaffManagementPage(),
+        ),
+      );
     }
 
     return items;

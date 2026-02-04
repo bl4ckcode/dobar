@@ -11,6 +11,7 @@
 library;
 
 export 'tokens/colors.dart';
+export 'tokens/dobar_colors.dart';
 export 'tokens/spacing.dart';
 export 'tokens/typography.dart';
 export 'tokens/radii.dart';

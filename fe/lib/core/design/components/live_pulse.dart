@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import '../tokens/colors.dart';
-import '../tokens/radii.dart';
-import '../tokens/spacing.dart';
+import '../design_system.dart';
 
 class LivePulse extends StatefulWidget {
   final String venueName;
@@ -83,12 +81,16 @@ class _LivePulseState extends State<LivePulse> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.dobarColors;
     return Container(
       padding: const EdgeInsets.all(BarzSpacing.md),
       decoration: BoxDecoration(
-        color: const Color(0xCC121212),
+        color: colors.surface.withValues(alpha: 0.8),
         borderRadius: BorderRadius.circular(BarzRadii.md),
-        border: Border.all(color: const Color(0x1AFFD700), width: 1),
+        border: Border.all(
+          color: colors.labelSelected.withValues(alpha: 0.1),
+          width: 1,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -101,18 +103,18 @@ class _LivePulseState extends State<LivePulse> with TickerProviderStateMixin {
                   Container(
                     width: 8,
                     height: 8,
-                    decoration: const BoxDecoration(
-                      color: barzGold,
+                    decoration: BoxDecoration(
+                      color: colors.labelSelected,
                       shape: BoxShape.circle,
                     ),
                   ),
                   const SizedBox(width: BarzSpacing.xs),
-                  const Text(
+                  Text(
                     'LIVE PULSE',
                     style: TextStyle(
                       fontSize: 10,
                       fontWeight: FontWeight.bold,
-                      color: barzGold,
+                      color: colors.labelSelected,
                       letterSpacing: 1.2,
                     ),
                   ),
@@ -120,27 +122,27 @@ class _LivePulseState extends State<LivePulse> with TickerProviderStateMixin {
               ),
               Text(
                 '~${widget.waitTime} wait',
-                style: const TextStyle(fontSize: 12, color: textSecondary),
+                style: TextStyle(fontSize: 12, color: colors.labelSecondary),
               ),
             ],
           ),
           const SizedBox(height: BarzSpacing.md),
           Text(
             widget.venueName.toUpperCase(),
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: textOnDark,
+              color: colors.labelPrimary,
               letterSpacing: 0.5,
             ),
           ),
           const SizedBox(height: BarzSpacing.md),
           Row(
             children: [
-              const Icon(
+              Icon(
                 Icons.local_fire_department,
                 size: 16,
-                color: barzGold,
+                color: colors.labelSelected,
               ),
               const SizedBox(width: BarzSpacing.sm),
               Expanded(
@@ -150,16 +152,19 @@ class _LivePulseState extends State<LivePulse> with TickerProviderStateMixin {
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        const Text(
+                        Text(
                           'Energy',
-                          style: TextStyle(fontSize: 12, color: textSecondary),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: colors.labelSecondary,
+                          ),
                         ),
                         Text(
                           '${widget.energyLevel}%',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: textOnDark,
+                            color: colors.labelPrimary,
                           ),
                         ),
                       ],
@@ -168,7 +173,7 @@ class _LivePulseState extends State<LivePulse> with TickerProviderStateMixin {
                     Container(
                       height: 6,
                       decoration: BoxDecoration(
-                        color: barzDarkLight,
+                        color: colors.surfaceElevated,
                         borderRadius: BorderRadius.circular(3),
                       ),
                       child: AnimatedBuilder(
@@ -179,7 +184,7 @@ class _LivePulseState extends State<LivePulse> with TickerProviderStateMixin {
                             widthFactor: _energyAnimation.value,
                             child: Container(
                               decoration: BoxDecoration(
-                                color: barzGold,
+                                color: colors.labelSelected,
                                 borderRadius: BorderRadius.circular(3),
                               ),
                             ),
@@ -195,7 +200,7 @@ class _LivePulseState extends State<LivePulse> with TickerProviderStateMixin {
           const SizedBox(height: BarzSpacing.sm),
           Row(
             children: [
-              const Icon(Icons.volume_up, size: 16, color: barzGold),
+              Icon(Icons.volume_up, size: 16, color: colors.labelSelected),
               const SizedBox(width: BarzSpacing.sm),
               Expanded(
                 child: SizedBox(
@@ -214,7 +219,7 @@ class _LivePulseState extends State<LivePulse> with TickerProviderStateMixin {
                                   heightFactor: _barAnimations[index].value,
                                   child: Container(
                                     decoration: BoxDecoration(
-                                      color: barzGold,
+                                      color: colors.labelSelected,
                                       borderRadius: BorderRadius.circular(1),
                                     ),
                                   ),
@@ -233,11 +238,11 @@ class _LivePulseState extends State<LivePulse> with TickerProviderStateMixin {
           const SizedBox(height: BarzSpacing.sm),
           Row(
             children: [
-              const Icon(Icons.trending_up, size: 16, color: barzGold),
+              Icon(Icons.trending_up, size: 16, color: colors.labelSelected),
               const SizedBox(width: BarzSpacing.sm),
               Text(
                 'Trending up since ${widget.trendingSince}',
-                style: const TextStyle(fontSize: 12, color: textSecondary),
+                style: TextStyle(fontSize: 12, color: colors.labelSecondary),
               ),
             ],
           ),

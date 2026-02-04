@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import '../tokens/colors.dart';
-import '../tokens/radii.dart';
-import '../tokens/spacing.dart';
+import '../design_system.dart';
 
 class VenueCard extends StatelessWidget {
   final String name;
@@ -25,13 +23,14 @@ class VenueCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.dobarColors;
     return GestureDetector(
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: barzDarkLight,
+          color: colors.surface,
           borderRadius: BorderRadius.circular(BarzRadii.md),
-          border: Border.all(color: barzDarkMuted, width: 1),
+          border: Border.all(color: colors.surfaceElevated, width: 1),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -51,24 +50,24 @@ class VenueCard extends StatelessWidget {
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) {
                               return Container(
-                                color: const Color(0xFF242424),
-                                child: const Center(
+                                color: colors.surfaceElevated,
+                                child: Center(
                                   child: Icon(
                                     Icons.location_city,
                                     size: 48,
-                                    color: textSecondary,
+                                    color: colors.labelSecondary,
                                   ),
                                 ),
                               );
                             },
                           )
                         : Container(
-                            color: const Color(0xFF242424),
-                            child: const Center(
+                            color: colors.surfaceElevated,
+                            child: Center(
                               child: Icon(
                                 Icons.location_city,
                                 size: 48,
-                                color: textSecondary,
+                                color: colors.labelSecondary,
                               ),
                             ),
                           ),
@@ -83,7 +82,7 @@ class VenueCard extends StatelessWidget {
                         colors: [
                           Colors.transparent,
                           Colors.transparent,
-                          barzDark.withValues(alpha: 0.9),
+                          colors.navBackground.withValues(alpha: 0.9),
                         ],
                         stops: const [0.0, 0.5, 1.0],
                       ),
@@ -103,25 +102,25 @@ class VenueCard extends StatelessWidget {
                         horizontal: 8,
                         vertical: 4,
                       ),
-                      decoration: const BoxDecoration(color: barzGold),
+                      decoration: BoxDecoration(color: colors.buttonPrimary),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Container(
                             width: 6,
                             height: 6,
-                            decoration: const BoxDecoration(
-                              color: barzDark,
+                            decoration: BoxDecoration(
+                              color: colors.buttonOnPrimary,
                               shape: BoxShape.circle,
                             ),
                           ),
                           const SizedBox(width: 6),
-                          const Text(
+                          Text(
                             'LIVE',
                             style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.bold,
-                              color: barzDark,
+                              color: colors.buttonOnPrimary,
                               letterSpacing: 1.2,
                             ),
                           ),
@@ -138,20 +137,20 @@ class VenueCard extends StatelessWidget {
                     children: [
                       Text(
                         type.toUpperCase(),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
-                          color: barzGold,
+                          color: colors.labelSelected,
                           letterSpacing: 1.2,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         name.toUpperCase(),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: textOnDark,
+                          color: colors.navLabel,
                           letterSpacing: 0.5,
                         ),
                         maxLines: 1,
@@ -169,34 +168,34 @@ class VenueCard extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.location_on_outlined,
                         size: 14,
-                        color: barzGold,
+                        color: colors.labelSelected,
                       ),
                       const SizedBox(width: 6),
                       Text(
                         distance,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
-                          color: textSecondary,
+                          color: colors.labelSecondary,
                         ),
                       ),
                     ],
                   ),
                   Row(
                     children: [
-                      const Icon(
+                      Icon(
                         Icons.people_outline,
                         size: 14,
-                        color: barzGold,
+                        color: colors.labelSelected,
                       ),
                       const SizedBox(width: 6),
                       Text(
                         crowd,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
-                          color: textSecondary,
+                          color: colors.labelSecondary,
                         ),
                       ),
                     ],

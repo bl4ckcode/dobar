@@ -117,6 +117,7 @@ class _WireframeShellState extends State<WireframeShell> {
           }
         },
         child: Scaffold(
+          extendBody: true,
           body: Stack(
             children: [
               IndexedStack(index: _selectedIndex, children: _pages),
@@ -199,8 +200,9 @@ class _CenterDockedFab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.dobarColors;
     return Transform.translate(
-      offset: const Offset(0, 8), // Shift down to sit nicely in the notch
+      offset: const Offset(0, 8),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -210,8 +212,8 @@ class _CenterDockedFab extends StatelessWidget {
             child: FloatingActionButton(
               heroTag: 'shell_checkin_fab',
               onPressed: onPressed,
-              backgroundColor: barzGold,
-              foregroundColor: barzDark,
+              backgroundColor: colors.buttonPrimary,
+              foregroundColor: colors.buttonOnPrimary,
               elevation: 4,
               shape: const CircleBorder(),
               child: const Icon(Icons.qr_code_scanner, size: 28),
@@ -223,7 +225,7 @@ class _CenterDockedFab extends StatelessWidget {
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w600,
-              color: textOnDark,
+              color: colors.navLabel,
             ),
           ),
         ],
@@ -232,7 +234,6 @@ class _CenterDockedFab extends StatelessWidget {
   }
 }
 
-/// Individual navigation item with icon and optional label
 class _NavItem extends StatelessWidget {
   final IconData icon;
   final IconData selectedIcon;
@@ -250,6 +251,7 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.dobarColors;
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
@@ -257,7 +259,7 @@ class _NavItem extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         child: Icon(
           isSelected ? selectedIcon : icon,
-          color: isSelected ? barzGold : Colors.white70,
+          color: isSelected ? colors.navIconSelected : colors.navIcon,
           size: 24,
         ),
       ),

@@ -18,9 +18,7 @@ void main() async {
     usePathUrlStrategy();
   }
 
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   await initInjections();
   await getItInjector<AppInitializer>().run();
@@ -69,7 +67,7 @@ class DobarAppState extends State<DobarApp> with WidgetsBindingObserver {
       title: 'Dobar',
       theme: getBarzLightTheme(),
       darkTheme: getBarzDarkTheme(),
-      themeMode: ThemeMode.light,
+      themeMode: ThemeMode.system,
       localizationsDelegates: [
         ...AppLocalizations.localizationsDelegates,
         ...PhoneFieldLocalization.delegates,
@@ -80,11 +78,6 @@ class DobarAppState extends State<DobarApp> with WidgetsBindingObserver {
 }
 
 const defaultInputBorder = OutlineInputBorder(
-  borderRadius: BorderRadius.all(
-    Radius.circular(16),
-  ),
-  borderSide: BorderSide(
-    color: Color(0xFFDEE3F2),
-    width: 1,
-  ),
+  borderRadius: BorderRadius.all(Radius.circular(16)),
+  borderSide: BorderSide(color: Color(0xFFDEE3F2), width: 1),
 );

@@ -40,12 +40,21 @@ class _LoginFieldsWidgetState extends State<LoginFieldsWidget> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(BarzRadii.md),
-            borderSide: const BorderSide(color: barzDark, width: 2),
+            borderSide: const BorderSide(color: barzGold, width: 2),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(BarzRadii.md),
             borderSide: BorderSide.none,
           ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(BarzRadii.md),
+            borderSide: BorderSide.none,
+          ),
+          focusedErrorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(BarzRadii.md),
+            borderSide: const BorderSide(color: barzGold, width: 2),
+          ),
+          errorStyle: const TextStyle(height: 0, fontSize: 0),
           contentPadding: const EdgeInsets.all(InputSpacing.paddingHorizontal),
           counterStyle: TextStyle(color: barzDark.withValues(alpha: 0.6)),
           filled: true,

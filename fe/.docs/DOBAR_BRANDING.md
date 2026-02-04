@@ -17,8 +17,12 @@
 - **Industrial Modern:** Gritty brewery aesthetics meet digital-first precision.
 
 ### Color Palette
-- **Dobar Electric Yellow:** `#FFD700` (Energy, Beer, Visibility).
+- **Dobar Electric Yellow:** `#FFDE59` (Energy, Beer, Visibility).
 - **Deep Onyx Black:** `#0A0A0A` (Nightlife, Sophistication, Solid).
+
+### Logo fonts
+-- **Primary Logo Font:** `Perendory Condensed`, `Sloop Script Pro`
+-- **Secondary Logo Font:** `Layiji JarakeFadhang`
 
 ---
 
