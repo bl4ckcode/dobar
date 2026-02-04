@@ -81,6 +81,8 @@ class Bar(BarBase):
     # Computed fields (from MongoDB)
     approximateLocation: Optional[float] = None
     image_url_expiration: Optional[int] = None
+    latitude: Optional[float] = None
+    longitude: Optional[float] = None
 
 
 class BarResponse(BaseModel):

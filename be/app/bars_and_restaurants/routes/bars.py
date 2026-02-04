@@ -194,8 +194,9 @@ async def get_bars_by_ids(bars_info: list[dict]):
         info["bar_id"]: {
             "approximateLocation": info.get("approximateLocation"),
             "image_url": generate_presigned_url(extract_s3_key(info.get("image_url"))) if info.get("image_url") else None,
-            "image_url_expiration": current_time + 3600 if info.get("image_url") else None  # Expire in 1 hour
-
+            "image_url_expiration": current_time + 3600 if info.get("image_url") else None,  # Expire in 1 hour
+            "latitude": info.get("latitude"),
+            "longitude": info.get("longitude"),
         }
         for info in bars_info
     }
@@ -254,6 +255,8 @@ async def find_bars_near_location(latitude: float, longitude: float, max_distanc
             "bar_id": bar["bar_id"],
             "approximateLocation": distance,
             "image_url": bar.get("image_url", None),
+            "latitude": bar_lat,
+            "longitude": bar_lon,
         })
     
     return results
