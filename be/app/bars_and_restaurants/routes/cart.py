@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy import and_
 from typing import List, Optional
 from decimal import Decimal
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 
 from app.auth.middleware import get_current_active_user
 from app.auth.auth_models import User
@@ -90,7 +90,7 @@ async def add_item_to_cart(
             CartItemModel.__table__
             .update()
             .where(CartItemModel.id == existing_item["id"])
-            .values(quantity=new_quantity, updated_at=datetime.now(timezone.utc))
+            .values(quantity=new_quantity, updated_at=datetime.utcnow())
         )
         await database.execute(update_query)
         
@@ -98,7 +98,7 @@ async def add_item_to_cart(
             CartItemModel.__table__.select().where(CartItemModel.id == existing_item["id"])
         )
     else:
-        now = datetime.now(timezone.utc)
+        now = datetime.utcnow()
         item_data = {
             **item.model_dump(),
             "cart_id": cart["id"],
@@ -136,7 +136,7 @@ async def update_cart_item(
         CartItemModel.__table__
         .update()
         .where(CartItemModel.id == item_id)
-        .values(quantity=item_update.quantity, updated_at=datetime.now(timezone.utc))
+        .values(quantity=item_update.quantity, updated_at=datetime.utcnow())
     )
     await database.execute(update_query)
     
@@ -247,7 +247,7 @@ async def checkout(
     total = subtotal + tax + tip + delivery_fee - discount
     
     # Estimate ready time (30 minutes from now - should be based on bar settings)
-    estimated_ready_time = datetime.now(timezone.utc) + timedelta(minutes=30)
+    estimated_ready_time = datetime.utcnow() + timedelta(minutes=30)
     
     # Start transaction to create order
     transaction = await database.transaction()
