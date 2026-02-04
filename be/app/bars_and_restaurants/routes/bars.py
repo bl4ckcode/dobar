@@ -11,7 +11,7 @@ from app.bars_and_restaurants.services.image_upload import generate_presigned_ur
 from app.errors import APIError
 from app.auth.dependencies import get_current_user
 from app.auth.auth_models import User
-from ..models.relational_models import Bar as BarModel, BarOwner
+from ..models.relational_models import Bar as BarModel, BarOwner, Promotion as PromotionModel
 from ..models.nosql_models import bars_collection
 from ..schemas.bars import Bar, BarCreate, BarResponse
 from ..models.nosql_models import insert_bar_into_mongo
@@ -454,3 +454,57 @@ async def refresh_image_url(bar_id: int):
         "image_url": new_url,
         "image_url_expiration": int(time.time()) + 3600  # Expires in 1 hour
     }
+
+
+@bars_router.get("/{bar_id}/location-config")
+async def get_location_config(bar_id: int):
+    """
+    Get the Place Location configuration for a bar.
+    Used by Frontend to render "Where are you?" UI (Table Number vs Spot List vs Free Text).
+    """
+    query = BarModel.__table__.select().where(BarModel.id == bar_id)
+    bar = await database.fetch_one(query)
+    
+    if not bar:
+        raise APIError.partner_not_found("Bar not found")
+    
+    return {
+        "method": bar["location_method"] or "table_number",
+        "spots": bar["location_spots"] or []
+    }
+
+
+@bars_router.get("/{bar_id}/promotions")
+async def get_bar_promotions(bar_id: int):
+    """
+    Get active promotions for a specific bar.
+    Used by Frontend to populate the Active Promotions bottom sheet.
+    """
+    # Check if bar exists
+    bar_query = BarModel.__table__.select().where(BarModel.id == bar_id)
+    bar = await database.fetch_one(bar_query)
+    if not bar:
+        raise APIError.partner_not_found("Bar not found")
+
+    # Fetch active promotions
+    query = PromotionModel.__table__.select().where(
+        and_(
+            PromotionModel.bar_id == bar_id,
+            PromotionModel.is_active == True
+        )
+    ).order_by(PromotionModel.created_at.desc())
+    
+    promotions = await database.fetch_all(query)
+    
+    result = []
+    current_time = int(time.time())
+    
+    for promo in promotions:
+        promo_dict = dict(promo)
+        # Handle image URL signing if present
+        if promo_dict.get("image_url"):
+            promo_dict["image_url"] = generate_presigned_url(extract_s3_key(promo_dict["image_url"]))
+            promo_dict["image_url_expiration"] = current_time + 3600
+        result.append(promo_dict)
+    
+    return result
