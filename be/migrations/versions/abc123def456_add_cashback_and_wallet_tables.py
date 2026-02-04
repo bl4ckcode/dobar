@@ -20,14 +20,18 @@ depends_on: Union[str, Sequence[str], None] = None
 
 def upgrade() -> None:
     # Create enums
+    # Force drop to ensure clean state and avoid "already exists" errors during re-runs
+    op.execute("DROP TYPE IF EXISTS cashbacktype CASCADE")
+    op.execute("DROP TYPE IF EXISTS fundingsource CASCADE")
+    op.execute("DROP TYPE IF EXISTS cashbackstatus CASCADE")
+
     cashback_type_enum = postgresql.ENUM('EARN', 'REDEEM', 'EXPIRE', 'ADJUST', name='cashbacktype')
-    cashback_type_enum.create(op.get_bind())
     
     funding_source_enum = postgresql.ENUM('BAR', 'BARZ', 'SPONSORED', name='fundingsource')
-    funding_source_enum.create(op.get_bind())
     
     cashback_status_enum = postgresql.ENUM('PENDING', 'AVAILABLE', 'USED', 'EXPIRED', name='cashbackstatus')
-    cashback_status_enum.create(op.get_bind())
+    
+    # Create user_wallet table
     
     # Create user_wallet table
     op.create_table(

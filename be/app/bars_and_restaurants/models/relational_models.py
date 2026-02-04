@@ -41,6 +41,10 @@ class Bar(Base):
     category = Column(String(50), index=True, nullable=True)
     google_types = Column(JSON, nullable=True)
     
+    # 🆕 Place Location Logic (Where are you?)
+    location_method = Column(String(20), default="table_number")  # table_number, spot_list, free_text
+    location_spots = Column(JSON, nullable=True, default=list)  # List of {id, name} objects
+    
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -112,6 +116,10 @@ class Order(Base):
     delivery_address = Column(String, nullable=True)
     special_instructions = Column(String, nullable=True)
     
+    # 🆕 Location & Promotions
+    location_identifier = Column(String, nullable=True)  # "5", "vip_1"
+    active_promotion_ids = Column(JSON, nullable=True)  # List of promo IDs selected by user
+    
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -131,6 +139,8 @@ class Promotion(Base):
     bar_id = Column(Integer, ForeignKey("bars.id"), index=True, nullable=False)
     title = Column(String(200), nullable=False)
     description = Column(String(1000), nullable=True)
+    benefit_text = Column(String(200), nullable=True)  # "5% cashback" - Short text for UI
+    promotion_type = Column(String(20), default="discount")  # discount, cashback, points
     discount_type = Column(String(20), nullable=False, default="percentage")  # percentage, fixed, bogo
     discount_value = Column(Float, nullable=False, default=0.0)
     start_time = Column(String(5), nullable=True)  # HH:MM format for daily recurring

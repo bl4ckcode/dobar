@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from sqlalchemy import func, and_
 from app.database import database
 from ..models.relational_models import Order as OrderModel
@@ -19,7 +19,7 @@ async def calculate_progressive_discount(user_id: int, bar_id: int) -> dict:
     Calculate the progressive discount for a user at a specific bar.
     Based on the number of non-cancelled orders in the last 12 hours.
     """
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
     session_start = now - timedelta(hours=SESSION_HOURS)
     
     

@@ -83,6 +83,10 @@ class CheckoutRequest(BaseModel):
     
     # Payment details (will be encrypted/tokenized in production)
     payment_details: Optional[dict] = None
+    
+    # 🆕 Place Location & Promotions
+    location_identifier: Optional[str] = None
+    active_promotion_ids: Optional[List[int]] = []
 
 
 class CheckoutSummary(BaseModel):

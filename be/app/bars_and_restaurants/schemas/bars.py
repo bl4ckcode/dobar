@@ -83,6 +83,10 @@ class Bar(BarBase):
     image_url_expiration: Optional[int] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
+    
+    # 🆕 Place Location Logic
+    location_method: Optional[str] = "table_number"
+    location_spots: Optional[list] = []
 
 
 class BarResponse(BaseModel):

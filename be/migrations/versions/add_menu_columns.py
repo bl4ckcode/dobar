@@ -15,10 +15,10 @@ depends_on = None
 
 
 def upgrade():
-    # Add new columns to menus table
-    op.add_column('menus', sa.Column('name', sa.String(), nullable=True, server_default='Menu Principal'))
-    op.add_column('menus', sa.Column('description', sa.String(), nullable=True))
-    op.add_column('menus', sa.Column('is_active', sa.Boolean(), nullable=True, server_default='true'))
+    # Add new columns to menus table using raw SQL to support IF NOT EXISTS
+    op.execute("ALTER TABLE menus ADD COLUMN IF NOT EXISTS name VARCHAR DEFAULT 'Menu Principal'")
+    op.execute("ALTER TABLE menus ADD COLUMN IF NOT EXISTS description VARCHAR")
+    op.execute("ALTER TABLE menus ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true")
 
 
 def downgrade():
