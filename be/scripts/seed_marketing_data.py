@@ -27,8 +27,8 @@ TARGET_BARS_DATA = {
     13: "Boteco SP",
     14: "Cervejaria Artesanal",
     16: "Vibe Bar",
-    17: "Night Club",
-    18: "Lounge 18"
+    17: "Ponto Savassi",
+    18: "Porcão BH"
 }
 
 async def seed_data():
@@ -99,13 +99,19 @@ async def seed_data():
             else:
                 print(f"   ℹ️  Bar {b_id} exists in Postgres")
 
-            # 2. Mongo Upsert (Location)
+            # 2. Mongo Upsert (Location & Logo)
+            logo_url = f"https://barz-images.s3.amazonaws.com/mock-{b_id}.png"
+            if b_id == 17:
+                logo_url = "https://barz-images.s3.amazonaws.com/seed/pontosavassilogo.jpg"
+            elif b_id == 18:
+                logo_url = "https://barz-images.s3.amazonaws.com/seed/porcaobhlogo.jpg"
+
             await bars_collection.update_one(
                 {"bar_id": b_id},
                 {"$set": {
                     "bar_id": b_id,
                     "location": {"type": "Point", "coordinates": [lon, lat]},
-                    "image_url": f"https://barz-images.s3.amazonaws.com/mock-{b_id}.png"
+                    "image_url": logo_url
                 }},
                 upsert=True
             )
@@ -269,42 +275,70 @@ async def seed_data():
              print("   ✅ Created Dummy User (ID 1)")
 
         # Ensure MenuItems exist for Bar 16/13
-        for b_id in [13, 16]:
+        classic_drinks = [
+            {"name": "Caipirinha", "price": 22.00, "category": "Drinks", "picture": "caipirinha.jpeg"},
+            {"name": "Morrito", "price": 28.00, "category": "Drinks", "picture": "morrito.jpg"}, # User calls it Morrito (Mojito)
+            {"name": "Moscow Mule", "price": 32.00, "category": "Drinks", "picture": "moscowmule.jpeg"},
+            {"name": "Pina Colada", "price": 30.00, "category": "Drinks", "picture": "pinacolada.jpeg"}
+        ]
+
+        for b_id in [13, 16, 17, 18]: # Added 17, 18 for BH coverage
             # Get Menu ID
             menu = await database.fetch_one(select(Menu).where(Menu.bar_id == b_id))
             if menu:
-                # Check for items
-                items_check = await database.fetch_all(select(MenuItem).where(MenuItem.menu_id == menu.id))
-                if not items_check:
-                    print(f"   Constructor Menu Items for Bar {b_id}...")
-                    mock_items = [
-                        {"menu_id": menu.id, "name": "Chopp Brahma", "price": 12.00, "category": "Cervejas"},
-                        {"menu_id": menu.id, "name": "Caipirinha", "price": 25.00, "category": "Drinks"},
-                        {"menu_id": menu.id, "name": "Porção Fritas", "price": 30.00, "category": "Petiscos"}
-                    ]
-                    for it in mock_items:
-                        await database.execute(insert(MenuItem).values(**it))
-                    print(f"   ✅ Created 3 MenuItems for Bar {b_id}")
+                print(f"   Constructor Menu Items for Bar {b_id}...")
+                
+                # Check & Create Classics
+                for drink in classic_drinks:
+                    item_check = await database.fetch_one(
+                        select(MenuItem).where(MenuItem.menu_id == menu.id, MenuItem.name == drink["name"])
+                    )
+                    if not item_check:
+                         # Construct S3 URL (assuming user will upload to root or seed folder)
+                         # Using a public accessible URL structure or signed pattern via backend later
+                         # For seeding, we store the KEY or full URL. Apps usually store full URL.
+                         img_url = f"https://barz-images.s3.amazonaws.com/seed/{drink['picture']}"
+                         
+                         await database.execute(insert(MenuItem).values(
+                             menu_id=menu.id,
+                             name=drink["name"],
+                             price=drink["price"],
+                             category=drink["category"],
+                             picture=img_url,
+                             description=f"Clássico {drink['name']} refrescante.",
+                             available=True
+                         ))
+                         print(f"      ✅ Created Classic: {drink['name']}")
+                    else:
+                         # Update picture just in case
+                         img_url = f"https://barz-images.s3.amazonaws.com/seed/{drink['picture']}"
+                         await database.execute(
+                             "UPDATE menu_items SET picture = :pic WHERE id = :id",
+                             {"pic": img_url, "id": item_check.id}
+                         )
 
-        # Get menu items again
-        query = select(MenuItem).join(Menu).where(Menu.bar_id.in_([16, 13]), Menu.is_active == True)
+        # Get menu items again (focusing on Classics to boost)
+        # We want to boost Classics to be "Most Wanted"
+        classic_names = [d["name"] for d in classic_drinks]
+        query = select(MenuItem).join(Menu).where(
+            Menu.bar_id.in_([16, 17]), # Focus on BH bars
+            MenuItem.name.in_(classic_names)
+        )
         items = await database.fetch_all(query)
         
         if items:
-            print(f"   Found {len(items)} menu items. Generating orders...")
+            print(f"   Found {len(items)} classic items. Generating TRENDING orders...")
             
-            # Pick a few "popular" items
-            popular_items = random.sample(items, min(len(items), 3))
-            
-            for item in popular_items:
-                # Create 10-20 orders for this item
-                count = random.randint(10, 20)
-                print(f"   🌟 Boosting '{item.name}' with {count} orders")
+            for item in items:
+                # Create 30-50 orders to ensure High Trending Score
+                count = random.randint(30, 50)
+                print(f"   🌟 Boosting '{item.name}' (Bar {item.menu_id}) with {count} orders")
                 
                 for _ in range(count):
                     user_id = 1 
                     
                     # Create Order
+                    # ... (rest of order creation)
                     order_data = {
                         "user_id": user_id,
                         "bar_id": item.menu_id, # Actually incorrect field usage in previous logic safely ignored?
