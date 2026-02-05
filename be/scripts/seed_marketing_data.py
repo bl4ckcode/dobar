@@ -21,6 +21,16 @@ from motor.motor_asyncio import AsyncIOMotorClient
 MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/barz_db")
 MONGO_DB_NAME = os.getenv("MONGO_DB", "barz_db")
 
+# Target Bar IDs and Names (Mock)
+TARGET_BARS_DATA = {
+    12: "Bar do Carlos",
+    13: "Boteco SP",
+    14: "Cervejaria Artesanal",
+    16: "Vibe Bar",
+    17: "Night Club",
+    18: "Lounge 18"
+}
+
 async def seed_data():
     print("🚀 Connecting to database...")
     await database.connect()
