@@ -49,10 +49,20 @@ async def seed_data():
         for b_id, b_name in TARGET_BARS_DATA.items():
             bar_check = await database.fetch_one("SELECT * FROM bars WHERE id = :id", {"id": b_id})
             if not bar_check:
+                # Default coordinates (SP)
+                lat, lon = -23.5505, -46.6333
+                
+                # Mock Location for Bar 16 (Belo Horizonte - User Location)
+                if b_id == 16:
+                    lat, lon = -19.8325619, -43.9798416
+                # Mock Location for Bar 17 (BH - Savassi)
+                elif b_id == 17:
+                    lat, lon = -19.9395582, -43.9356845
+
                 await database.execute(
                     """
-                    INSERT INTO bars (id, owner_id, name, address, phone_number, email, verification_status, country_code)
-                    VALUES (:id, :owner_id, :name, :address, :phone, :email, 'verified', 'BR')
+                    INSERT INTO bars (id, owner_id, name, address, phone_number, email, verification_status, country_code, latitude, longitude)
+                    VALUES (:id, :owner_id, :name, :address, :phone, :email, 'verified', 'BR', :lat, :lon)
                     """,
                     {
                         "id": b_id, 
@@ -60,7 +70,9 @@ async def seed_data():
                         "name": b_name, 
                         "address": "Rua Exemplo, 123", 
                         "phone": "11999999999", 
-                        "email": f"contact@{b_id}.com"
+                        "email": f"contact@{b_id}.com",
+                        "lat": lat,
+                        "lon": lon
                     }
                 )
                 print(f"   ✅ Created Bar {b_id} ({b_name})")
@@ -76,6 +88,13 @@ async def seed_data():
                 )
                 
             else:
+                # Update location for Bar 16 if it exists (force move to User)
+                if b_id == 16:
+                     await database.execute(
+                        "UPDATE bars SET latitude = :lat, longitude = :lon WHERE id = :id",
+                        {"id": b_id, "lat": -19.8325619, "lon": -43.9798416}
+                     )
+                     print(f"   📍 Moved Bar 16 to BH User Location")
                 print(f"   ℹ️  Bar {b_id} exists")
 
         # 1. Active Promotions
