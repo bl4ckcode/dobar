@@ -30,7 +30,7 @@
         </activity>
         <meta-data
                 android:name="com.google.android.geo.API_KEY"
-                android:value="AIzaSyBYxRApMMfkA9dI6qHYUEYxHY8ZsZf6jOI"/>
+                android:value="AIzaSyBBEOwWrrA86ZTMfEtLnuhGn2D7MAg5jsU"/>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
         <meta-data

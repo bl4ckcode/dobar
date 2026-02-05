@@ -5,6 +5,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:map_launcher/map_launcher.dart' as ml;
+import 'package:flutter_polyline_points/flutter_polyline_points.dart'; // Added
 import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/bars/presentation/bloc/bar_bloc.dart';
@@ -87,9 +88,21 @@ class _FindConnectedViewState extends State<FindConnectedView>
   late AnimationController _panelAnimController;
   late Animation<Offset> _panelSlideAnimation;
 
+  final Set<Polyline> _polylines = {};
+
+  // Using the key from AndroidManifest
+  static const String _googleMapsApiKey =
+      "AIzaSyBBEOwWrrA86ZTMfEtLnuhGn2D7MAg5jsU";
+
+  final PolylinePoints _polylinePoints = PolylinePoints(
+    apiKey: _googleMapsApiKey,
+  );
+
   @override
   void initState() {
     super.initState();
+    // _polylinePoints initialized inline above
+
     _panelAnimController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 300),
@@ -244,7 +257,7 @@ class _FindConnectedViewState extends State<FindConnectedView>
                   child: _BottomSheetButton(
                     icon: Icons.directions,
                     label: 'Navigate',
-                    onTap: () => _launchNavigation(bar),
+                    onTap: () => _handleNavigationRequest(bar),
                     isPrimary: false,
                   ),
                 ),
@@ -266,6 +279,74 @@ class _FindConnectedViewState extends State<FindConnectedView>
           ],
         ),
       ),
+    );
+  }
+
+  Future<void> _handleNavigationRequest(BarModel bar) async {
+    Navigator.pop(context); // Close bottom sheet to show map
+
+    final locationState = context.read<LocationBloc>().state;
+    final userLoc = locationState.currentLocation;
+
+    if (userLoc != null && bar.latitude != null && bar.longitude != null) {
+      await _drawRoute(
+        LatLng(userLoc.latitude, userLoc.longitude),
+        LatLng(bar.latitude!, bar.longitude!),
+      );
+    }
+
+    if (!mounted) return;
+    _launchNavigation(bar);
+  }
+
+  Future<void> _drawRoute(LatLng start, LatLng dest) async {
+    final result = await _polylinePoints.getRouteBetweenCoordinates(
+      request: PolylineRequest(
+        origin: PointLatLng(start.latitude, start.longitude),
+        destination: PointLatLng(dest.latitude, dest.longitude),
+        mode: TravelMode.driving,
+      ),
+    );
+
+    if (result.points.isNotEmpty) {
+      final points = result.points
+          .map((point) => LatLng(point.latitude, point.longitude))
+          .toList();
+
+      setState(() {
+        _polylines.add(
+          Polyline(
+            polylineId: const PolylineId('route'),
+            color: const Color(0xFFEBC147), // barzGold
+            width: 5,
+            points: points,
+          ),
+        );
+      });
+
+      // Zoom to fit route
+      final controller = await _mapController.future;
+      LatLngBounds bounds = _boundsFromLatLngList(points);
+      controller.animateCamera(CameraUpdate.newLatLngBounds(bounds, 50));
+    }
+  }
+
+  LatLngBounds _boundsFromLatLngList(List<LatLng> list) {
+    double? x0, x1, y0, y1;
+    for (LatLng latLng in list) {
+      if (x0 == null) {
+        x0 = x1 = latLng.latitude;
+        y0 = y1 = latLng.longitude;
+      } else {
+        if (latLng.latitude > x1!) x1 = latLng.latitude;
+        if (latLng.latitude < x0) x0 = latLng.latitude;
+        if (latLng.longitude > y1!) y1 = latLng.longitude;
+        if (latLng.longitude < y0!) y0 = latLng.longitude;
+      }
+    }
+    return LatLngBounds(
+      northeast: LatLng(x1!, y1!),
+      southwest: LatLng(x0!, y0!),
     );
   }
 
@@ -395,15 +476,40 @@ class _FindConnectedViewState extends State<FindConnectedView>
     final lat = locationState.currentLocation?.latitude ?? _defaultLat;
     final lng = locationState.currentLocation?.longitude ?? _defaultLng;
 
-    return GoogleMap(
-      mapType: MapType.normal,
-      style: _darkMapStyle,
-      initialCameraPosition: CameraPosition(target: LatLng(lat, lng), zoom: 15),
-      myLocationEnabled: true,
-      myLocationButtonEnabled: false,
-      zoomControlsEnabled: false,
-      mapToolbarEnabled: false,
-      onMapCreated: _onMapCreated,
+    return BlocBuilder<BarBloc, BarState>(
+      builder: (context, barState) {
+        final markers = <Marker>{};
+        if (barState is BarsLoaded) {
+          for (final bar in barState.bars) {
+            if (bar.latitude != null && bar.longitude != null) {
+              markers.add(
+                Marker(
+                  markerId: MarkerId(bar.id.toString()),
+                  position: LatLng(bar.latitude!, bar.longitude!),
+                  infoWindow: InfoWindow(title: bar.name),
+                  onTap: () => _showBarBottomSheet(bar),
+                ),
+              );
+            }
+          }
+        }
+
+        return GoogleMap(
+          mapType: MapType.normal,
+          style: _darkMapStyle,
+          initialCameraPosition: CameraPosition(
+            target: LatLng(lat, lng),
+            zoom: 15,
+          ),
+          myLocationEnabled: true,
+          myLocationButtonEnabled: false,
+          zoomControlsEnabled: false,
+          mapToolbarEnabled: false,
+          onMapCreated: _onMapCreated,
+          markers: markers,
+          polylines: _polylines,
+        );
+      },
     );
   }
 
@@ -488,17 +594,18 @@ class _FindConnectedViewState extends State<FindConnectedView>
       top: 0,
       right: 0,
       bottom: 0,
-      width: MediaQuery.of(context).size.width * 0.85,
+      width: 288, // Fixed width matching SideBar
       child: SlideTransition(
         position: _panelSlideAnimation,
         child: Container(
-          decoration: BoxDecoration(
-            color: colors.surface,
+          decoration: const BoxDecoration(
+            color: Color(0xFF17203A), // SideBar color
+            borderRadius: BorderRadius.horizontal(left: Radius.circular(30)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.3),
-                blurRadius: 20,
-                offset: const Offset(-5, 0),
+                color: Colors.black26, // Lighter shadow
+                blurRadius: 30,
+                offset: Offset(0, 10),
               ),
             ],
           ),
@@ -506,7 +613,12 @@ class _FindConnectedViewState extends State<FindConnectedView>
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.all(BarzSpacing.lg),
+                  padding: const EdgeInsets.only(
+                    left: 24,
+                    right: 24,
+                    top: 32,
+                    bottom: 16,
+                  ),
                   child: Row(
                     children: [
                       Text(
@@ -514,15 +626,27 @@ class _FindConnectedViewState extends State<FindConnectedView>
                         style: TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: colors.labelPrimary,
+                          color: Colors.white.withValues(alpha: 0.9),
                         ),
                       ),
                       const Spacer(),
                       IconButton(
                         onPressed: _toggleListPanel,
-                        icon: Icon(Icons.close, color: colors.labelPrimary),
+                        icon: const Icon(Icons.close, color: Colors.white70),
                       ),
                     ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 24, bottom: 8),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      "BROWSE",
+                      style: Theme.of(
+                        context,
+                      ).textTheme.titleMedium!.copyWith(color: Colors.white70),
+                    ),
                   ),
                 ),
                 Expanded(child: _buildBarsList(colors)),
@@ -545,71 +669,54 @@ class _FindConnectedViewState extends State<FindConnectedView>
         return BlocBuilder<BarBloc, BarState>(
           builder: (context, state) {
             if (state is BarLoading) {
-              return Center(
-                child: CircularProgressIndicator(color: colors.labelSelected),
+              return const Center(
+                child: CircularProgressIndicator(color: Colors.white),
               );
             }
             if (state is BarError) {
               return Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 48,
-                      color: colors.labelSecondary,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      state.message,
-                      style: TextStyle(color: colors.labelSecondary),
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () => _refreshData(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: colors.buttonPrimary,
-                        foregroundColor: colors.buttonOnPrimary,
-                      ),
-                      child: const Text('Retry'),
-                    ),
-                  ],
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    state.message,
+                    style: const TextStyle(color: Colors.white70),
+                    textAlign: TextAlign.center,
+                  ),
                 ),
               );
             }
             if (state is BarsLoaded) {
               if (state.bars.isEmpty) {
-                return Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.store, size: 48, color: colors.labelSecondary),
-                      const SizedBox(height: 16),
-                      Text(
-                        'No bars found nearby',
-                        style: TextStyle(
-                          color: colors.labelPrimary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
+                return const Center(
+                  child: Text(
+                    'No bars found nearby',
+                    style: TextStyle(color: Colors.white70),
                   ),
                 );
               }
-              return RefreshIndicator(
-                onRefresh: () async => _refreshData(context),
-                color: colors.labelSelected,
-                child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: BarzSpacing.md,
-                  ),
-                  itemCount: state.bars.length,
-                  itemBuilder: (context, index) {
-                    final bar = state.bars[index];
-                    final hasPromo = barsWithPromos.contains(bar.id);
-                    return _buildPanelBarCard(bar, colors, hasPromo: hasPromo);
-                  },
-                ),
+              return ListView.builder(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: state.bars.length,
+                itemBuilder: (context, index) {
+                  final bar = state.bars[index];
+                  final hasPromo = barsWithPromos.contains(bar.id);
+                  return _buildPanelBarCard(
+                        bar,
+                        colors,
+                        hasPromo: hasPromo,
+                        index: index,
+                      )
+                      .animate()
+                      // Staggered list animation
+                      .moveX(
+                        begin: 100,
+                        end: 0,
+                        delay: (index * 50).ms,
+                        duration: 400.ms,
+                        curve: Curves.fastOutSlowIn,
+                      )
+                      .fadeIn(delay: (index * 50).ms, duration: 400.ms);
+                },
               );
             }
             return const SizedBox.shrink();
@@ -623,96 +730,123 @@ class _FindConnectedViewState extends State<FindConnectedView>
     BarModel bar,
     DobarColors colors, {
     bool hasPromo = false,
+    int index = 0,
   }) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: BarzSpacing.sm),
-      color: colors.surfaceElevated,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(BarzRadii.md),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.1), // Semi-transparent card
+        borderRadius: BorderRadius.circular(16),
       ),
-      child: InkWell(
-        onTap: () {
-          _toggleListPanel();
-          _showBarBottomSheet(bar);
-        },
-        borderRadius: BorderRadius.circular(BarzRadii.md),
-        child: Padding(
-          padding: const EdgeInsets.all(BarzSpacing.sm),
-          child: Row(
-            children: [
-              BarImage(
-                barId: bar.id,
-                imageUrl: bar.imageUrl,
-                imageUrlExpiration: bar.imageUrlExpiration,
-                width: 48,
-                height: 48,
-                borderRadius: BorderRadius.circular(BarzRadii.sm),
-                errorWidget: Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: colors.surface,
-                    borderRadius: BorderRadius.circular(BarzRadii.sm),
-                  ),
-                  child: Icon(
-                    Icons.store,
-                    color: colors.labelSecondary,
-                    size: 24,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () async {
+            // 1. Close panel
+            _toggleListPanel();
+
+            // 2. Animate Camera
+            if (bar.latitude != null && bar.longitude != null) {
+              final controller = await _mapController.future;
+              await controller.animateCamera(
+                CameraUpdate.newLatLngZoom(
+                  LatLng(bar.latitude!, bar.longitude!),
+                  16,
+                ),
+              );
+              // Wait slightly for animation
+              await Future.delayed(const Duration(milliseconds: 600));
+            }
+
+            if (!mounted) return;
+
+            // 3. Show Bottom Sheet
+            _showBarBottomSheet(bar);
+          },
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                BarImage(
+                  barId: bar.id,
+                  imageUrl: bar.imageUrl,
+                  imageUrlExpiration: bar.imageUrlExpiration,
+                  width: 56,
+                  height: 56,
+                  borderRadius: BorderRadius.circular(12),
+                  errorWidget: Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: Colors.white10,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(Icons.store, color: Colors.white70),
                   ),
                 ),
-              ),
-              const SizedBox(width: BarzSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            bar.name,
-                            style: TextStyle(
-                              color: colors.labelPrimary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (hasPromo)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: colors.buttonPrimary,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              'PROMO',
-                              style: TextStyle(
-                                color: colors.buttonOnPrimary,
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    if (bar.approximateLocation != null)
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
-                        '${(bar.approximateLocation! / 1000).toStringAsFixed(1)} km',
-                        style: TextStyle(
-                          color: colors.labelSecondary,
+                        bar.name,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        bar.address,
+                        style: const TextStyle(
+                          color: Colors.white70,
                           fontSize: 12,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                  ],
+                      if (hasPromo) ...[
+                        const SizedBox(height: 6),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(
+                              0xFF6792FF,
+                            ), // Accent color from SideBar
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: const Text(
+                            'PROMO',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-              ),
-              Icon(Icons.chevron_right, color: colors.labelSecondary),
-            ],
+                if (bar.approximateLocation != null)
+                  Text(
+                    '${(bar.approximateLocation! / 1000).toStringAsFixed(1)}km',
+                    style: const TextStyle(
+                      color: Colors.white60,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ),

@@ -14,6 +14,7 @@ enum AppRoute {
   createBar('/create-bar'),
   checkin('/checkin'),
   cart('/cart'),
+  checkout('/checkout'),
   showcase('/showcase'),
   find('/find'),
   profile('/profile'),

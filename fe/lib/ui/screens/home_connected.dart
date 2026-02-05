@@ -82,8 +82,6 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
           padding: const EdgeInsets.all(BarzSpacing.lg),
           children: [
             const DobarHomeHeader(),
-            const SizedBox(height: BarzSpacing.xl),
-            _buildSectionTitle('Browse by Category', colors),
             const SizedBox(height: BarzSpacing.md),
             _buildCategoriesSection(context),
             const SizedBox(height: BarzSpacing.lg),
@@ -367,7 +365,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
             child: ListView.separated(
               scrollDirection: Axis.horizontal,
               itemCount: displayBars.length,
-              separatorBuilder: (_, __) => const SizedBox(width: 12),
+              separatorBuilder: (_, _) => const SizedBox(width: 12),
               itemBuilder: (context, index) {
                 final bar = displayBars[index];
                 return SizedBox(

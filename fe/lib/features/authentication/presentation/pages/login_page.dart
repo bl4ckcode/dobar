@@ -9,6 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/features/authentication/presentation/bloc/login_bloc.dart';
 import 'package:barz/features/authentication/presentation/bloc/login_event.dart';
@@ -123,7 +124,7 @@ class _LoginPageState extends State<LoginPage> {
                             SizedBox(
                               height: 180,
                               child: Image.asset(
-                                'assets/dobar/1.png',
+                                'assets/icons/dobar_logo_animated_fade.gif',
                                 fit: BoxFit.contain,
                               ),
                             ),
@@ -238,13 +239,21 @@ class _LoginPageState extends State<LoginPage> {
                                     bottom: -80,
                                     child: Opacity(
                                       opacity: 0.2,
-                                      child: Image.asset(
-                                        'assets/login/barz_cup_icon.png',
-                                        width:
-                                            MediaQuery.of(context).size.width *
-                                            0.8,
-                                        fit: BoxFit.contain,
-                                      ),
+                                      child:
+                                          Image.asset(
+                                            'assets/login/barz_cup_icon.png',
+                                            width:
+                                                MediaQuery.of(
+                                                  context,
+                                                ).size.width *
+                                                0.8,
+                                            fit: BoxFit.contain,
+                                          ).animate().slideY(
+                                            begin: 1.0,
+                                            end: 0.0,
+                                            duration: 800.ms,
+                                            curve: Curves.easeOutBack,
+                                          ),
                                     ),
                                   ),
                                 ],

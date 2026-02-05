@@ -8,6 +8,8 @@ class BarModel {
   final String? imageUrl;
   final int? imageUrlExpiration; // Unix timestamp when presigned URL expires
   final double? approximateLocation;
+  final double? latitude;
+  final double? longitude;
 
   BarModel({
     required this.id,
@@ -19,6 +21,8 @@ class BarModel {
     this.imageUrl,
     this.imageUrlExpiration,
     this.approximateLocation,
+    this.latitude,
+    this.longitude,
   });
 
   factory BarModel.fromJson(Map<String, dynamic> json) {
@@ -33,6 +37,12 @@ class BarModel {
       imageUrlExpiration: json['image_url_expiration'],
       approximateLocation: (json['approximateLocation'] != null)
           ? (json['approximateLocation'] as num).toDouble()
+          : null,
+      latitude: (json['latitude'] != null)
+          ? (json['latitude'] as num).toDouble()
+          : null,
+      longitude: (json['longitude'] != null)
+          ? (json['longitude'] as num).toDouble()
           : null,
     );
   }
@@ -49,6 +59,8 @@ class BarModel {
       imageUrl: newImageUrl,
       imageUrlExpiration: newExpiration,
       approximateLocation: approximateLocation,
+      latitude: latitude,
+      longitude: longitude,
     );
   }
 
@@ -63,6 +75,8 @@ class BarModel {
       'image_url': imageUrl,
       'image_url_expiration': imageUrlExpiration,
       'approximateLocation': approximateLocation,
+      'latitude': latitude,
+      'longitude': longitude,
     };
   }
 }

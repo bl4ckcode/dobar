@@ -1,4 +1,5 @@
 import 'package:barz/features/cart/domain/models/cart_model.dart';
+import 'package:barz/features/cart/domain/models/cart_models.dart';
 import 'package:equatable/equatable.dart';
 
 abstract class CartState extends Equatable {
@@ -14,11 +15,29 @@ class CartLoading extends CartState {}
 
 class CartLoaded extends CartState {
   final CartModel cart;
+  final LocationConfig? locationConfig;
+  final List<Promotion> activePromotions;
 
-  const CartLoaded({required this.cart});
+  const CartLoaded({
+    required this.cart,
+    this.locationConfig,
+    this.activePromotions = const [],
+  });
+
+  CartLoaded copyWith({
+    CartModel? cart,
+    LocationConfig? locationConfig,
+    List<Promotion>? activePromotions,
+  }) {
+    return CartLoaded(
+      cart: cart ?? this.cart,
+      locationConfig: locationConfig ?? this.locationConfig,
+      activePromotions: activePromotions ?? this.activePromotions,
+    );
+  }
 
   @override
-  List<Object?> get props => [cart];
+  List<Object?> get props => [cart, locationConfig, activePromotions];
 }
 
 class CartItemAdded extends CartState {

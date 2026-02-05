@@ -20,15 +20,21 @@ class CartItemModel {
   });
 
   factory CartItemModel.fromJson(Map<String, dynamic> json) {
+    final quantity = json['quantity'] as int;
+    final unitPrice = (json['unit_price'] as num).toDouble();
+    final totalPrice = json['total_price'] != null
+        ? (json['total_price'] as num).toDouble()
+        : quantity * unitPrice;
+
     return CartItemModel(
       id: json['id'],
       cartId: json['cart_id'],
       menuItemId: json['menu_item_id'],
       barId: json['bar_id'],
       menuItemName: json['menu_item_name'],
-      quantity: json['quantity'],
-      unitPrice: (json['unit_price'] as num).toDouble(),
-      totalPrice: (json['total_price'] as num).toDouble(),
+      quantity: quantity,
+      unitPrice: unitPrice,
+      totalPrice: totalPrice,
     );
   }
 
@@ -59,12 +65,48 @@ class CartItemModel {
   }
 }
 
+class AppliedBundleModel {
+  final int bundleId;
+  final String bundleName;
+  final double discountAmount;
+  final String message;
+
+  AppliedBundleModel({
+    required this.bundleId,
+    required this.bundleName,
+    required this.discountAmount,
+    required this.message,
+  });
+
+  factory AppliedBundleModel.fromJson(Map<String, dynamic> json) {
+    return AppliedBundleModel(
+      bundleId: json['bundle_id'],
+      bundleName: json['bundle_name'],
+      discountAmount: (json['discount_amount'] as num).toDouble(),
+      message: json['message'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'bundle_id': bundleId,
+      'bundle_name': bundleName,
+      'discount_amount': discountAmount,
+      'message': message,
+    };
+  }
+}
+
 class CartModel {
   final int id;
   final int userId;
   final List<CartItemModel> items;
   final int totalItems;
   final double subtotal;
+  final List<AppliedBundleModel> appliedBundles;
+  final double bundleSavings;
+  final double subtotalAfterBundles;
+  final String? bundleHint;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -74,20 +116,34 @@ class CartModel {
     required this.items,
     required this.totalItems,
     required this.subtotal,
+    this.appliedBundles = const [],
+    this.bundleSavings = 0.0,
+    double? subtotalAfterBundles,
+    this.bundleHint,
     required this.createdAt,
     required this.updatedAt,
-  });
+  }) : subtotalAfterBundles = subtotalAfterBundles ?? subtotal;
 
   factory CartModel.fromJson(Map<String, dynamic> json) {
     return CartModel(
       id: json['id'],
       userId: json['user_id'],
-      items: (json['items'] as List<dynamic>?)
+      items:
+          (json['items'] as List<dynamic>?)
               ?.map((e) => CartItemModel.fromJson(e))
               .toList() ??
           [],
       totalItems: json['total_items'] ?? 0,
       subtotal: (json['subtotal'] as num?)?.toDouble() ?? 0.0,
+      appliedBundles:
+          (json['applied_bundles'] as List<dynamic>?)
+              ?.map((e) => AppliedBundleModel.fromJson(e))
+              .toList() ??
+          [],
+      bundleSavings: (json['bundle_savings'] as num?)?.toDouble() ?? 0.0,
+      subtotalAfterBundles: (json['subtotal_after_bundles'] as num?)
+          ?.toDouble(),
+      bundleHint: json['bundle_hint'],
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
     );
@@ -100,18 +156,34 @@ class CartModel {
       'items': items.map((e) => e.toJson()).toList(),
       'total_items': totalItems,
       'subtotal': subtotal,
+      'applied_bundles': appliedBundles.map((e) => e.toJson()).toList(),
+      'bundle_savings': bundleSavings,
+      'subtotal_after_bundles': subtotalAfterBundles,
+      'bundle_hint': bundleHint,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
   }
 
-  CartModel copyWith({List<CartItemModel>? items, int? totalItems, double? subtotal}) {
+  CartModel copyWith({
+    List<CartItemModel>? items,
+    int? totalItems,
+    double? subtotal,
+    List<AppliedBundleModel>? appliedBundles,
+    double? bundleSavings,
+    double? subtotalAfterBundles,
+    String? bundleHint,
+  }) {
     return CartModel(
       id: id,
       userId: userId,
       items: items ?? this.items,
       totalItems: totalItems ?? this.totalItems,
       subtotal: subtotal ?? this.subtotal,
+      appliedBundles: appliedBundles ?? this.appliedBundles,
+      bundleSavings: bundleSavings ?? this.bundleSavings,
+      subtotalAfterBundles: subtotalAfterBundles ?? this.subtotalAfterBundles,
+      bundleHint: bundleHint ?? this.bundleHint,
       createdAt: createdAt,
       updatedAt: DateTime.now(),
     );

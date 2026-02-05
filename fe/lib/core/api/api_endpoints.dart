@@ -13,6 +13,8 @@ class ApiEndpoints {
   static String bar(int id) => '/bars/$id';
   static String barImage(int id) => '/bars/$id/image';
   static String refreshBarImage(int id) => '/bars/$id/refresh-image';
+  static String barLocationConfig(int id) => '/bars/$id/location-config';
+  static String barActivePromotions(int id) => '/bars/$id/promotions';
 
   // Menus
   static const String menusCreate = '/menus/';
@@ -20,10 +22,14 @@ class ApiEndpoints {
   static String menus(int barId) => '/menus/$barId';
   static String menusForBar(int barId) => '/menus/bar/$barId';
   static String menuFull(int menuId) => '/menus/$menuId/full';
+
   /// New endpoint structure: /menus/{menu_id}/items (replaces deprecated /menus/items/{menu_id})
   static String menuItems(int menuId) => '/menus/$menuId/items';
-  static String menuItem(int menuId, int itemId) => '/menus/$menuId/items/$itemId';
-  static String menuItemAvailability(int menuId, int itemId) => '/menus/$menuId/items/$itemId/availability';
+  static String menuItem(int menuId, int itemId) =>
+      '/menus/$menuId/items/$itemId';
+  static String menuItemAvailability(int menuId, int itemId) =>
+      '/menus/$menuId/items/$itemId/availability';
+
   /// @deprecated Use menuItems(menuId) instead
   static String menuItemsLegacy(int menuId) => '/menus/items/$menuId';
 
@@ -49,7 +55,7 @@ class ApiEndpoints {
   static const String acceptPrivacy = '/me/accept-privacy';
   static const String onboarding = '/me/onboarding';
   static const String paymentGateway = '/me/payment-gateway';
-  
+
   // Legacy user endpoints (for backwards compatibility)
   static const String users = '/users';
   static const String userProfile = '/me/profile';
@@ -72,17 +78,18 @@ class ApiEndpoints {
   static String barPromotions(int barId) => '/promotions/bar/$barId';
   static const String nearbyPromotions = '/promotions/nearby';
   static String togglePromotion(int id) => '/promotions/$id/toggle-active';
-  
+
   static const String offers = '/offers';
 
   // RBAC / Session Management
   static const String myBars = '/me/bars';
   static const String acceptInvitation = '/me/bars/accept-invitation';
-  
+
   // Staff Management
   static String barStaff(int barId) => '/bars/$barId/staff';
   static String inviteStaff(int barId) => '/bars/$barId/staff/invite';
-  static String removeStaff(int barId, int staffId) => '/bars/$barId/staff/$staffId';
+  static String removeStaff(int barId, int staffId) =>
+      '/bars/$barId/staff/$staffId';
 
   // Advertising & Monetization
   // Public endpoints (no auth) - ad serving
@@ -91,16 +98,21 @@ class ApiEndpoints {
   static const String adServeMap = '/advertising/serve/map';
   static const String adTrack = '/advertising/track';
   static const String adPlans = '/advertising/plans';
-  
+
   // Authenticated endpoints - campaign/subscription management
   static const String subscriptions = '/advertising/subscriptions';
   static String subscription(int barId) => '/advertising/subscriptions/$barId';
-  static String cancelSubscription(int subscriptionId) => '/advertising/subscriptions/$subscriptionId/cancel';
+  static String cancelSubscription(int subscriptionId) =>
+      '/advertising/subscriptions/$subscriptionId/cancel';
   static const String campaigns = '/advertising/campaigns';
-  static String campaign(int campaignId) => '/advertising/campaigns/$campaignId';
-  static String pauseCampaign(int campaignId) => '/advertising/campaigns/$campaignId/pause';
-  static String resumeCampaign(int campaignId) => '/advertising/campaigns/$campaignId/resume';
-  static String campaignAnalytics(int campaignId) => '/advertising/analytics/$campaignId';
+  static String campaign(int campaignId) =>
+      '/advertising/campaigns/$campaignId';
+  static String pauseCampaign(int campaignId) =>
+      '/advertising/campaigns/$campaignId/pause';
+  static String resumeCampaign(int campaignId) =>
+      '/advertising/campaigns/$campaignId/resume';
+  static String campaignAnalytics(int campaignId) =>
+      '/advertising/analytics/$campaignId';
 
   // Google Places API Proxy (secure - API key on server)
   static const String placesAutocomplete = '/api/places/autocomplete';

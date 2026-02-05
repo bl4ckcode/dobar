@@ -20,5 +20,8 @@ abstract class AbstractCartRepository {
   Future<Either<Failure, CheckoutResult>> checkout({
     required String orderType,
     required String paymentMethod,
+    String? tableNumber,
+    String? specialInstructions,
+    List<String>? activePromotionIds,
   });
 }

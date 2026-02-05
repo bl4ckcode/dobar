@@ -21,6 +21,8 @@ import 'package:barz/features/orders/presentation/pages/order_detail_page.dart';
 import 'package:barz/features/orders/presentation/pages/orders_page.dart';
 import 'package:barz/features/checkin/presentation/pages/checkin_page.dart';
 import 'package:barz/features/cart/presentation/pages/cart_page.dart';
+import 'package:barz/features/cart/presentation/bloc/cart_bloc.dart';
+import 'package:barz/features/payment/presentation/pages/checkout_page.dart';
 import 'package:barz/features/authentication/presentation/pages/login_page.dart';
 import 'package:barz/features/authentication/presentation/pages/complete_registration_page.dart';
 import 'package:barz/features/onboarding/presentation/pages/onboarding_page.dart';
@@ -195,6 +197,17 @@ final appRouter = GoRouter(
       path: AppRoute.cart.path,
       name: AppRoute.cart.name,
       builder: (context, state) => const CartPage(),
+    ),
+    GoRoute(
+      path: AppRoute.checkout.path,
+      name: AppRoute.checkout.name,
+      builder: (context, state) {
+        final args = state.extra as CheckoutArguments?;
+        return BlocProvider(
+          create: (_) => getItInjector<CartBloc>(),
+          child: CheckoutPage(arguments: args),
+        );
+      },
     ),
     GoRoute(
       path: AppRoute.showcase.path,

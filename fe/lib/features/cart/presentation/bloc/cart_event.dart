@@ -25,8 +25,13 @@ class AddToCart extends CartEvent {
   });
 
   @override
-  List<Object?> get props =>
-      [menuItemId, barId, menuItemName, quantity, unitPrice];
+  List<Object?> get props => [
+    menuItemId,
+    barId,
+    menuItemName,
+    quantity,
+    unitPrice,
+  ];
 }
 
 class UpdateCartItem extends CartEvent {
@@ -50,19 +55,36 @@ class RemoveFromCart extends CartEvent {
 
 class ClearCart extends CartEvent {}
 
+class LoadCheckoutConfig extends CartEvent {
+  final int barId;
+
+  const LoadCheckoutConfig({required this.barId});
+
+  @override
+  List<Object?> get props => [barId];
+}
+
 class Checkout extends CartEvent {
   final String orderType;
   final String paymentMethod;
   final String? tableNumber;
   final String? specialInstructions;
+  final List<String>? activePromotionIds;
 
   const Checkout({
     required this.orderType,
     required this.paymentMethod,
     this.tableNumber,
     this.specialInstructions,
+    this.activePromotionIds,
   });
 
   @override
-  List<Object?> get props => [orderType, paymentMethod, tableNumber, specialInstructions];
+  List<Object?> get props => [
+    orderType,
+    paymentMethod,
+    tableNumber,
+    specialInstructions,
+    activePromotionIds,
+  ];
 }

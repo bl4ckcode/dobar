@@ -10,12 +10,15 @@ class CartNetworkDataSource {
 
   Future<CartModel> getCart() async {
     try {
-      final response = await dio.get('${ApiEndpoints.baseUrl}${ApiEndpoints.cart}');
+      final response = await dio.get(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.cart}',
+      );
       return CartModel.fromJson(response.data);
     } on DioException catch (e) {
       throw ServerException(
-          e.response?.data?['detail'] ?? 'Failed to fetch cart',
-          e.response?.statusCode);
+        e.response?.data?['detail'] ?? 'Failed to fetch cart',
+        e.response?.statusCode,
+      );
     }
   }
 
@@ -40,8 +43,9 @@ class CartNetworkDataSource {
       return CartItemModel.fromJson(response.data);
     } on DioException catch (e) {
       throw ServerException(
-          e.response?.data?['detail'] ?? 'Failed to add item',
-          e.response?.statusCode);
+        e.response?.data?['detail'] ?? 'Failed to add item',
+        e.response?.statusCode,
+      );
     }
   }
 
@@ -57,18 +61,22 @@ class CartNetworkDataSource {
       return CartItemModel.fromJson(response.data);
     } on DioException catch (e) {
       throw ServerException(
-          e.response?.data?['detail'] ?? 'Failed to update item',
-          e.response?.statusCode);
+        e.response?.data?['detail'] ?? 'Failed to update item',
+        e.response?.statusCode,
+      );
     }
   }
 
   Future<void> removeItem(int itemId) async {
     try {
-      await dio.delete('${ApiEndpoints.baseUrl}${ApiEndpoints.cartItem(itemId)}');
+      await dio.delete(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.cartItem(itemId)}',
+      );
     } on DioException catch (e) {
       throw ServerException(
-          e.response?.data?['detail'] ?? 'Failed to remove item',
-          e.response?.statusCode);
+        e.response?.data?['detail'] ?? 'Failed to remove item',
+        e.response?.statusCode,
+      );
     }
   }
 
@@ -77,28 +85,40 @@ class CartNetworkDataSource {
       await dio.delete('${ApiEndpoints.baseUrl}${ApiEndpoints.cart}');
     } on DioException catch (e) {
       throw ServerException(
-          e.response?.data?['detail'] ?? 'Failed to clear cart',
-          e.response?.statusCode);
+        e.response?.data?['detail'] ?? 'Failed to clear cart',
+        e.response?.statusCode,
+      );
     }
   }
 
   Future<CheckoutResult> checkout({
     required String orderType,
     required String paymentMethod,
+    String? tableNumber,
+    String? specialInstructions,
+    List<String>? activePromotionIds,
   }) async {
     try {
+      final data = {
+        'order_type': orderType,
+        'payment_method': paymentMethod,
+        if (tableNumber != null) 'location_identifier': tableNumber,
+        if (specialInstructions != null)
+          'special_instructions': specialInstructions,
+        if (activePromotionIds != null)
+          'active_promotion_ids': activePromotionIds,
+      };
+
       final response = await dio.post(
         '${ApiEndpoints.baseUrl}${ApiEndpoints.cartCheckout}',
-        data: {
-          'order_type': orderType,
-          'payment_method': paymentMethod,
-        },
+        data: data,
       );
       return CheckoutResult.fromJson(response.data);
     } on DioException catch (e) {
       throw ServerException(
-          e.response?.data?['detail'] ?? 'Checkout failed',
-          e.response?.statusCode);
+        e.response?.data?['detail'] ?? 'Checkout failed',
+        e.response?.statusCode,
+      );
     }
   }
 }

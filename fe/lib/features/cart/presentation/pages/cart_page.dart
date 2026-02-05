@@ -1,8 +1,11 @@
+import 'package:barz/core/design/tokens/colors.dart';
 import 'package:barz/core/utils/injections.dart';
+import 'package:barz/features/cart/domain/models/cart_models.dart';
 import 'package:barz/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:barz/features/cart/presentation/bloc/cart_event.dart'
     as cart_event;
 import 'package:barz/features/cart/presentation/bloc/cart_state.dart';
+import 'package:barz/features/payment/presentation/pages/checkout_page.dart'; // For CheckoutArguments
 import 'package:barz/features/checkin/presentation/bloc/checkin_bloc.dart';
 import 'package:barz/features/checkin/presentation/bloc/checkin_event.dart'
     as checkin_event;
@@ -13,7 +16,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:barz/core/router/app_routes.dart';
 
-/// Enhanced cart page with table number and special instructions
+// New Widget Imports
+import '../widgets/cart_item_card.dart';
+import '../widgets/coupon_input_section.dart';
+import '../widgets/active_promotions_section.dart';
+import '../widgets/order_summary_section.dart';
+
 class CartPage extends StatefulWidget {
   const CartPage({super.key});
 
@@ -22,22 +30,8 @@ class CartPage extends StatefulWidget {
 }
 
 class _CartPageState extends State<CartPage> {
-  final _tableController = TextEditingController();
-  final _instructionsController = TextEditingController();
-  String _selectedPaymentMethod = 'credit_card';
-  String _selectedOrderType = 'dine_in';
-
-  @override
-  void dispose() {
-    _tableController.dispose();
-    _instructionsController.dispose();
-    super.dispose();
-  }
-
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-
     return MultiBlocProvider(
       providers: [
         BlocProvider(
@@ -49,110 +43,65 @@ class _CartPageState extends State<CartPage> {
                 ..add(const checkin_event.LoadActiveCheckin()),
         ),
       ],
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text(l10n.cart_title),
-          actions: [
-            BlocBuilder<CartBloc, CartState>(
-              builder: (context, state) {
-                if (state is CartLoaded && state.cart.items.isNotEmpty) {
-                  return IconButton(
-                    icon: const Icon(Icons.delete_outline),
-                    onPressed: () => _showClearCartDialog(context),
-                    tooltip: l10n.cart_clear,
-                  );
-                }
-                return const SizedBox.shrink();
-              },
-            ),
-          ],
-        ),
-        body: BlocConsumer<CartBloc, CartState>(
-          listener: (context, state) {
-            if (state is CheckoutSuccess) {
-              _showOrderSuccessDialog(context, state.result.orderId);
-            }
-            if (state is CartError) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(state.message),
-                  backgroundColor: Colors.red,
-                ),
-              );
-            }
-          },
-          builder: (context, state) {
-            if (state is CartLoading) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (state is CartError) {
-              return _EmptyCartView(message: state.message, isError: true);
-            }
-            if (state is CartLoaded) {
-              final cart = state.cart;
-              if (cart.items.isEmpty) {
-                return _EmptyCartView(message: l10n.cart_empty);
-              }
-
-              return _CartContentView(
-                cart: cart,
-                tableController: _tableController,
-                instructionsController: _instructionsController,
-                selectedPaymentMethod: _selectedPaymentMethod,
-                selectedOrderType: _selectedOrderType,
-                onPaymentMethodChanged: (value) {
-                  setState(() => _selectedPaymentMethod = value);
-                },
-                onOrderTypeChanged: (value) {
-                  setState(() => _selectedOrderType = value);
-                },
-                onCheckout: () => _handleCheckout(context),
-              );
-            }
-            return const SizedBox.shrink();
-          },
-        ),
-      ),
+      child: const _CartPageContent(),
     );
   }
+}
 
-  void _showClearCartDialog(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.cart_clear),
-        content: const Text('Are you sure you want to clear your cart?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(l10n.cancel),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              context.read<CartBloc>().add(cart_event.ClearCart());
-            },
-            child: Text(l10n.cart_clear),
-          ),
-        ],
-      ),
-    );
+class _CartPageContent extends StatefulWidget {
+  const _CartPageContent();
+
+  @override
+  State<_CartPageContent> createState() => _CartPageContentState();
+}
+
+class _CartPageContentState extends State<_CartPageContent> {
+  final _tableController = TextEditingController();
+  final _locationNoteController =
+      TextEditingController(); // For free text location
+  final _instructionsController = TextEditingController();
+
+  // Configuration is loaded from backend via CartBloc
+  String? _selectedSpotId;
+  int _tableNumber = 0;
+
+  final Set<String> _selectedPromotionIds = {};
+  int? _lastLoadedBarId;
+
+  @override
+  void dispose() {
+    _tableController.dispose();
+    _locationNoteController.dispose();
+    _instructionsController.dispose();
+    super.dispose();
   }
 
-  void _handleCheckout(BuildContext context) {
-    context.read<CartBloc>().add(
-      cart_event.Checkout(
-        orderType: _selectedOrderType,
-        paymentMethod: _selectedPaymentMethod,
-        tableNumber: _tableController.text.isNotEmpty
-            ? _tableController.text
-            : null,
-        specialInstructions: _instructionsController.text.isNotEmpty
-            ? _instructionsController.text
-            : null,
-      ),
-    );
+  void _updateTableNumber(int delta) {
+    setState(() {
+      _tableNumber = (_tableNumber + delta).clamp(0, 999);
+      _tableController.text = _tableNumber > 0 ? _tableNumber.toString() : '';
+    });
+  }
+
+  void _listenToCartState(BuildContext context, CartState state) {
+    if (state is CheckoutSuccess) {
+      _showOrderSuccessDialog(context, state.result.orderId);
+    }
+    if (state is CartError) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(state.message), backgroundColor: errorRed),
+      );
+    }
+
+    // Load config if needed
+    if (state is CartLoaded &&
+        state.cart.items.isNotEmpty &&
+        (state.locationConfig == null ||
+            _lastLoadedBarId != state.cart.items.first.barId)) {
+      final barId = state.cart.items.first.barId;
+      _lastLoadedBarId = barId;
+      context.read<CartBloc>().add(cart_event.LoadCheckoutConfig(barId: barId));
+    }
   }
 
   void _showOrderSuccessDialog(BuildContext context, int orderId) {
@@ -165,10 +114,10 @@ class _CartPageState extends State<CartPage> {
           width: 64,
           height: 64,
           decoration: BoxDecoration(
-            color: Colors.green.withValues(alpha: 0.1),
+            color: successGreen.withValues(alpha: 0.1),
             shape: BoxShape.circle,
           ),
-          child: const Icon(Icons.check_circle, size: 48, color: Colors.green),
+          child: const Icon(Icons.check_circle, size: 48, color: successGreen),
         ),
         title: Text(l10n.checkout_success),
         content: Column(
@@ -203,455 +152,545 @@ class _CartPageState extends State<CartPage> {
       ),
     );
   }
-}
 
-/// Empty cart view
-class _EmptyCartView extends StatelessWidget {
-  final String message;
-  final bool isError;
+  void _handleCheckout(BuildContext context) {
+    final state = context.read<CartBloc>().state;
+    if (state is! CartLoaded) return;
 
-  const _EmptyCartView({required this.message, this.isError = false});
+    final locationConfig = state.locationConfig;
+    final method = locationConfig?.method ?? LocationMethod.tableNumber;
+
+    // Determine location identifier based on method
+    String? locationIdentifier;
+    if (method == LocationMethod.tableNumber) {
+      locationIdentifier = _tableController.text;
+    } else if (method == LocationMethod.spotList) {
+      locationIdentifier = _selectedSpotId;
+    } else {
+      locationIdentifier = _locationNoteController.text;
+    }
+    final cart = state.cart;
+    final items = cart.items
+        .map(
+          (item) => CartItem(
+            id: item.id.toString(),
+            name: item.menuItemName,
+            description: '',
+            price: item.unitPrice,
+            quantity: item.quantity,
+          ),
+        )
+        .toList();
+
+    Coupon? coupon;
+    if (cart.appliedBundles.isNotEmpty) {
+      coupon = Coupon(
+        code: cart.appliedBundles.first.bundleName,
+        discount: cart.appliedBundles.first.discountAmount,
+        type: CouponType.fixed,
+      );
+    }
+
+    final args = CheckoutArguments(
+      items: items,
+      subtotal: cart.subtotal,
+      total: cart.subtotalAfterBundles,
+      bundleSavings: cart.bundleSavings,
+      coupon: coupon,
+      locationIdentifier: locationIdentifier,
+      instructions: _instructionsController.text.isNotEmpty
+          ? _instructionsController.text
+          : null,
+      activePromotionIds: _selectedPromotionIds.toList(),
+    );
+
+    context.push(AppRoute.checkout.path, extra: args);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
+    return Scaffold(
+      backgroundColor: isDark ? barzDark : barzGoldSoft,
+      body: BlocListener<CartBloc, CartState>(
+        listener: _listenToCartState,
+        child: BlocBuilder<CheckinBloc, CheckinState>(
+          builder: (context, checkinState) {
+            // Auto-fill table number
+            if (checkinState.isCheckedIn &&
+                checkinState.activeCheckin?.tableNumber != null &&
+                _tableController.text.isEmpty &&
+                _tableNumber == 0) {
+              // Schedule strictly to avoid build phase errors
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted && _tableNumber == 0) {
+                  final tVal =
+                      int.tryParse(checkinState.activeCheckin!.tableNumber!) ??
+                      0;
+                  if (tVal > 0) {
+                    setState(() {
+                      _tableNumber = tVal;
+                      _tableController.text = tVal.toString();
+                      // Location method is determined by config, not local override
+                      // but we assume if tableNumber is present, the venue supports it
+                      // or it's the default.
+                    });
+                  }
+                }
+              });
+            }
+
+            return BlocBuilder<CartBloc, CartState>(
+              builder: (context, state) {
+                if (state is CartLoading) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final cart = (state is CartLoaded) ? state.cart : null;
+                final items = cart?.items ?? [];
+
+                if (state is CartLoaded && items.isEmpty) {
+                  return _buildEmptyState(context, isDark);
+                }
+
+                // Map legacy items to new UI items
+                final uiItems = items
+                    .map(
+                      (item) => CartItem(
+                        id: item.id.toString(),
+                        name: item.menuItemName,
+                        description: 'Delicious item', // Placeholder
+                        price: item.unitPrice,
+                        quantity: item.quantity,
+                        imageUrl: null, // Placeholder handled by widget
+                      ),
+                    )
+                    .toList();
+
+                // Map Bundle/Coupon
+                Coupon? displayedCoupon;
+                if (cart != null && cart.appliedBundles.isNotEmpty) {
+                  final bundle = cart.appliedBundles.first;
+                  displayedCoupon = Coupon(
+                    code: bundle.bundleName,
+                    discount: bundle.discountAmount,
+                    type: CouponType.fixed, // Basic assumption
+                  );
+                }
+
+                return SafeArea(
+                  child: Column(
+                    children: [
+                      _buildHeader(context, isDark, items.length),
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.only(bottom: 32),
+                          child: Column(
+                            children: [
+                              const SizedBox(height: 8),
+                              ...uiItems.map(
+                                (item) => CartItemCard(
+                                  item: item,
+                                  onQuantityChanged: (qty) {
+                                    if (qty > item.quantity) {
+                                      context.read<CartBloc>().add(
+                                        cart_event.UpdateCartItem(
+                                          itemId: int.parse(item.id),
+                                          quantity: qty,
+                                        ),
+                                      );
+                                    } else {
+                                      if (qty < 1) {
+                                        context.read<CartBloc>().add(
+                                          cart_event.RemoveFromCart(
+                                            itemId: int.parse(item.id),
+                                          ),
+                                        );
+                                      } else {
+                                        context.read<CartBloc>().add(
+                                          cart_event.UpdateCartItem(
+                                            itemId: int.parse(item.id),
+                                            quantity: qty,
+                                          ),
+                                        );
+                                      }
+                                    }
+                                  },
+                                  onRemove: () => context.read<CartBloc>().add(
+                                    cart_event.RemoveFromCart(
+                                      itemId: int.parse(item.id),
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              // Coupon Section
+                              CouponInputSection(
+                                appliedCoupon: displayedCoupon,
+                                onApplyCoupon: (code) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        'Coupon application logic not connected yet',
+                                      ),
+                                    ),
+                                  );
+                                  return false;
+                                },
+                                onRemoveCoupon: () {},
+                              ),
+
+                              const SizedBox(height: 16),
+
+                              // Active Promotions Section
+                              if (state is CartLoaded &&
+                                  state.activePromotions.isNotEmpty) ...[
+                                ActivePromotionsSection(
+                                  promotions: state.activePromotions,
+                                  onToggle: (id, isActive) {
+                                    setState(() {
+                                      if (isActive) {
+                                        _selectedPromotionIds.add(id);
+                                      } else {
+                                        _selectedPromotionIds.remove(id);
+                                      }
+                                    });
+                                  },
+                                ),
+                                const SizedBox(height: 16),
+                              ],
+
+                              const SizedBox(height: 16),
+
+                              // Where Are You Section (Renamed & Enhanced)
+                              _buildWhereAreYouSection(context, isDark),
+
+                              const SizedBox(height: 16),
+
+                              OrderSummarySection(
+                                items: uiItems,
+                                coupon: displayedCoupon,
+                                promotions:
+                                    const [], // Pass real promotions if available
+                                onCheckout: () => _handleCheckout(context),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context, bool isDark, int itemCount) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () => context.pop(),
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: isDark ? barzDarkLight : surfaceWhite,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: Icon(
+                Icons.arrow_back,
+                color: isDark ? textOnDark : textPrimary,
+                size: 22,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: barzGold,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: barzGold.withValues(alpha: 0.35),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: const Icon(
+              Icons.shopping_bag_outlined,
+              color: barzDark,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Your Cart',
+                  style: TextStyle(
+                    color: isDark ? textOnDark : textPrimary,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  '$itemCount ${itemCount == 1 ? "item" : "items"}',
+                  style: TextStyle(
+                    color: isDark ? const Color(0xFFB0B0B0) : textSecondary,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context, bool isDark) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
-            isError ? Icons.error_outline : Icons.shopping_cart_outlined,
+            Icons.shopping_bag_outlined,
             size: 80,
-            color: isError
-                ? Colors.red
-                : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+            color: isDark
+                ? const Color(0xFF444444)
+                : textTertiary.withValues(alpha: 0.4),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 16),
           Text(
-            message,
-            style: theme.textTheme.titleMedium,
-            textAlign: TextAlign.center,
+            'Your cart is empty',
+            style: TextStyle(
+              color: isDark ? const Color(0xFFB0B0B0) : textSecondary,
+              fontSize: 16,
+            ),
           ),
           const SizedBox(height: 24),
-          OutlinedButton.icon(
+          FilledButton.icon(
             onPressed: () => context.pop(),
-            icon: const Icon(Icons.restaurant_menu),
-            label: Text(l10n.checkin_browse_menu),
+            icon: const Icon(Icons.arrow_back),
+            label: const Text('Go back to Menu'),
+            style: FilledButton.styleFrom(
+              backgroundColor: barzGold,
+              foregroundColor: barzDark,
+            ),
           ),
         ],
       ),
     );
   }
-}
 
-/// Cart content with items, order details, and checkout
-class _CartContentView extends StatelessWidget {
-  final dynamic cart;
-  final TextEditingController tableController;
-  final TextEditingController instructionsController;
-  final String selectedPaymentMethod;
-  final String selectedOrderType;
-  final ValueChanged<String> onPaymentMethodChanged;
-  final ValueChanged<String> onOrderTypeChanged;
-  final VoidCallback onCheckout;
-
-  const _CartContentView({
-    required this.cart,
-    required this.tableController,
-    required this.instructionsController,
-    required this.selectedPaymentMethod,
-    required this.selectedOrderType,
-    required this.onPaymentMethodChanged,
-    required this.onOrderTypeChanged,
-    required this.onCheckout,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-
-    return Column(
-      children: [
-        Expanded(
-          child: ListView(
-            padding: const EdgeInsets.all(16),
+  Widget _buildWhereAreYouSection(BuildContext context, bool isDark) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? barzDarkLight : surfaceWhite,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: barzDark.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              // Cart Items
-              Card(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.shopping_basket),
-                          const SizedBox(width: 12),
-                          Text(
-                            l10n.cart_items(cart.totalItems),
-                            style: theme.textTheme.titleMedium,
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Divider(height: 1),
-                    ...cart.items.map<Widget>(
-                      (item) => _CartItemTile(item: item),
-                    ),
-                  ],
+              Icon(
+                Icons.location_on_outlined,
+                color: isDark ? textOnDark : textPrimary,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Where are you?',
+                style: TextStyle(
+                  color: isDark ? textOnDark : textPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 16),
-
-              // Active check-in info
-              BlocBuilder<CheckinBloc, CheckinState>(
-                builder: (context, state) {
-                  if (state.isCheckedIn && state.activeCheckin != null) {
-                    final checkin = state.activeCheckin!;
-                    // Pre-fill table number from check-in
-                    if (tableController.text.isEmpty &&
-                        checkin.tableNumber != null) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        tableController.text = checkin.tableNumber!;
-                      });
-                    }
-                    return Card(
-                      color: theme.colorScheme.primaryContainer,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.check_circle,
-                              color: theme.colorScheme.primary,
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    l10n.checkin_at_bar(checkin.barName),
-                                    style: theme.textTheme.titleSmall,
-                                  ),
-                                  if (checkin.tableNumber != null)
-                                    Text(
-                                      'Table ${checkin.tableNumber}',
-                                      style: theme.textTheme.bodySmall,
-                                    ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }
-                  return const SizedBox.shrink();
-                },
-              ),
-              const SizedBox(height: 16),
-
-              // Order Details Card
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.checkout_order_details,
-                        style: theme.textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Order Type
-                      Text(
-                        l10n.checkout_order_type,
-                        style: theme.textTheme.labelMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      SegmentedButton<String>(
-                        segments: [
-                          ButtonSegment(
-                            value: 'dine_in',
-                            icon: const Icon(Icons.restaurant),
-                            label: Text(l10n.checkout_dine_in),
-                          ),
-                          ButtonSegment(
-                            value: 'takeaway',
-                            icon: const Icon(Icons.takeout_dining),
-                            label: Text(l10n.checkout_takeaway),
-                          ),
-                        ],
-                        selected: {selectedOrderType},
-                        onSelectionChanged: (value) =>
-                            onOrderTypeChanged(value.first),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Table Number
-                      TextField(
-                        controller: tableController,
-                        decoration: InputDecoration(
-                          labelText: l10n.cart_table_number,
-                          hintText: 'e.g., 5, A1',
-                          prefixIcon: const Icon(Icons.table_bar),
-                          border: const OutlineInputBorder(),
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Special Instructions
-                      TextField(
-                        controller: instructionsController,
-                        decoration: InputDecoration(
-                          labelText: l10n.cart_special_instructions,
-                          hintText: 'Any allergies or special requests...',
-                          prefixIcon: const Icon(Icons.notes),
-                          border: const OutlineInputBorder(),
-                        ),
-                        maxLines: 2,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
-
-              // Payment Method Card
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        l10n.checkout_payment_method,
-                        style: theme.textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      RadioGroup<String>(
-                        groupValue: selectedPaymentMethod,
-                        onChanged: (value) => onPaymentMethodChanged(
-                          value ?? selectedPaymentMethod,
-                        ),
-                        child: Column(
-                          children: [
-                            _PaymentMethodRadio(
-                              value: 'credit_card',
-                              icon: Icons.credit_card,
-                              label: l10n.payment_credit_card,
-                            ),
-                            _PaymentMethodRadio(
-                              value: 'pix',
-                              icon: Icons.qr_code,
-                              label: l10n.payment_pix,
-                            ),
-                            _PaymentMethodRadio(
-                              value: 'cash',
-                              icon: Icons.money,
-                              label: l10n.payment_cash,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 100), // Space for bottom bar
             ],
           ),
-        ),
+          const SizedBox(height: 16),
 
-        // Bottom checkout bar
-        _CheckoutBottomBar(
-          subtotal: cart.subtotal,
-          itemCount: cart.totalItems,
-          onCheckout: onCheckout,
-        ),
-      ],
-    );
-  }
-}
+          // Location Logic driven by Bloc State
+          BlocBuilder<CartBloc, CartState>(
+            builder: (context, state) {
+              final config = (state is CartLoaded)
+                  ? state.locationConfig
+                  : null;
+              final method = config?.method ?? LocationMethod.tableNumber;
 
-/// Single cart item tile
-class _CartItemTile extends StatelessWidget {
-  final dynamic item;
+              if (method == LocationMethod.tableNumber) {
+                return Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: isDark ? barzDark : surfaceMuted,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      _buildSpinnerButton(
+                        icon: Icons.remove,
+                        onTap: () => _updateTableNumber(-1),
+                        isDark: isDark,
+                      ),
+                      Expanded(
+                        child: TextField(
+                          controller: _tableController,
+                          keyboardType: TextInputType.number,
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: isDark ? textOnDark : textPrimary,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                          decoration: InputDecoration(
+                            border: InputBorder.none,
+                            hintText: 'Table #',
+                            hintStyle: TextStyle(
+                              color: isDark ? textTertiary : textSecondary,
+                              fontWeight: FontWeight.normal,
+                            ),
+                          ),
+                          onChanged: (val) {
+                            setState(() {
+                              _tableNumber = int.tryParse(val) ?? 0;
+                            });
+                          },
+                        ),
+                      ),
+                      _buildSpinnerButton(
+                        icon: Icons.add,
+                        onTap: () => _updateTableNumber(1),
+                        isDark: isDark,
+                      ),
+                    ],
+                  ),
+                );
+              } else if (method == LocationMethod.spotList) {
+                final spots = config?.spots ?? [];
+                // Ensure selected spot is valid
+                if (_selectedSpotId != null &&
+                    !spots.any((s) => s.id == _selectedSpotId)) {
+                  // reset if invalid, but wrapped in microtask to avoid build error?
+                  // actually let's just ignore for now or handle in onChanged
+                }
 
-  const _CartItemTile({required this.item});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return ListTile(
-      title: Text(item.menuItemName),
-      subtitle: Text(
-        '\$${item.unitPrice.toStringAsFixed(2)} each',
-        style: theme.textTheme.bodySmall,
-      ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Quantity controls
-          IconButton(
-            icon: const Icon(Icons.remove_circle_outline),
-            iconSize: 20,
-            onPressed: () {
-              if (item.quantity > 1) {
-                context.read<CartBloc>().add(
-                  cart_event.UpdateCartItem(
-                    itemId: item.id,
-                    quantity: item.quantity - 1,
+                return DropdownButtonFormField<String>(
+                  // ignore: deprecated_member_use
+                  value: _selectedSpotId,
+                  items: spots
+                      .map(
+                        (spot) => DropdownMenuItem(
+                          value: spot.id,
+                          child: Text(spot.name),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (val) {
+                    setState(() => _selectedSpotId = val);
+                  },
+                  dropdownColor: isDark ? barzDarkLight : surfaceWhite,
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: isDark ? barzDark : surfaceMuted,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    prefixIcon: const Icon(Icons.place),
+                    hintText: 'Select your location',
                   ),
                 );
               } else {
-                context.read<CartBloc>().add(
-                  cart_event.RemoveFromCart(itemId: item.id),
+                return TextField(
+                  controller: _locationNoteController,
+                  decoration: InputDecoration(
+                    labelText: 'Your Location',
+                    hintText: 'e.g. Near the band',
+                    filled: true,
+                    fillColor: isDark ? barzDark : surfaceMuted,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    prefixIcon: const Icon(Icons.pin_drop),
+                  ),
                 );
               }
             },
           ),
-          SizedBox(
-            width: 32,
-            child: Text(
-              '${item.quantity}',
-              style: theme.textTheme.titleMedium,
-              textAlign: TextAlign.center,
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.add_circle_outline),
-            iconSize: 20,
-            onPressed: () {
-              context.read<CartBloc>().add(
-                cart_event.UpdateCartItem(
-                  itemId: item.id,
-                  quantity: item.quantity + 1,
-                ),
-              );
-            },
-          ),
-          const SizedBox(width: 16),
-          // Item total
-          SizedBox(
-            width: 70,
-            child: Text(
-              '\$${item.totalPrice.toStringAsFixed(2)}',
-              style: theme.textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
+
+          const SizedBox(height: 16),
+          Divider(color: isDark ? barzDarkMuted : surfaceDim),
+          const SizedBox(height: 16),
+
+          // Special Instructions
+          TextField(
+            controller: _instructionsController,
+            decoration: InputDecoration(
+              labelText: 'Kitchen / Bar Notes',
+              hintText: 'Allergies, extra ice...',
+              filled: true,
+              fillColor: isDark ? barzDark : surfaceMuted,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
               ),
-              textAlign: TextAlign.right,
+              prefixIcon: const Icon(Icons.comment),
             ),
+            maxLines: 2,
           ),
         ],
       ),
     );
   }
-}
 
-/// Payment method radio tile
-class _PaymentMethodRadio extends StatelessWidget {
-  final String value;
-  final IconData icon;
-  final String label;
-
-  const _PaymentMethodRadio({
-    required this.value,
-    required this.icon,
-    required this.label,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final radioGroup = RadioGroup.maybeOf<String>(context);
-    final isSelected = radioGroup?.groupValue == value;
-    return ListTile(
-      leading: Radio<String>(value: value, groupRegistry: radioGroup),
-      title: Row(
-        children: [
-          Icon(icon, size: 20),
-          const SizedBox(width: 12),
-          Text(label),
-        ],
-      ),
-      onTap: () => radioGroup?.onChanged(value),
-      contentPadding: EdgeInsets.zero,
-      selected: isSelected,
-    );
-  }
-}
-
-/// Fixed bottom checkout bar
-class _CheckoutBottomBar extends StatelessWidget {
-  final double subtotal;
-  final int itemCount;
-  final VoidCallback onCheckout;
-
-  const _CheckoutBottomBar({
-    required this.subtotal,
-    required this.itemCount,
-    required this.onCheckout,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.1),
-            blurRadius: 8,
-            offset: const Offset(0, -2),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        child: Row(
-          children: [
-            Expanded(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.cart_subtotal,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                  Text(
-                    '\$${subtotal.toStringAsFixed(2)}',
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            FilledButton.icon(
-              onPressed: onCheckout,
-              icon: const Icon(Icons.payment),
-              label: Text(l10n.checkout_place_order),
-              style: FilledButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 24,
-                  vertical: 16,
-                ),
-              ),
+  Widget _buildSpinnerButton({
+    required IconData icon,
+    required VoidCallback onTap,
+    required bool isDark,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: isDark ? barzDarkLight : surfaceWhite,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 4,
+              offset: const Offset(0, 2),
             ),
           ],
         ),
+        child: Icon(icon, color: isDark ? textOnDark : textPrimary),
       ),
     );
   }

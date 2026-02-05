@@ -1,5 +1,6 @@
 import 'package:barz/core/network/dio_network.dart';
 import 'package:barz/core/utils/injections.dart';
+import 'package:barz/features/bars/domain/repositories/abstract_bar_repository.dart';
 import 'package:barz/features/cart/data/data_sources/cart_network_datasource.dart';
 import 'package:barz/features/cart/data/repositories/cart_repository_impl.dart';
 import 'package:barz/features/cart/domain/repositories/abstract_cart_repository.dart';
@@ -13,7 +14,8 @@ Future<void> initCartInjection() async {
 
   getItInjector.registerLazySingleton<AbstractCartRepository>(
     () => CartRepositoryImpl(
-        networkDataSource: getItInjector<CartNetworkDataSource>()),
+      networkDataSource: getItInjector<CartNetworkDataSource>(),
+    ),
   );
 
   getItInjector.registerLazySingleton<CartUsecase>(
@@ -21,6 +23,9 @@ Future<void> initCartInjection() async {
   );
 
   getItInjector.registerFactory<CartBloc>(
-    () => CartBloc(cartUsecase: getItInjector<CartUsecase>()),
+    () => CartBloc(
+      cartUsecase: getItInjector<CartUsecase>(),
+      barRepository: getItInjector<AbstractBarRepository>(),
+    ),
   );
 }

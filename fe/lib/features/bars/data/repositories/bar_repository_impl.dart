@@ -4,6 +4,7 @@ import 'package:barz/features/bars/data/data_sources/bar_network_datasource.dart
 import 'package:barz/features/bars/domain/models/bar_model.dart';
 import 'package:barz/features/bars/domain/models/menu_model.dart';
 import 'package:barz/features/bars/domain/repositories/abstract_bar_repository.dart';
+import 'package:barz/features/cart/domain/models/cart_models.dart';
 import 'package:dartz/dartz.dart';
 
 class BarRepositoryImpl extends AbstractBarRepository {
@@ -13,10 +14,16 @@ class BarRepositoryImpl extends AbstractBarRepository {
 
   @override
   Future<Either<Failure, List<BarModel>>> getNearbyBars(
-      double lat, double lng, double maxDistance) async {
+    double lat,
+    double lng,
+    double maxDistance,
+  ) async {
     try {
-      final result =
-          await networkDataSource.getNearbyBars(lat, lng, maxDistance);
+      final result = await networkDataSource.getNearbyBars(
+        lat,
+        lng,
+        maxDistance,
+      );
       return Right(result);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message, e.statusCode));
@@ -80,6 +87,26 @@ class BarRepositoryImpl extends AbstractBarRepository {
         operatingHours: operatingHours,
         bankAccount: bankAccount,
       );
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message, e.statusCode));
+    }
+  }
+
+  @override
+  Future<Either<Failure, LocationConfig>> getLocationConfig(int barId) async {
+    try {
+      final result = await networkDataSource.getLocationConfig(barId);
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message, e.statusCode));
+    }
+  }
+
+  @override
+  Future<Either<Failure, List<Promotion>>> getPromotions(int barId) async {
+    try {
+      final result = await networkDataSource.getActivePromotions(barId);
       return Right(result);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message, e.statusCode));

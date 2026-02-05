@@ -82,11 +82,17 @@ class CartRepositoryImpl extends AbstractCartRepository {
   Future<Either<Failure, CheckoutResult>> checkout({
     required String orderType,
     required String paymentMethod,
+    String? tableNumber,
+    String? specialInstructions,
+    List<String>? activePromotionIds,
   }) async {
     try {
       final result = await networkDataSource.checkout(
         orderType: orderType,
         paymentMethod: paymentMethod,
+        tableNumber: tableNumber,
+        specialInstructions: specialInstructions,
+        activePromotionIds: activePromotionIds,
       );
       return Right(result);
     } on ServerException catch (e) {

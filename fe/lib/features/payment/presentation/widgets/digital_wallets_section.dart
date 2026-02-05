@@ -1,0 +1,202 @@
+import 'package:flutter/material.dart';
+import 'package:barz/core/design/tokens/colors.dart';
+
+class DigitalWalletsSection extends StatelessWidget {
+  final VoidCallback onApplePay;
+  final VoidCallback onGooglePay;
+
+  const DigitalWalletsSection({
+    super.key,
+    required this.onApplePay,
+    required this.onGooglePay,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  height: 1,
+                  color: isDark
+                      ? const Color(0xFF333333)
+                      : const Color(0xFFDDDDDD),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Text(
+                  'or pay with',
+                  style: TextStyle(
+                    color: isDark ? const Color(0xFF888888) : textSecondary,
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+              Expanded(
+                child: Container(
+                  height: 1,
+                  color: isDark
+                      ? const Color(0xFF333333)
+                      : const Color(0xFFDDDDDD),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(child: _buildApplePayButton(isDark)),
+              const SizedBox(width: 12),
+              Expanded(child: _buildGooglePayButton(isDark)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildApplePayButton(bool isDark) {
+    return GestureDetector(
+      onTap: onApplePay,
+      child: Container(
+        height: 48,
+        decoration: BoxDecoration(
+          color: isDark ? Colors.white : barzDark,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: barzDark.withValues(alpha: 0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.apple,
+              color: isDark ? barzDark : Colors.white,
+              size: 22,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              'Pay',
+              style: TextStyle(
+                color: isDark ? barzDark : Colors.white,
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGooglePayButton(bool isDark) {
+    return GestureDetector(
+      onTap: onGooglePay,
+      child: Container(
+        height: 48,
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF222222) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isDark ? const Color(0xFF333333) : const Color(0xFFDDDDDD),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: barzDark.withValues(alpha: 0.06),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _buildGoogleIcon(),
+            const SizedBox(width: 6),
+            Text(
+              'Pay',
+              style: TextStyle(
+                color: isDark ? Colors.white : barzDark,
+                fontSize: 15,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildGoogleIcon() {
+    return SizedBox(
+      width: 18,
+      height: 18,
+      child: Stack(
+        children: [
+          Positioned(
+            left: 0,
+            top: 0,
+            child: Container(
+              width: 9,
+              height: 9,
+              decoration: const BoxDecoration(
+                color: Color(0xFF4285F4),
+                borderRadius: BorderRadius.only(topLeft: Radius.circular(9)),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 0,
+            top: 0,
+            child: Container(
+              width: 9,
+              height: 9,
+              decoration: const BoxDecoration(
+                color: Color(0xFFEA4335),
+                borderRadius: BorderRadius.only(topRight: Radius.circular(9)),
+              ),
+            ),
+          ),
+          Positioned(
+            left: 0,
+            bottom: 0,
+            child: Container(
+              width: 9,
+              height: 9,
+              decoration: const BoxDecoration(
+                color: Color(0xFF34A853),
+                borderRadius: BorderRadius.only(bottomLeft: Radius.circular(9)),
+              ),
+            ),
+          ),
+          Positioned(
+            right: 0,
+            bottom: 0,
+            child: Container(
+              width: 9,
+              height: 9,
+              decoration: const BoxDecoration(
+                color: Color(0xFFFBBC05),
+                borderRadius: BorderRadius.only(
+                  bottomRight: Radius.circular(9),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

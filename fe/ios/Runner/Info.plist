@@ -79,5 +79,7 @@
 			<string>uber</string>
 			<string>lyft</string>
 		</array>
+		<key>GOOGLE_MAPS_API_KEY</key>
+		<string>AIzaSyBBEOwWrrA86ZTMfEtLnuhGn2D7MAg5jsU</string>
 	</dict>
 </plist>
