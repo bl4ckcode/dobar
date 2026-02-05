@@ -30,7 +30,7 @@ class PromotionBase(BaseModel):
     end_time: Optional[str] = Field(None, description="Daily end time (HH:MM format)")
     start_date: Optional[datetime] = None
     end_date: Optional[datetime] = None
-    recurring: bool = False
+    recurring: Optional[bool] = False
     recurring_days: Optional[List[DayOfWeek]] = None
     terms: Optional[str] = Field(None, max_length=500)
     is_active: bool = True
@@ -57,8 +57,8 @@ class PromotionUpdate(BaseModel):
 
 class Promotion(PromotionBase):
     id: int
-    created_at: datetime
-    updated_at: datetime
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
     image_url: Optional[str] = None
     image_url_expiration: Optional[int] = None
 
