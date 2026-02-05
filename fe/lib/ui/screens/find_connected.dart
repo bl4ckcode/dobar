@@ -19,6 +19,7 @@ import 'package:barz/features/location/presentation/bloc/location_bloc.dart';
 import 'package:barz/features/location/presentation/bloc/location_event.dart';
 import 'package:barz/features/location/presentation/bloc/location_state.dart';
 import 'package:barz/shared/presentation/widget/bar_image.dart';
+import 'package:barz/core/utils/marker_generator.dart';
 
 const double _defaultLat = -23.5505;
 const double _defaultLng = -46.6333;
@@ -89,6 +90,8 @@ class _FindConnectedViewState extends State<FindConnectedView>
   late Animation<Offset> _panelSlideAnimation;
 
   final Set<Polyline> _polylines = {};
+  final Map<String, BitmapDescriptor> _customMarkers = {};
+  BarModel? _selectedDestinationBar;
 
   // Using the key from AndroidManifest
   static const String _googleMapsApiKey =
@@ -138,6 +141,27 @@ class _FindConnectedViewState extends State<FindConnectedView>
       _panelAnimController.forward();
     } else {
       _panelAnimController.reverse();
+    }
+  }
+
+  Future<void> _loadMarkers(List<BarModel> bars) async {
+    for (final bar in bars) {
+      if (!_customMarkers.containsKey(bar.id.toString())) {
+        try {
+          final marker = await MarkerGenerator.createCustomMarkerBitmap(
+            bar.imageUrl,
+            fallbackAssetPath: 'assets/images/cup_placeholder.jpg',
+            borderColor: context.dobarColors.buttonPrimary,
+          );
+          if (mounted) {
+            setState(() {
+              _customMarkers[bar.id.toString()] = marker;
+            });
+          }
+        } catch (e) {
+          debugPrint('Error generating marker: $e');
+        }
+      }
     }
   }
 
@@ -256,7 +280,7 @@ class _FindConnectedViewState extends State<FindConnectedView>
                 Expanded(
                   child: _BottomSheetButton(
                     icon: Icons.directions,
-                    label: 'Navigate',
+                    label: 'Preview Route',
                     onTap: () => _handleNavigationRequest(bar),
                     isPrimary: false,
                   ),
@@ -285,6 +309,10 @@ class _FindConnectedViewState extends State<FindConnectedView>
   Future<void> _handleNavigationRequest(BarModel bar) async {
     Navigator.pop(context); // Close bottom sheet to show map
 
+    setState(() {
+      _selectedDestinationBar = bar;
+    });
+
     final locationState = context.read<LocationBloc>().state;
     final userLoc = locationState.currentLocation;
 
@@ -295,8 +323,8 @@ class _FindConnectedViewState extends State<FindConnectedView>
       );
     }
 
-    if (!mounted) return;
-    _launchNavigation(bar);
+    // if (!mounted) return;
+    // _launchNavigation(bar); // Moved to manual button
   }
 
   Future<void> _drawRoute(LatLng start, LatLng dest) async {
@@ -327,7 +355,20 @@ class _FindConnectedViewState extends State<FindConnectedView>
       // Zoom to fit route
       final controller = await _mapController.future;
       LatLngBounds bounds = _boundsFromLatLngList(points);
-      controller.animateCamera(CameraUpdate.newLatLngBounds(bounds, 50));
+      controller.animateCamera(
+        CameraUpdate.newLatLngBounds(bounds, 80),
+      ); // Increased padding
+    } else {
+      debugPrint(
+        'No polyline points found. Error: ${result.errorMessage}, Status: ${result.status}',
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not find route. Check internet connection.'),
+          ),
+        );
+      }
     }
   }
 
@@ -351,7 +392,7 @@ class _FindConnectedViewState extends State<FindConnectedView>
   }
 
   Future<void> _launchNavigation(BarModel bar) async {
-    Navigator.pop(context);
+    // Navigator.pop(context); // Removed redundant pop
 
     final availableMaps = await ml.MapLauncher.installedMaps;
     if (availableMaps.isEmpty) {
@@ -465,6 +506,36 @@ class _FindConnectedViewState extends State<FindConnectedView>
             _buildListFab(colors),
             _buildLocationFab(colors),
             if (_showListPanel) _buildListPanel(colors),
+            // Floating "Start Navigation" Button
+            if (_selectedDestinationBar != null && _polylines.isNotEmpty)
+              Positioned(
+                bottom: 24,
+                left: 16,
+                right: 16,
+                child: SafeArea(
+                  child: ElevatedButton.icon(
+                    onPressed: () =>
+                        _launchNavigation(_selectedDestinationBar!),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: colors.buttonPrimary,
+                      foregroundColor: colors.buttonOnPrimary,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(BarzRadii.xl),
+                      ),
+                      elevation: 8,
+                    ),
+                    icon: const Icon(Icons.navigation),
+                    label: const Text(
+                      'Open in Maps',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ).animate().fadeIn().slideY(begin: 1, end: 0),
+                ),
+              ),
           ],
         ),
       ),
@@ -476,16 +547,23 @@ class _FindConnectedViewState extends State<FindConnectedView>
     final lat = locationState.currentLocation?.latitude ?? _defaultLat;
     final lng = locationState.currentLocation?.longitude ?? _defaultLng;
 
-    return BlocBuilder<BarBloc, BarState>(
+    return BlocConsumer<BarBloc, BarState>(
+      listener: (context, state) {
+        if (state is BarsLoaded) {
+          _loadMarkers(state.bars);
+        }
+      },
       builder: (context, barState) {
         final markers = <Marker>{};
         if (barState is BarsLoaded) {
           for (final bar in barState.bars) {
             if (bar.latitude != null && bar.longitude != null) {
+              final customIcon = _customMarkers[bar.id.toString()];
               markers.add(
                 Marker(
                   markerId: MarkerId(bar.id.toString()),
                   position: LatLng(bar.latitude!, bar.longitude!),
+                  icon: customIcon ?? BitmapDescriptor.defaultMarker,
                   infoWindow: InfoWindow(title: bar.name),
                   onTap: () => _showBarBottomSheet(bar),
                 ),

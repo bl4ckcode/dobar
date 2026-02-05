@@ -9,9 +9,12 @@ class DobarHomeHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.dobarColors;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [_buildAppBarRow(context, colors)],
+    return SafeArea(
+      bottom: false,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [_buildAppBarRow(context, colors)],
+      ),
     );
   }
 
@@ -21,8 +24,8 @@ class DobarHomeHeader extends StatelessWidget {
         Align(
           alignment: Alignment.center,
           child: Image.asset(
-            'assets/icons/dobar-logo-animated.gif',
-            height: 40,
+            'assets/icons/dobar-logo-animated-transparent.gif',
+            height: 200,
             fit: BoxFit.contain,
           ),
         ),

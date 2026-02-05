@@ -73,42 +73,46 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
     final colors = context.dobarColors;
     return Scaffold(
       backgroundColor: colors.background,
-      body: RefreshIndicator(
-        onRefresh: () async => _refreshData(context),
-        color: colors.buttonPrimary,
-        backgroundColor: colors.surface,
-        child: ListView(
-          controller: _scrollController,
-          padding: const EdgeInsets.all(BarzSpacing.lg),
-          children: [
-            const DobarHomeHeader(),
-            const SizedBox(height: BarzSpacing.md),
-            _buildCategoriesSection(context),
-            const SizedBox(height: BarzSpacing.lg),
-            _buildSectionTitleWithSubtitle(
-              'Conheça nossos parceiros',
-              'Dê uma olhada no menu dos parceiros mais próximos de você :)',
-              colors,
+      body: Stack(
+        children: [
+          const Positioned(top: 0, left: 0, right: 0, child: DobarHomeHeader()),
+          RefreshIndicator(
+            onRefresh: () async => _refreshData(context),
+            color: colors.buttonPrimary,
+            backgroundColor: colors.surface,
+            child: ListView(
+              controller: _scrollController,
+              padding: const EdgeInsets.all(BarzSpacing.lg),
+              children: [
+                const SizedBox(height: 32),
+                _buildCategoriesSection(context),
+                const SizedBox(height: BarzSpacing.lg),
+                _buildSectionTitleWithSubtitle(
+                  'Conheça nossos parceiros',
+                  'Dê uma olhada no menu dos parceiros mais próximos de você :)',
+                  colors,
+                ),
+                const SizedBox(height: BarzSpacing.md),
+                _buildBarsCarousel(context),
+                const SizedBox(height: BarzSpacing.xl),
+                _buildSectionTitleWithSubtitle(
+                  'Mais procurados',
+                  'Com sede daquela bebida específica? Selecione-a e descubra onde ir!',
+                  colors,
+                ),
+                const SizedBox(height: BarzSpacing.md),
+                _buildMostWantedDrinksSection(context),
+                const SizedBox(height: BarzSpacing.xl),
+                _buildSectionTitle('Hottest Drinks 🔥', colors),
+                const SizedBox(height: BarzSpacing.md),
+                _buildHottestDrinksSection(context),
+                const SizedBox(height: BarzSpacing.xl),
+                _buildPromotionsSection(context),
+                const SizedBox(height: BarzSpacing.xl),
+              ],
             ),
-            const SizedBox(height: BarzSpacing.md),
-            _buildBarsCarousel(context),
-            const SizedBox(height: BarzSpacing.xl),
-            _buildSectionTitleWithSubtitle(
-              'Mais procurados',
-              'Com sede daquela bebida específica? Selecione-a e descubra onde ir!',
-              colors,
-            ),
-            const SizedBox(height: BarzSpacing.md),
-            _buildMostWantedDrinksSection(context),
-            const SizedBox(height: BarzSpacing.xl),
-            _buildSectionTitle('Hottest Drinks 🔥', colors),
-            const SizedBox(height: BarzSpacing.md),
-            _buildHottestDrinksSection(context),
-            const SizedBox(height: BarzSpacing.xl),
-            _buildPromotionsSection(context),
-            const SizedBox(height: BarzSpacing.xl),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
