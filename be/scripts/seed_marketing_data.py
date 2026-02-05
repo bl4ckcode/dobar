@@ -221,6 +221,20 @@ async def seed_data():
         # 4. Trending Drinks (Orders)
         print("\n🔥 Seeding Orders for Trending Drinks...")
         
+        # Ensure a Dummy User exists for orders
+        user_id = 1
+        user_check = await database.fetch_one("SELECT * FROM users WHERE id = :id", {"id": user_id})
+        if not user_check:
+             # Create a dummy user
+             await database.execute(
+                 """
+                 INSERT INTO users (id, email, phone_number, firebase_uid, is_active)
+                 VALUES (:id, 'dummy_user@barz.com', '5511988888888', 'dummy_uid_123', true)
+                 """,
+                 {"id": user_id}
+             )
+             print("   ✅ Created Dummy User (ID 1)")
+
         # Ensure MenuItems exist for Bar 16/13
         for b_id in [13, 16]:
             # Get Menu ID
