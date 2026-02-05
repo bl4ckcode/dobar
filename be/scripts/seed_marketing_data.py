@@ -16,25 +16,26 @@ from app.advertising.models import AdvertisingCampaign, AdvertisingSubscription
 from sqlalchemy import select, insert
 from sqlalchemy.sql import func
 
-# Target Bar IDs and Names (Mock)
-TARGET_BARS_DATA = {
-    12: "Bar do Carlos",
-    13: "Boteco SP",
-    14: "Cervejaria Artesanal",
-    16: "Vibe Bar",
-    17: "Night Club",
-    18: "Lounge 18"
-}
+# Mongo setup
+from motor.motor_asyncio import AsyncIOMotorClient
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/barz_db")
+MONGO_DB_NAME = os.getenv("MONGO_DB", "barz_db")
 
 async def seed_data():
     print("🚀 Connecting to database...")
     await database.connect()
     
+    # Connect to Mongo
+    mongo_client = AsyncIOMotorClient(MONGO_URI)
+    mongo_db = mongo_client[MONGO_DB_NAME]
+    bars_collection = mongo_db["bars"]
+    print(f"📦 Connected to MongoDB: {MONGO_DB_NAME}")
+    
     try:
         print(f"🎯 Target Bars: {list(TARGET_BARS_DATA.keys())}")
         
         # 0. Ensure Owner and Bars exist
-        print("\n🏗️  Seeding Bars...")
+        print("\n🏗️  Seeding Bars (PG + Mongo)...")
         
         # Ensure a default owner
         owner_id = 1
@@ -47,22 +48,23 @@ async def seed_data():
              print("   ✅ Created Default Owner (ID 1)")
 
         for b_id, b_name in TARGET_BARS_DATA.items():
+            # Default coordinates (SP)
+            lat, lon = -23.5505, -46.6333
+            
+            # Mock Location for Bar 16 (Belo Horizonte - User Location)
+            if b_id == 16:
+                lat, lon = -19.8325619, -43.9798416
+            # Mock Location for Bar 17 (BH - Savassi)
+            elif b_id == 17:
+                lat, lon = -19.9395582, -43.9356845
+
+            # 1. Postgres Insert (No lat/lon)
             bar_check = await database.fetch_one("SELECT * FROM bars WHERE id = :id", {"id": b_id})
             if not bar_check:
-                # Default coordinates (SP)
-                lat, lon = -23.5505, -46.6333
-                
-                # Mock Location for Bar 16 (Belo Horizonte - User Location)
-                if b_id == 16:
-                    lat, lon = -19.8325619, -43.9798416
-                # Mock Location for Bar 17 (BH - Savassi)
-                elif b_id == 17:
-                    lat, lon = -19.9395582, -43.9356845
-
                 await database.execute(
                     """
-                    INSERT INTO bars (id, owner_id, name, address, phone_number, email, verification_status, country_code, latitude, longitude)
-                    VALUES (:id, :owner_id, :name, :address, :phone, :email, 'verified', 'BR', :lat, :lon)
+                    INSERT INTO bars (id, owner_id, name, address, phone_number, email, verification_status, country_code)
+                    VALUES (:id, :owner_id, :name, :address, :phone, :email, 'verified', 'BR')
                     """,
                     {
                         "id": b_id, 
@@ -70,12 +72,10 @@ async def seed_data():
                         "name": b_name, 
                         "address": "Rua Exemplo, 123", 
                         "phone": "11999999999", 
-                        "email": f"contact@{b_id}.com",
-                        "lat": lat,
-                        "lon": lon
+                        "email": f"contact@{b_id}.com"
                     }
                 )
-                print(f"   ✅ Created Bar {b_id} ({b_name})")
+                print(f"   ✅ Created Bar {b_id} ({b_name}) in Postgres")
                 
                 # Create Default Menu for this bar
                 await database.execute(
@@ -86,16 +86,20 @@ async def seed_data():
                      """,
                      {"bar_id": b_id}
                 )
-                
             else:
-                # Update location for Bar 16 if it exists (force move to User)
-                if b_id == 16:
-                     await database.execute(
-                        "UPDATE bars SET latitude = :lat, longitude = :lon WHERE id = :id",
-                        {"id": b_id, "lat": -19.8325619, "lon": -43.9798416}
-                     )
-                     print(f"   📍 Moved Bar 16 to BH User Location")
-                print(f"   ℹ️  Bar {b_id} exists")
+                print(f"   ℹ️  Bar {b_id} exists in Postgres")
+
+            # 2. Mongo Upsert (Location)
+            await bars_collection.update_one(
+                {"bar_id": b_id},
+                {"$set": {
+                    "bar_id": b_id,
+                    "location": {"type": "Point", "coordinates": [lon, lat]},
+                    "image_url": f"https://barz-images.s3.amazonaws.com/mock-{b_id}.png"
+                }},
+                upsert=True
+            )
+            print(f"   🌍 Synced Bar {b_id} to MongoDB (Lat: {lat}, Lon: {lon})")
 
         # 1. Active Promotions
         print("\n✨ Seeding Active Promotions...")
