@@ -364,7 +364,8 @@ async def seed_data():
                         "menu_item_name": item.name,
                         "unit_price": item.price,
                         "quantity": 1,
-                        "total_price": item.price
+                        "total_price": item.price,
+                        "created_at": order_data["created_at"] # SYNC created_at with Order
                     }
                     await database.execute(insert(OrderItem).values(**item_data))
                     

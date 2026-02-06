@@ -1,11 +1,16 @@
 import boto3
 import os
 import sys
+from dotenv import load_dotenv
+
+# Load env vars from .env file
+load_dotenv()
 
 # AWS Configuration
-# Ensure you have AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY set in your env 
-# OR configured via 'aws configure'
-BUCKET_NAME = "barz-images"
+BUCKET_NAME = os.getenv("AWS_S3_BUCKET", "barz-images")
+AWS_ACCESS_KEY = os.getenv("AWS_ACCESS_KEY_ID")
+AWS_SECRET_KEY = os.getenv("AWS_SECRET_ACCESS_KEY")
+AWS_REGION = os.getenv("AWS_REGION", "sa-east-1")
 
 # Map local filename -> S3 key
 # These must match what's in seed_marketing_data.py
@@ -19,7 +24,16 @@ IMAGES = {
 }
 
 def upload_images():
-    s3 = boto3.client('s3')
+    if not AWS_ACCESS_KEY or not AWS_SECRET_KEY:
+        print("❌ Error: AWS credentials not found in .env")
+        return
+
+    s3 = boto3.client(
+        's3',
+        aws_access_key_id=AWS_ACCESS_KEY,
+        aws_secret_access_key=AWS_SECRET_KEY,
+        region_name=AWS_REGION
+    )
     
     print(f"🚀 Uploading {len(IMAGES)} images to s3://{BUCKET_NAME}...")
     
