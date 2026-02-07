@@ -306,7 +306,9 @@ async def seed_data():
                              category=drink["category"],
                              picture=img_url,
                              description=f"Clássico {drink['name']} refrescante.",
-                             available=True
+                             available=True,
+                             created_at=datetime.utcnow(),
+                             updated_at=datetime.utcnow()
                          ))
                          print(f"      ✅ Created Classic: {drink['name']}")
                     else:
