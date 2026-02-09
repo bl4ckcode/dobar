@@ -73,11 +73,11 @@ class Promotion {
 
   factory Promotion.fromJson(Map<String, dynamic> json) {
     return Promotion(
-      id: json['id'],
-      name: json['name'],
+      id: json['id']?.toString() ?? '',
+      name: json['name'] ?? 'Promotion',
       benefit: json['benefit_text'] ?? '',
-      type: json['type'],
-      value: (json['value'] as num).toDouble(),
+      type: json['type'] ?? 'discount',
+      value: (json['value'] as num?)?.toDouble() ?? 0.0,
       active: json['is_active_by_default'] ?? false,
     );
   }
@@ -138,6 +138,9 @@ class LocationSpot {
   const LocationSpot({required this.id, required this.name});
 
   factory LocationSpot.fromJson(Map<String, dynamic> json) {
-    return LocationSpot(id: json['id'] as String, name: json['name'] as String);
+    return LocationSpot(
+      id: json['id'].toString(),
+      name: json['name'] as String,
+    );
   }
 }

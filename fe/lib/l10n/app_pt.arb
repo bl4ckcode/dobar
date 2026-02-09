@@ -292,5 +292,24 @@
   "apply_to_all_days": "Aplicar a Todos os Dias",
   "general_hours": "Horário Geral",
   "general_hours_hint": "Defina o horário para todos os dias de uma vez",
-  "or_customize": "Ou personalize cada dia abaixo"
+  "or_customize": "Ou personalize cada dia abaixo",
+
+  "section_promotions": "Ofertas Quentes",
+  "section_categories": "Categorias",
+  "section_nearby_bars": "Parceiros Próximos",
+  "section_trending_drinks": "Bebidas em Alta",
+  "category_bars": "Bares",
+  "category_restaurants": "Restaurantes",
+  "category_clubs": "Clubes",
+  "empty_no_promotions": "Nenhuma promoção disponível",
+  "empty_no_bars_nearby": "Nenhum parceiro próximo",
+  "empty_no_drinks": "Nenhuma bebida disponível",
+  "empty_no_hot_deals": "Nenhuma oferta quente agora",
+  "empty_pull_to_refresh": "Puxe para atualizar",
+  "loading_text": "Carregando...",
+  "error_retry_button": "Tentar Novamente",
+  "promo_label_deal": "OFERTA",
+  "promo_label_bogo": "LEVE 2",
+  "promo_default_title": "Promoção",
+  "badge_hot": "QUENTE"
 }

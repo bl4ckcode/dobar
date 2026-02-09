@@ -58,13 +58,17 @@ class _BarMenuCardState extends State<BarMenuCard>
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
       decoration: BoxDecoration(
-        color: barzDark,
+        color: isDark ? barzDark : Colors.white,
         border: Border(
           bottom: BorderSide(
-            color: barzDarkMuted.withValues(alpha: 0.3),
+            color: isDark
+                ? barzDarkMuted.withValues(alpha: 0.3)
+                : Colors.grey.withValues(alpha: 0.2),
             width: 1,
           ),
         ),
@@ -78,10 +82,10 @@ class _BarMenuCardState extends State<BarMenuCard>
               children: [
                 Text(
                   widget.name,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: isDark ? Colors.white : barzDark,
                   ),
                 ),
                 if (widget.description != null &&
@@ -91,7 +95,9 @@ class _BarMenuCardState extends State<BarMenuCard>
                     widget.description!,
                     style: TextStyle(
                       fontSize: 13,
-                      color: Colors.white.withValues(alpha: 0.6),
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.6)
+                          : barzDark.withValues(alpha: 0.6),
                       height: 1.3,
                     ),
                     maxLines: 2,
@@ -122,6 +128,7 @@ class _BarMenuCardState extends State<BarMenuCard>
                       icon: Icons.remove,
                       onTap: _handleRemove,
                       filled: false,
+                      isDark: isDark,
                     ),
                     ScaleTransition(
                       scale: _scaleAnimation,
@@ -130,10 +137,10 @@ class _BarMenuCardState extends State<BarMenuCard>
                         child: Center(
                           child: Text(
                             '${widget.quantity}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                              color: isDark ? Colors.white : barzDark,
                             ),
                           ),
                         ),
@@ -143,6 +150,7 @@ class _BarMenuCardState extends State<BarMenuCard>
                       icon: Icons.add,
                       onTap: _handleAdd,
                       filled: true,
+                      isDark: isDark,
                     ),
                   ],
                 )
@@ -151,6 +159,7 @@ class _BarMenuCardState extends State<BarMenuCard>
                   icon: Icons.add,
                   onTap: _handleAdd,
                   filled: false,
+                  isDark: isDark,
                 ),
             ],
           ),
@@ -163,6 +172,7 @@ class _BarMenuCardState extends State<BarMenuCard>
     required IconData icon,
     required VoidCallback? onTap,
     required bool filled,
+    required bool isDark,
   }) {
     return GestureDetector(
       onTap: onTap,
@@ -172,12 +182,18 @@ class _BarMenuCardState extends State<BarMenuCard>
         decoration: BoxDecoration(
           color: filled ? barzGold : Colors.transparent,
           border: Border.all(
-            color: filled ? barzGold : barzDarkMuted,
+            color: filled
+                ? barzGold
+                : (isDark ? barzDarkMuted : Colors.grey.withValues(alpha: 0.3)),
             width: 1,
           ),
           borderRadius: BorderRadius.circular(4),
         ),
-        child: Icon(icon, size: 16, color: filled ? barzDark : Colors.white),
+        child: Icon(
+          icon,
+          size: 16,
+          color: filled ? barzDark : (isDark ? Colors.white : barzDark),
+        ),
       ),
     );
   }

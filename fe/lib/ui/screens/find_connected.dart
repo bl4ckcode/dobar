@@ -35,8 +35,8 @@ const String _darkMapStyle = '''
   {"featureType": "landscape.man_made", "elementType": "geometry.stroke", "stylers": [{"color": "#334e87"}]},
   {"featureType": "landscape.natural", "elementType": "geometry", "stylers": [{"color": "#023e58"}]},
   {"featureType": "poi", "elementType": "geometry", "stylers": [{"color": "#283d6a"}]},
-  {"featureType": "poi", "elementType": "labels.text.fill", "stylers": [{"color": "#6f9ba5"}]},
-  {"featureType": "poi", "elementType": "labels.text.stroke", "stylers": [{"color": "#1d2c4d"}]},
+  {"featureType": "poi", "elementType": "labels", "stylers": [{"visibility": "off"}]},
+  {"featureType": "poi.business", "stylers": [{"visibility": "off"}]},
   {"featureType": "poi.park", "elementType": "geometry.fill", "stylers": [{"color": "#023e58"}]},
   {"featureType": "poi.park", "elementType": "labels.text.fill", "stylers": [{"color": "#3C7680"}]},
   {"featureType": "road", "elementType": "geometry", "stylers": [{"color": "#304a7d"}]},
@@ -46,10 +46,9 @@ const String _darkMapStyle = '''
   {"featureType": "road.highway", "elementType": "geometry.stroke", "stylers": [{"color": "#255763"}]},
   {"featureType": "road.highway", "elementType": "labels.text.fill", "stylers": [{"color": "#b0d5ce"}]},
   {"featureType": "road.highway", "elementType": "labels.text.stroke", "stylers": [{"color": "#023e58"}]},
-  {"featureType": "transit", "elementType": "labels.text.fill", "stylers": [{"color": "#98a5be"}]},
-  {"featureType": "transit", "elementType": "labels.text.stroke", "stylers": [{"color": "#1d2c4d"}]},
+  {"featureType": "transit", "elementType": "labels", "stylers": [{"visibility": "off"}]},
   {"featureType": "transit.line", "elementType": "geometry.fill", "stylers": [{"color": "#283d6a"}]},
-  {"featureType": "transit.station", "elementType": "geometry", "stylers": [{"color": "#3a4762"}]},
+  {"featureType": "transit.station", "stylers": [{"visibility": "off"}]},
   {"featureType": "water", "elementType": "geometry", "stylers": [{"color": "#0e1626"}]},
   {"featureType": "water", "elementType": "labels.text.fill", "stylers": [{"color": "#4e6d70"}]}
 ]
@@ -87,13 +86,15 @@ class _FindConnectedViewState extends State<FindConnectedView>
   final Completer<GoogleMapController> _mapController = Completer();
   bool _showListPanel = false;
   late AnimationController _panelAnimController;
-  late Animation<Offset> _panelSlideAnimation;
+  late Animation<double> _panelAnimation;
+  List<BarModel> _filteredBars = [];
 
   final Set<Polyline> _polylines = {};
   final Map<String, BitmapDescriptor> _customMarkers = {};
   BarModel? _selectedDestinationBar;
+  String? _routeDistance;
+  String? _routeDuration;
 
-  // Using the key from AndroidManifest
   static const String _googleMapsApiKey =
       "AIzaSyBBEOwWrrA86ZTMfEtLnuhGn2D7MAg5jsU";
 
@@ -104,19 +105,17 @@ class _FindConnectedViewState extends State<FindConnectedView>
   @override
   void initState() {
     super.initState();
-    // _polylinePoints initialized inline above
 
     _panelAnimController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 300),
+      duration: const Duration(milliseconds: 400),
     );
-    _panelSlideAnimation =
-        Tween<Offset>(begin: const Offset(1.0, 0.0), end: Offset.zero).animate(
-          CurvedAnimation(
-            parent: _panelAnimController,
-            curve: Curves.easeOutCubic,
-          ),
-        );
+    _panelAnimation = CurvedAnimation(
+      parent: _panelAnimController,
+      curve: Curves.fastOutSlowIn,
+    );
+
+    _searchController.addListener(_onSearchChanged);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -127,9 +126,32 @@ class _FindConnectedViewState extends State<FindConnectedView>
 
   @override
   void dispose() {
+    _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _panelAnimController.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged() {
+    final query = _searchController.text;
+    final barState = context.read<BarBloc>().state;
+    if (barState is BarsLoaded) {
+      _filterBars(query, barState.bars);
+    }
+  }
+
+  void _filterBars(String query, List<BarModel> allBars) {
+    setState(() {
+      if (query.isEmpty) {
+        _filteredBars = allBars;
+      } else {
+        final lowerQuery = query.toLowerCase();
+        _filteredBars = allBars.where((bar) {
+          return bar.name.toLowerCase().contains(lowerQuery) ||
+              bar.address.toLowerCase().contains(lowerQuery);
+        }).toList();
+      }
+    });
   }
 
   void _toggleListPanel() {
@@ -327,40 +349,77 @@ class _FindConnectedViewState extends State<FindConnectedView>
     // _launchNavigation(bar); // Moved to manual button
   }
 
+  void _clearRoute() {
+    setState(() {
+      _selectedDestinationBar = null;
+      _polylines.clear();
+      _routeDistance = null;
+      _routeDuration = null;
+    });
+  }
+
   Future<void> _drawRoute(LatLng start, LatLng dest) async {
-    final result = await _polylinePoints.getRouteBetweenCoordinates(
-      request: PolylineRequest(
+    final result = await _polylinePoints.getRouteBetweenCoordinatesV2(
+      request: RoutesApiRequest(
         origin: PointLatLng(start.latitude, start.longitude),
         destination: PointLatLng(dest.latitude, dest.longitude),
-        mode: TravelMode.driving,
+        travelMode: TravelMode.driving,
       ),
     );
 
-    if (result.points.isNotEmpty) {
-      final points = result.points
-          .map((point) => LatLng(point.latitude, point.longitude))
-          .toList();
+    if (result.routes.isNotEmpty) {
+      final route = result.routes.first;
+      final polylinePoints = route.polylinePoints ?? [];
 
-      setState(() {
-        _polylines.add(
-          Polyline(
-            polylineId: const PolylineId('route'),
-            color: const Color(0xFFEBC147), // barzGold
-            width: 5,
-            points: points,
-          ),
-        );
-      });
+      if (polylinePoints.isNotEmpty) {
+        final points = polylinePoints
+            .map((point) => LatLng(point.latitude, point.longitude))
+            .toList();
 
-      // Zoom to fit route
-      final controller = await _mapController.future;
-      LatLngBounds bounds = _boundsFromLatLngList(points);
-      controller.animateCamera(
-        CameraUpdate.newLatLngBounds(bounds, 80),
-      ); // Increased padding
+        // Extract distance and duration from route
+        String? distance;
+        String? duration;
+
+        // Use Route properties directly
+        if (route.distanceMeters != null) {
+          final distanceKm = route.distanceMeters! / 1000;
+          distance = '${distanceKm.toStringAsFixed(1)} km';
+        }
+
+        if (route.duration != null) {
+          final durationMin = (route.duration! / 60).round();
+          duration = '$durationMin min';
+        }
+
+        setState(() {
+          _polylines.add(
+            Polyline(
+              polylineId: const PolylineId('route'),
+              color: const Color(0xFFEBC147),
+              width: 5,
+              points: points,
+            ),
+          );
+          _routeDistance = distance;
+          _routeDuration = duration;
+        });
+
+        final controller = await _mapController.future;
+        LatLngBounds bounds = _boundsFromLatLngList(points);
+        controller.animateCamera(CameraUpdate.newLatLngBounds(bounds, 80));
+      } else {
+        debugPrint('Route found but no polyline points available');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Could not find route. Check internet connection.'),
+            ),
+          );
+        }
+      }
     } else {
       debugPrint(
-        'No polyline points found. Error: ${result.errorMessage}, Status: ${result.status}',
+        'No routes found. Error: ${result.errorMessage}, Status: ${result.status}',
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -502,10 +561,14 @@ class _FindConnectedViewState extends State<FindConnectedView>
         child: Stack(
           children: [
             _buildMap(context),
-            _buildSearchBar(colors),
             _buildListFab(colors),
             _buildLocationFab(colors),
             if (_showListPanel) _buildListPanel(colors),
+            // Route Info Overlay (Google Maps style)
+            if (_selectedDestinationBar != null &&
+                _polylines.isNotEmpty &&
+                (_routeDistance != null || _routeDuration != null))
+              _buildRouteInfoOverlay(colors),
             // Floating "Start Navigation" Button
             if (_selectedDestinationBar != null && _polylines.isNotEmpty)
               Positioned(
@@ -583,6 +646,8 @@ class _FindConnectedViewState extends State<FindConnectedView>
           myLocationButtonEnabled: false,
           zoomControlsEnabled: false,
           mapToolbarEnabled: false,
+          buildingsEnabled: false,
+          trafficEnabled: false,
           onMapCreated: _onMapCreated,
           markers: markers,
           polylines: _polylines,
@@ -591,56 +656,18 @@ class _FindConnectedViewState extends State<FindConnectedView>
     );
   }
 
-  Widget _buildSearchBar(DobarColors colors) {
+  Widget _buildListFab(DobarColors colors) {
     return Positioned(
       top: MediaQuery.of(context).padding.top + 16,
       left: 16,
-      right: 16,
-      child: Container(
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(BarzRadii.lg),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: TextField(
-          controller: _searchController,
-          style: TextStyle(color: colors.labelPrimary),
-          decoration: InputDecoration(
-            hintText: 'Search bars, restaurants...',
-            hintStyle: TextStyle(color: colors.labelSecondary),
-            prefixIcon: Icon(Icons.search, color: colors.labelSecondary),
-            suffixIcon: IconButton(
-              icon: Icon(Icons.tune, color: colors.labelSecondary),
-              onPressed: () {},
-            ),
-            border: InputBorder.none,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 16,
-              vertical: 14,
-            ),
-          ),
-        ),
-      ).animate().fadeIn().slideY(begin: -0.2, end: 0),
-    );
-  }
-
-  Widget _buildListFab(DobarColors colors) {
-    return Positioned(
-      bottom: 100,
-      right: 16,
       child: FloatingActionButton(
         heroTag: 'list_fab',
         onPressed: _toggleListPanel,
-        backgroundColor: colors.buttonPrimary,
+        backgroundColor: colors.surface,
+        elevation: 8,
         child: Icon(
-          _showListPanel ? Icons.close : Icons.list,
-          color: colors.buttonOnPrimary,
+          _showListPanel ? Icons.close : Icons.menu,
+          color: colors.labelPrimary,
         ),
       ).animate().fadeIn().scale(),
     );
@@ -648,7 +675,7 @@ class _FindConnectedViewState extends State<FindConnectedView>
 
   Widget _buildLocationFab(DobarColors colors) {
     return Positioned(
-      bottom: 170,
+      bottom: 100,
       right: 16,
       child: FloatingActionButton.small(
         heroTag: 'location_fab',
@@ -670,18 +697,25 @@ class _FindConnectedViewState extends State<FindConnectedView>
   Widget _buildListPanel(DobarColors colors) {
     return Positioned(
       top: 0,
-      right: 0,
+      left: 0,
       bottom: 0,
-      width: 288, // Fixed width matching SideBar
-      child: SlideTransition(
-        position: _panelSlideAnimation,
+      width: 288,
+      child: AnimatedBuilder(
+        animation: _panelAnimation,
+        builder: (context, child) {
+          final slideValue = _panelAnimation.value;
+          return Transform.translate(
+            offset: Offset(-288 * (1 - slideValue), 0),
+            child: Opacity(opacity: slideValue, child: child),
+          );
+        },
         child: Container(
           decoration: const BoxDecoration(
-            color: Color(0xFF17203A), // SideBar color
-            borderRadius: BorderRadius.horizontal(left: Radius.circular(30)),
+            color: Color(0xFF17203A),
+            borderRadius: BorderRadius.horizontal(right: Radius.circular(30)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black26, // Lighter shadow
+                color: Colors.black26,
                 blurRadius: 30,
                 offset: Offset(0, 10),
               ),
@@ -694,15 +728,56 @@ class _FindConnectedViewState extends State<FindConnectedView>
                   padding: const EdgeInsets.only(
                     left: 24,
                     right: 24,
-                    top: 32,
+                    top: 24,
                     bottom: 16,
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(BarzRadii.lg),
+                    ),
+                    child: TextField(
+                      controller: _searchController,
+                      style: const TextStyle(color: Colors.white),
+                      decoration: InputDecoration(
+                        hintText: 'Search partners...',
+                        hintStyle: const TextStyle(color: Colors.white60),
+                        prefixIcon: const Icon(
+                          Icons.search,
+                          color: Colors.white70,
+                        ),
+                        suffixIcon: _searchController.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(
+                                  Icons.clear,
+                                  color: Colors.white70,
+                                ),
+                                onPressed: () {
+                                  _searchController.clear();
+                                },
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(
+                    left: 24,
+                    right: 24,
+                    bottom: 8,
                   ),
                   child: Row(
                     children: [
                       Text(
-                        'Nearby Bars',
+                        'Nearby Partners',
                         style: TextStyle(
-                          fontSize: 20,
+                          fontSize: 18,
                           fontWeight: FontWeight.bold,
                           color: Colors.white.withValues(alpha: 0.9),
                         ),
@@ -711,6 +786,7 @@ class _FindConnectedViewState extends State<FindConnectedView>
                       IconButton(
                         onPressed: _toggleListPanel,
                         icon: const Icon(Icons.close, color: Colors.white70),
+                        iconSize: 20,
                       ),
                     ],
                   ),
@@ -764,19 +840,56 @@ class _FindConnectedViewState extends State<FindConnectedView>
               );
             }
             if (state is BarsLoaded) {
-              if (state.bars.isEmpty) {
-                return const Center(
-                  child: Text(
-                    'No bars found nearby',
-                    style: TextStyle(color: Colors.white70),
+              if (_filteredBars.isEmpty && _searchController.text.isEmpty) {
+                _filteredBars = state.bars;
+              }
+
+              final barsToShow = _filteredBars;
+
+              if (barsToShow.isEmpty) {
+                return Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          _searchController.text.isNotEmpty
+                              ? Icons.search_off
+                              : Icons.store_outlined,
+                          color: Colors.white38,
+                          size: 48,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          _searchController.text.isNotEmpty
+                              ? 'No partners found'
+                              : 'No partners nearby',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 16,
+                          ),
+                        ),
+                        if (_searchController.text.isNotEmpty) ...[
+                          const SizedBox(height: 8),
+                          Text(
+                            'Try a different search',
+                            style: const TextStyle(
+                              color: Colors.white54,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
                 );
               }
               return ListView.builder(
                 padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: state.bars.length,
+                itemCount: barsToShow.length,
                 itemBuilder: (context, index) {
-                  final bar = state.bars[index];
+                  final bar = barsToShow[index];
                   final hasPromo = barsWithPromos.contains(bar.id);
                   return _buildPanelBarCard(
                         bar,
@@ -785,7 +898,6 @@ class _FindConnectedViewState extends State<FindConnectedView>
                         index: index,
                       )
                       .animate()
-                      // Staggered list animation
                       .moveX(
                         begin: 100,
                         end: 0,
@@ -926,6 +1038,90 @@ class _FindConnectedViewState extends State<FindConnectedView>
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRouteInfoOverlay(DobarColors colors) {
+    return Positioned(
+      top: MediaQuery.of(context).padding.top + 16,
+      left: 0,
+      right: 0,
+      child: SafeArea(
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: colors.surface,
+              borderRadius: BorderRadius.circular(BarzRadii.lg),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_routeDuration != null) ...[
+                  Icon(
+                    Icons.access_time,
+                    size: 18,
+                    color: colors.labelSelected,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    _routeDuration!,
+                    style: TextStyle(
+                      color: colors.labelPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+                if (_routeDuration != null && _routeDistance != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    child: Container(
+                      width: 1,
+                      height: 16,
+                      color: colors.labelSecondary.withValues(alpha: 0.3),
+                    ),
+                  ),
+                if (_routeDistance != null) ...[
+                  Icon(Icons.straighten, size: 18, color: colors.labelSelected),
+                  const SizedBox(width: 6),
+                  Text(
+                    _routeDistance!,
+                    style: TextStyle(
+                      color: colors.labelPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+                const SizedBox(width: 12),
+                GestureDetector(
+                  onTap: _clearRoute,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: colors.labelSecondary.withValues(alpha: 0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.close,
+                      size: 16,
+                      color: colors.labelPrimary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ).animate().fadeIn().slideY(begin: -0.5, end: 0),
         ),
       ),
     );

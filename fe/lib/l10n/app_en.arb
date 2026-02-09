@@ -348,5 +348,24 @@
   "apply_to_all_days": "Apply to All Days",
   "general_hours": "General Hours",
   "general_hours_hint": "Set hours for all days at once",
-  "or_customize": "Or customize each day below"
+  "or_customize": "Or customize each day below",
+
+  "section_promotions": "Hot Deals",
+  "section_categories": "Categories",
+  "section_nearby_bars": "Nearby Partners",
+  "section_trending_drinks": "Trending Drinks",
+  "category_bars": "Bars",
+  "category_restaurants": "Restaurants",
+  "category_clubs": "Clubs",
+  "empty_no_promotions": "No promotions available",
+  "empty_no_bars_nearby": "No partners nearby",
+  "empty_no_drinks": "No drinks available",
+  "empty_no_hot_deals": "No hot deals right now",
+  "empty_pull_to_refresh": "Pull to refresh",
+  "loading_text": "Loading...",
+  "error_retry_button": "Retry",
+  "promo_label_deal": "DEAL",
+  "promo_label_bogo": "BOGO",
+  "promo_default_title": "Promotion",
+  "badge_hot": "HOT"
 }

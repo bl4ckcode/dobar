@@ -110,7 +110,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
     return BlocListener<CartBloc, CartState>(
       listener: _listenToCartState,
       child: Scaffold(
-        backgroundColor: isDark ? barzDark : barzGoldSoft,
+        backgroundColor: isDark ? barzDark : Colors.white,
         body: SafeArea(
           child: Column(
             children: [
@@ -166,7 +166,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
             MediaQuery.of(context).padding.bottom + 12,
           ),
           decoration: BoxDecoration(
-            color: (isDark ? barzDark : barzGoldSoft).withValues(alpha: 0.9),
+            color: (isDark ? barzDark : Colors.white).withValues(alpha: 0.9),
             border: Border(
               top: BorderSide(
                 color: isDark

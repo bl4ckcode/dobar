@@ -43,12 +43,13 @@ class _BarDetailContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return BlocBuilder<BarBloc, BarState>(
       builder: (context, state) {
         if (state is BarLoading) {
           return Scaffold(
-            backgroundColor: barzDark,
+            backgroundColor: isDark ? barzDark : Colors.white,
             body: const Center(
               child: CircularProgressIndicator(color: barzGold),
             ),
@@ -56,10 +57,10 @@ class _BarDetailContent extends StatelessWidget {
         }
         if (state is BarError) {
           return Scaffold(
-            backgroundColor: barzDark,
+            backgroundColor: isDark ? barzDark : Colors.white,
             appBar: AppBar(
-              backgroundColor: barzDark,
-              foregroundColor: Colors.white,
+              backgroundColor: isDark ? barzDark : Colors.white,
+              foregroundColor: isDark ? Colors.white : barzDark,
               title: Text(l10n.menu_title),
             ),
             body: Center(
@@ -70,7 +71,7 @@ class _BarDetailContent extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text(
                     state.message,
-                    style: const TextStyle(color: Colors.white),
+                    style: TextStyle(color: isDark ? Colors.white : barzDark),
                   ),
                   const SizedBox(height: 16),
                   OutlinedButton(
@@ -92,10 +93,10 @@ class _BarDetailContent extends StatelessWidget {
           final menus = state.menus;
           if (menus.isEmpty) {
             return Scaffold(
-              backgroundColor: barzDark,
+              backgroundColor: isDark ? barzDark : Colors.white,
               appBar: AppBar(
-                backgroundColor: barzDark,
-                foregroundColor: Colors.white,
+                backgroundColor: isDark ? barzDark : Colors.white,
+                foregroundColor: isDark ? Colors.white : barzDark,
                 title: Text(l10n.menu_title),
               ),
               body: Center(
@@ -105,12 +106,18 @@ class _BarDetailContent extends StatelessWidget {
                     Icon(
                       Icons.restaurant_menu,
                       size: 64,
-                      color: Colors.white.withValues(alpha: 0.4),
+                      color: isDark
+                          ? Colors.white.withValues(alpha: 0.4)
+                          : barzDark.withValues(alpha: 0.4),
                     ),
                     const SizedBox(height: 16),
                     Text(
                       l10n.no_results,
-                      style: const TextStyle(color: Colors.white70),
+                      style: TextStyle(
+                        color: isDark
+                            ? Colors.white70
+                            : barzDark.withValues(alpha: 0.7),
+                      ),
                     ),
                   ],
                 ),
@@ -129,10 +136,10 @@ class _BarDetailContent extends StatelessWidget {
           );
         }
         return Scaffold(
-          backgroundColor: barzDark,
+          backgroundColor: isDark ? barzDark : Colors.white,
           appBar: AppBar(
-            backgroundColor: barzDark,
-            foregroundColor: Colors.white,
+            backgroundColor: isDark ? barzDark : Colors.white,
+            foregroundColor: isDark ? Colors.white : barzDark,
             title: Text(l10n.menu_title),
           ),
           body: const SizedBox.shrink(),
@@ -252,8 +259,9 @@ class _MenuPageViewState extends State<_MenuPageView> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
-      backgroundColor: barzDark,
+      backgroundColor: isDark ? barzDark : Colors.white,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -271,6 +279,7 @@ class _MenuPageViewState extends State<_MenuPageView> {
   }
 
   Widget _buildHeader() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -284,9 +293,9 @@ class _MenuPageViewState extends State<_MenuPageView> {
                 color: barzDarkLight,
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(
+              child: Icon(
                 Icons.arrow_back,
-                color: Colors.white,
+                color: isDark ? Colors.white : barzDark,
                 size: 20,
               ),
             ),
@@ -308,7 +317,9 @@ class _MenuPageViewState extends State<_MenuPageView> {
                   'Menu & Order',
                   style: TextStyle(
                     fontSize: 14,
-                    color: Colors.white.withValues(alpha: 0.6),
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.6)
+                        : barzDark.withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -325,10 +336,10 @@ class _MenuPageViewState extends State<_MenuPageView> {
               ),
               child: Stack(
                 children: [
-                  const Center(
+                  Center(
                     child: Icon(
                       Icons.shopping_cart_outlined,
-                      color: Colors.white,
+                      color: isDark ? Colors.white : barzDark,
                       size: 20,
                     ),
                   ),
@@ -383,6 +394,7 @@ class _MenuPageViewState extends State<_MenuPageView> {
   }
 
   Widget _buildMenuList() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     if (_filteredItems.isEmpty) {
       return Center(
         child: Column(
@@ -391,12 +403,18 @@ class _MenuPageViewState extends State<_MenuPageView> {
             Icon(
               Icons.search_off,
               size: 64,
-              color: Colors.white.withValues(alpha: 0.3),
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.3)
+                  : barzDark.withValues(alpha: 0.3),
             ),
             const SizedBox(height: 16),
             Text(
               AppLocalizations.of(context)!.no_results,
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.6)),
+              style: TextStyle(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.6)
+                    : barzDark.withValues(alpha: 0.6),
+              ),
             ),
           ],
         ),

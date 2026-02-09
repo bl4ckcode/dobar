@@ -212,7 +212,7 @@ class _CartPageContentState extends State<_CartPageContent> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? barzDark : barzGoldSoft,
+      backgroundColor: isDark ? barzDark : Colors.white,
       body: BlocListener<CartBloc, CartState>(
         listener: _listenToCartState,
         child: BlocBuilder<CheckinBloc, CheckinState>(
@@ -350,6 +350,7 @@ class _CartPageContentState extends State<_CartPageContent> {
                                   state.activePromotions.isNotEmpty) ...[
                                 ActivePromotionsSection(
                                   promotions: state.activePromotions,
+                                  selectedIds: _selectedPromotionIds,
                                   onToggle: (id, isActive) {
                                     setState(() {
                                       if (isActive) {

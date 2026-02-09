@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/core/design/design_system.dart';
@@ -17,21 +18,10 @@ import '../screens/home_connected.dart';
 import '../screens/find_connected.dart';
 import '../screens/profile_wireframe.dart';
 
-/// Bottom navigation constants for consistent sizing across the app
-///
-/// The FAB sits in a circular notch carved out of the BottomAppBar.
-/// These values are calculated to ensure the FAB perfectly fills the notch.
 class _NavBarMetrics {
-  /// Height of the bottom app bar
   static const double barHeight = 56.0;
-
-  /// Gap between FAB edge and notch edge (minimal for snug fit)
   static const double notchMargin = 4.0;
-
-  /// FAB diameter calculated to fill the notch perfectly
   static const double fabDiameter = 64.0;
-
-  /// Total notch width = fabDiameter + (2 * notchMargin) = 72.0
   static const double notchWidth = fabDiameter + (2 * notchMargin);
 }
 
@@ -47,8 +37,6 @@ class _WireframeShellState extends State<WireframeShell> {
   bool _dataLoaded = false;
   LocationModel? _lastLocation;
 
-  /// Pages wrapped in IndexedStack to preserve state across tab switches
-  /// Using view widgets that don't create their own BlocProviders
   static const List<Widget> _pages = [
     HomeConnectedView(),
     FindConnectedView(),
@@ -65,12 +53,10 @@ class _WireframeShellState extends State<WireframeShell> {
     BuildContext context,
     LocationState locationState,
   ) {
-    // Only load once we actually have permission; avoid falling back to São Paulo
-    // so we don't show wrong results while waiting for the user to grant access.
     if (!locationState.hasPermission) return;
 
     final current = locationState.currentLocation;
-    if (current == null) return; // wait for the first real fix
+    if (current == null) return;
 
     final lat = current.latitude;
     final lng = current.longitude;
@@ -111,7 +97,6 @@ class _WireframeShellState extends State<WireframeShell> {
       ],
       child: BlocListener<LocationBloc, LocationState>(
         listener: (context, state) {
-          // When location is obtained (either success or after loading completes), load data
           if (!state.isLoading) {
             _loadDataWithLocation(context, state);
           }
@@ -163,7 +148,6 @@ class _WireframeShellState extends State<WireframeShell> {
                   isSelected: _selectedIndex == 1,
                   onTap: () => _onItemTapped(1),
                 ),
-                // Spacer for the FAB notch
                 SizedBox(width: _NavBarMetrics.notchWidth),
                 _NavItem(
                   icon: Icons.shopping_cart_outlined,
@@ -188,11 +172,6 @@ class _WireframeShellState extends State<WireframeShell> {
   }
 }
 
-/// Center-docked FAB that perfectly fills the notch
-///
-/// Uses a circular shape with QR code icon and "Check-in" label below.
-/// The label is positioned using a Column to keep the FAB circular.
-/// Transform offsets the FAB to sit perfectly in the navbar notch.
 class _CenterDockedFab extends StatelessWidget {
   final VoidCallback onPressed;
 
@@ -209,15 +188,25 @@ class _CenterDockedFab extends StatelessWidget {
           SizedBox(
             width: _NavBarMetrics.fabDiameter,
             height: _NavBarMetrics.fabDiameter,
-            child: FloatingActionButton(
-              heroTag: 'shell_checkin_fab',
-              onPressed: onPressed,
-              backgroundColor: colors.buttonPrimary,
-              foregroundColor: colors.buttonOnPrimary,
-              elevation: 4,
-              shape: const CircleBorder(),
-              child: const Icon(Icons.qr_code_scanner, size: 28),
-            ),
+            child:
+                FloatingActionButton(
+                      heroTag: 'shell_checkin_fab',
+                      onPressed: onPressed,
+                      backgroundColor: colors.buttonPrimary,
+                      foregroundColor: colors.buttonOnPrimary,
+                      elevation: 4,
+                      shape: const CircleBorder(),
+                      child: const Icon(Icons.qr_code_scanner, size: 28),
+                    )
+                    .animate(
+                      onPlay: (controller) => controller.repeat(reverse: true),
+                    )
+                    .scale(
+                      begin: const Offset(1, 1),
+                      end: const Offset(1.1, 1.1),
+                      duration: 1500.ms,
+                      curve: Curves.easeInOut,
+                    ),
           ),
           const SizedBox(height: 4),
           Text(

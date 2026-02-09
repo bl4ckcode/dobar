@@ -5,11 +5,13 @@ import '../../domain/models/cart_models.dart';
 class ActivePromotionsSection extends StatelessWidget {
   final List<Promotion> promotions;
   final void Function(String id, bool active) onToggle;
+  final Set<String> selectedIds;
 
   const ActivePromotionsSection({
     super.key,
     required this.promotions,
     required this.onToggle,
+    this.selectedIds = const {},
   });
 
   @override
@@ -53,6 +55,7 @@ class ActivePromotionsSection extends StatelessWidget {
           ...promotions.map(
             (promo) => _PromotionTile(
               promotion: promo,
+              isSelected: selectedIds.contains(promo.id),
               onToggle: (active) => onToggle(promo.id, active),
               isDark: isDark,
             ),
@@ -65,11 +68,13 @@ class ActivePromotionsSection extends StatelessWidget {
 
 class _PromotionTile extends StatelessWidget {
   final Promotion promotion;
+  final bool isSelected;
   final ValueChanged<bool> onToggle;
   final bool isDark;
 
   const _PromotionTile({
     required this.promotion,
+    required this.isSelected,
     required this.onToggle,
     required this.isDark,
   });
@@ -81,11 +86,11 @@ class _PromotionTile extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: promotion.active
+        color: isSelected
             ? barzGold.withValues(alpha: 0.1)
             : (isDark ? barzDarkMuted : surfaceMuted),
         borderRadius: BorderRadius.circular(14),
-        border: promotion.active
+        border: isSelected
             ? Border.all(color: barzGold.withValues(alpha: 0.3))
             : null,
       ),
@@ -107,7 +112,7 @@ class _PromotionTile extends StatelessWidget {
                 Text(
                   promotion.benefit,
                   style: TextStyle(
-                    color: promotion.active
+                    color: isSelected
                         ? barzGold
                         : (isDark ? const Color(0xFFB0B0B0) : textSecondary),
                     fontSize: 13,
@@ -117,7 +122,7 @@ class _PromotionTile extends StatelessWidget {
             ),
           ),
           Switch(
-            value: promotion.active,
+            value: isSelected,
             onChanged: onToggle,
             thumbColor: WidgetStateProperty.resolveWith((states) {
               if (states.contains(WidgetState.selected)) {

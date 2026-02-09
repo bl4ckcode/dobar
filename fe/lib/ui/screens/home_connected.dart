@@ -5,7 +5,7 @@ import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/core/design/components/category_pill.dart';
-import 'package:barz/core/design/components/dobar_app_bar.dart';
+import 'package:barz/core/design/components/home_connected_header.dart';
 import 'package:barz/ui/primitives/barz_card.dart' as legacy;
 import 'package:barz/features/bars/presentation/bloc/bar_bloc.dart';
 import 'package:barz/features/bars/presentation/bloc/bar_event.dart';
@@ -14,12 +14,12 @@ import 'package:barz/features/promotions/presentation/bloc/promotions_bloc.dart'
 import 'package:barz/features/promotions/presentation/bloc/promotions_event.dart';
 import 'package:barz/features/promotions/presentation/bloc/promotions_state.dart';
 import 'package:barz/features/trending/presentation/bloc/trending_bloc.dart';
+import 'package:barz/features/trending/presentation/bloc/trending_event.dart';
 import 'package:barz/features/trending/presentation/bloc/trending_state.dart';
 import 'package:barz/features/location/presentation/bloc/location_bloc.dart';
 import 'package:barz/features/location/presentation/bloc/location_event.dart';
-
-const double _defaultLat = -23.5505;
-const double _defaultLng = -46.6333;
+import 'package:barz/features/location/presentation/bloc/location_state.dart';
+import 'package:barz/l10n/app_localizations.dart';
 
 class HomeConnected extends StatelessWidget {
   const HomeConnected({super.key});
@@ -34,6 +34,7 @@ class HomeConnected extends StatelessWidget {
         ),
         BlocProvider(create: (_) => getItInjector<BarBloc>()),
         BlocProvider(create: (_) => getItInjector<PromotionsBloc>()),
+        BlocProvider(create: (_) => getItInjector<TrendingBloc>()),
       ],
       child: const HomeConnectedView(),
     );
@@ -58,79 +59,150 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
 
   void _refreshData(BuildContext context) {
     final locationState = context.read<LocationBloc>().state;
-    final lat = locationState.currentLocation?.latitude ?? _defaultLat;
-    final lng = locationState.currentLocation?.longitude ?? _defaultLng;
-
     context.read<LocationBloc>().add(GetCurrentLocation());
-    context.read<BarBloc>().add(LoadNearbyBars(lat: lat, lng: lng));
-    context.read<PromotionsBloc>().add(
-      LoadPromotions(latitude: lat, longitude: lng),
-    );
+
+    if (locationState.currentLocation != null) {
+      context.read<BarBloc>().add(
+        LoadNearbyBars(
+          lat: locationState.currentLocation!.latitude,
+          lng: locationState.currentLocation!.longitude,
+        ),
+      );
+      context.read<PromotionsBloc>().add(
+        LoadPromotions(
+          latitude: locationState.currentLocation!.latitude,
+          longitude: locationState.currentLocation!.longitude,
+        ),
+      );
+      context.read<TrendingBloc>().add(
+        TrendingEvent.loadMostWanted(
+          latitude: locationState.currentLocation!.latitude,
+          longitude: locationState.currentLocation!.longitude,
+        ),
+      );
+      context.read<TrendingBloc>().add(
+        TrendingEvent.loadHottest(
+          latitude: locationState.currentLocation!.latitude,
+          longitude: locationState.currentLocation!.longitude,
+        ),
+      );
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final colors = context.dobarColors;
-    return Scaffold(
-      backgroundColor: colors.background,
-      body: Stack(
-        children: [
-          const Positioned(top: 0, left: 0, right: 0, child: DobarHomeHeader()),
-          RefreshIndicator(
-            onRefresh: () async => _refreshData(context),
-            color: colors.buttonPrimary,
-            backgroundColor: colors.surface,
-            child: ListView(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(BarzSpacing.lg),
-              children: [
-                const SizedBox(height: 32),
-                _buildCategoriesSection(context),
-                const SizedBox(height: BarzSpacing.lg),
-                _buildSectionTitleWithSubtitle(
-                  'Conheça nossos parceiros',
-                  'Dê uma olhada no menu dos parceiros mais próximos de você :)',
-                  colors,
-                ),
-                const SizedBox(height: BarzSpacing.md),
-                _buildBarsCarousel(context),
-                const SizedBox(height: BarzSpacing.xl),
-                _buildSectionTitleWithSubtitle(
-                  'Mais procurados',
-                  'Com sede daquela bebida específica? Selecione-a e descubra onde ir!',
-                  colors,
-                ),
-                const SizedBox(height: BarzSpacing.md),
-                _buildMostWantedDrinksSection(context),
-                const SizedBox(height: BarzSpacing.xl),
-                _buildSectionTitle('Hottest Drinks 🔥', colors),
-                const SizedBox(height: BarzSpacing.md),
-                _buildHottestDrinksSection(context),
-                const SizedBox(height: BarzSpacing.xl),
-                _buildPromotionsSection(context),
-                const SizedBox(height: BarzSpacing.xl),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+    final barState = context.watch<BarBloc>().state;
+    String? nearbyBarName;
 
-  Widget _buildSectionTitle(String title, DobarColors colors) {
-    return Row(
-      children: [
-        Icon(Icons.star, color: colors.labelSelected, size: 20),
-        const SizedBox(width: BarzSpacing.xs),
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: colors.labelPrimary,
+    if (barState is BarsLoaded) {
+      for (final bar in barState.bars) {
+        if ((bar.approximateLocation ?? 999999) <= 5.0) {
+          nearbyBarName = bar.name;
+          break;
+        }
+      }
+    }
+
+    return BlocListener<LocationBloc, LocationState>(
+      listener: (context, state) {
+        if (state.currentLocation != null) {
+          context.read<BarBloc>().add(
+            LoadNearbyBars(
+              lat: state.currentLocation!.latitude,
+              lng: state.currentLocation!.longitude,
+            ),
+          );
+          context.read<PromotionsBloc>().add(
+            LoadPromotions(
+              latitude: state.currentLocation!.latitude,
+              longitude: state.currentLocation!.longitude,
+            ),
+          );
+          context.read<TrendingBloc>().add(
+            TrendingEvent.loadMostWanted(
+              latitude: state.currentLocation!.latitude,
+              longitude: state.currentLocation!.longitude,
+            ),
+          );
+          context.read<TrendingBloc>().add(
+            TrendingEvent.loadHottest(
+              latitude: state.currentLocation!.latitude,
+              longitude: state.currentLocation!.longitude,
+            ),
+          );
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Theme.of(context).brightness == Brightness.light
+            ? Colors.white
+            : colors.background,
+        body: SafeArea(
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: Opacity(
+                  opacity: 0.6,
+                  child: Center(
+                    child: Image.asset(
+                      'assets/icons/dobar-logo-animated-transparent.gif',
+                      height: 300,
+                      fit: BoxFit.contain,
+                    ),
+                  ),
+                ),
+              ),
+              RefreshIndicator(
+                onRefresh: () async => _refreshData(context),
+                color: colors.buttonPrimary,
+                backgroundColor: colors.surface,
+                child: ListView(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.only(
+                    left: BarzSpacing.lg,
+                    right: BarzSpacing.lg,
+                    top: 80,
+                    bottom: BarzSpacing.lg,
+                  ),
+                  children: [
+                    const SizedBox(height: 32),
+                    _buildCategoriesSection(context),
+                    const SizedBox(height: BarzSpacing.lg),
+                    _buildSectionTitleWithSubtitle(
+                      AppLocalizations.of(context)!.meet_our_partners,
+                      AppLocalizations.of(
+                        context,
+                      )!.here_are_the_closest_partners,
+                      colors,
+                    ),
+                    const SizedBox(height: BarzSpacing.md),
+                    _buildBarsCarousel(context),
+                    const SizedBox(height: BarzSpacing.xl),
+                    _buildSectionTitleWithSubtitle(
+                      AppLocalizations.of(context)!.most_wanted,
+                      AppLocalizations.of(context)!.want_a_specific_drink,
+                      colors,
+                    ),
+                    const SizedBox(height: BarzSpacing.md),
+                    _buildMostWantedDrinksSection(context),
+                    const SizedBox(height: BarzSpacing.md),
+                    _buildHottestDrinksSection(context),
+                    const SizedBox(height: BarzSpacing.xl),
+                    _buildPromotionsSection(context),
+                    const SizedBox(height: BarzSpacing.xl),
+                  ],
+                ),
+              ),
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: HomeConnectedHeader(nearbyBarName: nearbyBarName),
+              ),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
 
@@ -165,16 +237,25 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
         if (state.isLoading) return _buildLoadingCard();
         if (state.error != null) {
           return _buildErrorCard(state.error!, () {
-            final locationState = context.read<LocationBloc>().state;
-            final lat = locationState.currentLocation?.latitude ?? _defaultLat;
-            final lng = locationState.currentLocation?.longitude ?? _defaultLng;
-            context.read<PromotionsBloc>().add(
-              LoadPromotions(latitude: lat, longitude: lng),
-            );
+            if (context.mounted &&
+                context.read<LocationBloc>().state.currentLocation != null) {
+              final loc = context.read<LocationBloc>().state.currentLocation!;
+              context.read<PromotionsBloc>().add(
+                LoadPromotions(
+                  latitude: loc.latitude,
+                  longitude: loc.longitude,
+                ),
+              );
+            } else {
+              context.read<LocationBloc>().add(GetCurrentLocation());
+            }
           });
         }
         if (state.promotions.isEmpty) {
-          return _buildEmptyCard('No promotions available', Icons.local_offer);
+          return _buildEmptyCard(
+            AppLocalizations.of(context)!.empty_no_promotions,
+            Icons.local_offer,
+          );
         }
         return SizedBox(
           height: 224,
@@ -205,10 +286,10 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
             'R\$ ${promo.discountValue?.toStringAsFixed(0) ?? '0'} OFF';
         break;
       case 'bogo':
-        discountLabel = 'BOGO';
+        discountLabel = AppLocalizations.of(context)!.promo_label_bogo;
         break;
       default:
-        discountLabel = 'DEAL';
+        discountLabel = AppLocalizations.of(context)!.promo_label_deal;
     }
 
     return GestureDetector(
@@ -219,6 +300,15 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(BarzRadii.lg),
           border: Border.all(color: barzDarkMuted, width: 1),
+          boxShadow: Theme.of(context).brightness == Brightness.light
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ]
+              : null,
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(BarzRadii.lg),
@@ -273,7 +363,8 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        promo.title ?? 'Promotion',
+                        promo.title ??
+                            AppLocalizations.of(context)!.promo_default_title,
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
@@ -315,10 +406,15 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
   }
 
   Widget _buildCategoriesSection(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final categories = [
-      (icon: Icons.local_bar, label: 'Bars', id: 'bar'),
-      (icon: Icons.restaurant, label: 'Restaurants', id: 'restaurant'),
-      (icon: Icons.nightlife, label: 'Clubs', id: 'club'),
+      (icon: Icons.local_bar, label: l10n.category_bars, id: 'bar'),
+      (
+        icon: Icons.restaurant,
+        label: l10n.category_restaurants,
+        id: 'restaurant',
+      ),
+      (icon: Icons.nightlife, label: l10n.category_clubs, id: 'club'),
     ];
 
     return SizedBox(
@@ -347,7 +443,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
   }
 
   String _getBarType(dynamic bar) {
-    return 'Bar';
+    return AppLocalizations.of(context)!.category_bars;
   }
 
   Widget _buildBarsCarousel(BuildContext context) {
@@ -359,7 +455,10 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
         }
         if (state is BarsLoaded) {
           if (state.bars.isEmpty) {
-            return _buildEmptyCard('No bars nearby', Icons.store);
+            return _buildEmptyCard(
+              AppLocalizations.of(context)!.empty_no_bars_nearby,
+              Icons.store,
+            );
           }
           final displayBars = state.bars.length > 10
               ? state.bars.sublist(0, 10)
@@ -375,13 +474,33 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
                 return SizedBox(
                   width: 160,
                   child:
-                      BarCard(
-                            name: bar.name,
-                            type: _getBarType(bar),
-                            distance: _formatDistance(bar.approximateLocation),
-                            rating: 4.5,
-                            imageUrl: bar.imageUrl,
-                            onTap: () => AppRoute.pushBar(context, bar.id),
+                      Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(BarzRadii.lg),
+                              boxShadow:
+                                  Theme.of(context).brightness ==
+                                      Brightness.light
+                                  ? [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(
+                                          alpha: 0.1,
+                                        ),
+                                        blurRadius: 8,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ]
+                                  : null,
+                            ),
+                            child: BarCard(
+                              name: bar.name,
+                              type: _getBarType(bar),
+                              distance: _formatDistance(
+                                bar.approximateLocation,
+                              ),
+                              rating: 4.5,
+                              imageUrl: bar.imageUrl,
+                              onTap: () => AppRoute.pushBar(context, bar.id),
+                            ),
                           )
                           .animate()
                           .fadeIn(delay: (50 * index).ms, duration: 400.ms)
@@ -397,7 +516,10 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
             ),
           );
         }
-        return _buildEmptyCard('Pull to refresh', Icons.refresh);
+        return _buildEmptyCard(
+          AppLocalizations.of(context)!.empty_pull_to_refresh,
+          Icons.refresh,
+        );
       },
     );
   }
@@ -407,7 +529,10 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
       builder: (context, state) {
         if (state.isLoadingMostWanted) return _buildLoadingCard();
         if (state.mostWantedDrinks.isEmpty) {
-          return _buildEmptyCard('No drinks available', Icons.local_bar);
+          return _buildEmptyCard(
+            AppLocalizations.of(context)!.empty_no_drinks,
+            Icons.local_bar,
+          );
         }
         return SizedBox(
           height: 224,
@@ -419,7 +544,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
             separatorBuilder: (_, _) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
               final drink = state.mostWantedDrinks[index];
-              return _buildDrinkCard(drink, index, false);
+              return _buildDrinkCard(drink, index, false, false);
             },
           ),
         );
@@ -432,7 +557,10 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
       builder: (context, state) {
         if (state.isLoadingHottest) return _buildLoadingCard();
         if (state.hottestDrinks.isEmpty) {
-          return _buildEmptyCard('No hot deals', Icons.whatshot);
+          return _buildEmptyCard(
+            AppLocalizations.of(context)!.empty_no_hot_deals,
+            Icons.whatshot,
+          );
         }
         return SizedBox(
           height: 224,
@@ -444,7 +572,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
             separatorBuilder: (_, _) => const SizedBox(width: 12),
             itemBuilder: (context, index) {
               final drink = state.hottestDrinks[index];
-              return _buildDrinkCard(drink, index, drink.isPromoted);
+              return _buildDrinkCard(drink, index, drink.isPromoted, true);
             },
           ),
         );
@@ -452,11 +580,150 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
     );
   }
 
-  Widget _buildDrinkCard(dynamic drink, int index, bool showHotBadge) {
+  Widget _buildDrinkCard(
+    dynamic drink,
+    int index,
+    bool showHotBadge,
+    bool isCircular,
+  ) {
     final priceText = drink.priceAvg != null
         ? 'R\$ ${drink.priceAvg!.toStringAsFixed(2)}'
         : (drink.price != null ? 'R\$ ${drink.price!.toStringAsFixed(2)}' : '');
 
+    if (isCircular) {
+      return GestureDetector(
+        onTap: () {},
+        child: SizedBox(
+          width: 140,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ClipOval(
+                child: Container(
+                  width: 140,
+                  height: 140,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: barzDarkMuted, width: 1),
+                  ),
+                  child: Stack(
+                    children: [
+                      if (drink.imageUrl != null || drink.picture != null)
+                        Positioned.fill(
+                          child: Image.network(
+                            drink.imageUrl ?? drink.picture ?? '',
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, _) => _drinkPlaceholder(),
+                          ),
+                        )
+                      else
+                        Positioned.fill(child: _drinkPlaceholder()),
+                      Positioned.fill(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: showHotBadge
+                                  ? [
+                                      Colors.transparent,
+                                      Colors.orange.withValues(alpha: 0.3),
+                                      Colors.deepOrange.withValues(alpha: 0.85),
+                                    ]
+                                  : [
+                                      Colors.transparent,
+                                      barzDark.withValues(alpha: 0.4),
+                                      barzDark.withValues(alpha: 0.9),
+                                    ],
+                              stops: const [0.0, 0.5, 1.0],
+                            ),
+                          ),
+                        ),
+                      ),
+                      if (showHotBadge)
+                        Positioned(
+                          top: 8,
+                          left: 8,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 3,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.deepOrange,
+                              borderRadius: BorderRadius.circular(999),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(
+                                  Icons.whatshot,
+                                  size: 10,
+                                  color: Colors.white,
+                                ),
+                                const SizedBox(width: 2),
+                                Text(
+                                  AppLocalizations.of(context)!.badge_hot,
+                                  style: const TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        child: Padding(
+                          padding: const EdgeInsets.all(10),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              if (drink.barName != null)
+                                Text(
+                                  drink.barName!.toUpperCase(),
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.w600,
+                                    color: textOnDark.withValues(alpha: 0.7),
+                                    letterSpacing: 0.5,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              if (drink.barName != null)
+                                const SizedBox(height: 2),
+                              Text(
+                                drink.name,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                  color: textOnDark,
+                                ),
+                                textAlign: TextAlign.center,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ).animate().fadeIn(delay: (40 * index).ms).slideX(begin: 0.1, end: 0);
+    }
+
+    // Rectangular card (with price)
     return GestureDetector(
       onTap: () {},
       child: Container(
@@ -465,6 +732,15 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(BarzRadii.lg),
           border: Border.all(color: barzDarkMuted, width: 1),
+          boxShadow: Theme.of(context).brightness == Brightness.light
+              ? [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ]
+              : null,
         ),
         child: ClipRRect(
           borderRadius: BorderRadius.circular(BarzRadii.lg),
@@ -475,7 +751,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
                   child: Image.network(
                     drink.imageUrl ?? drink.picture ?? '',
                     fit: BoxFit.cover,
-                    errorBuilder: (_, _, _) => _drinkPlaceholder(),
+                    errorBuilder: (_, __, _) => _drinkPlaceholder(),
                   ),
                 )
               else
@@ -524,9 +800,9 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
                           color: Colors.white,
                         ),
                         const SizedBox(width: 4),
-                        const Text(
-                          'HOT',
-                          style: TextStyle(
+                        Text(
+                          AppLocalizations.of(context)!.badge_hot,
+                          style: const TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
                             color: Colors.white,
@@ -571,7 +847,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
                       if (priceText.isNotEmpty)
                         Text(
                           priceText,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color: barzGold,
@@ -610,7 +886,10 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
               child: CircularProgressIndicator(color: barzGold, strokeWidth: 2),
             ),
             const SizedBox(width: 16),
-            Text('Loading...', style: TextStyle(color: textSecondary)),
+            Text(
+              AppLocalizations.of(context)!.loading_text,
+              style: TextStyle(color: textSecondary),
+            ),
           ],
         ),
       ),
@@ -633,7 +912,10 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
             const SizedBox(height: 12),
             TextButton(
               onPressed: onRetry,
-              child: Text('Retry', style: TextStyle(color: barzGoldDark)),
+              child: Text(
+                AppLocalizations.of(context)!.error_retry_button,
+                style: TextStyle(color: barzGoldDark),
+              ),
             ),
           ],
         ),

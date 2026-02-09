@@ -246,5 +246,24 @@
   "apply_to_all_days": "Aplicar a Todos los Días",
   "general_hours": "Horario General",
   "general_hours_hint": "Establece el horario para todos los días a la vez",
-  "or_customize": "O personaliza cada día abajo"
+  "or_customize": "O personaliza cada día abajo",
+
+  "section_promotions": "Ofertas Calientes",
+  "section_categories": "Categorías",
+  "section_nearby_bars": "Socios Cercanos",
+  "section_trending_drinks": "Bebidas Populares",
+  "category_bars": "Bares",
+  "category_restaurants": "Restaurantes",
+  "category_clubs": "Clubes",
+  "empty_no_promotions": "No hay promociones disponibles",
+  "empty_no_bars_nearby": "No hay socios cercanos",
+  "empty_no_drinks": "No hay bebidas disponibles",
+  "empty_no_hot_deals": "No hay ofertas calientes ahora",
+  "empty_pull_to_refresh": "Desliza para actualizar",
+  "loading_text": "Cargando...",
+  "error_retry_button": "Reintentar",
+  "promo_label_deal": "OFERTA",
+  "promo_label_bogo": "2x1",
+  "promo_default_title": "Promoción",
+  "badge_hot": "CALIENTE"
 }
