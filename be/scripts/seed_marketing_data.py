@@ -100,7 +100,8 @@ async def seed_data():
                 print(f"   ℹ️  Bar {b_id} exists in Postgres")
 
             # 2. Mongo Upsert (Location & Logo)
-            logo_url = f"https://barz-images.s3.amazonaws.com/mock-{b_id}.png"
+            # Only set logo_url for bars with actual uploaded images
+            logo_url = None  # Default to null to avoid 404s
             if b_id == 17:
                 logo_url = "https://barz-images.s3.amazonaws.com/seed/pontosavassilogo.jpg"
             elif b_id == 18:
