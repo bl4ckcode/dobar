@@ -12,6 +12,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from .database import engine, Base, database
 from fastapi import FastAPI, Request
+from fastapi.staticfiles import StaticFiles
 from .auth.routes import auth_router
 from .bars_and_restaurants.routes.bars import bars_router
 from .bars_and_restaurants.routes.menus import menus_router
@@ -190,6 +191,8 @@ async def generic_exception_handler(request: Request, exc: Exception):
             message="An unexpected error occurred"
         ).model_dump(exclude_none=True)
     )
+
+app.mount("/legal", StaticFiles(directory="app/static/legal"), name="legal")
 
 app.include_router(auth_router)
 app.include_router(bars_router)

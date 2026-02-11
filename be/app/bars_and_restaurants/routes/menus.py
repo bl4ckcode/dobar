@@ -356,19 +356,40 @@ async def get_trending_drinks(
     if not results:
         return TrendingDrinksResponse(drinks=[])
     
-    drinks = [
-        TrendingDrink(
-            id=r["id"],
-            name=r["name"],
-            price_avg=float(r["price_avg"]) if r["price_avg"] else 0.0,
-            bar_name=r["bar_name"],
-            bar_id=r["bar_id"],
-            image_url=r["image_url"],
-            order_count=r["order_count"],
-            is_promoted=r["is_promoted"]
+    drinks = []
+    
+    # Import S3 utilities locally to avoid circular imports if any
+    from ..services.image_upload import extract_s3_key, generate_presigned_url
+    
+    for r in results:
+        image_url = r["image_url"]
+        
+        # Try to sign the URL if it exists
+        if image_url:
+            try:
+                # Check if it's an S3 URL before trying to sign
+                if "s3.amazonaws.com" in image_url:
+                    key = extract_s3_key(image_url)
+                    signed = generate_presigned_url(key)
+                    if signed:
+                        image_url = signed
+            except Exception as e:
+                # Log error but keep original URL
+                print(f"Error signing trending drink image: {e}")
+                pass
+        
+        drinks.append(
+            TrendingDrink(
+                id=r["id"],
+                name=r["name"],
+                price_avg=float(r["price_avg"]) if r["price_avg"] else 0.0,
+                bar_name=r["bar_name"],
+                bar_id=r["bar_id"],
+                image_url=image_url,
+                order_count=r["order_count"],
+                is_promoted=r["is_promoted"]
+            )
         )
-        for r in results
-    ]
     
     return TrendingDrinksResponse(drinks=drinks)
 
