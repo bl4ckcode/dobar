@@ -30,6 +30,8 @@ import 'package:barz/features/menu_reader/presentation/bloc/menu_reader_bloc.dar
 import 'package:barz/features/menu_reader/presentation/pages/menu_reader_page.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/showcase/showcase_screen.dart';
+import 'package:barz/features/legal/presentation/screens/legal_document_viewer.dart';
+import 'package:barz/features/legal/domain/models/legal_document.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 final _businessShellNavigatorKey = GlobalKey<NavigatorState>();
@@ -213,6 +215,20 @@ final appRouter = GoRouter(
       path: AppRoute.showcase.path,
       name: AppRoute.showcase.name,
       builder: (context, state) => const ShowcaseScreen(),
+    ),
+    GoRoute(
+      path: AppRoute.termsOfService.path,
+      name: AppRoute.termsOfService.name,
+      builder: (context, state) => const LegalDocumentViewer(
+        documentType: LegalDocumentType.termsOfService,
+      ),
+    ),
+    GoRoute(
+      path: AppRoute.privacyPolicy.path,
+      name: AppRoute.privacyPolicy.name,
+      builder: (context, state) => const LegalDocumentViewer(
+        documentType: LegalDocumentType.privacyPolicy,
+      ),
     ),
   ],
 );

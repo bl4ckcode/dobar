@@ -99,6 +99,26 @@ class _ProfileWireframeState extends State<ProfileWireframe> {
               subtitle: 'Get assistance',
             ),
           ).animate().fadeIn(delay: 250.ms).slideX(begin: -0.1, end: 0),
+          GestureDetector(
+            onTap: () => context.push('/legal/terms'),
+            child: BarzCard(
+              child: _buildMenuItem(
+                icon: Icons.description_outlined,
+                title: 'Terms of Service',
+                subtitle: 'View our terms',
+              ),
+            ),
+          ).animate().fadeIn(delay: 275.ms).slideX(begin: -0.1, end: 0),
+          GestureDetector(
+            onTap: () => context.push('/legal/privacy'),
+            child: BarzCard(
+              child: _buildMenuItem(
+                icon: Icons.privacy_tip_outlined,
+                title: 'Privacy Policy',
+                subtitle: 'How we protect your data',
+              ),
+            ),
+          ).animate().fadeIn(delay: 300.ms).slideX(begin: -0.1, end: 0),
           const SizedBox(height: 24),
 
           // Logout button
@@ -112,7 +132,7 @@ class _ProfileWireframeState extends State<ProfileWireframe> {
                 isDestructive: true,
               ),
             ),
-          ).animate().fadeIn(delay: 300.ms).slideX(begin: -0.1, end: 0),
+          ).animate().fadeIn(delay: 325.ms).slideX(begin: -0.1, end: 0),
         ],
       ),
     );

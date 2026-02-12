@@ -161,7 +161,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
                   padding: const EdgeInsets.only(
                     left: BarzSpacing.lg,
                     right: BarzSpacing.lg,
-                    top: 80,
+                    top: 20,
                     bottom: BarzSpacing.lg,
                   ),
                   children: [
@@ -185,6 +185,12 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
                     ),
                     const SizedBox(height: BarzSpacing.md),
                     _buildMostWantedDrinksSection(context),
+                    const SizedBox(height: BarzSpacing.xl), // Increased spacing
+                    _buildSectionTitleWithSubtitle(
+                      "Hottest Drinks",
+                      "Trending now",
+                      colors,
+                    ),
                     const SizedBox(height: BarzSpacing.md),
                     _buildHottestDrinksSection(context),
                     const SizedBox(height: BarzSpacing.xl),
@@ -594,128 +600,107 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
       return GestureDetector(
         onTap: () {},
         child: SizedBox(
-          width: 140,
+          width: 110, // Reduced width since text is outside
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              ClipOval(
-                child: Container(
-                  width: 140,
-                  height: 140,
-                  decoration: BoxDecoration(
-                    border: Border.all(color: barzDarkMuted, width: 1),
-                  ),
-                  child: Stack(
-                    children: [
-                      if (drink.imageUrl != null || drink.picture != null)
-                        Positioned.fill(
-                          child: Image.network(
-                            drink.imageUrl ?? drink.picture ?? '',
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, _) => _drinkPlaceholder(),
-                          ),
-                        )
-                      else
-                        Positioned.fill(child: _drinkPlaceholder()),
-                      Positioned.fill(
-                        child: Container(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: showHotBadge
-                                  ? [
-                                      Colors.transparent,
-                                      Colors.orange.withValues(alpha: 0.3),
-                                      Colors.deepOrange.withValues(alpha: 0.85),
-                                    ]
-                                  : [
-                                      Colors.transparent,
-                                      barzDark.withValues(alpha: 0.4),
-                                      barzDark.withValues(alpha: 0.9),
-                                    ],
-                              stops: const [0.0, 0.5, 1.0],
-                            ),
-                          ),
-                        ),
+              Stack(
+                children: [
+                  ClipOval(
+                    child: Container(
+                      width: 110,
+                      height: 110,
+                      decoration: BoxDecoration(
+                        border: Border.all(color: barzDarkMuted, width: 1),
                       ),
-                      if (showHotBadge)
-                        Positioned(
-                          top: 8,
-                          left: 8,
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 6,
-                              vertical: 3,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.deepOrange,
-                              borderRadius: BorderRadius.circular(999),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.whatshot,
-                                  size: 10,
-                                  color: Colors.white,
-                                ),
-                                const SizedBox(width: 2),
-                                Text(
-                                  AppLocalizations.of(context)!.badge_hot,
-                                  style: const TextStyle(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      Positioned(
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        child: Padding(
-                          padding: const EdgeInsets.all(10),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.center,
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (drink.barName != null)
-                                Text(
-                                  drink.barName!.toUpperCase(),
-                                  style: TextStyle(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w600,
-                                    color: textOnDark.withValues(alpha: 0.7),
-                                    letterSpacing: 0.5,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              if (drink.barName != null)
-                                const SizedBox(height: 2),
-                              Text(
-                                drink.name,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: textOnDark,
-                                ),
-                                textAlign: TextAlign.center,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
+                      child: Stack(
+                        children: [
+                          if (drink.imageUrl != null || drink.picture != null)
+                            Positioned.fill(
+                              child: Image.network(
+                                drink.imageUrl ?? drink.picture ?? '',
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) =>
+                                    _drinkPlaceholder(),
                               ),
-                            ],
+                            )
+                          else
+                            Positioned.fill(child: _drinkPlaceholder()),
+                          // Gradient for Hot Badge only
+                          if (showHotBadge)
+                            Positioned.fill(
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.transparent,
+                                      Colors.deepOrange.withValues(alpha: 0.1),
+                                      Colors.deepOrange.withValues(alpha: 0.4),
+                                    ],
+                                    stops: const [0.0, 0.5, 1.0],
+                                  ),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  if (showHotBadge)
+                    Positioned(
+                      top: 0,
+                      right: 0,
+                      child: Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.deepOrange,
+                          shape: BoxShape.circle,
+                          border: Border.all(
+                            color: Theme.of(context).scaffoldBackgroundColor,
+                            width: 2,
                           ),
                         ),
+                        child: const Icon(
+                          Icons.whatshot,
+                          size: 14,
+                          color: Colors.white,
+                        ),
                       ),
-                    ],
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (drink.barName != null)
+                Text(
+                  drink.barName!.toUpperCase(),
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    color: Theme.of(context).brightness == Brightness.light
+                        ? Colors.grey[600]
+                        : Colors.grey[400],
+                    letterSpacing: 0.5,
                   ),
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
+              if (drink.barName != null) const SizedBox(height: 2),
+              Text(
+                drink.name,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).brightness == Brightness.light
+                      ? Colors.black87
+                      : textOnDark,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),
@@ -751,7 +736,8 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
                   child: Image.network(
                     drink.imageUrl ?? drink.picture ?? '',
                     fit: BoxFit.cover,
-                    errorBuilder: (_, __, _) => _drinkPlaceholder(),
+                    errorBuilder: (context, error, stackTrace) =>
+                        _drinkPlaceholder(),
                   ),
                 )
               else

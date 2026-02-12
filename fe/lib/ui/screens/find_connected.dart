@@ -234,6 +234,11 @@ class _FindConnectedViewState extends State<FindConnectedView>
                   barId: bar.id,
                   imageUrl: bar.imageUrl,
                   imageUrlExpiration: bar.imageUrlExpiration,
+                  fallbackUrls: [
+                    if (bar.coverUrl != null) bar.coverUrl!,
+                    if (bar.logoUrl != null) bar.logoUrl!,
+                    if (bar.photoUrls != null) ...bar.photoUrls!,
+                  ],
                   width: 64,
                   height: 64,
                   borderRadius: BorderRadius.circular(BarzRadii.md),
@@ -637,7 +642,9 @@ class _FindConnectedViewState extends State<FindConnectedView>
 
         return GoogleMap(
           mapType: MapType.normal,
-          style: _darkMapStyle,
+          style: Theme.of(context).brightness == Brightness.dark
+              ? _darkMapStyle
+              : null,
           initialCameraPosition: CameraPosition(
             target: LatLng(lat, lng),
             zoom: 15,
@@ -899,13 +906,14 @@ class _FindConnectedViewState extends State<FindConnectedView>
                       )
                       .animate()
                       .moveX(
-                        begin: 100,
+                        begin: -20, // Slide from left to match panel
                         end: 0,
-                        delay: (index * 50).ms,
-                        duration: 400.ms,
-                        curve: Curves.fastOutSlowIn,
+                        delay:
+                            (index * 30).ms, // Reduced delay for snappier feel
+                        duration: 300.ms,
+                        curve: Curves.easeOut,
                       )
-                      .fadeIn(delay: (index * 50).ms, duration: 400.ms);
+                      .fadeIn(delay: (index * 30).ms, duration: 300.ms);
                 },
               );
             }
@@ -962,6 +970,11 @@ class _FindConnectedViewState extends State<FindConnectedView>
                   barId: bar.id,
                   imageUrl: bar.imageUrl,
                   imageUrlExpiration: bar.imageUrlExpiration,
+                  fallbackUrls: [
+                    if (bar.coverUrl != null) bar.coverUrl!,
+                    if (bar.logoUrl != null) bar.logoUrl!,
+                    if (bar.photoUrls != null) ...bar.photoUrls!,
+                  ],
                   width: 56,
                   height: 56,
                   borderRadius: BorderRadius.circular(12),

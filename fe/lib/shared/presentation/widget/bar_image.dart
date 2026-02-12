@@ -4,7 +4,7 @@ import 'package:barz/core/services/image_refresh_service.dart';
 import 'package:barz/core/utils/constant/colors.dart';
 
 /// A specialized image widget for bar images that handles presigned URL expiration
-/// 
+///
 /// This widget automatically refreshes expired S3 presigned URLs before displaying
 class BarImage extends StatefulWidget {
   final int barId;
@@ -16,7 +16,9 @@ class BarImage extends StatefulWidget {
   final Widget? placeholder;
   final Widget? errorWidget;
   final BorderRadius? borderRadius;
+
   final ValueChanged<String>? onImageUrlRefreshed;
+  final List<String>? fallbackUrls;
 
   const BarImage({
     super.key,
@@ -29,7 +31,9 @@ class BarImage extends StatefulWidget {
     this.placeholder,
     this.errorWidget,
     this.borderRadius,
+
     this.onImageUrlRefreshed,
+    this.fallbackUrls,
   });
 
   @override
@@ -41,7 +45,10 @@ class _BarImageState extends State<BarImage> {
   String? _currentUrl;
   bool _isLoading = true;
   bool _hasError = false;
+
   bool _refreshAttempted = false; // Prevent multiple refresh attempts on error
+  int _fallbackIndex =
+      -1; // -1 means using main imageUrl, 0+ means using fallbackUrls[index]
 
   @override
   void initState() {
@@ -53,7 +60,7 @@ class _BarImageState extends State<BarImage> {
   @override
   void didUpdateWidget(BarImage oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.barId != widget.barId || 
+    if (oldWidget.barId != widget.barId ||
         oldWidget.imageUrl != widget.imageUrl ||
         oldWidget.imageUrlExpiration != widget.imageUrlExpiration) {
       _loadValidUrl();
@@ -62,7 +69,7 @@ class _BarImageState extends State<BarImage> {
 
   Future<void> _loadValidUrl() async {
     if (!mounted) return;
-    
+
     setState(() {
       _isLoading = true;
       _hasError = false;
@@ -142,10 +149,7 @@ class _BarImageState extends State<BarImage> {
               padding: const EdgeInsets.only(top: 4),
               child: Text(
                 'Bar',
-                style: TextStyle(
-                  color: barzYellowDark,
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: barzYellowDark, fontSize: 12),
               ),
             ),
         ],
@@ -170,31 +174,66 @@ class _BarImageState extends State<BarImage> {
         return widget.placeholder ?? defaultPlaceholder;
       },
       errorBuilder: (context, error, stackTrace) {
-        debugPrint('[BarImage] Error loading image for bar ${widget.barId}: $error');
+        debugPrint(
+          '[BarImage] Error loading image for bar ${widget.barId}: $error',
+        );
         // Try to refresh on error (might be expired URL) - but only once
         // Don't call refresh synchronously in build - use post-frame callback
-        if (!_refreshAttempted && !_imageRefreshService.isInCooldown(widget.barId)) {
+        if (!_refreshAttempted &&
+            !_imageRefreshService.isInCooldown(widget.barId)) {
           _refreshAttempted = true;
           WidgetsBinding.instance.addPostFrameCallback((_) {
             _imageRefreshService.forceRefresh(widget.barId).then((newUrl) {
               if (newUrl != null && mounted) {
-                setState(() => _currentUrl = newUrl);
-              } else if (mounted) {
+                // If we got a new URL and it's different from current, use it
+                if (newUrl != _currentUrl) {
+                  setState(() => _currentUrl = newUrl);
+                  return;
+                }
+              }
+
+              // If refresh failed or returned same URL, try fallbacks
+              if (mounted &&
+                  widget.fallbackUrls != null &&
+                  widget.fallbackUrls!.isNotEmpty) {
+                if (_fallbackIndex < widget.fallbackUrls!.length - 1) {
+                  setState(() {
+                    _fallbackIndex++;
+                    _currentUrl = widget.fallbackUrls![_fallbackIndex];
+                  });
+                  return;
+                }
+              }
+
+              if (mounted) {
                 // Refresh failed or returned null, show error state
                 setState(() => _hasError = true);
               }
             });
           });
         }
+
+        // If we are already traversing fallbacks (refreshAttempted is true)
+        if (_refreshAttempted &&
+            widget.fallbackUrls != null &&
+            _fallbackIndex < widget.fallbackUrls!.length - 1) {
+          // Queue next fallback attempt
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              setState(() {
+                _fallbackIndex++;
+                _currentUrl = widget.fallbackUrls![_fallbackIndex];
+              });
+            }
+          });
+        }
+
         return widget.errorWidget ?? defaultError;
       },
     );
 
     if (widget.borderRadius != null) {
-      image = ClipRRect(
-        borderRadius: widget.borderRadius!,
-        child: image,
-      );
+      image = ClipRRect(borderRadius: widget.borderRadius!, child: image);
     }
 
     return image;
@@ -240,7 +279,7 @@ class _BarImageAvatarState extends State<BarImageAvatar> {
   @override
   void didUpdateWidget(BarImageAvatar oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.barId != widget.barId || 
+    if (oldWidget.barId != widget.barId ||
         oldWidget.imageUrl != widget.imageUrl) {
       _loadValidUrl();
     }
@@ -248,7 +287,7 @@ class _BarImageAvatarState extends State<BarImageAvatar> {
 
   Future<void> _loadValidUrl() async {
     if (!mounted) return;
-    
+
     setState(() {
       _isLoading = true;
       _refreshAttempted = false; // Reset on new load
@@ -284,7 +323,9 @@ class _BarImageAvatarState extends State<BarImageAvatar> {
   @override
   Widget build(BuildContext context) {
     final bgColor = widget.backgroundColor ?? barzYellowSoft;
-    final fallback = widget.fallbackIcon ?? Icon(Icons.store, size: widget.radius, color: barzYellowDark);
+    final fallback =
+        widget.fallbackIcon ??
+        Icon(Icons.store, size: widget.radius, color: barzYellowDark);
 
     if (_isLoading) {
       return CircleAvatar(
@@ -316,7 +357,8 @@ class _BarImageAvatarState extends State<BarImageAvatar> {
       onBackgroundImageError: (exception, stackTrace) {
         debugPrint('[BarImageAvatar] Error loading image: $exception');
         // Try to refresh on error - but only once and with cooldown check
-        if (!_refreshAttempted && !_imageRefreshService.isInCooldown(widget.barId)) {
+        if (!_refreshAttempted &&
+            !_imageRefreshService.isInCooldown(widget.barId)) {
           _refreshAttempted = true;
           _imageRefreshService.forceRefresh(widget.barId).then((newUrl) {
             if (newUrl != null && mounted) {

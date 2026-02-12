@@ -7,6 +7,9 @@ class BarModel {
   final int? ownerId;
   final String? imageUrl;
   final int? imageUrlExpiration; // Unix timestamp when presigned URL expires
+  final String? logoUrl;
+  final String? coverUrl;
+  final List<String>? photoUrls;
   final double? approximateLocation;
   final double? latitude;
   final double? longitude;
@@ -20,6 +23,9 @@ class BarModel {
     this.ownerId,
     this.imageUrl,
     this.imageUrlExpiration,
+    this.logoUrl,
+    this.coverUrl,
+    this.photoUrls,
     this.approximateLocation,
     this.latitude,
     this.longitude,
@@ -35,6 +41,11 @@ class BarModel {
       ownerId: json['owner_id'],
       imageUrl: json['image_url'],
       imageUrlExpiration: json['image_url_expiration'],
+      logoUrl: json['logo_url'],
+      coverUrl: json['cover_url'],
+      photoUrls: (json['photo_urls'] as List?)
+          ?.map((e) => e as String)
+          .toList(),
       approximateLocation: (json['approximateLocation'] != null)
           ? (json['approximateLocation'] as num).toDouble()
           : null,
@@ -58,6 +69,9 @@ class BarModel {
       ownerId: ownerId,
       imageUrl: newImageUrl,
       imageUrlExpiration: newExpiration,
+      logoUrl: logoUrl,
+      coverUrl: coverUrl,
+      photoUrls: photoUrls,
       approximateLocation: approximateLocation,
       latitude: latitude,
       longitude: longitude,
@@ -74,6 +88,9 @@ class BarModel {
       'owner_id': ownerId,
       'image_url': imageUrl,
       'image_url_expiration': imageUrlExpiration,
+      'logo_url': logoUrl,
+      'cover_url': coverUrl,
+      'photo_urls': photoUrls,
       'approximateLocation': approximateLocation,
       'latitude': latitude,
       'longitude': longitude,

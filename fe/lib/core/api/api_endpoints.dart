@@ -124,4 +124,8 @@ class ApiEndpoints {
   static String barOrders(int barId) => '/bars/$barId/orders';
   static String barStatus(int barId) => '/bars/$barId/status';
   static String barStatusToggle(int barId) => '/bars/$barId/status/toggle';
+
+  // Legal Documents
+  static String legalDocument(String type, String language) =>
+      '/legal/${type}_$language.md';
 }

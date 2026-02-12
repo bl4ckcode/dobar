@@ -25,7 +25,9 @@ enum AppRoute {
   businessCampaigns('/business/campaigns'),
   businessCampaignAnalytics('/business/campaign/:campaignId/analytics'),
   businessStaff('/business/staff'),
-  businessSubscriptionPlans('/business/subscription-plans');
+  businessSubscriptionPlans('/business/subscription-plans'),
+  termsOfService('/legal/terms'),
+  privacyPolicy('/legal/privacy');
 
   final String path;
   const AppRoute(this.path);

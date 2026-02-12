@@ -21,6 +21,7 @@ import 'package:barz/features/payments/payments_injection.dart';
 import 'package:barz/features/promotions/promotions_injection.dart';
 import 'package:barz/features/session/session_injection.dart';
 import 'package:barz/features/trending/trending_injection.dart';
+import 'package:barz/features/legal/legal_injection.dart';
 import 'package:barz/features/user/user_injection.dart';
 import 'package:barz/shared/app_injections.dart';
 import 'package:get_it/get_it.dart';
@@ -49,6 +50,7 @@ Future<void> initInjections() async {
   initOnboardingInjection();
   initAdvertisingInjection();
   registerTrendingFeature(getItInjector);
+  initLegalInjection();
   await initSessionInjection();
 }
 
@@ -89,10 +91,10 @@ Future<void> initDioInjections() async {
     tokenStorage: getItInjector<TokenStorageService>(),
     onAuthExpired: _handleAuthExpired,
   );
-  
+
   // Load any existing tokens from storage
   await DioNetwork.loadTokensFromStorage();
-  
+
   // Register ImageRefreshService
   getItInjector.registerLazySingleton<ImageRefreshService>(
     () => ImageRefreshService(DioNetwork.appAPI),
@@ -115,9 +117,8 @@ Future<void> initNotificationInjections() async {
   // Register NotificationService singleton
   final notificationService = NotificationService();
   getItInjector.registerSingleton<NotificationService>(notificationService);
-  
+
   // Initialize notifications in background - don't block app startup
   // Permission will be requested lazily, and if denied, app still works
   notificationService.initializeInBackground();
 }
-
