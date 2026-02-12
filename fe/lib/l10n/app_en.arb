@@ -367,5 +367,9 @@
   "promo_label_deal": "DEAL",
   "promo_label_bogo": "BOGO",
   "promo_default_title": "Promotion",
-  "badge_hot": "HOT"
+  "badge_hot": "HOT",
+  "home_promotions_title": "Promotions",
+  "home_promotions_subtitle": "Active promotions and cashback for you",
+  "home_hottest_drinks_title": "Hottest drinks",
+  "home_hottest_drinks_subtitle": "Special selection for you from Dobar team"
 }

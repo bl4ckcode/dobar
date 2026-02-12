@@ -125,22 +125,8 @@ class _WireframeShellState extends State<WireframeShell> {
                 ),
             ],
           ),
-          floatingActionButton: BlocBuilder<CartBloc, CartState>(
-            builder: (context, cartState) {
-              final hasItems =
-                  cartState is CartLoaded && cartState.cart.items.isNotEmpty;
-
-              if (hasItems) {
-                return _CenterDockedCartFab(
-                  itemCount: cartState.cart.items.length,
-                  onPressed: () => AppRoute.cart.push(context),
-                );
-              }
-
-              return _CenterDockedFab(
-                onPressed: () => AppRoute.checkin.push(context),
-              );
-            },
+          floatingActionButton: _CenterDockedFab(
+            onPressed: () => AppRoute.checkin.push(context),
           ),
           floatingActionButtonLocation:
               FloatingActionButtonLocation.centerDocked,
@@ -167,6 +153,58 @@ class _WireframeShellState extends State<WireframeShell> {
                   onTap: () => _onItemTapped(1),
                 ),
                 SizedBox(width: _NavBarMetrics.notchWidth),
+                BlocBuilder<CartBloc, CartState>(
+                  builder: (context, state) {
+                    final itemCount = (state is CartLoaded)
+                        ? state.cart.items.length
+                        : 0;
+                    return Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        _NavItem(
+                          icon: Icons.shopping_cart_outlined,
+                          selectedIcon: Icons.shopping_cart,
+                          label: 'Cart',
+                          isSelected: false,
+                          onTap: () => AppRoute.cart.push(context),
+                        ),
+                        if (itemCount > 0)
+                          Positioned(
+                            top: 4,
+                            right: 4,
+                            child:
+                                Container(
+                                      padding: const EdgeInsets.all(4),
+                                      decoration: const BoxDecoration(
+                                        color: Colors.deepOrange,
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Text(
+                                        itemCount > 9
+                                            ? '9+'
+                                            : itemCount.toString(),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    )
+                                    .animate(
+                                      onPlay: (controller) =>
+                                          controller.repeat(reverse: true),
+                                    )
+                                    .scale(
+                                      begin: const Offset(1, 1),
+                                      end: const Offset(1.2, 1.2),
+                                      duration: 1000.ms,
+                                      curve: Curves.easeInOut,
+                                    ),
+                          ),
+                      ],
+                    );
+                  },
+                ),
                 _NavItem(
                   icon: Icons.person_outline,
                   selectedIcon: Icons.person,
@@ -178,84 +216,6 @@ class _WireframeShellState extends State<WireframeShell> {
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _CenterDockedCartFab extends StatelessWidget {
-  final int itemCount;
-  final VoidCallback onPressed;
-
-  const _CenterDockedCartFab({
-    required this.itemCount,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = context.dobarColors;
-    return Transform.translate(
-      offset: const Offset(0, 8),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          SizedBox(
-            width: _NavBarMetrics.fabDiameter,
-            height: _NavBarMetrics.fabDiameter,
-            child: Stack(
-              children: [
-                FloatingActionButton(
-                      heroTag: 'shell_cart_fab',
-                      onPressed: onPressed,
-                      backgroundColor: colors.surface,
-                      foregroundColor: colors.buttonPrimary,
-                      elevation: 4,
-                      shape: const CircleBorder(),
-                      child: const Icon(Icons.shopping_cart, size: 28),
-                    )
-                    .animate(
-                      onPlay: (controller) => controller.repeat(reverse: true),
-                    )
-                    .scale(
-                      begin: const Offset(1, 1),
-                      end: const Offset(1.05, 1.05),
-                      duration: 2000.ms,
-                      curve: Curves.easeInOut,
-                    ),
-                Positioned(
-                  top: 0,
-                  right: 0,
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: colors.background, width: 2),
-                    ),
-                    child: Text(
-                      itemCount > 9 ? '9+' : itemCount.toString(),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ).animate().scale(delay: 200.ms, curve: Curves.elasticOut),
-              ],
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Cart',
-            style: TextStyle(
-              fontSize: 10,
-              fontWeight: FontWeight.w600,
-              color: colors.navLabel,
-            ),
-          ),
-        ],
       ),
     );
   }

@@ -265,5 +265,9 @@
   "promo_label_deal": "OFERTA",
   "promo_label_bogo": "2x1",
   "promo_default_title": "Promoción",
-  "badge_hot": "CALIENTE"
+  "badge_hot": "CALIENTE",
+  "home_promotions_title": "Promociones",
+  "home_promotions_subtitle": "Promociones activas y reembolso para ti",
+  "home_hottest_drinks_title": "Bebidas Populares",
+  "home_hottest_drinks_subtitle": "Selección especial para ti del equipo Dobar"
 }

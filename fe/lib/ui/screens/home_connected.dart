@@ -159,9 +159,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
                 child: ListView(
                   controller: _scrollController,
                   padding: const EdgeInsets.only(
-                    left: BarzSpacing.lg,
-                    right: BarzSpacing.lg,
-                    top: 20,
+                    top: 32,
                     bottom: BarzSpacing.lg,
                   ),
                   children: [
@@ -187,13 +185,21 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
                     _buildMostWantedDrinksSection(context),
                     const SizedBox(height: BarzSpacing.xl), // Increased spacing
                     _buildSectionTitleWithSubtitle(
-                      "Hottest Drinks",
-                      "Trending now",
+                      AppLocalizations.of(context)!.home_hottest_drinks_title,
+                      AppLocalizations.of(
+                        context,
+                      )!.home_hottest_drinks_subtitle,
                       colors,
                     ),
                     const SizedBox(height: BarzSpacing.md),
                     _buildHottestDrinksSection(context),
-                    const SizedBox(height: BarzSpacing.xl),
+                    const SizedBox(height: BarzSpacing.lg),
+                    _buildSectionTitleWithSubtitle(
+                      AppLocalizations.of(context)!.home_promotions_title,
+                      AppLocalizations.of(context)!.home_promotions_subtitle,
+                      colors,
+                    ),
+                    const SizedBox(height: BarzSpacing.md),
                     _buildPromotionsSection(context),
                     const SizedBox(height: BarzSpacing.xl),
                   ],
@@ -217,23 +223,26 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
     String subtitle,
     DobarColors colors,
   ) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: colors.labelPrimary,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: BarzSpacing.lg),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: colors.labelPrimary,
+            ),
           ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          subtitle,
-          style: TextStyle(fontSize: 14, color: colors.labelSecondary),
-        ),
-      ],
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: TextStyle(fontSize: 14, color: colors.labelSecondary),
+          ),
+        ],
+      ),
     );
   }
 
@@ -264,8 +273,9 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
           );
         }
         return SizedBox(
-          height: 224,
+          height: 112,
           child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: BarzSpacing.lg),
             scrollDirection: Axis.horizontal,
             itemCount: state.promotions.length > 10
                 ? 10
@@ -426,6 +436,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
     return SizedBox(
       height: 44,
       child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: BarzSpacing.lg),
         scrollDirection: Axis.horizontal,
         itemCount: categories.length,
         separatorBuilder: (_, _) => const SizedBox(width: 10),
@@ -472,6 +483,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
           return SizedBox(
             height: 200,
             child: ListView.separated(
+              padding: const EdgeInsets.symmetric(horizontal: BarzSpacing.lg),
               scrollDirection: Axis.horizontal,
               itemCount: displayBars.length,
               separatorBuilder: (_, _) => const SizedBox(width: 12),
@@ -543,6 +555,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
         return SizedBox(
           height: 224,
           child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: BarzSpacing.lg),
             scrollDirection: Axis.horizontal,
             itemCount: state.mostWantedDrinks.length > 10
                 ? 10
@@ -569,8 +582,9 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
           );
         }
         return SizedBox(
-          height: 224,
+          height: 140,
           child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: BarzSpacing.lg),
             scrollDirection: Axis.horizontal,
             itemCount: state.hottestDrinks.length > 10
                 ? 10
@@ -600,7 +614,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
       return GestureDetector(
         onTap: () {},
         child: SizedBox(
-          width: 110, // Reduced width since text is outside
+          width: 110,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.center,
@@ -673,22 +687,6 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
                 ],
               ),
               const SizedBox(height: 8),
-              if (drink.barName != null)
-                Text(
-                  drink.barName!.toUpperCase(),
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w600,
-                    color: Theme.of(context).brightness == Brightness.light
-                        ? Colors.grey[600]
-                        : Colors.grey[400],
-                    letterSpacing: 0.5,
-                  ),
-                  textAlign: TextAlign.center,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              if (drink.barName != null) const SizedBox(height: 2),
               Text(
                 drink.name,
                 style: TextStyle(
@@ -713,7 +711,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
       onTap: () {},
       child: Container(
         width: 160,
-        height: 224,
+        height: 160,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(BarzRadii.lg),
           border: Border.all(color: barzDarkMuted, width: 1),

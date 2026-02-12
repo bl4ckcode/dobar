@@ -311,5 +311,9 @@
   "promo_label_deal": "OFERTA",
   "promo_label_bogo": "LEVE 2",
   "promo_default_title": "Promoção",
-  "badge_hot": "QUENTE"
+  "badge_hot": "QUENTE",
+  "home_promotions_title": "Promoções",
+  "home_promotions_subtitle": "Promoções ativas e cashback para você",
+  "home_hottest_drinks_title": "Bebidas em Alta",
+  "home_hottest_drinks_subtitle": "Seleção especial para você da equipe Dobar"
 }

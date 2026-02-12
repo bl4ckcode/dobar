@@ -287,16 +287,25 @@ class _MenuPageViewState extends State<_MenuPageView> {
           GestureDetector(
             onTap: () => context.pop(),
             child: Container(
-              width: 40,
-              height: 40,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
-                color: barzDarkLight,
-                borderRadius: BorderRadius.circular(10),
+                color: isDark ? barzDarkLight : surfaceWhite,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: isDark
+                    ? null
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
               ),
               child: Icon(
                 Icons.arrow_back,
                 color: isDark ? Colors.white : barzDark,
-                size: 20,
+                size: 22,
               ),
             ),
           ),
@@ -328,11 +337,20 @@ class _MenuPageViewState extends State<_MenuPageView> {
           GestureDetector(
             onTap: () => AppRoute.cart.push(context),
             child: Container(
-              width: 40,
-              height: 40,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
-                color: barzDarkLight,
-                borderRadius: BorderRadius.circular(10),
+                color: isDark ? barzDarkLight : surfaceWhite,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: isDark
+                    ? null
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 8,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
               ),
               child: Stack(
                 children: [
@@ -340,13 +358,13 @@ class _MenuPageViewState extends State<_MenuPageView> {
                     child: Icon(
                       Icons.shopping_cart_outlined,
                       color: isDark ? Colors.white : barzDark,
-                      size: 20,
+                      size: 22,
                     ),
                   ),
                   if (_totalItems > 0)
                     Positioned(
-                      right: 4,
-                      top: 4,
+                      right: 8, // Adjusted for new size
+                      top: 8,
                       child: Container(
                         padding: const EdgeInsets.all(4),
                         decoration: const BoxDecoration(

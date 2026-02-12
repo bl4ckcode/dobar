@@ -6,8 +6,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 
 class MarkerGenerator {
-  static const int _markerSize = 120;
-  static const double _borderWidth = 7.0;
+  static const int _markerSize = 36;
+  static const double _borderWidth = 2.0;
 
   /// Creates a BitmapDescriptor from a URL or fallback asset.
   /// Draws the image in a circle with a branded border.

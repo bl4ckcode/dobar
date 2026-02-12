@@ -52,6 +52,26 @@ const String _darkMapStyle = '''
   {"featureType": "water", "elementType": "geometry", "stylers": [{"color": "#0e1626"}]},
   {"featureType": "water", "elementType": "labels.text.fill", "stylers": [{"color": "#4e6d70"}]}
 ]
+ // ... existing dark style
+]
+''';
+
+const String _lightMapStyle = '''
+[
+  {
+    "featureType": "poi",
+    "elementType": "labels",
+    "stylers": [{"visibility": "off"}]
+  },
+  {
+    "featureType": "poi",
+    "stylers": [{"visibility": "off"}]
+  },
+  {
+    "featureType": "transit",
+    "stylers": [{"visibility": "off"}]
+  }
+]
 ''';
 
 class FindConnected extends StatelessWidget {
@@ -456,6 +476,19 @@ class _FindConnectedViewState extends State<FindConnectedView>
   }
 
   Future<void> _launchNavigation(BarModel bar) async {
+    if (bar.latitude == null || bar.longitude == null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Navigation not available for this location at the moment.',
+          ),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     // Navigator.pop(context); // Removed redundant pop
 
     final availableMaps = await ml.MapLauncher.installedMaps;
@@ -513,12 +546,8 @@ class _FindConnectedViewState extends State<FindConnectedView>
                   style: TextStyle(color: colors.labelPrimary),
                 ),
                 onTap: () {
-                  Navigator.pop(ctx);
                   map.showMarker(
-                    coords: ml.Coords(
-                      0,
-                      0,
-                    ), // TODO: Use actual bar coordinates when available
+                    coords: ml.Coords(bar.latitude!, bar.longitude!),
                     title: bar.name,
                     description: bar.address,
                   );
@@ -644,7 +673,7 @@ class _FindConnectedViewState extends State<FindConnectedView>
           mapType: MapType.normal,
           style: Theme.of(context).brightness == Brightness.dark
               ? _darkMapStyle
-              : null,
+              : _lightMapStyle,
           initialCameraPosition: CameraPosition(
             target: LatLng(lat, lng),
             zoom: 15,
