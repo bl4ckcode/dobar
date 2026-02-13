@@ -238,8 +238,10 @@ class _CheckoutOrderSummaryState extends State<CheckoutOrderSummary>
               ),
               Text(
                 _formatCurrency(widget.total),
-                style: const TextStyle(
-                  color: barzGold,
+                style: TextStyle(
+                  color: isDark
+                      ? barzGold
+                      : Colors.black, // Explicit black for light mode
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
                 ),

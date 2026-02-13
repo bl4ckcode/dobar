@@ -7,7 +7,7 @@ import 'package:http/http.dart' as http;
 
 class MarkerGenerator {
   static const int _markerSize = 36;
-  static const double _borderWidth = 2.0;
+  static const double _borderWidth = 3.0;
 
   /// Creates a BitmapDescriptor from a URL or fallback asset.
   /// Draws the image in a circle with a branded border.

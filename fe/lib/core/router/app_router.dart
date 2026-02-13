@@ -29,7 +29,7 @@ import 'package:barz/features/onboarding/presentation/pages/onboarding_page.dart
 import 'package:barz/features/menu_reader/presentation/bloc/menu_reader_bloc.dart';
 import 'package:barz/features/menu_reader/presentation/pages/menu_reader_page.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
-import 'package:barz/features/showcase/showcase_screen.dart';
+import 'package:barz/features/promotions/presentation/screens/promotions_gallery_screen.dart';
 import 'package:barz/features/legal/presentation/screens/legal_document_viewer.dart';
 import 'package:barz/features/legal/domain/models/legal_document.dart';
 
@@ -214,7 +214,7 @@ final appRouter = GoRouter(
     GoRoute(
       path: AppRoute.showcase.path,
       name: AppRoute.showcase.name,
-      builder: (context, state) => const ShowcaseScreen(),
+      builder: (context, state) => const PromotionsGalleryScreen(),
     ),
     GoRoute(
       path: AppRoute.termsOfService.path,

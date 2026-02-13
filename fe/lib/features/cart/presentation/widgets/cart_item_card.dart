@@ -107,8 +107,10 @@ class CartItemCard extends StatelessWidget {
         const SizedBox(height: 8),
         Text(
           '\$${item.price.toStringAsFixed(2)}',
-          style: const TextStyle(
-            color: barzGold,
+          style: TextStyle(
+            color: isDark
+                ? barzGold
+                : Colors.black, // Explicit black for light mode
             fontSize: 17,
             fontWeight: FontWeight.w700,
           ),

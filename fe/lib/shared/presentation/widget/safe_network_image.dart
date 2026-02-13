@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 /// A network image widget with proper error handling and fallback
-/// 
+///
 /// Use this instead of Image.network or NetworkImage directly to handle:
 /// - Corrupted images from S3
 /// - Invalid URLs
@@ -68,15 +68,28 @@ class SafeNetworkImage extends StatelessWidget {
               padding: const EdgeInsets.only(top: 4),
               child: Text(
                 'Bar',
-                style: TextStyle(
-                  color: Colors.grey[600],
-                  fontSize: 12,
-                ),
+                style: TextStyle(color: Colors.grey[600], fontSize: 12),
               ),
             ),
         ],
       ),
     );
+
+    if (imageUrl != null && imageUrl!.startsWith('marketing_mockups/')) {
+      Widget image = Image.asset(
+        imageUrl!,
+        width: width,
+        height: height,
+        fit: fit,
+        errorBuilder: (context, error, stackTrace) {
+          return errorWidget ?? defaultError;
+        },
+      );
+      if (borderRadius != null) {
+        image = ClipRRect(borderRadius: borderRadius!, child: image);
+      }
+      return image;
+    }
 
     if (!_isValidUrl(imageUrl)) {
       return errorWidget ?? defaultError;
@@ -98,10 +111,7 @@ class SafeNetworkImage extends StatelessWidget {
     );
 
     if (borderRadius != null) {
-      image = ClipRRect(
-        borderRadius: borderRadius!,
-        child: image,
-      );
+      image = ClipRRect(borderRadius: borderRadius!, child: image);
     }
 
     return image;

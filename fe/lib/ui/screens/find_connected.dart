@@ -9,12 +9,10 @@ import 'package:flutter_polyline_points/flutter_polyline_points.dart'; // Added
 import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/bars/presentation/bloc/bar_bloc.dart';
-import 'package:barz/features/bars/presentation/bloc/bar_event.dart';
 import 'package:barz/features/bars/presentation/bloc/bar_state.dart';
 import 'package:barz/features/bars/domain/models/bar_model.dart';
 import 'package:barz/features/promotions/presentation/bloc/promotions_bloc.dart';
-import 'package:barz/features/promotions/presentation/bloc/promotions_event.dart';
-import 'package:barz/features/promotions/presentation/bloc/promotions_state.dart';
+
 import 'package:barz/features/location/presentation/bloc/location_bloc.dart';
 import 'package:barz/features/location/presentation/bloc/location_event.dart';
 import 'package:barz/features/location/presentation/bloc/location_state.dart';
@@ -105,9 +103,11 @@ class _FindConnectedViewState extends State<FindConnectedView>
   final TextEditingController _searchController = TextEditingController();
   final Completer<GoogleMapController> _mapController = Completer();
   bool _showListPanel = false;
+  bool _isListExpanded = false;
+  bool _isSearchExpanded = false;
   late AnimationController _panelAnimController;
-  late Animation<double> _panelAnimation;
-  List<BarModel> _filteredBars = [];
+
+  final List<BarModel> _displayedBars = [];
 
   final Set<Polyline> _polylines = {};
   final Map<String, BitmapDescriptor> _customMarkers = {};
@@ -130,16 +130,16 @@ class _FindConnectedViewState extends State<FindConnectedView>
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
-    _panelAnimation = CurvedAnimation(
-      parent: _panelAnimController,
-      curve: Curves.fastOutSlowIn,
-    );
 
     _searchController.addListener(_onSearchChanged);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        _refreshData(context);
+        final barState = context.read<BarBloc>().state;
+        if (barState is BarsLoaded) {
+          _filterBars(_searchController.text, barState.bars);
+          _loadMarkers(barState.bars);
+        }
       }
     });
   }
@@ -161,16 +161,29 @@ class _FindConnectedViewState extends State<FindConnectedView>
   }
 
   void _filterBars(String query, List<BarModel> allBars) {
+    // Current list is _displayedBars
+    // New list calculation
+    List<BarModel> newBars;
+    if (query.isEmpty) {
+      newBars = List.from(allBars);
+    } else {
+      final lowerQuery = query.toLowerCase();
+      newBars = allBars.where((bar) {
+        return bar.name.toLowerCase().contains(lowerQuery) ||
+            bar.address.toLowerCase().contains(lowerQuery);
+      }).toList();
+    }
+
+    // Basic diffing to update AnimatedList
+    // For simplicity in this iteration: clear and refill if significantly different
+    // Or just simple remove/insert loop.
+
+    // NOTE: A proper diff algorithm involves Myers Diff or similar.
+    // Given the prototype nature, we will do a smart replace.
+
     setState(() {
-      if (query.isEmpty) {
-        _filteredBars = allBars;
-      } else {
-        final lowerQuery = query.toLowerCase();
-        _filteredBars = allBars.where((bar) {
-          return bar.name.toLowerCase().contains(lowerQuery) ||
-              bar.address.toLowerCase().contains(lowerQuery);
-        }).toList();
-      }
+      _displayedBars.clear();
+      _displayedBars.addAll(newBars);
     });
   }
 
@@ -193,7 +206,7 @@ class _FindConnectedViewState extends State<FindConnectedView>
           final marker = await MarkerGenerator.createCustomMarkerBitmap(
             bar.imageUrl,
             fallbackAssetPath: 'assets/images/cup_placeholder.jpg',
-            borderColor: context.dobarColors.buttonPrimary,
+            borderColor: context.dobarColors.surfaceElevated,
           );
           if (mounted) {
             setState(() {
@@ -207,17 +220,17 @@ class _FindConnectedViewState extends State<FindConnectedView>
     }
   }
 
-  void _refreshData(BuildContext context) {
-    final locationState = context.read<LocationBloc>().state;
-    final lat = locationState.currentLocation?.latitude ?? _defaultLat;
-    final lng = locationState.currentLocation?.longitude ?? _defaultLng;
+  // void _refreshData(BuildContext context) {
+  //   final locationState = context.read<LocationBloc>().state;
+  //   final lat = locationState.currentLocation?.latitude ?? _defaultLat;
+  //   final lng = locationState.currentLocation?.longitude ?? _defaultLng;
 
-    context.read<LocationBloc>().add(GetCurrentLocation());
-    context.read<BarBloc>().add(LoadNearbyBars(lat: lat, lng: lng));
-    context.read<PromotionsBloc>().add(
-      LoadPromotions(latitude: lat, longitude: lng),
-    );
-  }
+  //   context.read<LocationBloc>().add(GetCurrentLocation());
+  //   context.read<BarBloc>().add(LoadNearbyBars(lat: lat, lng: lng));
+  //   context.read<PromotionsBloc>().add(
+  //     LoadPromotions(latitude: lat, longitude: lng),
+  //   );
+  // }
 
   Future<void> _onMapCreated(GoogleMapController controller) async {
     _mapController.complete(controller);
@@ -489,8 +502,6 @@ class _FindConnectedViewState extends State<FindConnectedView>
       return;
     }
 
-    // Navigator.pop(context); // Removed redundant pop
-
     final availableMaps = await ml.MapLauncher.installedMaps;
     if (availableMaps.isEmpty) {
       if (!mounted) return;
@@ -595,9 +606,8 @@ class _FindConnectedViewState extends State<FindConnectedView>
         child: Stack(
           children: [
             _buildMap(context),
-            _buildListFab(colors),
-            _buildLocationFab(colors),
-            if (_showListPanel) _buildListPanel(colors),
+            _buildLocationButton(colors),
+            _buildListPanel(colors),
             // Route Info Overlay (Google Maps style)
             if (_selectedDestinationBar != null &&
                 _polylines.isNotEmpty &&
@@ -648,6 +658,7 @@ class _FindConnectedViewState extends State<FindConnectedView>
       listener: (context, state) {
         if (state is BarsLoaded) {
           _loadMarkers(state.bars);
+          _filterBars(_searchController.text, state.bars);
         }
       },
       builder: (context, barState) {
@@ -692,24 +703,7 @@ class _FindConnectedViewState extends State<FindConnectedView>
     );
   }
 
-  Widget _buildListFab(DobarColors colors) {
-    return Positioned(
-      top: MediaQuery.of(context).padding.top + 16,
-      left: 16,
-      child: FloatingActionButton(
-        heroTag: 'list_fab',
-        onPressed: _toggleListPanel,
-        backgroundColor: colors.surface,
-        elevation: 8,
-        child: Icon(
-          _showListPanel ? Icons.close : Icons.menu,
-          color: colors.labelPrimary,
-        ),
-      ).animate().fadeIn().scale(),
-    );
-  }
-
-  Widget _buildLocationFab(DobarColors colors) {
+  Widget _buildLocationButton(DobarColors colors) {
     return Positioned(
       bottom: 100,
       right: 16,
@@ -731,115 +725,275 @@ class _FindConnectedViewState extends State<FindConnectedView>
   }
 
   Widget _buildListPanel(DobarColors colors) {
-    return Positioned(
-      top: 0,
-      left: 0,
-      bottom: 0,
-      width: 288,
-      child: AnimatedBuilder(
-        animation: _panelAnimation,
-        builder: (context, child) {
-          final slideValue = _panelAnimation.value;
-          return Transform.translate(
-            offset: Offset(-288 * (1 - slideValue), 0),
-            child: Opacity(opacity: slideValue, child: child),
-          );
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final paddingTop = MediaQuery.of(context).padding.top;
+    final navBarHeight = 80.0; // Approximate nav bar height
+
+    // Panel width: 50% normally, 70% when search is expanded
+    final panelWidth = screenWidth * (_isSearchExpanded ? 0.7 : 0.5);
+    final peekWidth = screenWidth * 0.1; // 10% peeking
+    final collapsedLeft = -(panelWidth - peekWidth);
+
+    // Determine target left position based on expansion state
+    // We reuse _showListPanel to mean "Expanded" (true) vs "Collapsed/Peeking" (false)
+    final targetLeft = _showListPanel ? 0.0 : collapsedLeft;
+
+    // Heights: 50% when collapsed (vertically), full (minus nav bar) when expanded (vertically)
+    // The user said "without being expanded to the bottom", so maybe we simply use
+    // the collapsedHeight logic for both, or keep the existing vertical expansion toggle as a separate state?
+    // Let's keep _isListExpanded for vertical height.
+    final collapsedHeight = screenHeight * 0.5;
+    final expandedHeight = screenHeight - paddingTop - navBarHeight - 12;
+    final currentHeight = _isListExpanded ? expandedHeight : collapsedHeight;
+
+    return AnimatedPositioned(
+      duration: 400.ms,
+      curve: Curves.easeOutCubic,
+      top: paddingTop,
+      left: targetLeft,
+      width: panelWidth,
+      height: currentHeight,
+      child: GestureDetector(
+        onTap: _showListPanel ? null : _toggleListPanel, // Open if closed
+        onHorizontalDragEnd: (details) {
+          // Simple swipe handling
+          if (details.primaryVelocity! > 0) {
+            // Swipe Right -> Open
+            if (!_showListPanel) _toggleListPanel();
+          } else if (details.primaryVelocity! < 0) {
+            // Swipe Left -> Close
+            if (_showListPanel) _toggleListPanel();
+          }
         },
         child: Container(
-          decoration: const BoxDecoration(
-            color: Color(0xFF17203A),
-            borderRadius: BorderRadius.horizontal(right: Radius.circular(30)),
+          decoration: BoxDecoration(
+            color: Theme.of(context).brightness == Brightness.dark
+                ? const Color(0xFF1E1E1E)
+                : Colors.white,
+            borderRadius: const BorderRadius.only(
+              topRight: Radius.circular(24),
+              bottomRight: Radius.circular(24),
+            ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black26,
-                blurRadius: 30,
-                offset: Offset(0, 10),
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 10,
+                offset: const Offset(4, 4),
               ),
             ],
           ),
-          child: SafeArea(
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border(
+                right: BorderSide(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Colors.grey.withValues(alpha: 0.2),
+                  width: 1,
+                ),
+                bottom: BorderSide(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Colors.grey.withValues(alpha: 0.2),
+                  width: 1,
+                ),
+                top: BorderSide(
+                  color: Theme.of(context).brightness == Brightness.dark
+                      ? Colors.white.withValues(alpha: 0.1)
+                      : Colors.grey.withValues(alpha: 0.2),
+                  width: 1,
+                ),
+              ),
+              borderRadius: const BorderRadius.only(
+                topRight: Radius.circular(22),
+                bottomRight: Radius.circular(22),
+              ),
+            ),
             child: Column(
               children: [
-                Padding(
-                  padding: const EdgeInsets.only(
-                    left: 24,
-                    right: 24,
-                    top: 24,
-                    bottom: 16,
+                // Header with search and close
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
                   ),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(BarzRadii.lg),
-                    ),
-                    child: TextField(
-                      controller: _searchController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        hintText: 'Search partners...',
-                        hintStyle: const TextStyle(color: Colors.white60),
-                        prefixIcon: const Icon(
-                          Icons.search,
-                          color: Colors.white70,
-                        ),
-                        suffixIcon: _searchController.text.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(
-                                  Icons.clear,
-                                  color: Colors.white70,
-                                ),
-                                onPressed: () {
-                                  _searchController.clear();
-                                },
-                              )
-                            : null,
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
-                        ),
+                  decoration: BoxDecoration(
+                    border: Border(
+                      bottom: BorderSide(
+                        color: colors.surfaceElevated.withValues(alpha: 0.3),
+                        width: 1,
                       ),
                     ),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.only(
-                    left: 24,
-                    right: 24,
-                    bottom: 8,
                   ),
                   child: Row(
                     children: [
-                      Text(
-                        'Nearby Partners',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white.withValues(alpha: 0.9),
+                      if (_isSearchExpanded)
+                        Flexible(
+                          child: SizedBox(
+                            height: 40,
+                            child: TextField(
+                              controller: _searchController,
+                              autofocus: true,
+                              style: TextStyle(
+                                color: colors.labelPrimary,
+                                fontSize: 14,
+                              ),
+                              decoration: InputDecoration(
+                                hintText: 'Search...',
+                                hintStyle: TextStyle(
+                                  color: colors.labelSecondary,
+                                ),
+                                filled: true,
+                                fillColor: colors.background,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8),
+                                  borderSide: BorderSide.none,
+                                ),
+                                contentPadding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                suffixIcon: IconButton(
+                                  icon: Icon(
+                                    Icons.close,
+                                    size: 18,
+                                    color: colors.labelSecondary,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _isSearchExpanded = false;
+                                      _searchController.clear();
+                                    });
+                                  },
+                                ),
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        IconButton(
+                          icon: Icon(Icons.search, color: colors.labelPrimary),
+                          onPressed: () {
+                            // Expand panel if needed when search clicked
+                            if (!_showListPanel) _toggleListPanel();
+
+                            setState(() {
+                              _isSearchExpanded = true;
+                            });
+                          },
                         ),
-                      ),
-                      const Spacer(),
-                      IconButton(
-                        onPressed: _toggleListPanel,
-                        icon: const Icon(Icons.close, color: Colors.white70),
-                        iconSize: 20,
-                      ),
+                      if (!_isSearchExpanded) const Spacer(),
+                      // Close button (only show when expanded, or maybe change icon)
+                      if (_showListPanel)
+                        IconButton(
+                          icon: Icon(Icons.close, color: colors.labelPrimary),
+                          onPressed: _toggleListPanel,
+                        ),
                     ],
                   ),
                 ),
-                Padding(
-                  padding: const EdgeInsets.only(left: 24, bottom: 8),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      "BROWSE",
-                      style: Theme.of(
-                        context,
-                      ).textTheme.titleMedium!.copyWith(color: Colors.white70),
+
+                // List Area - show all bars with staggered fade
+                Expanded(
+                  child: ListView.builder(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    itemCount: _displayedBars.length,
+                    itemBuilder: (context, index) {
+                      final bar = _displayedBars[index];
+                      return _buildPanelBarCard(
+                            bar,
+                            colors,
+                            animation: const AlwaysStoppedAnimation(1),
+                          )
+                          .animate()
+                          .fadeIn(delay: (80 * index).ms, duration: 400.ms)
+                          .slideX(begin: -0.2, end: 0);
+                    },
+                  ),
+                ),
+
+                // Arrow Button at bottom with animation
+                GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      _isListExpanded = !_isListExpanded;
+                    });
+                  },
+                  child: Container(
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: colors.surface,
+                      borderRadius: BorderRadius.only(
+                        bottomRight: _isListExpanded
+                            ? Radius.zero
+                            : const Radius.circular(24),
+                      ),
+                      border: Border(
+                        top: BorderSide(
+                          color: colors.surfaceElevated.withValues(alpha: 0.3),
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                    child: Center(
+                      child: SizedBox(
+                        width: 40,
+                        height: 40,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            // Animated arrows (only when collapsed)
+                            if (!_isListExpanded) ...[
+                              Icon(
+                                    Icons.keyboard_arrow_down,
+                                    color: colors.labelPrimary.withValues(
+                                      alpha: 0.3,
+                                    ),
+                                    size: 24,
+                                  )
+                                  .animate(
+                                    onPlay: (controller) => controller.repeat(),
+                                  )
+                                  .fadeIn(duration: 600.ms)
+                                  .fadeOut(delay: 600.ms, duration: 600.ms)
+                                  .moveY(begin: -8, end: 8, duration: 1200.ms),
+                              Icon(
+                                    Icons.keyboard_arrow_down,
+                                    color: colors.labelPrimary.withValues(
+                                      alpha: 0.5,
+                                    ),
+                                    size: 24,
+                                  )
+                                  .animate(
+                                    onPlay: (controller) => controller.repeat(),
+                                  )
+                                  .fadeIn(delay: 400.ms, duration: 600.ms)
+                                  .fadeOut(delay: 1000.ms, duration: 600.ms)
+                                  .moveY(
+                                    begin: -8,
+                                    end: 8,
+                                    delay: 400.ms,
+                                    duration: 1200.ms,
+                                  ),
+                            ],
+                            // Main arrow
+                            Icon(
+                              _isListExpanded
+                                  ? Icons.keyboard_arrow_up
+                                  : Icons.keyboard_arrow_down,
+                              color: colors.labelPrimary,
+                              size: 24,
+                            ),
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
-                Expanded(child: _buildBarsList(colors)),
               ],
             ),
           ),
@@ -848,236 +1002,142 @@ class _FindConnectedViewState extends State<FindConnectedView>
     );
   }
 
-  Widget _buildBarsList(DobarColors colors) {
-    return BlocBuilder<PromotionsBloc, PromotionsState>(
-      builder: (context, promoState) {
-        final barsWithPromos = <int>{};
-        for (final promo in promoState.promotions) {
-          barsWithPromos.add(promo.barId);
-        }
-
-        return BlocBuilder<BarBloc, BarState>(
-          builder: (context, state) {
-            if (state is BarLoading) {
-              return const Center(
-                child: CircularProgressIndicator(color: Colors.white),
-              );
-            }
-            if (state is BarError) {
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Text(
-                    state.message,
-                    style: const TextStyle(color: Colors.white70),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              );
-            }
-            if (state is BarsLoaded) {
-              if (_filteredBars.isEmpty && _searchController.text.isEmpty) {
-                _filteredBars = state.bars;
-              }
-
-              final barsToShow = _filteredBars;
-
-              if (barsToShow.isEmpty) {
-                return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          _searchController.text.isNotEmpty
-                              ? Icons.search_off
-                              : Icons.store_outlined,
-                          color: Colors.white38,
-                          size: 48,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          _searchController.text.isNotEmpty
-                              ? 'No partners found'
-                              : 'No partners nearby',
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 16,
-                          ),
-                        ),
-                        if (_searchController.text.isNotEmpty) ...[
-                          const SizedBox(height: 8),
-                          Text(
-                            'Try a different search',
-                            style: const TextStyle(
-                              color: Colors.white54,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                );
-              }
-              return ListView.builder(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                itemCount: barsToShow.length,
-                itemBuilder: (context, index) {
-                  final bar = barsToShow[index];
-                  final hasPromo = barsWithPromos.contains(bar.id);
-                  return _buildPanelBarCard(
-                        bar,
-                        colors,
-                        hasPromo: hasPromo,
-                        index: index,
-                      )
-                      .animate()
-                      .moveX(
-                        begin: -20, // Slide from left to match panel
-                        end: 0,
-                        delay:
-                            (index * 30).ms, // Reduced delay for snappier feel
-                        duration: 300.ms,
-                        curve: Curves.easeOut,
-                      )
-                      .fadeIn(delay: (index * 30).ms, duration: 300.ms);
-                },
-              );
-            }
-            return const SizedBox.shrink();
-          },
-        );
-      },
-    );
-  }
-
   Widget _buildPanelBarCard(
     BarModel bar,
     DobarColors colors, {
     bool hasPromo = false,
-    int index = 0,
+    required Animation<double> animation,
   }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.1), // Semi-transparent card
-        borderRadius: BorderRadius.circular(16),
+    return SlideTransition(
+      position: animation.drive(
+        Tween(
+          begin: const Offset(-0.2, 0),
+          end: Offset.zero,
+        ).chain(CurveTween(curve: Curves.easeOut)),
       ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: () async {
-            // 1. Close panel
-            _toggleListPanel();
+      child: FadeTransition(
+        opacity: animation,
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: colors.surfaceElevated.withValues(alpha: 0.5),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () async {
+                // 1. Close panel
+                _toggleListPanel();
 
-            // 2. Animate Camera
-            if (bar.latitude != null && bar.longitude != null) {
-              final controller = await _mapController.future;
-              await controller.animateCamera(
-                CameraUpdate.newLatLngZoom(
-                  LatLng(bar.latitude!, bar.longitude!),
-                  16,
-                ),
-              );
-              // Wait slightly for animation
-              await Future.delayed(const Duration(milliseconds: 600));
-            }
-
-            if (!mounted) return;
-
-            // 3. Show Bottom Sheet
-            _showBarBottomSheet(bar);
-          },
-          borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              children: [
-                BarImage(
-                  barId: bar.id,
-                  imageUrl: bar.imageUrl,
-                  imageUrlExpiration: bar.imageUrlExpiration,
-                  fallbackUrls: [
-                    if (bar.coverUrl != null) bar.coverUrl!,
-                    if (bar.logoUrl != null) bar.logoUrl!,
-                    if (bar.photoUrls != null) ...bar.photoUrls!,
-                  ],
-                  width: 56,
-                  height: 56,
-                  borderRadius: BorderRadius.circular(12),
-                  errorWidget: Container(
-                    width: 56,
-                    height: 56,
-                    decoration: BoxDecoration(
-                      color: Colors.white10,
-                      borderRadius: BorderRadius.circular(12),
+                // 2. Animate Camera
+                if (bar.latitude != null && bar.longitude != null) {
+                  final controller = await _mapController.future;
+                  await controller.animateCamera(
+                    CameraUpdate.newLatLngZoom(
+                      LatLng(bar.latitude!, bar.longitude!),
+                      16,
                     ),
-                    child: const Icon(Icons.store, color: Colors.white70),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        bar.name,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        bar.address,
-                        style: const TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (hasPromo) ...[
-                        const SizedBox(height: 6),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 6,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: const Color(
-                              0xFF6792FF,
-                            ), // Accent color from SideBar
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: const Text(
-                            'PROMO',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
+                  );
+                  // Wait slightly for animation
+                  await Future.delayed(const Duration(milliseconds: 600));
+                }
+
+                if (!mounted) return;
+
+                // 3. Show Bottom Sheet
+                _showBarBottomSheet(bar);
+              },
+              borderRadius: BorderRadius.circular(16),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    BarImage(
+                      barId: bar.id,
+                      imageUrl: bar.imageUrl,
+                      imageUrlExpiration: bar.imageUrlExpiration,
+                      fallbackUrls: [
+                        if (bar.coverUrl != null) bar.coverUrl!,
+                        if (bar.logoUrl != null) bar.logoUrl!,
+                        if (bar.photoUrls != null) ...bar.photoUrls!,
                       ],
-                    ],
-                  ),
-                ),
-                if (bar.approximateLocation != null)
-                  Text(
-                    '${(bar.approximateLocation! / 1000).toStringAsFixed(1)}km',
-                    style: const TextStyle(
-                      color: Colors.white60,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                      width: 56,
+                      height: 56,
+                      borderRadius: BorderRadius.circular(12),
+                      errorWidget: Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: Colors.white10,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(Icons.store, color: Colors.white70),
+                      ),
                     ),
-                  ),
-              ],
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            bar.name,
+                            style: TextStyle(
+                              color: colors.labelPrimary,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            bar.address,
+                            style: TextStyle(
+                              color: colors.labelSecondary,
+                              fontSize: 12,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          if (hasPromo) ...[
+                            const SizedBox(height: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 6,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(
+                                  0xFF6792FF,
+                                ), // Accent color from SideBar
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Text(
+                                'PROMO',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    if (bar.approximateLocation != null)
+                      Text(
+                        '${(bar.approximateLocation! / 1000).toStringAsFixed(1)}km',
+                        style: TextStyle(
+                          color: colors.labelSecondary, // Dobar color
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
           ),
         ),

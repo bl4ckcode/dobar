@@ -59,7 +59,11 @@ class BarCard extends StatelessWidget {
                       end: Alignment.bottomCenter,
                       colors: [
                         Colors.transparent,
-                        colors.surface.withValues(alpha: 0.8),
+                        Theme.of(context).brightness == Brightness.light
+                            ? const Color(0xFFFFFDE7).withValues(
+                                alpha: 0.8,
+                              ) // barzGoldSoft
+                            : colors.surface.withValues(alpha: 0.8),
                       ],
                     ),
                     borderRadius: const BorderRadius.only(
@@ -99,7 +103,16 @@ class BarCard extends StatelessWidget {
                 ),
               ],
             ),
-            Padding(
+            Container(
+              decoration: BoxDecoration(
+                color: Theme.of(context).brightness == Brightness.light
+                    ? const Color(0xFFFFFDF5) // Very light yellow
+                    : null,
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(BarzRadii.lg),
+                  bottomRight: Radius.circular(BarzRadii.lg),
+                ),
+              ),
               padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,

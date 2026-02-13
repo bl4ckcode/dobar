@@ -18,7 +18,6 @@ import 'package:barz/features/trending/presentation/bloc/trending_event.dart';
 import 'package:barz/features/trending/presentation/bloc/trending_state.dart';
 import 'package:barz/features/location/presentation/bloc/location_bloc.dart';
 import 'package:barz/features/location/presentation/bloc/location_event.dart';
-import 'package:barz/features/location/presentation/bloc/location_state.dart';
 import 'package:barz/l10n/app_localizations.dart';
 
 class HomeConnected extends StatelessWidget {
@@ -93,6 +92,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
   Widget build(BuildContext context) {
     final colors = context.dobarColors;
     final barState = context.watch<BarBloc>().state;
+    final promotionsState = context.watch<PromotionsBloc>().state;
     String? nearbyBarName;
 
     if (barState is BarsLoaded) {
@@ -104,96 +104,38 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
       }
     }
 
-    return BlocListener<LocationBloc, LocationState>(
-      listener: (context, state) {
-        if (state.currentLocation != null) {
-          context.read<BarBloc>().add(
-            LoadNearbyBars(
-              lat: state.currentLocation!.latitude,
-              lng: state.currentLocation!.longitude,
-            ),
-          );
-          context.read<PromotionsBloc>().add(
-            LoadPromotions(
-              latitude: state.currentLocation!.latitude,
-              longitude: state.currentLocation!.longitude,
-            ),
-          );
-          context.read<TrendingBloc>().add(
-            TrendingEvent.loadMostWanted(
-              latitude: state.currentLocation!.latitude,
-              longitude: state.currentLocation!.longitude,
-            ),
-          );
-          context.read<TrendingBloc>().add(
-            TrendingEvent.loadHottest(
-              latitude: state.currentLocation!.latitude,
-              longitude: state.currentLocation!.longitude,
-            ),
-          );
-        }
-      },
-      child: Scaffold(
-        backgroundColor: Theme.of(context).brightness == Brightness.light
-            ? Colors.white
-            : colors.background,
-        body: SafeArea(
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: Opacity(
-                  opacity: 0.6,
-                  child: Center(
-                    child: Image.asset(
-                      'assets/icons/dobar-logo-animated-transparent.gif',
-                      height: 300,
-                      fit: BoxFit.contain,
-                    ),
+    return Scaffold(
+      backgroundColor: Theme.of(context).brightness == Brightness.light
+          ? Colors.white
+          : colors.background,
+      body: SafeArea(
+        child: Stack(
+          children: [
+            Positioned.fill(
+              child: Opacity(
+                opacity: 0.6,
+                child: Center(
+                  child: Image.asset(
+                    'assets/icons/dobar-logo-animated-transparent.gif',
+                    height: 300,
+                    fit: BoxFit.contain,
                   ),
                 ),
               ),
-              RefreshIndicator(
-                onRefresh: () async => _refreshData(context),
-                color: colors.buttonPrimary,
-                backgroundColor: colors.surface,
-                child: ListView(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.only(
-                    top: 32,
-                    bottom: BarzSpacing.lg,
-                  ),
-                  children: [
-                    const SizedBox(height: 32),
-                    _buildCategoriesSection(context),
-                    const SizedBox(height: BarzSpacing.lg),
-                    _buildSectionTitleWithSubtitle(
-                      AppLocalizations.of(context)!.meet_our_partners,
-                      AppLocalizations.of(
-                        context,
-                      )!.here_are_the_closest_partners,
-                      colors,
-                    ),
-                    const SizedBox(height: BarzSpacing.md),
-                    _buildBarsCarousel(context),
-                    const SizedBox(height: BarzSpacing.xl),
-                    _buildSectionTitleWithSubtitle(
-                      AppLocalizations.of(context)!.most_wanted,
-                      AppLocalizations.of(context)!.want_a_specific_drink,
-                      colors,
-                    ),
-                    const SizedBox(height: BarzSpacing.md),
-                    _buildMostWantedDrinksSection(context),
-                    const SizedBox(height: BarzSpacing.xl), // Increased spacing
-                    _buildSectionTitleWithSubtitle(
-                      AppLocalizations.of(context)!.home_hottest_drinks_title,
-                      AppLocalizations.of(
-                        context,
-                      )!.home_hottest_drinks_subtitle,
-                      colors,
-                    ),
-                    const SizedBox(height: BarzSpacing.md),
-                    _buildHottestDrinksSection(context),
-                    const SizedBox(height: BarzSpacing.lg),
+            ),
+            RefreshIndicator(
+              onRefresh: () async => _refreshData(context),
+              color: colors.buttonPrimary,
+              backgroundColor: colors.surface,
+              child: ListView(
+                controller: _scrollController,
+                padding: const EdgeInsets.only(top: 16, bottom: BarzSpacing.lg),
+                children: [
+                  const SizedBox(height: 32),
+                  _buildCategoriesSection(context),
+                  const SizedBox(height: BarzSpacing.lg),
+
+                  if (promotionsState.promotions.isNotEmpty) ...[
                     _buildSectionTitleWithSubtitle(
                       AppLocalizations.of(context)!.home_promotions_title,
                       AppLocalizations.of(context)!.home_promotions_subtitle,
@@ -203,16 +145,41 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
                     _buildPromotionsSection(context),
                     const SizedBox(height: BarzSpacing.xl),
                   ],
-                ),
+
+                  _buildSectionTitleWithSubtitle(
+                    AppLocalizations.of(context)!.meet_our_partners,
+                    AppLocalizations.of(context)!.here_are_the_closest_partners,
+                    colors,
+                  ),
+                  const SizedBox(height: BarzSpacing.md),
+                  _buildBarsCarousel(context),
+                  const SizedBox(height: BarzSpacing.xl),
+                  _buildSectionTitleWithSubtitle(
+                    AppLocalizations.of(context)!.most_wanted,
+                    AppLocalizations.of(context)!.want_a_specific_drink,
+                    colors,
+                  ),
+                  const SizedBox(height: BarzSpacing.md),
+                  _buildMostWantedDrinksSection(context),
+                  const SizedBox(height: BarzSpacing.xl), // Increased spacing
+                  _buildSectionTitleWithSubtitle(
+                    AppLocalizations.of(context)!.home_hottest_drinks_title,
+                    AppLocalizations.of(context)!.home_hottest_drinks_subtitle,
+                    colors,
+                  ),
+                  const SizedBox(height: BarzSpacing.md),
+                  _buildHottestDrinksSection(context),
+                  const SizedBox(height: BarzSpacing.xl),
+                ],
               ),
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: HomeConnectedHeader(nearbyBarName: nearbyBarName),
-              ),
-            ],
-          ),
+            ),
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              child: HomeConnectedHeader(nearbyBarName: nearbyBarName),
+            ),
+          ],
         ),
       ),
     );
@@ -336,11 +303,23 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [
-                        barzDark,
-                        barzGold.withValues(alpha: 0.3),
-                        barzGold.withValues(alpha: 0.9),
-                      ],
+                      colors: Theme.of(context).brightness == Brightness.light
+                          ? [
+                              const Color(0xFFFFF9E6), // Very light yellow
+                              const Color(
+                                0xFFFFFBF0,
+                              ), // Almost white with yellow tint
+                              const Color(0xFFFFF4D6), // Light yellow
+                            ]
+                          : [
+                              const Color(0xFFFFDE59), // barzGold
+                              const Color(
+                                0xFFFFEB85,
+                              ).withValues(alpha: 0.9), // barzGoldLight
+                              const Color(
+                                0xFFFFDE59,
+                              ).withValues(alpha: 0.8), // barzGold
+                            ],
                       stops: const [0.0, 0.5, 1.0],
                     ),
                   ),
@@ -355,7 +334,9 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: barzGold,
+                    color: Theme.of(context).brightness == Brightness.light
+                        ? const Color(0xFFD4EDDA) // Very light green
+                        : Colors.lightGreen[400],
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
@@ -495,18 +476,10 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
                       Container(
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(BarzRadii.lg),
-                              boxShadow:
+                              border:
                                   Theme.of(context).brightness ==
                                       Brightness.light
-                                  ? [
-                                      BoxShadow(
-                                        color: Colors.black.withValues(
-                                          alpha: 0.1,
-                                        ),
-                                        blurRadius: 8,
-                                        offset: const Offset(0, 2),
-                                      ),
-                                    ]
+                                  ? Border.all(color: barzDarkMuted, width: 1)
                                   : null,
                             ),
                             child: BarCard(
@@ -553,7 +526,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
           );
         }
         return SizedBox(
-          height: 224,
+          height: 140,
           child: ListView.separated(
             padding: const EdgeInsets.symmetric(horizontal: BarzSpacing.lg),
             scrollDirection: Axis.horizontal,

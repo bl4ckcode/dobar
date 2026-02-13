@@ -316,10 +316,12 @@ class _MenuPageViewState extends State<_MenuPageView> {
               children: [
                 Text(
                   widget.barName,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: barzGold,
+                    color: isDark
+                        ? barzGold
+                        : const Color(0xFFC7A500), // Darker gold for light mode
                   ),
                 ),
                 Text(

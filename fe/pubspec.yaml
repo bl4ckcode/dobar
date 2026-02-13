@@ -139,6 +139,7 @@ flutter:
   uses-material-design: true
 
   assets:
+    - marketing_mockups/
     - assets/images/
     - assets/icons/
     - assets/login/
