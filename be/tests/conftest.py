@@ -425,3 +425,51 @@ def test_order(db_session, test_user, test_bar):
     db_session.commit()
     db_session.refresh(order)
     return order
+
+
+@pytest.fixture
+async def test_promotion(test_bar_in_db):
+    from app.bars_and_restaurants.models.relational_models import Promotion as PromotionModel
+    promo_data = {
+        "bar_id": test_bar_in_db["id"],
+        "title": "Test Promotion",
+        "discount_type": "percentage",
+        "discount_value": 10.00,
+        "is_active": True
+    }
+    promo_id = await test_database.execute(PromotionModel.__table__.insert().values(**promo_data))
+    return {"id": promo_id, **promo_data}
+
+
+@pytest.fixture
+async def inactive_promotion(test_bar_in_db):
+    from app.bars_and_restaurants.models.relational_models import Promotion as PromotionModel
+    promo_data = {
+        "bar_id": test_bar_in_db["id"],
+        "title": "Inactive Promotion",
+        "discount_type": "fixed",
+        "discount_value": 5.00,
+        "is_active": False
+    }
+    promo_id = await test_database.execute(PromotionModel.__table__.insert().values(**promo_data))
+    return {"id": promo_id, **promo_data}
+
+
+@pytest.fixture
+async def test_bar_with_spots(test_bar_owner_in_db):
+    from app.bars_and_restaurants.models.relational_models import Bar
+    bar_data = {
+        "name": "Bar with Spots",
+        "address": "789 Spot Street",
+        "phone_number": "+1111111111",
+        "email": "spots@test.com",
+        "owner_id": test_bar_owner_in_db["id"],
+        "location_method": "spot_list",
+        "location_spots": [
+            {"id": "table-1", "name": "Table 1"},
+            {"id": "table-2", "name": "Table 2"},
+            {"id": "bar-seat-1", "name": "Bar Seat 1"}
+        ]
+    }
+    bar_id = await test_database.execute(Bar.__table__.insert().values(**bar_data))
+    return {"id": bar_id, **bar_data}

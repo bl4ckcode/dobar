@@ -353,3 +353,70 @@ class WalletService:
         db.refresh(wallet)
         
         return transaction, wallet
+    
+    @staticmethod
+    def get_or_create_bar_wallet(db: Session, bar_id: int):
+        from app.bars_and_restaurants.models.wallet_models import BarWallet
+        
+        wallet = db.query(BarWallet).filter(BarWallet.bar_id == bar_id).first()
+        if not wallet:
+            wallet = BarWallet(
+                bar_id=bar_id,
+                available_balance=Decimal("0.00"),
+                reserved_balance=Decimal("0.00")
+            )
+            db.add(wallet)
+            db.commit()
+            db.refresh(wallet)
+        return wallet
+    
+    @staticmethod
+    def get_bar_wallet_balance(db: Session, bar_id: int) -> dict:
+        wallet = WalletService.get_or_create_bar_wallet(db, bar_id)
+        return {
+            "bar_id": wallet.bar_id,
+            "available_balance": wallet.available_balance,
+            "reserved_balance": wallet.reserved_balance,
+            "total_balance": wallet.total_balance,
+            "last_updated": wallet.last_updated or datetime.now(timezone.utc)
+        }
+    
+    @staticmethod
+    def validate_promotion_funding(db: Session, bar_id: int, amount: Decimal, funded_by: FundingSource) -> bool:
+        if funded_by == FundingSource.BARZ:
+            return True
+        
+        if funded_by == FundingSource.BAR:
+            wallet = WalletService.get_or_create_bar_wallet(db, bar_id)
+            return wallet.available_balance >= amount
+        
+        return False
+    
+    @staticmethod
+    def reserve_bar_funds(db: Session, bar_id: int, amount: Decimal) -> bool:
+        from app.bars_and_restaurants.models.wallet_models import BarWallet
+        
+        wallet = WalletService.get_or_create_bar_wallet(db, bar_id)
+        
+        if wallet.available_balance < amount:
+            return False
+        
+        wallet.available_balance -= amount
+        wallet.reserved_balance += amount
+        wallet.last_updated = datetime.now(timezone.utc)
+        
+        db.commit()
+        db.refresh(wallet)
+        return True
+    
+    @staticmethod
+    def release_bar_funds(db: Session, bar_id: int, amount: Decimal):
+        from app.bars_and_restaurants.models.wallet_models import BarWallet
+        
+        wallet = WalletService.get_or_create_bar_wallet(db, bar_id)
+        wallet.reserved_balance -= amount
+        wallet.available_balance += amount
+        wallet.last_updated = datetime.now(timezone.utc)
+        
+        db.commit()
+        db.refresh(wallet)

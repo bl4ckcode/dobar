@@ -109,3 +109,20 @@ class CheckoutResponse(BaseModel):
     total: float
     estimated_ready_time: Optional[datetime] = None
     message: str = "Order created successfully"
+
+
+class PromotionApplied(BaseModel):
+    id: int
+    name: str
+    amount: float
+
+
+class CartCalculateRequest(BaseModel):
+    active_promotion_ids: List[int] = []
+
+
+class CartCalculateResponse(BaseModel):
+    subtotal: float
+    discount_total: float
+    total: float
+    promotions_applied: List[PromotionApplied] = []

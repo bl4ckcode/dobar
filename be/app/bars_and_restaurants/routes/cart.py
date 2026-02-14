@@ -13,7 +13,7 @@ from app.auth.auth_models import User
 from app.errors import APIError
 from ..models.cart_models import Cart as CartModel, CartItem as CartItemModel, OrderItem as OrderItemModel
 from ..models.relational_models import Order as OrderModel
-from ..schemas.cart import Cart, CartItem, CartItemCreate, CartItemUpdate, CheckoutRequest, CheckoutResponse
+from ..schemas.cart import Cart, CartItem, CartItemCreate, CartItemUpdate, CheckoutRequest, CheckoutResponse, CartCalculateRequest
 from app.database import database
 from app.payment import get_payment_gateway, PaymentGateway
 
@@ -83,6 +83,80 @@ async def get_cart(current_user: User = Depends(get_current_active_user)):
         "bundle_savings": bundle_result["bundle_savings"],
         "subtotal_after_bundles": subtotal_after_bundles,
         "bundle_hint": bundle_result["bundle_hint"]
+    }
+
+
+@cart_router.post("/calculate", response_model=Cart)
+async def calculate_cart(
+    request: CartCalculateRequest,
+    current_user: User = Depends(get_current_active_user)
+):
+    from ..models.relational_models import Promotion as PromotionModel
+    from ..services.wallet_service import WalletService
+    from app.database import SessionLocal
+    
+    cart = await get_or_create_cart(current_user["id"])
+    items = await get_cart_items(cart["id"])
+    
+    if not items:
+        raise APIError.cart_empty()
+    
+    subtotal = sum(item["quantity"] * item["unit_price"] for item in items)
+    
+    discount_total = Decimal("0.00")
+    promotions_applied = []
+    
+    if request.active_promotion_ids:
+        query = PromotionModel.__table__.select().where(
+            PromotionModel.id.in_(request.active_promotion_ids)
+        )
+        promotions = await database.fetch_all(query)
+        
+        db = SessionLocal()
+        try:
+            for promo in promotions:
+                promo_dict = dict(promo)
+                
+                if not promo_dict.get("is_active"):
+                    continue
+                
+                bar_id = promo_dict["bar_id"]
+                
+                if promo_dict["discount_type"] == "percentage":
+                    discount_amount = Decimal(str(subtotal)) * (Decimal(str(promo_dict["discount_value"])) / 100)
+                elif promo_dict["discount_type"] == "fixed":
+                    discount_amount = Decimal(str(promo_dict["discount_value"]))
+                else:
+                    continue
+                
+                funded_by = promo_dict.get("promotion_type", "discount")
+                if funded_by == "cashback":
+                    from ..models.wallet_models import FundingSource
+                    funding_source = FundingSource.BAR
+                    
+                    if not WalletService.validate_promotion_funding(db, bar_id, discount_amount, funding_source):
+                        continue
+                
+                discount_total += discount_amount
+                promotions_applied.append({
+                    "id": promo_dict["id"],
+                    "name": promo_dict["title"],
+                    "amount": float(discount_amount)
+                })
+        finally:
+            db.close()
+    
+    total = subtotal - float(discount_total)
+    
+    return {
+        **dict(cart),
+        "items": items,
+        "total_items": sum(item["quantity"] for item in items),
+        "subtotal": subtotal,
+        "applied_bundles": [],
+        "bundle_savings": 0.0,
+        "subtotal_after_bundles": total,
+        "bundle_hint": None
     }
 
 
@@ -209,216 +283,190 @@ async def checkout(
     current_user: User = Depends(get_current_active_user),
     payment_gateway: PaymentGateway = Depends(get_payment_gateway)
 ):
-    """
-    Checkout the cart and create an order.
+    from app.redis_client import WalletLock
+    from ..services.connection_manager import manager
+    import uuid
     
-    Process:
-    1. Validate cart is not empty
-    2. Validate all items from same bar
-    3. Calculate totals (subtotal + tax + tip + delivery_fee - discount)
-    4. Create order with order items in transaction
-    5. Process payment via payment gateway
-    6. Update order with payment status
-    7. Clear cart if successful
-    8. Trigger WebSocket notification (TODO)
-    """
-    # Get cart and items
-    cart = await get_or_create_cart(current_user["id"])
-    cart_items = await get_cart_items(cart["id"])
+    idempotency_key = str(uuid.uuid4())
     
-    if not cart_items:
-        raise APIError.cart_empty()
-    
-    # Validate all items from same bar
-    bar_ids = set(item["bar_id"] for item in cart_items)
-    if len(bar_ids) > 1:
-        raise APIError.bad_request("All items must be from the same bar")
-    
-    bar_id = bar_ids.pop()
-    
-    # Calculate totals
-    subtotal = sum(Decimal(str(item["quantity"] * item["unit_price"])) for item in cart_items)
-    
-    from ..services.discounts import calculate_progressive_discount
-    
-    # Calculate Progressive Discount
-    progressive_data = await calculate_progressive_discount(current_user["id"], bar_id)
-    progressive_pct = Decimal(str(progressive_data["percentage"]))
-    progressive_discount_amount = subtotal * progressive_pct
-    
-    # Apply discount if coupon provided (Max of coupon vs progressive)
-    coupon_discount = Decimal("0.00")
-    if checkout_request.coupon_code:
-        # TODO: Implement coupon validation and discount calculation
-        pass
+    async with WalletLock(current_user["id"], idempotency_key):
+        cart = await get_or_create_cart(current_user["id"])
+        cart_items = await get_cart_items(cart["id"])
         
-    discount = max(coupon_discount, progressive_discount_amount)
-    
-    # Calculate tax (assuming 10% tax rate - should come from bar/location settings)
-    tax_rate = Decimal("0.10")
-    tax = subtotal * tax_rate
-    
-    # Get tip
-    tip = Decimal(str(checkout_request.tip)) if checkout_request.tip else Decimal("0.00")
-    
-    # Calculate delivery fee (should come from bar settings)
-    delivery_fee = Decimal("0.00")
-    if checkout_request.order_type == "delivery":
-        delivery_fee = Decimal("5.00")  # TODO: Get from bar settings
-    
-    # Calculate total
-    total = subtotal + tax + tip + delivery_fee - discount
-    
-    # Estimate ready time (30 minutes from now - should be based on bar settings)
-    estimated_ready_time = datetime.utcnow() + timedelta(minutes=30)
-    
-    # Start transaction to create order
-    transaction = await database.transaction()
-    
-    try:
-        # Create order
-        order_data = {
-            "user_id": current_user["id"],
-            "bar_id": bar_id,
-            "status": "pending",
-            "order_type": checkout_request.order_type,
-            "subtotal": float(subtotal),
-            "tax": float(tax),
-            "tip": float(tip),
-            "delivery_fee": float(delivery_fee),
-            "discount": float(discount),
-            "total_price": float(total),
-            "payment_method": checkout_request.payment_method,
-            "payment_status": "pending",
-            "estimated_ready_time": estimated_ready_time,
-            "delivery_address": checkout_request.delivery_address,
-            "special_instructions": checkout_request.special_instructions
-        }
+        if not cart_items:
+            raise APIError.cart_empty()
         
-        order_id = await database.execute(OrderModel.__table__.insert().values(**order_data))
+        bar_ids = set(item["bar_id"] for item in cart_items)
+        if len(bar_ids) > 1:
+            raise APIError.bad_request("All items must be from the same bar")
         
-        # Create order items from cart items
-        for cart_item in cart_items:
-            order_item_data = {
-                "order_id": order_id,
-                "menu_item_id": cart_item["menu_item_id"],
-                "menu_item_name": cart_item["menu_item_name"],
-                "quantity": cart_item["quantity"],
-                "unit_price": cart_item["unit_price"],
-                "total_price": cart_item["quantity"] * cart_item["unit_price"],
+        bar_id = bar_ids.pop()
+    
+        subtotal = sum(Decimal(str(item["quantity"] * item["unit_price"])) for item in cart_items)
+    
+        from ..services.discounts import calculate_progressive_discount
+        
+        progressive_data = await calculate_progressive_discount(current_user["id"], bar_id)
+        progressive_pct = Decimal(str(progressive_data["percentage"]))
+        progressive_discount_amount = subtotal * progressive_pct
+        
+        coupon_discount = Decimal("0.00")
+        if checkout_request.coupon_code:
+            pass
+            
+        discount = max(coupon_discount, progressive_discount_amount)
+        
+        tax_rate = Decimal("0.10")
+        tax = subtotal * tax_rate
+        
+        tip = Decimal(str(checkout_request.tip)) if checkout_request.tip else Decimal("0.00")
+        
+        delivery_fee = Decimal("0.00")
+        if checkout_request.order_type == "delivery":
+            delivery_fee = Decimal("5.00")
+        
+        total = subtotal + tax + tip + delivery_fee - discount
+        
+        estimated_ready_time = datetime.utcnow() + timedelta(minutes=30)
+        
+        transaction = await database.transaction()
+        
+        try:
+            order_data = {
+                "user_id": current_user["id"],
+                "bar_id": bar_id,
+                "status": "pending",
+                "order_type": checkout_request.order_type,
+                "subtotal": float(subtotal),
+                "tax": float(tax),
+                "tip": float(tip),
+                "delivery_fee": float(delivery_fee),
+                "discount": float(discount),
+                "total_price": float(total),
+                "payment_method": checkout_request.payment_method,
+                "payment_status": "pending",
+                "estimated_ready_time": estimated_ready_time,
+                "delivery_address": checkout_request.delivery_address,
+                "special_instructions": checkout_request.special_instructions
             }
-            await database.execute(OrderItemModel.__table__.insert().values(**order_item_data))
-        
-        # Process payment
-        payment_result = None
-        payment_error = None
-        
-        try:
-            # Prepare payment data
-            payment_amount = int(total * 100)  # Convert to cents
             
-            payment_result = payment_gateway.create_charge(
-                amount=payment_amount,
-                currency="usd",
-                customer={
-                    "email": current_user.get("email"),
-                    "phone": current_user.get("phone_number"),
-                    "name": current_user.get("name")
-                },
-                payment_method=checkout_request.payment_details or {}
-            )
+            order_id = await database.execute(OrderModel.__table__.insert().values(**order_data))
             
-            # Update order with payment info
-            if payment_result.get("status") == "succeeded":
-                update_data = {
-                    "payment_status": "completed",
-                    "payment_id": payment_result.get("id"),
-                    "status": "confirmed"
+            await manager.notify_bar_new_order(bar_id, {
+                "event": "new_order_pending",
+                "order_id": order_id,
+                "status": "pending",
+                "total": float(total),
+                "items_count": len(cart_items)
+            })
+            
+            for cart_item in cart_items:
+                order_item_data = {
+                    "order_id": order_id,
+                    "menu_item_id": cart_item["menu_item_id"],
+                    "menu_item_name": cart_item["menu_item_name"],
+                    "quantity": cart_item["quantity"],
+                    "unit_price": cart_item["unit_price"],
+                    "total_price": cart_item["quantity"] * cart_item["unit_price"],
                 }
-            else:
-                update_data = {
-                    "payment_status": "failed",
-                    "payment_id": payment_result.get("id")
-                }
-                payment_error = payment_result.get("message", "Payment failed")
+                await database.execute(OrderItemModel.__table__.insert().values(**order_item_data))
             
-            await database.execute(
-                OrderModel.__table__
-                .update()
-                .where(OrderModel.id == order_id)
-                .values(**update_data)
-            )
+            payment_result = None
+            payment_error = None
             
-        except Exception as e:
-            # Update order with payment failure
-            await database.execute(
-                OrderModel.__table__
-                .update()
-                .where(OrderModel.id == order_id)
-                .values(payment_status="failed")
-            )
-            payment_error = str(e)
-        
-        # If payment failed, rollback and raise error
-        if payment_error:
-            await transaction.rollback()
-            raise APIError.payment_declined(message=payment_error)
-        
-        # Clear cart
-        await database.execute(
-            CartItemModel.__table__.delete().where(CartItemModel.cart_id == cart["id"])
-        )
-        
-        # Commit transaction
-        await transaction.commit()
-        
-        # Fetch the created order
-        order = await database.fetch_one(
-            OrderModel.__table__.select().where(OrderModel.id == order_id)
-        )
-        
-        # Generate cashback for successful order (async, non-blocking)
-        try:
-            from app.bars_and_restaurants.services.wallet_service import WalletService
-            from app.bars_and_restaurants.schemas.wallet import EarnCashbackRequest
-            from app.bars_and_restaurants.models.wallet_models import FundingSource
-            from app.database import SessionLocal
-            
-            # Create a new DB session for cashback (separate from async database)
-            db = SessionLocal()
             try:
-                # Default cashback: 5% funded by BarZ, expires in 90 days
-                cashback_req = EarnCashbackRequest(
-                    user_id=current_user["id"],
-                    order_id=order_id,
-                    bar_id=bar_id,
-                    order_total=total,
-                    cashback_percentage=Decimal("0.05"),  # 5%
-                    funded_by=FundingSource.BARZ,
-                    expires_days=90
+                payment_amount = int(total * 100)
+                
+                payment_result = payment_gateway.create_charge(
+                    amount=payment_amount,
+                    currency="usd",
+                    customer={
+                        "email": current_user.get("email"),
+                        "phone": current_user.get("phone_number"),
+                        "name": current_user.get("name")
+                    },
+                    payment_method=checkout_request.payment_details or {}
                 )
                 
-                WalletService.earn_cashback(db, cashback_req, auto_available=False)
-            finally:
-                db.close()
-        except Exception as cashback_error:
-            # Log error but don't fail the order
-            print(f"Failed to generate cashback for order {order_id}: {cashback_error}")
-        
-        # TODO: Trigger WebSocket notification for real-time updates
-        
-        return CheckoutResponse(
-            order_id=order["id"],
-            status=order["status"],
-            payment_status=order["payment_status"],
-            payment_id=order.get("payment_id"),
-            total=order["total_price"],
-            estimated_ready_time=order["estimated_ready_time"]
-        )
-        
-    except APIError:
-        await transaction.rollback()
-        raise
-    except Exception as e:
-        await transaction.rollback()
-        raise APIError.server_error(f"Checkout failed: {str(e)}")
+                if payment_result.get("status") == "succeeded":
+                    update_data = {
+                        "payment_status": "completed",
+                        "payment_id": payment_result.get("id"),
+                        "status": "confirmed"
+                    }
+                else:
+                    update_data = {
+                        "payment_status": "failed",
+                        "payment_id": payment_result.get("id")
+                    }
+                    payment_error = payment_result.get("message", "Payment failed")
+                
+                await database.execute(
+                    OrderModel.__table__
+                    .update()
+                    .where(OrderModel.id == order_id)
+                    .values(**update_data)
+                )
+                
+            except Exception as e:
+                await database.execute(
+                    OrderModel.__table__
+                    .update()
+                    .where(OrderModel.id == order_id)
+                    .values(payment_status="failed")
+                )
+                payment_error = str(e)
+            
+            if payment_error:
+                await transaction.rollback()
+                raise APIError.payment_declined(message=payment_error)
+            
+            await database.execute(
+                CartItemModel.__table__.delete().where(CartItemModel.cart_id == cart["id"])
+            )
+            
+            await transaction.commit()
+            
+            order = await database.fetch_one(
+                OrderModel.__table__.select().where(OrderModel.id == order_id)
+            )
+            
+            try:
+                from app.bars_and_restaurants.services.wallet_service import WalletService
+                from app.bars_and_restaurants.schemas.wallet import EarnCashbackRequest
+                from app.bars_and_restaurants.models.wallet_models import FundingSource
+                from app.database import SessionLocal
+                
+                db = SessionLocal()
+                try:
+                    cashback_req = EarnCashbackRequest(
+                        user_id=current_user["id"],
+                        order_id=order_id,
+                        bar_id=bar_id,
+                        order_total=total,
+                        cashback_percentage=Decimal("0.05"),
+                        funded_by=FundingSource.BARZ,
+                        expires_days=90
+                    )
+                    
+                    WalletService.earn_cashback(db, cashback_req, auto_available=False)
+                finally:
+                    db.close()
+            except Exception as cashback_error:
+                print(f"Failed to generate cashback for order {order_id}: {cashback_error}")
+            
+            return CheckoutResponse(
+                order_id=order["id"],
+                status=order["status"],
+                payment_status=order["payment_status"],
+                payment_id=order.get("payment_id"),
+                total=order["total_price"],
+                estimated_ready_time=order["estimated_ready_time"]
+            )
+            
+        except APIError:
+            await transaction.rollback()
+            raise
+        except Exception as e:
+            await transaction.rollback()
+            raise APIError.server_error(f"Checkout failed: {str(e)}")

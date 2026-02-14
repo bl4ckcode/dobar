@@ -3,11 +3,9 @@ Wallet and Cashback Models for BarZ Platform
 """
 from datetime import datetime, timezone
 from decimal import Decimal
-from sqlalchemy import Column, String, Numeric, DateTime, ForeignKey, Enum as SQLEnum, Index
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import Column, String, Numeric, DateTime, ForeignKey, Enum as SQLEnum, Index, Integer, BigInteger
 from sqlalchemy.orm import relationship
 import enum
-import uuid
 
 from app.database import Base
 
@@ -42,10 +40,10 @@ class CashbackLedger(Base):
     """
     __tablename__ = "cashback_ledger"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
-    order_id = Column(UUID(as_uuid=True), ForeignKey("orders.id", ondelete="SET NULL"), nullable=True)
-    bar_id = Column(UUID(as_uuid=True), ForeignKey("bars.id", ondelete="CASCADE"), nullable=False)
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id", ondelete="SET NULL"), nullable=True)
+    bar_id = Column(Integer, ForeignKey("bars.id", ondelete="CASCADE"), nullable=False)
     
     # Financial details
     amount = Column(Numeric(10, 2), nullable=False)  # Positive for EARN, negative for REDEEM
@@ -83,7 +81,7 @@ class UserWallet(Base):
     """
     __tablename__ = "user_wallet"
 
-    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
     
     # Balance fields (in currency units, e.g., USD cents or BRL centavos)
     available_balance = Column(Numeric(10, 2), nullable=False, default=Decimal("0.00"))
@@ -100,5 +98,24 @@ class UserWallet(Base):
 
     @property
     def total_balance(self) -> Decimal:
-        """Total cashback (available + pending)"""
         return self.available_balance + self.pending_balance
+
+
+class BarWallet(Base):
+    __tablename__ = "bar_wallet"
+
+    bar_id = Column(Integer, ForeignKey("bars.id", ondelete="CASCADE"), primary_key=True)
+    
+    available_balance = Column(Numeric(10, 2), nullable=False, default=Decimal("0.00"))
+    reserved_balance = Column(Numeric(10, 2), nullable=False, default=Decimal("0.00"))
+    
+    last_updated = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc))
+    
+    bar = relationship("Bar", backref="wallet", uselist=False)
+
+    def __repr__(self):
+        return f"<BarWallet(bar_id={self.bar_id}, available={self.available_balance}, reserved={self.reserved_balance})>"
+
+    @property
+    def total_balance(self) -> Decimal:
+        return self.available_balance + self.reserved_balance
