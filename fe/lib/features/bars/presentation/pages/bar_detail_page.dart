@@ -319,9 +319,7 @@ class _MenuPageViewState extends State<_MenuPageView> {
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: isDark
-                        ? barzGold
-                        : const Color(0xFFC7A500), // Darker gold for light mode
+                    color: isDark ? barzGold : barzDark,
                   ),
                 ),
                 Text(

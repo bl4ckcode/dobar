@@ -58,4 +58,17 @@ class CartUsecase {
       activePromotionIds: activePromotionIds,
     );
   }
+
+  Future<Either<Failure, CartModel>> calculateCart({
+    required List<String> activePromotionIds,
+  }) {
+    return repository.calculateCart(activePromotionIds: activePromotionIds);
+  }
+
+  Future<Either<Failure, SpotAvailability>> checkSpotAvailability({
+    required int barId,
+    required String spotId,
+  }) {
+    return repository.checkSpotAvailability(barId: barId, spotId: spotId);
+  }
 }

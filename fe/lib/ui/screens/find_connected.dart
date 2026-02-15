@@ -927,10 +927,8 @@ class _FindConnectedViewState extends State<FindConnectedView>
                     height: 56,
                     decoration: BoxDecoration(
                       color: colors.surface,
-                      borderRadius: BorderRadius.only(
-                        bottomRight: _isListExpanded
-                            ? Radius.zero
-                            : const Radius.circular(24),
+                      borderRadius: const BorderRadius.only(
+                        bottomRight: Radius.circular(24),
                       ),
                       border: Border(
                         top: BorderSide(

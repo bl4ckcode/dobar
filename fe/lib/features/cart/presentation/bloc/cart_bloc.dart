@@ -20,6 +20,8 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     on<ClearCart>(_onClearCart);
     on<Checkout>(_onCheckout);
     on<LoadCheckoutConfig>(_onLoadCheckoutConfig);
+    on<CalculateCart>(_onCalculateCart);
+    on<CheckSpotAvailability>(_onCheckSpotAvailability);
   }
 
   Future<void> _onLoadCart(LoadCart event, Emitter<CartState> emit) async {
@@ -135,5 +137,50 @@ class CartBloc extends Bloc<CartEvent, CartState> {
       (failure) => emit(CartError(message: failure.errorMessage)),
       (checkoutResult) => emit(CheckoutSuccess(result: checkoutResult)),
     );
+  }
+
+  Future<void> _onCalculateCart(
+    CalculateCart event,
+    Emitter<CartState> emit,
+  ) async {
+    if (state is! CartLoaded) return;
+    final currentState = state as CartLoaded;
+
+    emit(CartLoading());
+
+    final result = await cartUsecase.calculateCart(
+      activePromotionIds: event.activePromotionIds,
+    );
+
+    result.fold(
+      (failure) {
+        emit(CartError(message: failure.errorMessage));
+        add(LoadCart());
+      },
+      (cart) {
+        emit(currentState.copyWith(cart: cart));
+      },
+    );
+  }
+
+  Future<void> _onCheckSpotAvailability(
+    CheckSpotAvailability event,
+    Emitter<CartState> emit,
+  ) async {
+    if (state is! CartLoaded) return;
+    final currentState = state as CartLoaded;
+
+    emit(CartLoading());
+
+    final result = await cartUsecase.checkSpotAvailability(
+      barId: event.barId,
+      spotId: event.spotId,
+    );
+
+    result.fold((failure) => emit(CartError(message: failure.errorMessage)), (
+      availability,
+    ) {
+      emit(currentState.copyWith(spotAvailability: availability));
+    });
   }
 }

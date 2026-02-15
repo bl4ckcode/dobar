@@ -141,51 +141,65 @@ class CartItemCard extends StatelessWidget {
         Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            _QuantityButton(
+            _buildActionButton(
               icon: Icons.remove,
               onTap: () => onQuantityChanged(item.quantity - 1),
+              filled: false,
+              isDark: isDark,
             ),
-            Container(
+            SizedBox(
               width: 32,
-              alignment: Alignment.center,
-              child: Text(
-                '${item.quantity}',
-                style: TextStyle(
-                  color: isDark ? textOnDark : textPrimary,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
+              child: Center(
+                child: Text(
+                  '${item.quantity}',
+                  style: TextStyle(
+                    color: isDark ? textOnDark : textPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ),
             ),
-            _QuantityButton(
+            _buildActionButton(
               icon: Icons.add,
               onTap: () => onQuantityChanged(item.quantity + 1),
+              filled: true,
+              isDark: isDark,
             ),
           ],
         ),
       ],
     );
   }
-}
 
-class _QuantityButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onTap;
-
-  const _QuantityButton({required this.icon, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _buildActionButton({
+    required IconData icon,
+    required VoidCallback onTap,
+    required bool filled,
+    required bool isDark,
+  }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
         width: 32,
         height: 32,
         decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          border: Border.all(color: barzGold, width: 2),
+          color: filled ? barzGold : Colors.transparent,
+          border: Border.all(
+            color: filled
+                ? barzGold
+                : (isDark
+                      ? const Color(0xFF444444)
+                      : Colors.grey.withValues(alpha: 0.3)),
+            width: 1,
+          ),
+          borderRadius: BorderRadius.circular(4),
         ),
-        child: Center(child: Icon(icon, color: barzGold, size: 18)),
+        child: Icon(
+          icon,
+          size: 16,
+          color: filled ? barzDark : (isDark ? Colors.white : barzDark),
+        ),
       ),
     );
   }

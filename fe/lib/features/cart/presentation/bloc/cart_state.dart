@@ -17,27 +17,36 @@ class CartLoaded extends CartState {
   final CartModel cart;
   final LocationConfig? locationConfig;
   final List<Promotion> activePromotions;
+  final SpotAvailability? spotAvailability;
 
   const CartLoaded({
     required this.cart,
     this.locationConfig,
     this.activePromotions = const [],
+    this.spotAvailability,
   });
 
   CartLoaded copyWith({
     CartModel? cart,
     LocationConfig? locationConfig,
     List<Promotion>? activePromotions,
+    SpotAvailability? spotAvailability,
   }) {
     return CartLoaded(
       cart: cart ?? this.cart,
       locationConfig: locationConfig ?? this.locationConfig,
       activePromotions: activePromotions ?? this.activePromotions,
+      spotAvailability: spotAvailability ?? this.spotAvailability,
     );
   }
 
   @override
-  List<Object?> get props => [cart, locationConfig, activePromotions];
+  List<Object?> get props => [
+    cart,
+    locationConfig,
+    activePromotions,
+    spotAvailability,
+  ];
 }
 
 class CartItemAdded extends CartState {

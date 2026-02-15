@@ -1,6 +1,7 @@
 import 'package:barz/core/design/tokens/colors.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/cart/domain/models/cart_models.dart';
+import 'package:barz/features/cart/domain/models/cart_model.dart';
 import 'package:barz/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:barz/features/cart/presentation/bloc/cart_event.dart'
     as cart_event;
@@ -66,7 +67,9 @@ class _CartPageContentState extends State<_CartPageContent> {
   int _tableNumber = 0;
 
   final Set<String> _selectedPromotionIds = {};
+
   int? _lastLoadedBarId;
+  bool _isCheckoutPending = false;
 
   @override
   void dispose() {
@@ -83,7 +86,13 @@ class _CartPageContentState extends State<_CartPageContent> {
     });
   }
 
+  CartModel? _lastLoadedCart;
+
   void _listenToCartState(BuildContext context, CartState state) {
+    if (state is CartLoaded) {
+      _lastLoadedCart = state.cart;
+    }
+
     if (state is CheckoutSuccess) {
       _showOrderSuccessDialog(context, state.result.orderId);
     }
@@ -101,6 +110,31 @@ class _CartPageContentState extends State<_CartPageContent> {
       final barId = state.cart.items.first.barId;
       _lastLoadedBarId = barId;
       context.read<CartBloc>().add(cart_event.LoadCheckoutConfig(barId: barId));
+    }
+
+    // Handle Spot Availability Check
+    if (state is CartLoaded &&
+        state.spotAvailability != null &&
+        _isCheckoutPending) {
+      if (state.spotAvailability!.isAvailable) {
+        _isCheckoutPending = false;
+        // Proceed to checkout
+        _proceedToCheckout(
+          context,
+          state.cart,
+          _selectedSpotId,
+        ); // Use selected spot ID
+      } else {
+        _isCheckoutPending = false;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              state.spotAvailability!.message ?? 'Spot is not available',
+            ),
+            backgroundColor: errorRed,
+          ),
+        );
+      }
     }
   }
 
@@ -166,10 +200,39 @@ class _CartPageContentState extends State<_CartPageContent> {
       locationIdentifier = _tableController.text;
     } else if (method == LocationMethod.spotList) {
       locationIdentifier = _selectedSpotId;
+
+      // Check availability for spot
+      if (locationIdentifier != null) {
+        context.read<CartBloc>().add(
+          cart_event.CheckSpotAvailability(
+            barId: state.cart.items.first.barId,
+            spotId: locationIdentifier,
+          ),
+        );
+        // We return here. If available, the listener should handle it.
+        // But we need a way to know we triggered it.
+        // Since we didn't add a specific "CheckTriggered" state,
+        // we can rely on the listener checking `spotAvailability`
+        // However, we need to know if we *should* proceed.
+        // For simplicity in this iteration, we will check spot availability,
+        // and if it returns success, the user has to click checkout again?
+        // Or we use a flag.
+        // Given complexity, I'll add a provisional flag.
+        _isCheckoutPending = true;
+        return;
+      }
     } else {
       locationIdentifier = _locationNoteController.text;
     }
-    final cart = state.cart;
+
+    _proceedToCheckout(context, state.cart, locationIdentifier);
+  }
+
+  void _proceedToCheckout(
+    BuildContext context,
+    CartModel cart,
+    String? locationIdentifier,
+  ) {
     final items = cart.items
         .map(
           (item) => CartItem(
@@ -185,6 +248,7 @@ class _CartPageContentState extends State<_CartPageContent> {
     Coupon? coupon;
     if (cart.appliedBundles.isNotEmpty) {
       coupon = Coupon(
+        // Assumes Coupon is available from imports
         code: cart.appliedBundles.first.bundleName,
         discount: cart.appliedBundles.first.discountAmount,
         type: CouponType.fixed,
@@ -222,7 +286,6 @@ class _CartPageContentState extends State<_CartPageContent> {
                 checkinState.activeCheckin?.tableNumber != null &&
                 _tableController.text.isEmpty &&
                 _tableNumber == 0) {
-              // Schedule strictly to avoid build phase errors
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 if (mounted && _tableNumber == 0) {
                   final tVal =
@@ -232,9 +295,6 @@ class _CartPageContentState extends State<_CartPageContent> {
                     setState(() {
                       _tableNumber = tVal;
                       _tableController.text = tVal.toString();
-                      // Location method is determined by config, not local override
-                      // but we assume if tableNumber is present, the venue supports it
-                      // or it's the default.
                     });
                   }
                 }
@@ -243,14 +303,19 @@ class _CartPageContentState extends State<_CartPageContent> {
 
             return BlocBuilder<CartBloc, CartState>(
               builder: (context, state) {
-                if (state is CartLoading) {
+                // If we have a new cart, update our local reference (redundant with listener but safe for rebuilds)
+                if (state is CartLoaded) {
+                  _lastLoadedCart = state.cart;
+                }
+
+                final cart = _lastLoadedCart;
+                final items = cart?.items ?? [];
+
+                if (state is CartLoading && cart == null) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                final cart = (state is CartLoaded) ? state.cart : null;
-                final items = cart?.items ?? [];
-
-                if (state is CartLoaded && items.isEmpty) {
+                if (cart != null && items.isEmpty) {
                   return _buildEmptyState(context, isDark);
                 }
 
@@ -359,6 +424,12 @@ class _CartPageContentState extends State<_CartPageContent> {
                                         _selectedPromotionIds.remove(id);
                                       }
                                     });
+                                    context.read<CartBloc>().add(
+                                      cart_event.CalculateCart(
+                                        activePromotionIds:
+                                            _selectedPromotionIds.toList(),
+                                      ),
+                                    );
                                   },
                                 ),
                                 const SizedBox(height: 16),
@@ -376,6 +447,14 @@ class _CartPageContentState extends State<_CartPageContent> {
                                 coupon: displayedCoupon,
                                 promotions:
                                     const [], // Pass real promotions if available
+                                overrideTotal: cart?.subtotalAfterBundles,
+                                overrideDiscount:
+                                    (cart != null &&
+                                        cart.subtotalAfterBundles <
+                                            cart.subtotal)
+                                    ? (cart.subtotal -
+                                          cart.subtotalAfterBundles)
+                                    : null,
                                 onCheckout: () => _handleCheckout(context),
                               ),
                             ],

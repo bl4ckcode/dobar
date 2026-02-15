@@ -99,4 +99,34 @@ class CartRepositoryImpl extends AbstractCartRepository {
       return Left(ServerFailure(e.message, e.statusCode));
     }
   }
+
+  @override
+  Future<Either<Failure, CartModel>> calculateCart({
+    required List<String> activePromotionIds,
+  }) async {
+    try {
+      final result = await networkDataSource.calculateCart(
+        activePromotionIds: activePromotionIds,
+      );
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message, e.statusCode));
+    }
+  }
+
+  @override
+  Future<Either<Failure, SpotAvailability>> checkSpotAvailability({
+    required int barId,
+    required String spotId,
+  }) async {
+    try {
+      final result = await networkDataSource.checkSpotAvailability(
+        barId: barId,
+        spotId: spotId,
+      );
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message, e.statusCode));
+    }
+  }
 }

@@ -41,6 +41,10 @@ class ApiEndpoints {
   static const String cartItems = '/cart/items';
   static String cartItem(int itemId) => '/cart/items/$itemId';
   static const String cartCheckout = '/cart/checkout';
+  static const String cartCalculate = '/cart/calculate';
+
+  static String barSpotAvailability(int barId, String spotId) =>
+      '/bars/$barId/spots/$spotId/availability';
 
   static const String orders = '/orders/';
   static const String myOrders = '/orders/user/me';

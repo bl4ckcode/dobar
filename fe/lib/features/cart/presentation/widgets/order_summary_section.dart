@@ -7,6 +7,8 @@ class OrderSummarySection extends StatelessWidget {
   final Coupon? coupon;
   final List<Promotion> promotions;
   final VoidCallback onCheckout;
+  final double? overrideTotal;
+  final double? overrideDiscount;
 
   const OrderSummarySection({
     super.key,
@@ -14,6 +16,8 @@ class OrderSummarySection extends StatelessWidget {
     required this.coupon,
     required this.promotions,
     required this.onCheckout,
+    this.overrideTotal,
+    this.overrideDiscount,
   });
 
   @override
@@ -25,7 +29,8 @@ class OrderSummarySection extends StatelessWidget {
       (sum, item) => sum + (item.price * item.quantity),
     );
 
-    final couponDiscount = coupon?.calculateDiscount(subtotal) ?? 0;
+    final couponDiscount =
+        overrideDiscount ?? (coupon?.calculateDiscount(subtotal) ?? 0);
 
     final activePromos = promotions.where((p) => p.active).toList();
     final cashbackPercentage = activePromos.fold<double>(
@@ -34,7 +39,7 @@ class OrderSummarySection extends StatelessWidget {
     );
     final cashbackAmount = subtotal * (cashbackPercentage / 100);
 
-    final total = subtotal - couponDiscount;
+    final total = overrideTotal ?? (subtotal - couponDiscount);
 
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),

@@ -88,3 +88,22 @@ class Checkout extends CartEvent {
     activePromotionIds,
   ];
 }
+
+class CalculateCart extends CartEvent {
+  final List<String> activePromotionIds;
+
+  const CalculateCart({required this.activePromotionIds});
+
+  @override
+  List<Object?> get props => [activePromotionIds];
+}
+
+class CheckSpotAvailability extends CartEvent {
+  final int barId;
+  final String spotId;
+
+  const CheckSpotAvailability({required this.barId, required this.spotId});
+
+  @override
+  List<Object?> get props => [barId, spotId];
+}

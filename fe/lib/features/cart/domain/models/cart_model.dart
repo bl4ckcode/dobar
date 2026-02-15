@@ -107,6 +107,7 @@ class CartModel {
   final double bundleSavings;
   final double subtotalAfterBundles;
   final String? bundleHint;
+  final List<PromotionApplied> appliedPromotions;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -120,6 +121,7 @@ class CartModel {
     this.bundleSavings = 0.0,
     double? subtotalAfterBundles,
     this.bundleHint,
+    this.appliedPromotions = const [],
     required this.createdAt,
     required this.updatedAt,
   }) : subtotalAfterBundles = subtotalAfterBundles ?? subtotal;
@@ -144,6 +146,11 @@ class CartModel {
       subtotalAfterBundles: (json['subtotal_after_bundles'] as num?)
           ?.toDouble(),
       bundleHint: json['bundle_hint'],
+      appliedPromotions:
+          (json['promotions_applied'] as List<dynamic>?)
+              ?.map((e) => PromotionApplied.fromJson(e))
+              .toList() ??
+          [],
       createdAt: DateTime.parse(json['created_at']),
       updatedAt: DateTime.parse(json['updated_at']),
     );
@@ -160,6 +167,7 @@ class CartModel {
       'bundle_savings': bundleSavings,
       'subtotal_after_bundles': subtotalAfterBundles,
       'bundle_hint': bundleHint,
+      'promotions_applied': appliedPromotions.map((e) => e.toJson()).toList(),
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -173,6 +181,7 @@ class CartModel {
     double? bundleSavings,
     double? subtotalAfterBundles,
     String? bundleHint,
+    List<PromotionApplied>? appliedPromotions,
   }) {
     return CartModel(
       id: id,
@@ -184,8 +193,47 @@ class CartModel {
       bundleSavings: bundleSavings ?? this.bundleSavings,
       subtotalAfterBundles: subtotalAfterBundles ?? this.subtotalAfterBundles,
       bundleHint: bundleHint ?? this.bundleHint,
+      appliedPromotions: appliedPromotions ?? this.appliedPromotions,
       createdAt: createdAt,
       updatedAt: DateTime.now(),
+    );
+  }
+}
+
+class PromotionApplied {
+  final String id;
+  final String name;
+  final double amount;
+
+  PromotionApplied({
+    required this.id,
+    required this.name,
+    required this.amount,
+  });
+
+  factory PromotionApplied.fromJson(Map<String, dynamic> json) {
+    return PromotionApplied(
+      id: json['id'].toString(),
+      name: json['name'],
+      amount: (json['amount'] as num).toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {'id': id, 'name': name, 'amount': amount};
+  }
+}
+
+class SpotAvailability {
+  final bool isAvailable;
+  final String? message;
+
+  SpotAvailability({required this.isAvailable, this.message});
+
+  factory SpotAvailability.fromJson(Map<String, dynamic> json) {
+    return SpotAvailability(
+      isAvailable: json['is_available'],
+      message: json['message'],
     );
   }
 }

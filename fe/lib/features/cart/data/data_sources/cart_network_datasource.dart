@@ -121,4 +121,38 @@ class CartNetworkDataSource {
       );
     }
   }
+
+  Future<CartModel> calculateCart({
+    required List<String> activePromotionIds,
+  }) async {
+    try {
+      final response = await dio.post(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.cartCalculate}',
+        data: {'active_promotion_ids': activePromotionIds},
+      );
+      return CartModel.fromJson(response.data);
+    } on DioException catch (e) {
+      throw ServerException(
+        e.response?.data?['detail'] ?? 'Failed to calculate cart',
+        e.response?.statusCode,
+      );
+    }
+  }
+
+  Future<SpotAvailability> checkSpotAvailability({
+    required int barId,
+    required String spotId,
+  }) async {
+    try {
+      final response = await dio.get(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.barSpotAvailability(barId, spotId)}',
+      );
+      return SpotAvailability.fromJson(response.data);
+    } on DioException catch (e) {
+      throw ServerException(
+        e.response?.data?['detail'] ?? 'Failed to check spot availability',
+        e.response?.statusCode,
+      );
+    }
+  }
 }

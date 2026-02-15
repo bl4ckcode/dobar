@@ -24,4 +24,13 @@ abstract class AbstractCartRepository {
     String? specialInstructions,
     List<String>? activePromotionIds,
   });
+
+  Future<Either<Failure, CartModel>> calculateCart({
+    required List<String> activePromotionIds,
+  });
+
+  Future<Either<Failure, SpotAvailability>> checkSpotAvailability({
+    required int barId,
+    required String spotId,
+  });
 }

@@ -113,10 +113,10 @@ class _BarMenuCardState extends State<BarMenuCard>
             children: [
               Text(
                 '\$${widget.price.toStringAsFixed(2)}',
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: barzGold,
+                  color: isDark ? barzGold : barzDark,
                 ),
               ),
               const SizedBox(width: 12),
