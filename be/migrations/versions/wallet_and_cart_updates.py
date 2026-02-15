@@ -22,10 +22,11 @@ def upgrade() -> None:
     op.execute("DROP TABLE IF EXISTS user_wallet CASCADE")
     op.execute("DROP TABLE IF EXISTS bar_wallet CASCADE")
 
-    # 2. Define Enums (assuming they might already exist, so checkfirst or just use name)
-    # We use create_type=False implies we expect them or let generic handling work.
-    # However, forcing usage of existing types is safest.
-    
+    # 2. Drop existing Types to avoid conflicts on recreation if previously defined
+    op.execute("DROP TYPE IF EXISTS cashbacktype CASCADE")
+    op.execute("DROP TYPE IF EXISTS fundingsource CASCADE")
+    op.execute("DROP TYPE IF EXISTS cashbackstatus CASCADE")
+
     # 3. Create UserWallet
     op.create_table('user_wallet',
         sa.Column('user_id', sa.Integer(), nullable=False),
