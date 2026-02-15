@@ -382,6 +382,7 @@ def test_bar(db_session):
     
     # Create bar owner first
     owner = BarOwner(
+        id=1,  # Explicit ID since BarOwner.id is not auto-incrementing
         name="Test Owner",
         email="owner@test.com",
         phone_number="+1234567890"

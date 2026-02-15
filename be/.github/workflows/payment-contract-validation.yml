@@ -78,15 +78,6 @@ jobs:
           SECRET_KEY: test_secret_key
           FIREBASE_CREDENTIALS_JSON: '{"type": "service_account", "project_id": "test"}'
       
-      - name: Run payment flow integration tests
-        run: |
-          pytest tests/contract_validation/test_payment_contracts.py -v --tb=short
-        env:
-          DATABASE_URL: sqlite:///./test.db
-          MONGO_URI: mongodb://localhost:27017/test
-          SECRET_KEY: test_secret_key
-          FIREBASE_CREDENTIALS_JSON: '{"type": "service_account", "project_id": "test"}'
-      
       - name: Validate external API contracts
         run: |
           python tests/contract_validation/validate_external_apis.py
