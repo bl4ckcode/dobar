@@ -11,7 +11,7 @@ from app.bars_and_restaurants.services.image_upload import generate_presigned_ur
 from app.errors import APIError
 from app.auth.dependencies import get_current_user
 from app.auth.auth_models import User
-from ..models.relational_models import Bar as BarModel, BarOwner, Promotion as PromotionModel
+from ..models.relational_models import Bar as BarModel, BarOwner, Promotion as PromotionModel, Order
 from ..models.nosql_models import bars_collection
 from ..schemas.bars import Bar, BarCreate, BarResponse
 from ..models.nosql_models import insert_bar_into_mongo
@@ -472,6 +472,52 @@ async def get_location_config(bar_id: int):
         "method": bar["location_method"] or "table_number",
         "spots": bar["location_spots"] or []
     }
+
+
+@bars_router.get("/{bar_id}/spots/{spot_id}/availability")
+async def check_spot_availability(bar_id: int, spot_id: str):
+    """
+    Check if a specific spot (table/seat) is available.
+    Returns { "is_available": bool, "message": str | None }
+    """
+    # 1. Get bar
+    query = BarModel.__table__.select().where(BarModel.id == bar_id)
+    bar = await database.fetch_one(query)
+    
+    if not bar:
+        raise APIError.partner_not_found("Bar not found")
+    
+    # 2. Check if spot exists in bar config
+    location_spots = bar["location_spots"] or []
+    
+    # Handle potential string format from SQLite/legacy data
+    if isinstance(location_spots, str):
+        import json
+        try:
+            location_spots = json.loads(location_spots)
+        except json.JSONDecodeError:
+            location_spots = []
+            
+    spot_exists = any(spot.get("id") == spot_id for spot in location_spots)
+    
+    if not spot_exists:
+        raise APIError.partner_not_found("Spot not found in bar configuration")
+    
+    # 3. Check for active orders at this spot
+    # Active = pending, preparing, ready (not completed, cancelled)
+    query = Order.__table__.select().where(
+        and_(
+            Order.bar_id == bar_id,
+            Order.location_identifier == spot_id,
+            Order.status.in_(["pending", "preparing", "ready"])
+        )
+    )
+    existing_order = await database.fetch_one(query)
+    
+    if existing_order:
+        return {"is_available": False, "message": "Spot occupied"}
+    
+    return {"is_available": True, "message": None}
 
 
 @bars_router.get("/{bar_id}/promotions")

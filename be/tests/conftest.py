@@ -478,11 +478,11 @@ async def test_bar_with_spots(test_bar_owner_in_db):
         "email": "spots@test.com",
         "owner_id": test_bar_owner_in_db["id"],
         "location_method": "spot_list",
-        "location_spots": json.dumps([
+        "location_spots": [
             {"id": "table-1", "name": "Table 1"},
             {"id": "table-2", "name": "Table 2"},
             {"id": "bar-seat-1", "name": "Bar Seat 1"}
-        ])
+        ]
     }
     bar_id = await test_database.execute(Bar.__table__.insert().values(**bar_data))
     return {"id": bar_id, **bar_data}
