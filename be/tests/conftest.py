@@ -44,6 +44,7 @@ with patch("firebase_admin.initialize_app", return_value=mock_firebase_app), \
     # Import all models to ensure their tables are registered with Base.metadata
     from app.auth.auth_models import User, Token, RefreshToken
     from app.auth.rbac_models import UserProfile, BarStaff, StaffInvitation
+    import fakeredis.aioredis
 
 # Test database URL (use SQLite for testing)
 TEST_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
@@ -344,15 +345,25 @@ def db_session():
     session.close()
 
 
+@pytest.fixture(autouse=True)
+async def mock_redis():
+    """Mock Redis for all tests."""
+    import fakeredis.aioredis
+    fake_redis = fakeredis.aioredis.FakeRedis(decode_responses=True)
+    with patch("app.redis_client.get_redis", new=AsyncMock(return_value=fake_redis)):
+        yield fake_redis
+    await fake_redis.close()
+
 @pytest.fixture
-def test_user(db_session):
+def test_user(db_session, faker):
     """Create a test user for wallet tests."""
     from app.auth.auth_models import User
     
+    unique_id = faker.uuid4()
     user = User(
-        firebase_uid="test_wallet_user_123",
-        phone_number="+1234567890",
-        email="wallet_test@example.com",
+        firebase_uid=f"test_wallet_user_{unique_id}",
+        phone_number=f"+{faker.random_number(digits=11)}",
+        email=f"wallet_test_{unique_id}@example.com",
         is_active=True
     )
     db_session.add(user)
@@ -466,11 +477,11 @@ async def test_bar_with_spots(test_bar_owner_in_db):
         "email": "spots@test.com",
         "owner_id": test_bar_owner_in_db["id"],
         "location_method": "spot_list",
-        "location_spots": [
+        "location_spots": json.dumps([
             {"id": "table-1", "name": "Table 1"},
             {"id": "table-2", "name": "Table 2"},
             {"id": "bar-seat-1", "name": "Bar Seat 1"}
-        ]
+        ])
     }
     bar_id = await test_database.execute(Bar.__table__.insert().values(**bar_data))
     return {"id": bar_id, **bar_data}
