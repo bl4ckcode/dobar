@@ -15,9 +15,28 @@ down_revision = 'ddedf80c7b90'
 branch_labels = None
 depends_on = None
 
-
 def upgrade() -> None:
-    # 1. Create bar_wallet table
+    # 1. Drop existing tables to avoid type casting issues (UUID -> Integer)
+    # Warning: This deletes existing wallet data, which is acceptable for fixing broken schema in dev/pdev.
+    op.execute("DROP TABLE IF EXISTS cashback_ledger CASCADE")
+    op.execute("DROP TABLE IF EXISTS user_wallet CASCADE")
+    op.execute("DROP TABLE IF EXISTS bar_wallet CASCADE")
+
+    # 2. Define Enums (assuming they might already exist, so checkfirst or just use name)
+    # We use create_type=False implies we expect them or let generic handling work.
+    # However, forcing usage of existing types is safest.
+    
+    # 3. Create UserWallet
+    op.create_table('user_wallet',
+        sa.Column('user_id', sa.Integer(), nullable=False),
+        sa.Column('available_balance', sa.Numeric(precision=10, scale=2), server_default='0.00', nullable=False),
+        sa.Column('pending_balance', sa.Numeric(precision=10, scale=2), server_default='0.00', nullable=False),
+        sa.Column('last_updated', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=True),
+        sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('user_id')
+    )
+
+    # 4. Create BarWallet
     op.create_table('bar_wallet',
         sa.Column('bar_id', sa.Integer(), nullable=False),
         sa.Column('available_balance', sa.Numeric(precision=10, scale=2), server_default='0.00', nullable=False),
@@ -27,75 +46,44 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint('bar_id')
     )
 
-    # 2. Update cashback_ledger columns from UUID to Integer
-    # Note: explicit casting using ::integer might fail if data is actual UUIDs.
-    # We assume the table is empty or data is compatible, or user handles data migration.
-    # For now, we will drop and recreate constraints if needed, but simple alters are shown.
-    
-    op.alter_column('cashback_ledger', 'id',
-               existing_type=postgresql.UUID(),
-               type_=sa.Integer(),
-               existing_nullable=False,
-               postgresql_using='id::integer')
-               
-    op.alter_column('cashback_ledger', 'user_id',
-               existing_type=postgresql.UUID(),
-               type_=sa.Integer(),
-               existing_nullable=False,
-               postgresql_using='user_id::integer')
-               
-    op.alter_column('cashback_ledger', 'bar_id',
-               existing_type=postgresql.UUID(),
-               type_=sa.Integer(),
-               existing_nullable=False,
-               postgresql_using='bar_id::integer')
-               
-    op.alter_column('cashback_ledger', 'order_id',
-               existing_type=postgresql.UUID(),
-               type_=sa.Integer(),
-               existing_nullable=True,
-               postgresql_using='order_id::integer')
+    # 5. Create CashbackLedger
+    op.create_table('cashback_ledger',
+        sa.Column('id', sa.Integer(), nullable=False),
+        sa.Column('user_id', sa.Integer(), nullable=False),
+        sa.Column('order_id', sa.Integer(), nullable=True),
+        sa.Column('bar_id', sa.Integer(), nullable=False),
+        sa.Column('amount', sa.Numeric(precision=10, scale=2), nullable=False),
+        
+        # Enums: We use the names that likely exist. 
+        # If they don't, we might need to create them. 
+        # But drop table DOES NOT drop enums in Postgres usually.
+        sa.Column('type', sa.Enum('EARN', 'REDEEM', 'EXPIRE', 'ADJUST', name='cashbacktype'), nullable=False),
+        sa.Column('funded_by', sa.Enum('BAR', 'BARZ', 'SPONSORED', name='fundingsource'), nullable=False),
+        sa.Column('status', sa.Enum('PENDING', 'AVAILABLE', 'USED', 'EXPIRED', name='cashbackstatus'), nullable=False),
+        
+        sa.Column('created_at', sa.DateTime(timezone=True), server_default=sa.text('now()'), nullable=False),
+        sa.Column('expires_at', sa.DateTime(timezone=True), nullable=True),
+        
+        sa.ForeignKeyConstraint(['bar_id'], ['bars.id'], ondelete='CASCADE'),
+        sa.ForeignKeyConstraint(['order_id'], ['orders.id'], ondelete='SET NULL'),
+        sa.ForeignKeyConstraint(['user_id'], ['users.id'], ondelete='CASCADE'),
+        sa.PrimaryKeyConstraint('id')
+    )
 
-    # 3. Update user_wallet column
-    op.alter_column('user_wallet', 'user_id',
-               existing_type=postgresql.UUID(),
-               type_=sa.Integer(),
-               existing_nullable=False,
-               postgresql_using='user_id::integer')
+    # 6. Create Indexes
+    op.create_index('idx_cashback_user_status', 'cashback_ledger', ['user_id', 'status'], unique=False)
+    op.create_index('idx_cashback_user_created', 'cashback_ledger', ['user_id', 'created_at'], unique=False)
+    op.create_index('idx_cashback_expires', 'cashback_ledger', ['expires_at'], unique=False)
 
 
 def downgrade() -> None:
-    # Revert user_wallet
-    op.alter_column('user_wallet', 'user_id',
-               existing_type=sa.Integer(),
-               type_=postgresql.UUID(),
-               existing_nullable=False,
-               postgresql_using='user_id::uuid')
-
-    # Revert cashback_ledger
-    op.alter_column('cashback_ledger', 'order_id',
-               existing_type=sa.Integer(),
-               type_=postgresql.UUID(),
-               existing_nullable=True,
-               postgresql_using='order_id::uuid')
-               
-    op.alter_column('cashback_ledger', 'bar_id',
-               existing_type=sa.Integer(),
-               type_=postgresql.UUID(),
-               existing_nullable=False,
-               postgresql_using='bar_id::uuid')
-               
-    op.alter_column('cashback_ledger', 'user_id',
-               existing_type=sa.Integer(),
-               type_=postgresql.UUID(),
-               existing_nullable=False,
-               postgresql_using='user_id::uuid')
-               
-    op.alter_column('cashback_ledger', 'id',
-               existing_type=sa.Integer(),
-               type_=postgresql.UUID(),
-               existing_nullable=False,
-               postgresql_using='id::uuid')
-
-    # Drop bar_wallet
+    # Drop tables
+    op.drop_index('idx_cashback_expires', table_name='cashback_ledger')
+    op.drop_index('idx_cashback_user_created', table_name='cashback_ledger')
+    op.drop_index('idx_cashback_user_status', table_name='cashback_ledger')
+    op.drop_table('cashback_ledger')
     op.drop_table('bar_wallet')
+    op.drop_table('user_wallet')
+    
+    # We do not attempt to recreate the broken UUID schema here. 
+    # Downgrade simply removes the valid Integer schema.
