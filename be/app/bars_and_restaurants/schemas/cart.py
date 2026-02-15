@@ -126,3 +126,50 @@ class CartCalculateResponse(BaseModel):
     discount_total: float
     total: float
     promotions_applied: List[PromotionApplied] = []
+
+class CartSyncItem(BaseModel):
+    menu_item_id: int
+    quantity: int = Field(gt=0)
+    special_instructions: Optional[str] = None
+
+class CartSyncRequest(BaseModel):
+    items: List[CartSyncItem]
+    location_identifier: Optional[str] = None
+    active_promotion_ids: List[int] = []
+    coupon_code: Optional[str] = None
+
+class CartValidationIssue(BaseModel):
+    severity: str  # "error", "warning"
+    message: str
+    related_field: Optional[str] = None
+
+class LocationStatus(BaseModel):
+    valid: bool
+    message: Optional[str] = None
+
+class CartItemView(BaseModel):
+    menu_item_id: int
+    name: str
+    quantity: int
+    unit_price: float
+    total_price: float
+    picture: Optional[str] = None
+    special_instructions: Optional[str] = None
+
+class CartResponse(BaseModel):
+    items: List[CartItemView]
+    total_items: int
+    subtotal: float
+    discount: float
+    tax: float
+    tip: float
+    delivery_fee: float
+    total: float
+    
+    validation_issues: List[CartValidationIssue] = []
+    location_status: Optional[LocationStatus] = None
+    available_promotions: List[PromotionApplied] = [] # Reusing PromotionApplied or creating new one? 
+    # PromotionApplied in file is {id, name, amount}, seems fine but might need more info like "why eligible"
+    
+    class Config:
+        from_attributes = True

@@ -13,7 +13,7 @@ from app.auth.auth_models import User
 from app.errors import APIError
 from ..models.cart_models import Cart as CartModel, CartItem as CartItemModel, OrderItem as OrderItemModel
 from ..models.relational_models import Order as OrderModel
-from ..schemas.cart import Cart, CartItem, CartItemCreate, CartItemUpdate, CheckoutRequest, CheckoutResponse, CartCalculateRequest
+from ..schemas.cart import Cart, CartItem, CartItemCreate, CartItemUpdate, CheckoutRequest, CheckoutResponse, CartCalculateRequest, CartSyncRequest, CartResponse
 from app.database import database
 from app.payment import get_payment_gateway, PaymentGateway
 
@@ -470,3 +470,15 @@ async def checkout(
         except Exception as e:
             await transaction.rollback()
             raise APIError.server_error(f"Checkout failed: {str(e)}")
+
+@cart_router.post("/sync", response_model=CartResponse)
+async def sync_cart(
+    request: CartSyncRequest,
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Sync cart state: calculates totals, verifies stock/prices, and validates location/promotions.
+    This is a server-driven UI endpoint that returns the full view state for the cart.
+    """
+    from ..services.cart_service import CartService
+    return await CartService.sync_cart(current_user["id"], request)
