@@ -22,59 +22,16 @@ class CartNetworkDataSource {
     }
   }
 
-  Future<CartItemModel> addItem({
-    required int menuItemId,
-    required int barId,
-    required String menuItemName,
-    required int quantity,
-    required double unitPrice,
-  }) async {
+  Future<CartModel> syncCart(CartSyncRequest request) async {
     try {
       final response = await dio.post(
-        '${ApiEndpoints.baseUrl}${ApiEndpoints.cartItems}',
-        data: {
-          'menu_item_id': menuItemId,
-          'bar_id': barId,
-          'menu_item_name': menuItemName,
-          'quantity': quantity,
-          'unit_price': unitPrice,
-        },
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.cartSync}',
+        data: request.toJson(),
       );
-      return CartItemModel.fromJson(response.data);
+      return CartModel.fromJson(response.data);
     } on DioException catch (e) {
       throw ServerException(
-        e.response?.data?['detail'] ?? 'Failed to add item',
-        e.response?.statusCode,
-      );
-    }
-  }
-
-  Future<CartItemModel> updateItemQuantity({
-    required int itemId,
-    required int quantity,
-  }) async {
-    try {
-      final response = await dio.put(
-        '${ApiEndpoints.baseUrl}${ApiEndpoints.cartItem(itemId)}',
-        data: {'quantity': quantity},
-      );
-      return CartItemModel.fromJson(response.data);
-    } on DioException catch (e) {
-      throw ServerException(
-        e.response?.data?['detail'] ?? 'Failed to update item',
-        e.response?.statusCode,
-      );
-    }
-  }
-
-  Future<void> removeItem(int itemId) async {
-    try {
-      await dio.delete(
-        '${ApiEndpoints.baseUrl}${ApiEndpoints.cartItem(itemId)}',
-      );
-    } on DioException catch (e) {
-      throw ServerException(
-        e.response?.data?['detail'] ?? 'Failed to remove item',
+        e.response?.data?['detail'] ?? 'Failed to sync cart',
         e.response?.statusCode,
       );
     }
@@ -117,23 +74,6 @@ class CartNetworkDataSource {
     } on DioException catch (e) {
       throw ServerException(
         e.response?.data?['detail'] ?? 'Checkout failed',
-        e.response?.statusCode,
-      );
-    }
-  }
-
-  Future<CartModel> calculateCart({
-    required List<String> activePromotionIds,
-  }) async {
-    try {
-      final response = await dio.post(
-        '${ApiEndpoints.baseUrl}${ApiEndpoints.cartCalculate}',
-        data: {'active_promotion_ids': activePromotionIds},
-      );
-      return CartModel.fromJson(response.data);
-    } on DioException catch (e) {
-      throw ServerException(
-        e.response?.data?['detail'] ?? 'Failed to calculate cart',
         e.response?.statusCode,
       );
     }

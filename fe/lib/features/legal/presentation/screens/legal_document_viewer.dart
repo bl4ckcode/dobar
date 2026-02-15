@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/legal/data/legal_repository.dart';
@@ -168,12 +169,29 @@ class _LegalDocumentViewerState extends State<LegalDocumentViewer> {
       return const Center(child: Text('No document loaded'));
     }
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(BarzSpacing.lg),
-      child: SelectableText(
-        _document!.content,
-        style: TextStyle(fontSize: 14, height: 1.6, color: colors.labelPrimary),
+    return Markdown(
+      data: _document!.content,
+      selectable: true,
+      styleSheet: MarkdownStyleSheet(
+        p: TextStyle(fontSize: 14, height: 1.6, color: colors.labelPrimary),
+        h1: TextStyle(
+          fontSize: 24,
+          fontWeight: FontWeight.bold,
+          color: colors.labelPrimary,
+        ),
+        h2: TextStyle(
+          fontSize: 20,
+          fontWeight: FontWeight.bold,
+          color: colors.labelPrimary,
+        ),
+        h3: TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+          color: colors.labelPrimary,
+        ),
+        listBullet: TextStyle(color: colors.labelPrimary),
       ),
+      padding: const EdgeInsets.all(BarzSpacing.lg),
     );
   }
 }

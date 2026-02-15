@@ -2,13 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:barz/core/design/tokens/colors.dart';
 import '../../domain/models/cart_models.dart';
 
-class OrderSummarySection extends StatelessWidget {
+class OrderSummarySection extends StatefulWidget {
   final List<CartItem> items;
   final Coupon? coupon;
   final List<Promotion> promotions;
   final VoidCallback onCheckout;
   final double? overrideTotal;
   final double? overrideDiscount;
+  final bool isLoading;
+  final bool isExpanded;
+  final VoidCallback onToggle;
 
   const OrderSummarySection({
     super.key,
@@ -16,74 +19,132 @@ class OrderSummarySection extends StatelessWidget {
     required this.coupon,
     required this.promotions,
     required this.onCheckout,
+    required this.isExpanded,
+    required this.onToggle,
     this.overrideTotal,
     this.overrideDiscount,
+    this.isLoading = false,
   });
 
+  @override
+  State<OrderSummarySection> createState() => _OrderSummarySectionState();
+}
+
+class _OrderSummarySectionState extends State<OrderSummarySection> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final subtotal = items.fold<double>(
+    final subtotal = widget.items.fold<double>(
       0,
       (sum, item) => sum + (item.price * item.quantity),
     );
 
     final couponDiscount =
-        overrideDiscount ?? (coupon?.calculateDiscount(subtotal) ?? 0);
+        widget.overrideDiscount ??
+        (widget.coupon?.calculateDiscount(subtotal) ?? 0);
 
-    final activePromos = promotions.where((p) => p.active).toList();
+    final activePromos = widget.promotions.where((p) => p.active).toList();
     final cashbackPercentage = activePromos.fold<double>(
       0,
       (sum, p) => sum + (p.cashbackPercentage ?? 0),
     );
     final cashbackAmount = subtotal * (cashbackPercentage / 100);
 
-    final total = overrideTotal ?? (subtotal - couponDiscount);
+    final total = widget.overrideTotal ?? (subtotal - couponDiscount);
+
+    final bottomPadding = MediaQuery.of(context).padding.bottom;
 
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.only(
+        top: 8,
+        left: 16,
+        right: 16,
+        bottom: 24 + bottomPadding,
+      ),
       decoration: BoxDecoration(
         color: isDark ? barzDarkLight : surfaceWhite,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
         boxShadow: [
           BoxShadow(
-            color: barzDark.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.1),
+            blurRadius: 20,
+            offset: const Offset(0, -2),
           ),
         ],
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          _SummaryRow(
-            label: 'Subtotal',
-            value: '\$${subtotal.toStringAsFixed(2)}',
-            isDark: isDark,
+          // Handle / Toggle
+          GestureDetector(
+            onTap: widget.onToggle,
+            behavior: HitTestBehavior.opaque,
+            child: Column(
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 8),
+                  decoration: BoxDecoration(
+                    color: isDark ? barzDarkMuted : surfaceDim,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                Icon(
+                  widget.isExpanded
+                      ? Icons.keyboard_arrow_down
+                      : Icons.keyboard_arrow_up,
+                  color: isDark ? textSecondary : textTertiary,
+                  size: 24,
+                ),
+              ],
+            ),
           ),
-          if (couponDiscount > 0) ...[
-            const SizedBox(height: 10),
-            _SummaryRow(
-              label: 'Coupon (${coupon!.code})',
-              value: '-\$${couponDiscount.toStringAsFixed(2)}',
-              isDark: isDark,
-              isHighlight: true,
-            ),
-          ],
-          if (cashbackAmount > 0) ...[
-            const SizedBox(height: 10),
-            _SummaryRow(
-              label: 'Cashback (${cashbackPercentage.toInt()}%)',
-              value: '+\$${cashbackAmount.toStringAsFixed(2)}',
-              isDark: isDark,
-              isHighlight: true,
-              isCashback: true,
-            ),
-          ],
-          const SizedBox(height: 16),
-          Container(height: 1, color: isDark ? barzDarkMuted : surfaceDim),
-          const SizedBox(height: 16),
+
+          // Expandable Details
+          AnimatedSize(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            child: widget.isExpanded
+                ? Column(
+                    children: [
+                      _SummaryRow(
+                        label: 'Subtotal',
+                        value: '\$${subtotal.toStringAsFixed(2)}',
+                        isDark: isDark,
+                      ),
+                      if (couponDiscount > 0) ...[
+                        const SizedBox(height: 10),
+                        _SummaryRow(
+                          label: 'Coupon (${widget.coupon!.code})',
+                          value: '-\$${couponDiscount.toStringAsFixed(2)}',
+                          isDark: isDark,
+                          isHighlight: true,
+                        ),
+                      ],
+                      if (cashbackAmount > 0) ...[
+                        const SizedBox(height: 10),
+                        _SummaryRow(
+                          label: 'Cashback (${cashbackPercentage.toInt()}%)',
+                          value: '+\$${cashbackAmount.toStringAsFixed(2)}',
+                          isDark: isDark,
+                          isHighlight: true,
+                          isCashback: true,
+                        ),
+                      ],
+                      const SizedBox(height: 16),
+                      Container(
+                        height: 1,
+                        color: isDark ? barzDarkMuted : surfaceDim,
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  )
+                : const SizedBox.shrink(),
+          ),
+
+          // Total & Checkout (Always visible)
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.end,
@@ -120,26 +181,31 @@ class OrderSummarySection extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
-          _CheckoutButton(onPressed: items.isEmpty ? null : onCheckout),
-          const SizedBox(height: 14),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.shield_outlined,
-                size: 14,
-                color: isDark ? const Color(0xFF888888) : textTertiary,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                'Secure checkout powered by encrypted payment',
-                style: TextStyle(
-                  color: isDark ? const Color(0xFF888888) : textTertiary,
-                  fontSize: 11,
-                ),
-              ),
-            ],
+          _CheckoutButton(
+            onPressed: widget.items.isEmpty ? null : widget.onCheckout,
+            isLoading: widget.isLoading,
           ),
+          if (widget.isExpanded) ...[
+            const SizedBox(height: 14),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.shield_outlined,
+                  size: 14,
+                  color: isDark ? const Color(0xFF888888) : textTertiary,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Secure checkout powered by encrypted payment',
+                  style: TextStyle(
+                    color: isDark ? const Color(0xFF888888) : textTertiary,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -190,8 +256,9 @@ class _SummaryRow extends StatelessWidget {
 
 class _CheckoutButton extends StatelessWidget {
   final VoidCallback? onPressed;
+  final bool isLoading;
 
-  const _CheckoutButton({required this.onPressed});
+  const _CheckoutButton({required this.onPressed, this.isLoading = false});
 
   @override
   Widget build(BuildContext context) {
@@ -219,20 +286,36 @@ class _CheckoutButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            if (isLoading)
+              Padding(
+                padding: const EdgeInsets.only(right: 12),
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      isEnabled ? barzDark : barzDark.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ),
+              ),
             Text(
-              'Proceed to Payment',
+              isLoading ? 'Updating...' : 'Proceed to Payment',
               style: TextStyle(
                 color: isEnabled ? barzDark : barzDark.withValues(alpha: 0.6),
                 fontSize: 17,
                 fontWeight: FontWeight.w700,
               ),
             ),
-            const SizedBox(width: 8),
-            Icon(
-              Icons.arrow_forward,
-              color: isEnabled ? barzDark : barzDark.withValues(alpha: 0.6),
-              size: 22,
-            ),
+            if (!isLoading) ...[
+              const SizedBox(width: 8),
+              Icon(
+                Icons.arrow_forward,
+                color: isEnabled ? barzDark : barzDark.withValues(alpha: 0.6),
+                size: 22,
+              ),
+            ],
           ],
         ),
       ),

@@ -17,26 +17,38 @@ class CartLoaded extends CartState {
   final CartModel cart;
   final LocationConfig? locationConfig;
   final List<Promotion> activePromotions;
+  final List<String> selectedPromotionIds;
   final SpotAvailability? spotAvailability;
+  final bool isLoading;
+  final int version;
 
   const CartLoaded({
     required this.cart,
     this.locationConfig,
     this.activePromotions = const [],
+    this.selectedPromotionIds = const [],
     this.spotAvailability,
+    this.isLoading = false,
+    this.version = 0,
   });
 
   CartLoaded copyWith({
     CartModel? cart,
     LocationConfig? locationConfig,
     List<Promotion>? activePromotions,
+    List<String>? selectedPromotionIds,
     SpotAvailability? spotAvailability,
+    bool? isLoading,
+    int? version,
   }) {
     return CartLoaded(
       cart: cart ?? this.cart,
       locationConfig: locationConfig ?? this.locationConfig,
       activePromotions: activePromotions ?? this.activePromotions,
+      selectedPromotionIds: selectedPromotionIds ?? this.selectedPromotionIds,
       spotAvailability: spotAvailability ?? this.spotAvailability,
+      isLoading: isLoading ?? this.isLoading,
+      version: version ?? this.version,
     );
   }
 
@@ -45,7 +57,10 @@ class CartLoaded extends CartState {
     cart,
     locationConfig,
     activePromotions,
+    selectedPromotionIds,
     spotAvailability,
+    isLoading,
+    version,
   ];
 }
 

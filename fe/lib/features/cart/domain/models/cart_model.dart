@@ -27,11 +27,11 @@ class CartItemModel {
         : quantity * unitPrice;
 
     return CartItemModel(
-      id: json['id'],
-      cartId: json['cart_id'],
+      id: json['id'] ?? 0,
+      cartId: json['cart_id'] ?? 0,
       menuItemId: json['menu_item_id'],
-      barId: json['bar_id'],
-      menuItemName: json['menu_item_name'],
+      barId: json['bar_id'] ?? 0,
+      menuItemName: json['menu_item_name'] ?? json['name'] ?? '',
       quantity: quantity,
       unitPrice: unitPrice,
       totalPrice: totalPrice,
@@ -97,6 +97,85 @@ class AppliedBundleModel {
   }
 }
 
+class CartSyncRequest {
+  final List<CartItemInput> items;
+  final String? locationIdentifier;
+  final List<String>? activePromotionIds;
+  final String? couponCode;
+
+  CartSyncRequest({
+    required this.items,
+    this.locationIdentifier,
+    this.activePromotionIds,
+    this.couponCode,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'items': items.map((e) => e.toJson()).toList(),
+      if (locationIdentifier != null) 'location_identifier': locationIdentifier,
+      if (activePromotionIds != null)
+        'active_promotion_ids': activePromotionIds,
+      if (couponCode != null) 'coupon_code': couponCode,
+    };
+  }
+}
+
+class CartItemInput {
+  final int menuItemId;
+  final int quantity;
+  final String? specialInstructions;
+
+  CartItemInput({
+    required this.menuItemId,
+    required this.quantity,
+    this.specialInstructions,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'menu_item_id': menuItemId,
+      'quantity': quantity,
+      if (specialInstructions != null)
+        'special_instructions': specialInstructions,
+    };
+  }
+}
+
+class ValidationIssue {
+  final String severity;
+  final String message;
+  final String? relatedField;
+
+  ValidationIssue({
+    required this.severity,
+    required this.message,
+    this.relatedField,
+  });
+
+  factory ValidationIssue.fromJson(Map<String, dynamic> json) {
+    return ValidationIssue(
+      severity: json['severity'] ?? 'info',
+      message: json['message'] ?? '',
+      relatedField: json['related_field'],
+    );
+  }
+}
+
+class LocationStatus {
+  final bool valid;
+  final String? message;
+
+  LocationStatus({required this.valid, this.message});
+
+  factory LocationStatus.fromJson(Map<String, dynamic> json) {
+    return LocationStatus(
+      valid: json['valid'] ?? true,
+      message: json['message'],
+    );
+  }
+}
+
 class CartModel {
   final int id;
   final int userId;
@@ -108,6 +187,8 @@ class CartModel {
   final double subtotalAfterBundles;
   final String? bundleHint;
   final List<PromotionApplied> appliedPromotions;
+  final List<ValidationIssue> validationIssues;
+  final LocationStatus? locationStatus;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -122,24 +203,30 @@ class CartModel {
     double? subtotalAfterBundles,
     this.bundleHint,
     this.appliedPromotions = const [],
+    this.validationIssues = const [],
+    this.locationStatus,
     required this.createdAt,
     required this.updatedAt,
   }) : subtotalAfterBundles = subtotalAfterBundles ?? subtotal;
 
   factory CartModel.fromJson(Map<String, dynamic> json) {
     return CartModel(
-      id: json['id'],
-      userId: json['user_id'],
+      id: json['id'] ?? 0,
+      userId: json['user_id'] ?? 0,
       items:
           (json['items'] as List<dynamic>?)
-              ?.map((e) => CartItemModel.fromJson(e))
+              ?.where((e) => e != null && e is Map<String, dynamic>)
+              .map((e) => CartItemModel.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
       totalItems: json['total_items'] ?? 0,
       subtotal: (json['subtotal'] as num?)?.toDouble() ?? 0.0,
       appliedBundles:
           (json['applied_bundles'] as List<dynamic>?)
-              ?.map((e) => AppliedBundleModel.fromJson(e))
+              ?.where((e) => e != null && e is Map<String, dynamic>)
+              .map(
+                (e) => AppliedBundleModel.fromJson(e as Map<String, dynamic>),
+              )
               .toList() ??
           [],
       bundleSavings: (json['bundle_savings'] as num?)?.toDouble() ?? 0.0,
@@ -148,11 +235,25 @@ class CartModel {
       bundleHint: json['bundle_hint'],
       appliedPromotions:
           (json['promotions_applied'] as List<dynamic>?)
-              ?.map((e) => PromotionApplied.fromJson(e))
+              ?.where((e) => e != null && e is Map<String, dynamic>)
+              .map((e) => PromotionApplied.fromJson(e as Map<String, dynamic>))
               .toList() ??
           [],
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
+      validationIssues:
+          (json['validation_issues'] as List<dynamic>?)
+              ?.where((e) => e != null && e is Map<String, dynamic>)
+              .map((e) => ValidationIssue.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+      locationStatus: json['location_status'] != null
+          ? LocationStatus.fromJson(json['location_status'])
+          : null,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'])
+          : DateTime.now(),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'])
+          : DateTime.now(),
     );
   }
 
@@ -182,6 +283,8 @@ class CartModel {
     double? subtotalAfterBundles,
     String? bundleHint,
     List<PromotionApplied>? appliedPromotions,
+    List<ValidationIssue>? validationIssues,
+    LocationStatus? locationStatus,
   }) {
     return CartModel(
       id: id,
@@ -194,6 +297,8 @@ class CartModel {
       subtotalAfterBundles: subtotalAfterBundles ?? this.subtotalAfterBundles,
       bundleHint: bundleHint ?? this.bundleHint,
       appliedPromotions: appliedPromotions ?? this.appliedPromotions,
+      validationIssues: validationIssues ?? this.validationIssues,
+      locationStatus: locationStatus ?? this.locationStatus,
       createdAt: createdAt,
       updatedAt: DateTime.now(),
     );

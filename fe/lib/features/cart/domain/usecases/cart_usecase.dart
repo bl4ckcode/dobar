@@ -12,31 +12,8 @@ class CartUsecase {
     return repository.getCart();
   }
 
-  Future<Either<Failure, CartItemModel>> addItem({
-    required int menuItemId,
-    required int barId,
-    required String menuItemName,
-    required int quantity,
-    required double unitPrice,
-  }) {
-    return repository.addItem(
-      menuItemId: menuItemId,
-      barId: barId,
-      menuItemName: menuItemName,
-      quantity: quantity,
-      unitPrice: unitPrice,
-    );
-  }
-
-  Future<Either<Failure, CartItemModel>> updateItemQuantity({
-    required int itemId,
-    required int quantity,
-  }) {
-    return repository.updateItemQuantity(itemId: itemId, quantity: quantity);
-  }
-
-  Future<Either<Failure, void>> removeItem(int itemId) {
-    return repository.removeItem(itemId);
+  Future<Either<Failure, CartModel>> syncCart(CartSyncRequest request) {
+    return repository.syncCart(request);
   }
 
   Future<Either<Failure, void>> clearCart() {
@@ -57,12 +34,6 @@ class CartUsecase {
       specialInstructions: specialInstructions,
       activePromotionIds: activePromotionIds,
     );
-  }
-
-  Future<Either<Failure, CartModel>> calculateCart({
-    required List<String> activePromotionIds,
-  }) {
-    return repository.calculateCart(activePromotionIds: activePromotionIds);
   }
 
   Future<Either<Failure, SpotAvailability>> checkSpotAvailability({

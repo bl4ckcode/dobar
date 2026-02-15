@@ -21,48 +21,10 @@ class CartRepositoryImpl extends AbstractCartRepository {
   }
 
   @override
-  Future<Either<Failure, CartItemModel>> addItem({
-    required int menuItemId,
-    required int barId,
-    required String menuItemName,
-    required int quantity,
-    required double unitPrice,
-  }) async {
+  Future<Either<Failure, CartModel>> syncCart(CartSyncRequest request) async {
     try {
-      final result = await networkDataSource.addItem(
-        menuItemId: menuItemId,
-        barId: barId,
-        menuItemName: menuItemName,
-        quantity: quantity,
-        unitPrice: unitPrice,
-      );
+      final result = await networkDataSource.syncCart(request);
       return Right(result);
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message, e.statusCode));
-    }
-  }
-
-  @override
-  Future<Either<Failure, CartItemModel>> updateItemQuantity({
-    required int itemId,
-    required int quantity,
-  }) async {
-    try {
-      final result = await networkDataSource.updateItemQuantity(
-        itemId: itemId,
-        quantity: quantity,
-      );
-      return Right(result);
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message, e.statusCode));
-    }
-  }
-
-  @override
-  Future<Either<Failure, void>> removeItem(int itemId) async {
-    try {
-      await networkDataSource.removeItem(itemId);
-      return const Right(null);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message, e.statusCode));
     }
@@ -92,20 +54,6 @@ class CartRepositoryImpl extends AbstractCartRepository {
         paymentMethod: paymentMethod,
         tableNumber: tableNumber,
         specialInstructions: specialInstructions,
-        activePromotionIds: activePromotionIds,
-      );
-      return Right(result);
-    } on ServerException catch (e) {
-      return Left(ServerFailure(e.message, e.statusCode));
-    }
-  }
-
-  @override
-  Future<Either<Failure, CartModel>> calculateCart({
-    required List<String> activePromotionIds,
-  }) async {
-    try {
-      final result = await networkDataSource.calculateCart(
         activePromotionIds: activePromotionIds,
       );
       return Right(result);

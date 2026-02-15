@@ -22,7 +22,7 @@ Future<void> initCartInjection() async {
     () => CartUsecase(repository: getItInjector<AbstractCartRepository>()),
   );
 
-  getItInjector.registerFactory<CartBloc>(
+  getItInjector.registerLazySingleton<CartBloc>(
     () => CartBloc(
       cartUsecase: getItInjector<CartUsecase>(),
       barRepository: getItInjector<AbstractBarRepository>(),

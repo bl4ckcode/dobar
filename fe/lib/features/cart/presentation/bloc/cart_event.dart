@@ -89,10 +89,12 @@ class Checkout extends CartEvent {
   ];
 }
 
-class CalculateCart extends CartEvent {
+class SyncCart extends CartEvent {}
+
+class UpdateActivePromotions extends CartEvent {
   final List<String> activePromotionIds;
 
-  const CalculateCart({required this.activePromotionIds});
+  const UpdateActivePromotions({required this.activePromotionIds});
 
   @override
   List<Object?> get props => [activePromotionIds];
