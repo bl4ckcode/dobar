@@ -44,10 +44,16 @@ jobs:
           SECRET_KEY: test_secret_key
           FIREBASE_CREDENTIALS_JSON: '{"type": "service_account", "project_id": "test"}'
 
+  validate_payment_contracts:
+    name: Validate Payment Contracts
+    needs: test
+    uses: ./.github/workflows/payment-contract-validation.yml
+    secrets: inherit
+
   deploy:
     name: Deploy to Fly.io
     runs-on: ubuntu-latest
-    needs: test
+    needs: [test, validate_payment_contracts]
     outputs:
       should_migrate: ${{ steps.check_migrate.outputs.should_migrate }}
     steps:

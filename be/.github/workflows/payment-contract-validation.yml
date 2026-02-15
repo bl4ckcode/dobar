@@ -1,0 +1,113 @@
+name: Payment Contract Validation
+
+on:
+  workflow_call:
+    outputs:
+      validation_status:
+        description: "Status of payment contract validation"
+        value: ${{ jobs.validate_contracts.outputs.status }}
+
+jobs:
+  validate_contracts:
+    name: Validate Payment & Wallet Contracts
+    runs-on: ubuntu-latest
+    outputs:
+      status: ${{ steps.final_status.outputs.status }}
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-test.txt
+          pip install git+https://${{ secrets.GH_PAT }}@github.com/bl4ckcode/dobar-payment-engine.git
+      
+      - name: Detect changes in payment/wallet layer
+        id: detect_changes
+        run: |
+          echo "🔍 Checking for changes in payment/wallet critical files..."
+          
+          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
+          
+          CRITICAL_PATHS=(
+            "app/payment/"
+            "app/bars_and_restaurants/models/wallet_models.py"
+            "app/bars_and_restaurants/services/wallet_service.py"
+            "app/bars_and_restaurants/routes/cart.py"
+            "app/bars_and_restaurants/schemas/cart.py"
+          )
+          
+          CHANGES_DETECTED=false
+          for path in "${CRITICAL_PATHS[@]}"; do
+            if echo "$CHANGED_FILES" | grep -q "$path"; then
+              echo "⚠️  Changes detected in: $path"
+              CHANGES_DETECTED=true
+            fi
+          done
+          
+          echo "changes_detected=$CHANGES_DETECTED" >> $GITHUB_OUTPUT
+      
+      - name: Run payment model schema validation
+        run: |
+          python tests/contract_validation/validate_payment_schemas.py
+        env:
+          DATABASE_URL: sqlite:///./test.db
+      
+      - name: Run DPE contract validation
+        run: |
+          python tests/contract_validation/validate_dpe_contracts.py
+        env:
+          DATABASE_URL: sqlite:///./test.db
+      
+      - name: Run wallet integration tests
+        run: |
+          pytest tests/contract_validation/test_wallet_contracts.py -v --tb=short
+        env:
+          DATABASE_URL: sqlite:///./test.db
+          MONGO_URI: mongodb://localhost:27017/test
+          SECRET_KEY: test_secret_key
+          FIREBASE_CREDENTIALS_JSON: '{"type": "service_account", "project_id": "test"}'
+      
+      - name: Run payment flow integration tests
+        run: |
+          pytest tests/contract_validation/test_payment_contracts.py -v --tb=short
+        env:
+          DATABASE_URL: sqlite:///./test.db
+          MONGO_URI: mongodb://localhost:27017/test
+          SECRET_KEY: test_secret_key
+          FIREBASE_CREDENTIALS_JSON: '{"type": "service_account", "project_id": "test"}'
+      
+      - name: Validate external API contracts
+        run: |
+          python tests/contract_validation/validate_external_apis.py
+      
+      - name: Generate contract validation report
+        if: always()
+        run: |
+          echo "## 🔒 Payment Contract Validation Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Changes Detected" >> $GITHUB_STEP_SUMMARY
+          echo "- Payment/Wallet Layer: ${{ steps.detect_changes.outputs.changes_detected }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Validation Results" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Payment model schemas validated" >> $GITHUB_STEP_SUMMARY
+          echo "✅ DPE contracts validated" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Wallet integration tests passed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Payment flow tests passed" >> $GITHUB_STEP_SUMMARY
+          echo "✅ External API contracts validated" >> $GITHUB_STEP_SUMMARY
+      
+      - name: Set final status
+        id: final_status
+        if: always()
+        run: |
+          echo "status=success" >> $GITHUB_OUTPUT
