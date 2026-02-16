@@ -45,6 +45,13 @@ class CartBloc extends Bloc<CartEvent, CartState> {
         event.barId ??
         (state is CartLoaded ? (state as CartLoaded).barId : null);
 
+    if (state is CartLoaded) {
+      final current = state as CartLoaded;
+      if (current.cart.items.isNotEmpty && current.barId == barId) {
+        return;
+      }
+    }
+
     CartLoaded currentState;
     if (state is CartLoaded) {
       currentState = state as CartLoaded;
@@ -97,6 +104,11 @@ class CartBloc extends Bloc<CartEvent, CartState> {
   ) async {
     if (state is CartLoaded) {
       final currentState = state as CartLoaded;
+
+      if (currentState.locationConfig != null &&
+          currentState.barId == event.barId) {
+        return;
+      }
 
       final results = await Future.wait([
         barRepository.getLocationConfig(event.barId),
