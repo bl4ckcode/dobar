@@ -258,7 +258,7 @@ class _CartPageContentState extends State<_CartPageContent> {
     final args = CheckoutArguments(
       items: items,
       subtotal: cart.subtotal,
-      total: cart.subtotalAfterBundles,
+      total: cart.total,
       bundleSavings: cart.bundleSavings,
       coupon: coupon,
       locationIdentifier: locationIdentifier,
