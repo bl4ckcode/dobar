@@ -22,4 +22,6 @@ class RateLimits:
     MENU_FETCH = "100/minute"
     SEARCH = "60/minute"
     AUTH = "5/minute"
+    MFA_CHALLENGE = "3/minute"
+    RECOVERY = "3/minute"
     DEFAULT = "200/minute"

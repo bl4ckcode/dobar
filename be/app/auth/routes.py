@@ -1,12 +1,15 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from datetime import datetime, timedelta, timezone
 from jose import jwt
 from .auth_models import User, RefreshToken
+from .mfa_models import MFASecret
 from app.database import database
 from .schemas import GoogleLogin, AppleLogin, Token, RefreshTokenRequest, LogoutRequest
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from firebase_admin import auth as firebase_auth
 from app.errors import APIError
+from app.rate_limiter import limiter, RateLimits
+from . import mfa_service
 import os
 import httpx
 import secrets
@@ -149,6 +152,35 @@ async def create_tokens(
     return access_token, refresh_token, expires_in
 
 
+async def check_mfa_required(user_id: int) -> bool:
+    query = MFASecret.__table__.select().where(
+        MFASecret.user_id == user_id,
+        MFASecret.is_enabled == True
+    )
+    record = await database.fetch_one(query)
+    return record is not None
+
+
+async def build_login_response(user_id: int, provider: str, provider_expiration: int = None, is_new: bool = False):
+    if not is_new and await check_mfa_required(user_id):
+        return Token(
+            mfa_required=True,
+            mfa_token=mfa_service.create_mfa_token(user_id),
+        )
+
+    access_token, refresh_token, expires_in = await create_tokens(
+        user_id=user_id,
+        provider=provider,
+        provider_expiration=provider_expiration,
+    )
+    return Token(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        expires_in=expires_in,
+        is_new_user=is_new,
+    )
+
+
 async def verify_google_token(id_token: str) -> dict:
     try:
         decoded = firebase_auth.verify_id_token(id_token)
@@ -216,7 +248,8 @@ async def verify_firebase_token(credentials: HTTPAuthorizationCredentials = Depe
 
 
 @auth_router.post("/phone-login", response_model=Token)
-async def phone_login(firebase_user=Depends(verify_firebase_token)):
+@limiter.limit(RateLimits.AUTH)
+async def phone_login(request: Request, firebase_user=Depends(verify_firebase_token)):
     firebase_uid = firebase_user["uid"]
     phone_number = firebase_user.get("phone_number")
     # Firebase tokens expire in 1 hour, but we use our default refresh token expiry
@@ -231,22 +264,16 @@ async def phone_login(firebase_user=Depends(verify_firebase_token)):
         user_id = await database.execute(User.__table__.insert().values(**user_data))
         user = await database.fetch_one(User.__table__.select().where(User.id == user_id))
     
-    access_token, refresh_token, expires_in = await create_tokens(
+    return await build_login_response(
         user_id=user["id"],
         provider="phone",
-        provider_expiration=None  # Use default for phone (no long-lived provider token)
-    )
-    return Token(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        token_type="bearer",
-        expires_in=expires_in,
-        is_new_user=is_new
+        is_new=is_new,
     )
 
 
 @auth_router.post("/google-login", response_model=Token)
-async def google_login(login_data: GoogleLogin):
+@limiter.limit(RateLimits.AUTH)
+async def google_login(request: Request, login_data: GoogleLogin):
     token_info = await verify_google_token(login_data.id_token)
     google_id = token_info["sub"]
     firebase_uid = token_info.get("firebase_uid")  # Firebase UID if verified via Firebase
@@ -290,22 +317,17 @@ async def google_login(login_data: GoogleLogin):
                 UserProfile.__table__.insert().values(user_id=user["id"], display_name=display_name)
             )
     
-    access_token, refresh_token, expires_in = await create_tokens(
+    return await build_login_response(
         user_id=user["id"],
         provider="google",
-        provider_expiration=login_data.token_expiration  # FE can send Google token expiry
-    )
-    return Token(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        token_type="bearer",
-        expires_in=expires_in,
-        is_new_user=is_new
+        provider_expiration=login_data.token_expiration,
+        is_new=is_new,
     )
 
 
 @auth_router.post("/apple-login", response_model=Token)
-async def apple_login(login_data: AppleLogin):
+@limiter.limit(RateLimits.AUTH)
+async def apple_login(request: Request, login_data: AppleLogin):
     token_info = await verify_apple_token(login_data.id_token)
     apple_id = token_info["sub"]
     firebase_uid = token_info.get("firebase_uid")  # Firebase UID if verified via Firebase
@@ -349,17 +371,11 @@ async def apple_login(login_data: AppleLogin):
                 UserProfile.__table__.insert().values(user_id=user["id"], display_name=display_name)
             )
     
-    access_token, refresh_token, expires_in = await create_tokens(
+    return await build_login_response(
         user_id=user["id"],
         provider="apple",
-        provider_expiration=login_data.token_expiration  # FE can send Apple token expiry
-    )
-    return Token(
-        access_token=access_token,
-        refresh_token=refresh_token,
-        token_type="bearer",
-        expires_in=expires_in,
-        is_new_user=is_new
+        provider_expiration=login_data.token_expiration,
+        is_new=is_new,
     )
 
 
@@ -368,25 +384,23 @@ async def apple_login(login_data: AppleLogin):
 # =============================================================================
 
 @auth_router.post("/refresh", response_model=Token)
-async def refresh_access_token(request: RefreshTokenRequest):
+@limiter.limit(RateLimits.AUTH)
+async def refresh_access_token(request: Request, body: RefreshTokenRequest):
     """
     Exchange a valid refresh token for a new access token.
     
     The refresh token itself is NOT rotated (to support multiple devices).
     If you want to rotate, call /auth/logout first then re-login.
     """
-    # Find the refresh token in database
-    query = RefreshToken.__table__.select().where(RefreshToken.token == request.refresh_token)
+    query = RefreshToken.__table__.select().where(RefreshToken.token == body.refresh_token)
     token_record = await database.fetch_one(query)
     
     if not token_record:
         raise APIError.invalid_token("Invalid refresh token")
     
-    # Check if revoked
     if token_record["revoked_at"] is not None:
         raise APIError.invalid_token("Refresh token has been revoked")
     
-    # Check if expired
     now = datetime.now(timezone.utc)
     expires_at = token_record["expires_at"]
     if expires_at.tzinfo is None:
@@ -395,7 +409,6 @@ async def refresh_access_token(request: RefreshTokenRequest):
     if expires_at <= now:
         raise APIError.session_expired("Refresh token has expired. Please log in again.")
     
-    # Verify user still exists and is active
     user_query = User.__table__.select().where(User.id == token_record["user_id"])
     user = await database.fetch_one(user_query)
     
@@ -405,12 +418,11 @@ async def refresh_access_token(request: RefreshTokenRequest):
     if not user["is_active"]:
         raise APIError.forbidden("User account is inactive")
     
-    # Create new access token (keep same refresh token)
     access_token, expires_in = await create_access_token(user["id"])
     
     return Token(
         access_token=access_token,
-        refresh_token=request.refresh_token,  # Return same refresh token
+        refresh_token=body.refresh_token,
         token_type="bearer",
         expires_in=expires_in,
         is_new_user=False
@@ -422,19 +434,13 @@ async def refresh_access_token(request: RefreshTokenRequest):
 # =============================================================================
 
 @auth_router.post("/logout")
-async def logout(request: LogoutRequest = None):
-    """
-    Revoke refresh token(s) on logout.
-    
-    If refresh_token is provided, revokes only that token.
-    This allows users to stay logged in on other devices.
-    """
-    if request and request.refresh_token:
-        # Revoke specific refresh token
+@limiter.limit(RateLimits.AUTH)
+async def logout(request: Request, body: LogoutRequest = None):
+    if body and body.refresh_token:
         now = datetime.now(timezone.utc)
         update_query = (
             RefreshToken.__table__.update()
-            .where(RefreshToken.token == request.refresh_token)
+            .where(RefreshToken.token == body.refresh_token)
             .values(revoked_at=now)
         )
         await database.execute(update_query)
@@ -447,15 +453,18 @@ async def logout(request: LogoutRequest = None):
 # =============================================================================
 
 @auth_router.post("/phone")
-async def phone_login_legacy(firebase_user=Depends(verify_firebase_token)):
-    return await phone_login(firebase_user)
+@limiter.limit(RateLimits.AUTH)
+async def phone_login_legacy(request: Request, firebase_user=Depends(verify_firebase_token)):
+    return await phone_login(request, firebase_user)
 
 
 @auth_router.post("/google", response_model=Token)
-async def google_login_legacy(login_data: GoogleLogin):
-    return await google_login(login_data)
+@limiter.limit(RateLimits.AUTH)
+async def google_login_legacy(request: Request, login_data: GoogleLogin):
+    return await google_login(request, login_data)
 
 
 @auth_router.post("/apple", response_model=Token)
-async def apple_login_legacy(login_data: AppleLogin):
-    return await apple_login(login_data)
+@limiter.limit(RateLimits.AUTH)
+async def apple_login_legacy(request: Request, login_data: AppleLogin):
+    return await apple_login(request, login_data)

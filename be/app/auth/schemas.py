@@ -23,11 +23,13 @@ class AppleLogin(BaseModel):
     token_expiration: Optional[int] = None
 
 class Token(BaseModel):
-    access_token: str
-    refresh_token: str
-    token_type: str
-    expires_in: int  # Seconds until access token expires
+    access_token: Optional[str] = None
+    refresh_token: Optional[str] = None
+    token_type: str = "bearer"
+    expires_in: Optional[int] = None
     is_new_user: bool = False
+    mfa_required: bool = False
+    mfa_token: Optional[str] = None
 
 class RefreshTokenRequest(BaseModel):
     refresh_token: str

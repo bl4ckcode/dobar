@@ -34,6 +34,9 @@ from .payment.routes import payment_router, pix_router
 from .payment import close_dpe_client
 from .advertising.routes import advertising_router
 from .bars_and_restaurants.routes.bundles import bundles_router
+from .auth.api_key_middleware import ApiKeyMiddleware
+from .auth.mfa_routes import mfa_router
+from .auth.recovery_routes import recovery_router
 
 IS_PRODUCTION = os.getenv("FLY_APP_NAME") is not None or os.getenv("ENVIRONMENT", "development") == "production"
 ENABLE_DOCS = os.getenv("ENABLE_DOCS", "false").lower() == "true" if IS_PRODUCTION else True
@@ -103,6 +106,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(ApiKeyMiddleware)
 
 
 @app.get("/health", tags=["Health"])
@@ -195,6 +200,8 @@ async def generic_exception_handler(request: Request, exc: Exception):
 app.mount("/legal", StaticFiles(directory="app/static/legal"), name="legal")
 
 app.include_router(auth_router)
+app.include_router(mfa_router)
+app.include_router(recovery_router)
 app.include_router(bars_router)
 app.include_router(menus_router)
 app.include_router(orders_router)

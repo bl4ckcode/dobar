@@ -328,3 +328,48 @@ async def get_available_countries():
         "countries": countries_info,
         "total": len(ENABLED_COUNTRIES),
     }
+
+
+@profile_router.delete("/data")
+async def delete_user_data(current_user: AuthUser = Depends(get_current_user)):
+    from .auth_models import User, Token, RefreshToken
+    from .mfa_models import MFASecret
+    from .recovery_models import RecoveryToken
+    from app.bars_and_restaurants.models.wallet_models import UserWallet, CashbackLedger
+    from app.bars_and_restaurants.models.cart_models import Cart, CartItem, OrderItem
+    from app.bars_and_restaurants.models.relational_models import Order
+    import hashlib
+
+    uid = current_user.id
+
+    await database.execute(CartItem.__table__.delete().where(
+        CartItem.cart_id.in_(
+            Cart.__table__.select().where(Cart.user_id == uid).with_only_columns(Cart.id)
+        )
+    ))
+    await database.execute(Cart.__table__.delete().where(Cart.user_id == uid))
+
+    orders = await database.fetch_all(
+        Order.__table__.select().where(Order.user_id == uid).with_only_columns(Order.id)
+    )
+    order_ids = [o["id"] for o in orders]
+    if order_ids:
+        await database.execute(OrderItem.__table__.delete().where(OrderItem.order_id.in_(order_ids)))
+    await database.execute(Order.__table__.delete().where(Order.user_id == uid))
+
+    await database.execute(CashbackLedger.__table__.delete().where(CashbackLedger.user_id == uid))
+    await database.execute(UserWallet.__table__.delete().where(UserWallet.user_id == uid))
+    await database.execute(MFASecret.__table__.delete().where(MFASecret.user_id == uid))
+    await database.execute(RecoveryToken.__table__.delete().where(RecoveryToken.user_id == uid))
+    await database.execute(RefreshToken.__table__.delete().where(RefreshToken.user_id == uid))
+    await database.execute(Token.__table__.delete().where(Token.user_id == uid))
+    await database.execute(UserProfile.__table__.delete().where(UserProfile.user_id == uid))
+    await database.execute(User.__table__.delete().where(User.id == uid))
+
+    anon_ref = hashlib.sha256(str(uid).encode()).hexdigest()[:16]
+
+    return {
+        "message": "All user data has been permanently deleted",
+        "reference": f"DEL-{anon_ref}",
+        "deleted_at": datetime.utcnow().isoformat(),
+    }
