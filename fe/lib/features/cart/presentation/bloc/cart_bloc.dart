@@ -22,6 +22,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     on<AddToCart>(_onAddToCart);
     on<UpdateCartItem>(_onUpdateCartItem);
     on<RemoveFromCart>(_onRemoveFromCart);
+    on<DecreaseCartItem>(_onDecreaseCartItem);
     on<ClearCart>(_onClearCart);
     on<Checkout>(_onCheckout);
     on<LoadCheckoutConfig>(_onLoadCheckoutConfig);
@@ -33,21 +34,22 @@ class CartBloc extends Bloc<CartEvent, CartState> {
       _onSyncCart,
       transformer: (events, mapper) {
         return events
-            .debounceTime(const Duration(milliseconds: 500))
+            .debounceTime(const Duration(milliseconds: 2000))
             .asyncExpand(mapper);
       },
     );
   }
 
   Future<void> _onLoadCart(LoadCart event, Emitter<CartState> emit) async {
-    // If already loaded, do not reset. This ensures the singleton state persists.
-    if (state is CartLoaded) return;
+    final barId =
+        event.barId ??
+        (state is CartLoaded ? (state as CartLoaded).barId : null);
 
-    // Initialize with empty cart state instead of fetching from server
-    // This prevents "items from other bars" from appearing and
-    // strictly follows the Optimistic UI + Sync approach.
-    emit(
-      CartLoaded(
+    CartLoaded currentState;
+    if (state is CartLoaded) {
+      currentState = state as CartLoaded;
+    } else {
+      currentState = CartLoaded(
         cart: CartModel(
           id: 0,
           userId: 0,
@@ -57,8 +59,36 @@ class CartBloc extends Bloc<CartEvent, CartState> {
           createdAt: DateTime.now(),
           updatedAt: DateTime.now(),
         ),
-      ),
+        barId: barId,
+      );
+    }
+
+    emit(currentState.copyWith(isLoading: true, barId: barId));
+
+    final itemsInput = currentState.cart.items
+        .map(
+          (item) => CartItemInput(
+            menuItemId: item.menuItemId,
+            quantity: item.quantity,
+          ),
+        )
+        .toList();
+
+    final request = CartSyncRequest(
+      items: itemsInput,
+      activePromotionIds: currentState.selectedPromotionIds,
     );
+
+    try {
+      final result = await cartUsecase.syncCart(request);
+      result.fold(
+        (failure) =>
+            emit(currentState.copyWith(isLoading: false, barId: barId)),
+        (serverCart) => emit(CartLoaded(cart: serverCart, barId: barId)),
+      );
+    } catch (e) {
+      emit(currentState.copyWith(isLoading: false, barId: barId));
+    }
   }
 
   Future<void> _onLoadCheckoutConfig(
@@ -97,32 +127,52 @@ class CartBloc extends Bloc<CartEvent, CartState> {
   }
 
   void _onAddToCart(AddToCart event, Emitter<CartState> emit) {
-    if (state is! CartLoaded) {
-      add(LoadCart());
-      return;
+    CartLoaded currentState;
+
+    if (state is CartLoaded) {
+      currentState = state as CartLoaded;
+    } else {
+      currentState = CartLoaded(
+        cart: CartModel(
+          id: 0,
+          userId: 0,
+          items: [],
+          totalItems: 0,
+          subtotal: 0,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      );
     }
 
-    final currentState = state as CartLoaded;
-    final currentItems = List<CartItemModel>.from(currentState.cart.items);
-    final existingIndex = currentItems.indexWhere(
+    final switchedBar =
+        currentState.barId != null &&
+        currentState.barId != event.barId &&
+        currentState.cart.items.isNotEmpty;
+
+    final baseItems = switchedBar
+        ? <CartItemModel>[]
+        : List<CartItemModel>.from(currentState.cart.items);
+
+    final existingIndex = baseItems.indexWhere(
       (item) => item.menuItemId == event.menuItemId,
     );
 
     List<CartItemModel> updatedItems;
 
     if (existingIndex != -1) {
-      final existingItem = currentItems[existingIndex];
+      final existingItem = baseItems[existingIndex];
       final newQuantity = existingItem.quantity + event.quantity;
-      updatedItems = List.from(currentItems);
+      updatedItems = List.from(baseItems);
       updatedItems[existingIndex] = existingItem.copyWith(
         quantity: newQuantity,
         totalPrice: newQuantity * existingItem.unitPrice,
       );
     } else {
-      updatedItems = List.from(currentItems)
+      updatedItems = List.from(baseItems)
         ..add(
           CartItemModel(
-            id: 0, // Temp ID
+            id: 0,
             cartId: currentState.cart.id,
             menuItemId: event.menuItemId,
             barId: event.barId,
@@ -143,7 +193,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
       ),
     );
 
-    emit(currentState.copyWith(cart: updatedCart, isLoading: true));
+    emit(currentState.copyWith(cart: updatedCart, barId: event.barId));
     add(SyncCart());
   }
 
@@ -151,7 +201,9 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     if (state is! CartLoaded) return;
     final currentState = state as CartLoaded;
     final currentItems = List<CartItemModel>.from(currentState.cart.items);
-    final index = currentItems.indexWhere((item) => item.id == event.itemId);
+    final index = currentItems.indexWhere(
+      (item) => item.menuItemId == event.menuItemId,
+    );
 
     if (index != -1) {
       final item = currentItems[index];
@@ -173,7 +225,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
         ),
       );
 
-      emit(currentState.copyWith(cart: updatedCart, isLoading: true));
+      emit(currentState.copyWith(cart: updatedCart));
       add(SyncCart());
     }
   }
@@ -182,7 +234,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     if (state is! CartLoaded) return;
     final currentState = state as CartLoaded;
     final currentItems = currentState.cart.items
-        .where((item) => item.id != event.itemId)
+        .where((item) => item.menuItemId != event.menuItemId)
         .toList();
 
     final updatedCart = currentState.cart.copyWith(
@@ -194,7 +246,40 @@ class CartBloc extends Bloc<CartEvent, CartState> {
       ),
     );
 
-    emit(currentState.copyWith(cart: updatedCart, isLoading: true));
+    emit(currentState.copyWith(cart: updatedCart));
+    add(SyncCart());
+  }
+
+  void _onDecreaseCartItem(DecreaseCartItem event, Emitter<CartState> emit) {
+    if (state is! CartLoaded) return;
+    final currentState = state as CartLoaded;
+    final currentItems = List<CartItemModel>.from(currentState.cart.items);
+    final index = currentItems.indexWhere(
+      (item) => item.menuItemId == event.menuItemId,
+    );
+
+    if (index == -1) return;
+
+    final item = currentItems[index];
+    if (item.quantity <= 1) {
+      currentItems.removeAt(index);
+    } else {
+      currentItems[index] = item.copyWith(
+        quantity: item.quantity - 1,
+        totalPrice: (item.quantity - 1) * item.unitPrice,
+      );
+    }
+
+    final updatedCart = currentState.cart.copyWith(
+      items: currentItems,
+      totalItems: currentItems.fold<int>(0, (sum, item) => sum + item.quantity),
+      subtotal: currentItems.fold<double>(
+        0.0,
+        (sum, item) => sum + item.totalPrice,
+      ),
+    );
+
+    emit(currentState.copyWith(cart: updatedCart));
     add(SyncCart());
   }
 
@@ -217,22 +302,19 @@ class CartBloc extends Bloc<CartEvent, CartState> {
   Future<void> _onSyncCart(SyncCart event, Emitter<CartState> emit) async {
     try {
       if (state is! CartLoaded) return;
-      var currentState = state as CartLoaded;
+      final currentState = state as CartLoaded;
 
-      // Construct request
       final itemsInput = currentState.cart.items
           .map(
             (item) => CartItemInput(
               menuItemId: item.menuItemId,
               quantity: item.quantity,
-              // specialInstructions: item.specialInstructions // Not in CartItemModel yet?
             ),
           )
           .toList();
 
       final request = CartSyncRequest(
         items: itemsInput,
-        // locationIdentifier: currentState.locationConfig.something?
         activePromotionIds: currentState.selectedPromotionIds,
       );
 
@@ -240,16 +322,30 @@ class CartBloc extends Bloc<CartEvent, CartState> {
 
       result.fold(
         (failure) {
-          emit(CartError(message: failure.errorMessage));
+          if (state is CartLoaded) {
+            emit((state as CartLoaded).copyWith(isLoading: false));
+          }
         },
-        (cart) {
-          emit(currentState.copyWith(cart: cart, isLoading: false));
+        (serverCart) {
+          final latestState = state;
+          if (latestState is! CartLoaded) return;
+          emit(
+            CartLoaded(
+              cart: serverCart,
+              barId: latestState.barId,
+              locationConfig: latestState.locationConfig,
+              activePromotions: latestState.activePromotions,
+              selectedPromotionIds: latestState.selectedPromotionIds,
+              spotAvailability: latestState.spotAvailability,
+            ),
+          );
         },
       );
     } catch (e, stackTrace) {
-      // Catch-all for unexpected crashes during sync
       print('Error in _onSyncCart: $e\n$stackTrace');
-      emit(CartError(message: 'Unexpected error syncing cart: $e'));
+      if (state is CartLoaded) {
+        emit((state as CartLoaded).copyWith(isLoading: false));
+      }
     }
   }
 
@@ -262,6 +358,8 @@ class CartBloc extends Bloc<CartEvent, CartState> {
       items: [],
       totalItems: 0,
       subtotal: 0.0,
+      discount: 0.0,
+      total: 0.0,
       bundleSavings: 0.0,
       subtotalAfterBundles: 0.0,
       validationIssues: [],

@@ -23,7 +23,9 @@ import '../widgets/order_summary_section.dart';
 import 'package:barz/core/presentation/widgets/barz_loading_widget.dart';
 
 class CartPage extends StatefulWidget {
-  const CartPage({super.key});
+  final int? barId;
+
+  const CartPage({super.key, this.barId});
 
   @override
   State<CartPage> createState() => _CartPageState();
@@ -35,7 +37,8 @@ class _CartPageState extends State<CartPage> {
     return MultiBlocProvider(
       providers: [
         BlocProvider.value(
-          value: getItInjector<CartBloc>()..add(cart_event.LoadCart()),
+          value: getItInjector<CartBloc>()
+            ..add(cart_event.LoadCart(barId: widget.barId)),
         ),
         BlocProvider.value(
           value: getItInjector<CheckinBloc>()
@@ -102,9 +105,9 @@ class _CartPageContentState extends State<_CartPageContent> {
     // Load config if needed
     if (state is CartLoaded &&
         state.cart.items.isNotEmpty &&
-        (state.locationConfig == null ||
-            _lastLoadedBarId != state.cart.items.first.barId)) {
-      final barId = state.cart.items.first.barId;
+        state.barId != null &&
+        (state.locationConfig == null || _lastLoadedBarId != state.barId)) {
+      final barId = state.barId!;
       _lastLoadedBarId = barId;
       context.read<CartBloc>().add(cart_event.LoadCheckoutConfig(barId: barId));
     }
@@ -202,7 +205,7 @@ class _CartPageContentState extends State<_CartPageContent> {
       if (locationIdentifier != null) {
         context.read<CartBloc>().add(
           cart_event.CheckSpotAvailability(
-            barId: state.cart.items.first.barId,
+            barId: state.barId ?? 0,
             spotId: locationIdentifier,
           ),
         );
@@ -325,9 +328,9 @@ class _CartPageContentState extends State<_CartPageContent> {
                 final uiItems = items
                     .map(
                       (item) => CartItem(
-                        id: item.id.toString(),
+                        id: item.menuItemId.toString(),
                         name: item.menuItemName,
-                        description: 'Delicious item', // Placeholder
+                        description: 'Delicious item',
                         price: item.unitPrice,
                         quantity: item.quantity,
                         imageUrl: null,
@@ -366,34 +369,26 @@ class _CartPageContentState extends State<_CartPageContent> {
                                     (item) => CartItemCard(
                                       item: item,
                                       onQuantityChanged: (qty) {
-                                        if (qty > item.quantity) {
+                                        final menuItemId = int.parse(item.id);
+                                        if (qty < 1) {
                                           context.read<CartBloc>().add(
-                                            cart_event.UpdateCartItem(
-                                              itemId: int.parse(item.id),
-                                              quantity: qty,
+                                            cart_event.RemoveFromCart(
+                                              menuItemId: menuItemId,
                                             ),
                                           );
                                         } else {
-                                          if (qty < 1) {
-                                            context.read<CartBloc>().add(
-                                              cart_event.RemoveFromCart(
-                                                itemId: int.parse(item.id),
-                                              ),
-                                            );
-                                          } else {
-                                            context.read<CartBloc>().add(
-                                              cart_event.UpdateCartItem(
-                                                itemId: int.parse(item.id),
-                                                quantity: qty,
-                                              ),
-                                            );
-                                          }
+                                          context.read<CartBloc>().add(
+                                            cart_event.UpdateCartItem(
+                                              menuItemId: menuItemId,
+                                              quantity: qty,
+                                            ),
+                                          );
                                         }
                                       },
                                       onRemove: () =>
                                           context.read<CartBloc>().add(
                                             cart_event.RemoveFromCart(
-                                              itemId: int.parse(item.id),
+                                              menuItemId: int.parse(item.id),
                                             ),
                                           ),
                                     ),
@@ -471,11 +466,9 @@ class _CartPageContentState extends State<_CartPageContent> {
                         promotions: (state is CartLoaded)
                             ? state.activePromotions
                             : const [],
-                        overrideTotal: cart?.subtotalAfterBundles,
-                        overrideDiscount:
-                            (cart != null &&
-                                cart.subtotalAfterBundles < cart.subtotal)
-                            ? (cart.subtotal - cart.subtotalAfterBundles)
+                        overrideTotal: cart?.total,
+                        overrideDiscount: (cart != null && cart.discount > 0)
+                            ? cart.discount
                             : null,
                         onCheckout: () => _handleCheckout(context),
                         isLoading: isLoading,

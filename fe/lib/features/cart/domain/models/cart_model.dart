@@ -51,12 +51,12 @@ class CartItemModel {
     };
   }
 
-  CartItemModel copyWith({int? quantity, double? totalPrice}) {
+  CartItemModel copyWith({int? barId, int? quantity, double? totalPrice}) {
     return CartItemModel(
       id: id,
       cartId: cartId,
       menuItemId: menuItemId,
-      barId: barId,
+      barId: barId ?? this.barId,
       menuItemName: menuItemName,
       quantity: quantity ?? this.quantity,
       unitPrice: unitPrice,
@@ -182,6 +182,11 @@ class CartModel {
   final List<CartItemModel> items;
   final int totalItems;
   final double subtotal;
+  final double discount;
+  final double tax;
+  final double tip;
+  final double deliveryFee;
+  final double total;
   final List<AppliedBundleModel> appliedBundles;
   final double bundleSavings;
   final double subtotalAfterBundles;
@@ -198,6 +203,11 @@ class CartModel {
     required this.items,
     required this.totalItems,
     required this.subtotal,
+    this.discount = 0.0,
+    this.tax = 0.0,
+    this.tip = 0.0,
+    this.deliveryFee = 0.0,
+    double? total,
     this.appliedBundles = const [],
     this.bundleSavings = 0.0,
     double? subtotalAfterBundles,
@@ -207,7 +217,8 @@ class CartModel {
     this.locationStatus,
     required this.createdAt,
     required this.updatedAt,
-  }) : subtotalAfterBundles = subtotalAfterBundles ?? subtotal;
+  }) : subtotalAfterBundles = subtotalAfterBundles ?? subtotal,
+       total = total ?? subtotal;
 
   factory CartModel.fromJson(Map<String, dynamic> json) {
     return CartModel(
@@ -221,6 +232,11 @@ class CartModel {
           [],
       totalItems: json['total_items'] ?? 0,
       subtotal: (json['subtotal'] as num?)?.toDouble() ?? 0.0,
+      discount: (json['discount'] as num?)?.toDouble() ?? 0.0,
+      tax: (json['tax'] as num?)?.toDouble() ?? 0.0,
+      tip: (json['tip'] as num?)?.toDouble() ?? 0.0,
+      deliveryFee: (json['delivery_fee'] as num?)?.toDouble() ?? 0.0,
+      total: (json['total'] as num?)?.toDouble(),
       appliedBundles:
           (json['applied_bundles'] as List<dynamic>?)
               ?.where((e) => e != null && e is Map<String, dynamic>)
@@ -234,7 +250,7 @@ class CartModel {
           ?.toDouble(),
       bundleHint: json['bundle_hint'],
       appliedPromotions:
-          (json['promotions_applied'] as List<dynamic>?)
+          (json['available_promotions'] as List<dynamic>?)
               ?.where((e) => e != null && e is Map<String, dynamic>)
               .map((e) => PromotionApplied.fromJson(e as Map<String, dynamic>))
               .toList() ??
@@ -264,11 +280,16 @@ class CartModel {
       'items': items.map((e) => e.toJson()).toList(),
       'total_items': totalItems,
       'subtotal': subtotal,
+      'discount': discount,
+      'tax': tax,
+      'tip': tip,
+      'delivery_fee': deliveryFee,
+      'total': total,
       'applied_bundles': appliedBundles.map((e) => e.toJson()).toList(),
       'bundle_savings': bundleSavings,
       'subtotal_after_bundles': subtotalAfterBundles,
       'bundle_hint': bundleHint,
-      'promotions_applied': appliedPromotions.map((e) => e.toJson()).toList(),
+      'available_promotions': appliedPromotions.map((e) => e.toJson()).toList(),
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -278,6 +299,11 @@ class CartModel {
     List<CartItemModel>? items,
     int? totalItems,
     double? subtotal,
+    double? discount,
+    double? tax,
+    double? tip,
+    double? deliveryFee,
+    double? total,
     List<AppliedBundleModel>? appliedBundles,
     double? bundleSavings,
     double? subtotalAfterBundles,
@@ -292,6 +318,11 @@ class CartModel {
       items: items ?? this.items,
       totalItems: totalItems ?? this.totalItems,
       subtotal: subtotal ?? this.subtotal,
+      discount: discount ?? this.discount,
+      tax: tax ?? this.tax,
+      tip: tip ?? this.tip,
+      deliveryFee: deliveryFee ?? this.deliveryFee,
+      total: total ?? this.total,
       appliedBundles: appliedBundles ?? this.appliedBundles,
       bundleSavings: bundleSavings ?? this.bundleSavings,
       subtotalAfterBundles: subtotalAfterBundles ?? this.subtotalAfterBundles,

@@ -15,6 +15,7 @@ class CartLoading extends CartState {}
 
 class CartLoaded extends CartState {
   final CartModel cart;
+  final int? barId;
   final LocationConfig? locationConfig;
   final List<Promotion> activePromotions;
   final List<String> selectedPromotionIds;
@@ -24,6 +25,7 @@ class CartLoaded extends CartState {
 
   const CartLoaded({
     required this.cart,
+    this.barId,
     this.locationConfig,
     this.activePromotions = const [],
     this.selectedPromotionIds = const [],
@@ -34,6 +36,7 @@ class CartLoaded extends CartState {
 
   CartLoaded copyWith({
     CartModel? cart,
+    int? barId,
     LocationConfig? locationConfig,
     List<Promotion>? activePromotions,
     List<String>? selectedPromotionIds,
@@ -43,6 +46,7 @@ class CartLoaded extends CartState {
   }) {
     return CartLoaded(
       cart: cart ?? this.cart,
+      barId: barId ?? this.barId,
       locationConfig: locationConfig ?? this.locationConfig,
       activePromotions: activePromotions ?? this.activePromotions,
       selectedPromotionIds: selectedPromotionIds ?? this.selectedPromotionIds,
@@ -55,6 +59,7 @@ class CartLoaded extends CartState {
   @override
   List<Object?> get props => [
     cart,
+    barId,
     locationConfig,
     activePromotions,
     selectedPromotionIds,

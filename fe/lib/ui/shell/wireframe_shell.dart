@@ -97,7 +97,7 @@ class _WireframeShellState extends State<WireframeShell> {
         BlocProvider(create: (_) => getItInjector<PromotionsBloc>()),
         BlocProvider(create: (_) => getItInjector<PromotionsBloc>()),
         BlocProvider(create: (_) => getItInjector<TrendingBloc>()),
-        BlocProvider(create: (_) => getItInjector<CartBloc>()),
+        BlocProvider.value(value: getItInjector<CartBloc>()),
       ],
       child: BlocListener<LocationBloc, LocationState>(
         listener: (context, state) {

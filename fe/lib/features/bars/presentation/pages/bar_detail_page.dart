@@ -10,6 +10,7 @@ import 'package:barz/features/bars/presentation/bloc/bar_event.dart';
 import 'package:barz/features/bars/presentation/bloc/bar_state.dart';
 import 'package:barz/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:barz/features/cart/presentation/bloc/cart_event.dart';
+import 'package:barz/features/cart/presentation/bloc/cart_state.dart';
 import 'package:barz/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -28,7 +29,7 @@ class BarDetailPage extends StatelessWidget {
           create: (_) =>
               getItInjector<BarBloc>()..add(LoadBarMenus(barId: barId)),
         ),
-        BlocProvider(create: (_) => getItInjector<CartBloc>()),
+        BlocProvider.value(value: getItInjector<CartBloc>()),
       ],
       child: _BarDetailContent(barId: barId),
     );
@@ -179,7 +180,6 @@ class _MenuPageView extends StatefulWidget {
 
 class _MenuPageViewState extends State<_MenuPageView> {
   String _selectedCategory = 'All';
-  final Map<int, int> _cart = {};
 
   List<String> get _categoryList => ['All', ...widget.categories.keys];
 
@@ -195,6 +195,7 @@ class _MenuPageViewState extends State<_MenuPageView> {
         return Icons.local_bar;
       case 'food':
       case 'snacks':
+      case 'petiscos':
         return Icons.restaurant;
       case 'wine':
       case 'wines':
@@ -211,12 +212,28 @@ class _MenuPageViewState extends State<_MenuPageView> {
     return widget.categories[_selectedCategory] ?? [];
   }
 
-  void _addToCart(MenuItemModel item) {
-    setState(() {
-      final id = item.id ?? 0;
-      _cart[id] = (_cart[id] ?? 0) + 1;
-    });
+  int _getQuantityFromState(CartState state, int menuItemId) {
+    if (state is! CartLoaded) return 0;
+    final item = state.cart.items
+        .where((i) => i.menuItemId == menuItemId)
+        .firstOrNull;
+    return item?.quantity ?? 0;
+  }
 
+  int _getTotalItemsFromState(CartState state) {
+    if (state is! CartLoaded) return 0;
+    return state.cart.items.fold<int>(0, (sum, item) => sum + item.quantity);
+  }
+
+  double _getTotalPriceFromState(CartState state) {
+    if (state is! CartLoaded) return 0;
+    return state.cart.items.fold<double>(
+      0.0,
+      (sum, item) => sum + item.totalPrice,
+    );
+  }
+
+  void _addToCart(MenuItemModel item) {
     context.read<CartBloc>().add(
       AddToCart(
         menuItemId: item.id ?? 0,
@@ -228,57 +245,39 @@ class _MenuPageViewState extends State<_MenuPageView> {
     );
   }
 
-  void _removeFromCart(MenuItemModel item) {
-    setState(() {
-      final id = item.id ?? 0;
-      if (_cart.containsKey(id) && _cart[id]! > 0) {
-        _cart[id] = _cart[id]! - 1;
-        if (_cart[id] == 0) {
-          _cart.remove(id);
-        }
-      }
-    });
-
-    context.read<CartBloc>().add(RemoveFromCart(itemId: item.id ?? 0));
-  }
-
-  int _getItemQuantity(MenuItemModel item) {
-    return _cart[item.id ?? 0] ?? 0;
-  }
-
-  int get _totalItems => _cart.values.fold(0, (sum, qty) => sum + qty);
-
-  double get _totalPrice {
-    double total = 0;
-    for (final item in widget.allItems) {
-      final qty = _cart[item.id ?? 0] ?? 0;
-      total += item.price * qty;
-    }
-    return total;
+  void _decreaseFromCart(MenuItemModel item) {
+    context.read<CartBloc>().add(DecreaseCartItem(menuItemId: item.id ?? 0));
   }
 
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Scaffold(
-      backgroundColor: isDark ? barzDark : Colors.white,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeader(),
-            const SizedBox(height: 16),
-            _buildCategoryTabs(),
-            const SizedBox(height: 8),
-            Expanded(child: _buildMenuList()),
-            _buildViewTabButton(),
-          ],
-        ),
-      ),
+    return BlocBuilder<CartBloc, CartState>(
+      builder: (context, cartState) {
+        final totalItems = _getTotalItemsFromState(cartState);
+        final totalPrice = _getTotalPriceFromState(cartState);
+
+        return Scaffold(
+          backgroundColor: isDark ? barzDark : Colors.white,
+          body: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(totalItems),
+                const SizedBox(height: 16),
+                _buildCategoryTabs(),
+                const SizedBox(height: 8),
+                Expanded(child: _buildMenuList(cartState)),
+                _buildViewTabButton(totalItems, totalPrice),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(int totalItems) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -335,7 +334,7 @@ class _MenuPageViewState extends State<_MenuPageView> {
             ),
           ),
           GestureDetector(
-            onTap: () => AppRoute.cart.push(context),
+            onTap: () => AppRoute.cart.push(context, extra: widget.barId),
             child: Container(
               width: 44,
               height: 44,
@@ -361,9 +360,9 @@ class _MenuPageViewState extends State<_MenuPageView> {
                       size: 22,
                     ),
                   ),
-                  if (_totalItems > 0)
+                  if (totalItems > 0)
                     Positioned(
-                      right: 8, // Adjusted for new size
+                      right: 8,
                       top: 8,
                       child: Container(
                         padding: const EdgeInsets.all(4),
@@ -372,7 +371,7 @@ class _MenuPageViewState extends State<_MenuPageView> {
                           shape: BoxShape.circle,
                         ),
                         child: Text(
-                          '$_totalItems',
+                          '$totalItems',
                           style: const TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
@@ -411,7 +410,7 @@ class _MenuPageViewState extends State<_MenuPageView> {
     );
   }
 
-  Widget _buildMenuList() {
+  Widget _buildMenuList(CartState cartState) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     if (_filteredItems.isEmpty) {
       return Center(
@@ -444,7 +443,7 @@ class _MenuPageViewState extends State<_MenuPageView> {
       itemCount: _filteredItems.length,
       itemBuilder: (context, index) {
         final item = _filteredItems[index];
-        final quantity = _getItemQuantity(item);
+        final quantity = _getQuantityFromState(cartState, item.id ?? 0);
 
         return TweenAnimationBuilder<double>(
           duration: Duration(milliseconds: 200 + (index * 30)),
@@ -465,26 +464,26 @@ class _MenuPageViewState extends State<_MenuPageView> {
             price: item.price,
             quantity: quantity,
             onAdd: () => _addToCart(item),
-            onRemove: () => _removeFromCart(item),
+            onRemove: () => _decreaseFromCart(item),
           ),
         );
       },
     );
   }
 
-  Widget _buildViewTabButton() {
+  Widget _buildViewTabButton(int totalItems, double totalPrice) {
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       padding: const EdgeInsets.all(16),
-      child: _totalItems > 0
+      child: totalItems > 0
           ? GlowButton(
               label: 'View Tab',
-              badgeCount: _totalItems,
+              badgeCount: totalItems,
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    '\$${_totalPrice.toStringAsFixed(2)}',
+                    '\$${totalPrice.toStringAsFixed(2)}',
                     style: const TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -495,7 +494,7 @@ class _MenuPageViewState extends State<_MenuPageView> {
                   const Icon(Icons.chevron_right, color: barzDark, size: 20),
                 ],
               ),
-              onPressed: () => AppRoute.cart.push(context),
+              onPressed: () => AppRoute.cart.push(context, extra: widget.barId),
             )
           : const SizedBox.shrink(),
     );

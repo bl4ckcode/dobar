@@ -198,15 +198,18 @@ final appRouter = GoRouter(
     GoRoute(
       path: AppRoute.cart.path,
       name: AppRoute.cart.name,
-      builder: (context, state) => const CartPage(),
+      builder: (context, state) {
+        final barId = state.extra as int?;
+        return CartPage(barId: barId);
+      },
     ),
     GoRoute(
       path: AppRoute.checkout.path,
       name: AppRoute.checkout.name,
       builder: (context, state) {
         final args = state.extra as CheckoutArguments?;
-        return BlocProvider(
-          create: (_) => getItInjector<CartBloc>(),
+        return BlocProvider.value(
+          value: getItInjector<CartBloc>(),
           child: CheckoutPage(arguments: args),
         );
       },
