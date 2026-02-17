@@ -48,14 +48,15 @@ jobs:
           git checkout main
           git pull origin main
           
-          # Delete all python files in versions folder
-          git rm migrations/versions/*.py || echo "No migration files to delete"
+          # Delete python files in versions folder BUT keep the 5 most recent ones
+          # to ensure the next migration has a valid parent to start from.
+          ls -t migrations/versions/*.py | tail -n +6 | xargs git rm 2>/dev/null || echo "No old migration files to delete"
           
           # Commit and push if there are changes
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "chore: remove applied migrations [skip ci]"
+            git commit -m "chore: remove applied migrations (keeping recent 5) [skip ci]"
             git push "https://${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git" main
-            echo "✅ Deleted applied migrations from repository"
+            echo "✅ Deleted old applied migrations from repository"
           fi
