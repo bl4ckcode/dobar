@@ -66,12 +66,14 @@ jobs:
       - name: Check if migrations should run
         id: check_migrate
         env:
-          COMMIT_MSG: ${{ github.event.head_commit.message }}
           MANUAL_TRIGGER: ${{ github.event.inputs.run_migrations }}
         run: |
-          # Check for [migrate] flag in commit message
-          if [[ "$COMMIT_MSG" == *"[migrate]"* ]]; then
-            echo "🔄 Found [migrate] flag in commit message"
+          # Get list of changed files in the last commit
+          CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
+          
+          # Check for changes in migrations/versions
+          if echo "$CHANGED_FILES" | grep -q "migrations/versions/"; then
+            echo "🔄 Detected changes in migrations/versions/"
             echo "should_migrate=true" >> $GITHUB_OUTPUT
           # Check for manual trigger
           elif [[ "$MANUAL_TRIGGER" == "true" ]]; then
@@ -81,7 +83,7 @@ jobs:
             echo "🔍 Dry-run migration trigger"
             echo "should_migrate=dry-run" >> $GITHUB_OUTPUT
           else
-            echo "⏭️ No migration flag found, skipping migrations"
+            echo "⏭️ No migration changes found, skipping migrations"
             echo "should_migrate=false" >> $GITHUB_OUTPUT
           fi
       

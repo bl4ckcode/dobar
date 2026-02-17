@@ -13,19 +13,8 @@ You are not allowed to deploy to Fly IO as well, we have automations and crenden
 
 .github/workflows/deploy.yml always run tests and deploy, so we must ensure our unit tests are covering new codes always too otherwise it's gonna fail.
 
-# When to Use [migrate] in Commit Messages
+# Database Migrations
 
-## ✅ USE [migrate] when:
-- You created a NEW migration file in `migrations/versions/`
-- The migration adds/removes tables, columns, indexes, or constraints
-- The Alembic chain has been updated (new revision ID at head)
-
-## ❌ DO NOT use [migrate] when:
-- Only code changes (routes, services, schemas, tests)
-- Database changes were applied manually via psql
-- Fixing bugs in existing code
-- No new files in `migrations/versions/`
-
-## Quick Check:
-```bash
-git status | grep migrations/versions
+The CI pipeline automatically detects changes in `migrations/versions/`. 
+- If you add or modify a migration file, the deploy workflow will automatically run `alembic upgrade head`.
+- You do **NOT** need to add any special tags like `[migrate]` to your commit messages anymore.
