@@ -149,6 +149,22 @@ class _LoginPageState extends State<LoginPage> {
                               onPressed: _handleLogin,
                             ),
 
+                            const SizedBox(height: 16),
+                            Center(
+                              child: TextButton(
+                                onPressed: () =>
+                                    AppRoute.recoveryInitiate.push(context),
+                                child: Text(
+                                  'Trouble logging in?',
+                                  style: TextStyle(
+                                    color: colors.labelSecondary,
+                                    fontSize: 14,
+                                    decoration: TextDecoration.underline,
+                                  ),
+                                ),
+                              ),
+                            ),
+
                             const SizedBox(height: 24),
 
                             Row(

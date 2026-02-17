@@ -27,110 +27,170 @@ class UserNetworkDatasource implements UserDatasource {
   @override
   Future<UserModel> getCurrentUser() async {
     try {
-      final response = await dio.get('${ApiEndpoints.baseUrl}${ApiEndpoints.userProfile}');
+      final response = await dio.get(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.userProfile}',
+      );
       return UserModel.fromJson(response.data);
     } on DioException catch (e) {
-      throw ServerException(e.response?.data?['detail'] ?? 'Failed to get user', e.response?.statusCode);
+      throw ServerException(
+        e.response?.data?['detail'] ?? 'Failed to get user',
+        e.response?.statusCode,
+      );
     }
   }
 
   @override
   Future<UserModel> getUserById(int id) async {
     try {
-      final response = await dio.get('${ApiEndpoints.baseUrl}${ApiEndpoints.users}/$id');
+      final response = await dio.get(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.users}/$id',
+      );
       return UserModel.fromJson(response.data);
     } on DioException catch (e) {
-      throw ServerException(e.response?.data?['detail'] ?? 'Failed to get user', e.response?.statusCode);
+      throw ServerException(
+        e.response?.data?['detail'] ?? 'Failed to get user',
+        e.response?.statusCode,
+      );
     }
   }
 
   @override
   Future<UserModel> updateProfile(Map<String, dynamic> data) async {
     try {
-      final response = await dio.put('${ApiEndpoints.baseUrl}${ApiEndpoints.userProfile}', data: data);
+      final response = await dio.put(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.userProfile}',
+        data: data,
+      );
       return UserModel.fromJson(response.data);
     } on DioException catch (e) {
-      throw ServerException(e.response?.data?['detail'] ?? 'Failed to update profile', e.response?.statusCode);
+      throw ServerException(
+        e.response?.data?['detail'] ?? 'Failed to update profile',
+        e.response?.statusCode,
+      );
     }
   }
 
   @override
   Future<UserModel> updatePreferences(UserPreferences preferences) async {
     try {
-      final response = await dio.put('${ApiEndpoints.baseUrl}${ApiEndpoints.userPreferences}', data: preferences.toJson());
+      final response = await dio.put(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.userPreferences}',
+        data: preferences.toJson(),
+      );
       return UserModel.fromJson(response.data);
     } on DioException catch (e) {
-      throw ServerException(e.response?.data?['detail'] ?? 'Failed to update preferences', e.response?.statusCode);
+      throw ServerException(
+        e.response?.data?['detail'] ?? 'Failed to update preferences',
+        e.response?.statusCode,
+      );
     }
   }
 
   @override
   Future<UserModel> addDocument(UserDocument document) async {
     try {
-      final response = await dio.post('${ApiEndpoints.baseUrl}${ApiEndpoints.userDocuments}', data: document.toJson());
+      final response = await dio.post(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.userDocuments}',
+        data: document.toJson(),
+      );
       return UserModel.fromJson(response.data);
     } on DioException catch (e) {
-      throw ServerException(e.response?.data?['detail'] ?? 'Failed to add document', e.response?.statusCode);
+      throw ServerException(
+        e.response?.data?['detail'] ?? 'Failed to add document',
+        e.response?.statusCode,
+      );
     }
   }
 
   @override
   Future<UserModel> removeDocument(int documentId) async {
     try {
-      final response = await dio.delete('${ApiEndpoints.baseUrl}${ApiEndpoints.userDocuments}/$documentId');
+      final response = await dio.delete(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.userDocuments}/$documentId',
+      );
       return UserModel.fromJson(response.data);
     } on DioException catch (e) {
-      throw ServerException(e.response?.data?['detail'] ?? 'Failed to remove document', e.response?.statusCode);
+      throw ServerException(
+        e.response?.data?['detail'] ?? 'Failed to remove document',
+        e.response?.statusCode,
+      );
     }
   }
 
   @override
   Future<UserModel> acceptTerms() async {
     try {
-      final response = await dio.post('${ApiEndpoints.baseUrl}${ApiEndpoints.userAcceptTerms}');
+      final response = await dio.post(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.userAcceptTerms}',
+      );
       return UserModel.fromJson(response.data);
     } on DioException catch (e) {
-      throw ServerException(e.response?.data?['detail'] ?? 'Failed to accept terms', e.response?.statusCode);
+      throw ServerException(
+        e.response?.data?['detail'] ?? 'Failed to accept terms',
+        e.response?.statusCode,
+      );
     }
   }
 
   @override
   Future<UserModel> acceptPrivacy() async {
     try {
-      final response = await dio.post('${ApiEndpoints.baseUrl}${ApiEndpoints.userAcceptPrivacy}');
+      final response = await dio.post(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.userAcceptPrivacy}',
+      );
       return UserModel.fromJson(response.data);
     } on DioException catch (e) {
-      throw ServerException(e.response?.data?['detail'] ?? 'Failed to accept privacy', e.response?.statusCode);
+      throw ServerException(
+        e.response?.data?['detail'] ?? 'Failed to accept privacy',
+        e.response?.statusCode,
+      );
     }
   }
 
   @override
   Future<bool> deleteAccount() async {
     try {
-      await dio.delete('${ApiEndpoints.baseUrl}${ApiEndpoints.userProfile}');
+      await dio.delete(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.userDataExclusion}',
+      );
       return true;
     } on DioException catch (e) {
-      throw ServerException(e.response?.data?['detail'] ?? 'Failed to delete account', e.response?.statusCode);
+      throw ServerException(
+        e.response?.data?['detail'] ?? 'Failed to delete account',
+        e.response?.statusCode,
+      );
     }
   }
 
   @override
   Future<double> getWalletBalance() async {
     try {
-      final response = await dio.get('${ApiEndpoints.baseUrl}${ApiEndpoints.userWallet}');
+      final response = await dio.get(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.userWallet}',
+      );
       return (response.data['balance'] as num).toDouble();
     } on DioException catch (e) {
-      throw ServerException(e.response?.data?['detail'] ?? 'Failed to get wallet balance', e.response?.statusCode);
+      throw ServerException(
+        e.response?.data?['detail'] ?? 'Failed to get wallet balance',
+        e.response?.statusCode,
+      );
     }
   }
 
   @override
   Future<List<CashbackTransaction>> getCashbackHistory() async {
     try {
-      final response = await dio.get('${ApiEndpoints.baseUrl}${ApiEndpoints.userCashback}');
-      return (response.data as List).map((json) => CashbackTransaction.fromJson(json)).toList();
+      final response = await dio.get(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.userCashback}',
+      );
+      return (response.data as List)
+          .map((json) => CashbackTransaction.fromJson(json))
+          .toList();
     } on DioException catch (e) {
-      throw ServerException(e.response?.data?['detail'] ?? 'Failed to get cashback history', e.response?.statusCode);
+      throw ServerException(
+        e.response?.data?['detail'] ?? 'Failed to get cashback history',
+        e.response?.statusCode,
+      );
     }
   }
 }

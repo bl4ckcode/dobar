@@ -5,9 +5,8 @@ part 'login_event.freezed.dart';
 
 @freezed
 sealed class LoginEvent with _$LoginEvent {
-  const factory LoginEvent.loginButtonPressed({
-    required String phoneNumber,
-  }) = LoginButtonPressed;
+  const factory LoginEvent.loginButtonPressed({required String phoneNumber}) =
+      LoginButtonPressed;
 
   const factory LoginEvent.verifyCodeButtonPressed({
     required String verificationId,
@@ -27,20 +26,18 @@ sealed class LoginEvent with _$LoginEvent {
     int? tokenExpiration,
   }) = AppleLoginPressed;
 
-  const factory LoginEvent.autoVerifyCompleted(
-    PhoneAuthCredential credential,
-  ) = LoginAutoVerifyCompleted;
+  const factory LoginEvent.autoVerifyCompleted(PhoneAuthCredential credential) =
+      LoginAutoVerifyCompleted;
 
-  const factory LoginEvent.verificationFailed(
-    String error,
-  ) = LoginVerificationFailed;
+  const factory LoginEvent.verificationFailed(String error) =
+      LoginVerificationFailed;
 
-  const factory LoginEvent.codeSent(
-    String verificationId,
-    String phoneNumber,
-  ) = LoginCodeSent;
+  const factory LoginEvent.codeSent(String verificationId, String phoneNumber) =
+      LoginCodeSent;
 
-  const factory LoginEvent.verificationTimeout(
-    String verificationId,
-  ) = LoginVerificationTimeout;
+  const factory LoginEvent.verificationTimeout(String verificationId) =
+      LoginVerificationTimeout;
+
+  const factory LoginEvent.mfaChallengeSubmitted(String mfaToken, String code) =
+      MfaChallengeSubmitted;
 }

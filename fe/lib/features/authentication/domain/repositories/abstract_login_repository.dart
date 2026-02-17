@@ -19,4 +19,17 @@ abstract class AbstractLoginRepository {
   Future<Either<Failure, void>> logout();
 
   Future<Either<Failure, AuthResponse?>> completeLoginWithBackend(User? user);
+
+  Future<Either<Failure, Map<String, String>>> setupMfa();
+
+  Future<Either<Failure, void>> verifyMfa(String code);
+
+  Future<Either<Failure, AuthResponse>> mfaChallenge(
+    String mfaToken,
+    String code,
+  );
+
+  // Account Recovery
+  Future<Either<Failure, void>> initiateRecovery(String email);
+  Future<Either<Failure, AuthResponse>> verifyRecovery(String token);
 }

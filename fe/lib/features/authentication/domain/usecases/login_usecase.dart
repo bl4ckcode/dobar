@@ -14,11 +14,15 @@ class LoginUsecase {
     return await repository.completeLoginWithBackend(user);
   }
 
-  Future<Either<Failure, AuthResponse?>> loginWithGoogle(LoginParams params) async {
+  Future<Either<Failure, AuthResponse?>> loginWithGoogle(
+    LoginParams params,
+  ) async {
     return await repository.loginWithGoogle(params);
   }
 
-  Future<Either<Failure, AuthResponse?>> loginWithApple(LoginParams params) async {
+  Future<Either<Failure, AuthResponse?>> loginWithApple(
+    LoginParams params,
+  ) async {
     return await repository.loginWithApple(params);
   }
 
@@ -38,5 +42,28 @@ class LoginUsecase {
 
   Future<Either<Failure, void>> logout() async {
     return await repository.logout();
+  }
+
+  Future<Either<Failure, Map<String, String>>> setupMfa() async {
+    return await repository.setupMfa();
+  }
+
+  Future<Either<Failure, void>> verifyMfa(String code) async {
+    return await repository.verifyMfa(code);
+  }
+
+  Future<Either<Failure, AuthResponse>> mfaChallenge(
+    String mfaToken,
+    String code,
+  ) async {
+    return await repository.mfaChallenge(mfaToken, code);
+  }
+
+  Future<Either<Failure, void>> initiateRecovery(String email) {
+    return repository.initiateRecovery(email);
+  }
+
+  Future<Either<Failure, AuthResponse>> verifyRecovery(String token) {
+    return repository.verifyRecovery(token);
   }
 }

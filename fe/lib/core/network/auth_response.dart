@@ -4,6 +4,8 @@ class AuthResponse {
   final String tokenType;
   final int expiresIn;
   final bool isNewUser;
+  final bool mfaRequired;
+  final String? mfaToken;
 
   const AuthResponse({
     required this.accessToken,
@@ -11,9 +13,22 @@ class AuthResponse {
     this.tokenType = 'bearer',
     this.expiresIn = 3600,
     this.isNewUser = false,
+    this.mfaRequired = false,
+    this.mfaToken,
   });
 
   factory AuthResponse.fromJson(Map<String, dynamic> json) {
+    final mfaRequired = json['mfa_required'] as bool? ?? false;
+
+    if (mfaRequired) {
+      return AuthResponse(
+        accessToken: '',
+        refreshToken: '',
+        mfaRequired: true,
+        mfaToken: json['mfa_token'] as String?,
+      );
+    }
+
     return AuthResponse(
       accessToken: json['access_token'] as String,
       refreshToken: json['refresh_token'] as String? ?? '',

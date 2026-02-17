@@ -18,7 +18,9 @@ class LoginRepositoryImpl extends AbstractLoginRepository {
   });
 
   @override
-  Future<Either<Failure, AuthResponse?>> completeLoginWithBackend(User? user) async {
+  Future<Either<Failure, AuthResponse?>> completeLoginWithBackend(
+    User? user,
+  ) async {
     try {
       final result = await networkDataSource.completeLoginWithBackend(user);
       if (result.result != null) {
@@ -34,7 +36,9 @@ class LoginRepositoryImpl extends AbstractLoginRepository {
   }
 
   @override
-  Future<Either<Failure, AuthResponse?>> loginWithGoogle(LoginParams params) async {
+  Future<Either<Failure, AuthResponse?>> loginWithGoogle(
+    LoginParams params,
+  ) async {
     try {
       final result = await networkDataSource.loginWithGoogle(params);
       if (result.result != null) {
@@ -50,7 +54,9 @@ class LoginRepositoryImpl extends AbstractLoginRepository {
   }
 
   @override
-  Future<Either<Failure, AuthResponse?>> loginWithApple(LoginParams params) async {
+  Future<Either<Failure, AuthResponse?>> loginWithApple(
+    LoginParams params,
+  ) async {
     try {
       final result = await networkDataSource.loginWithApple(params);
       if (result.result != null) {
@@ -105,6 +111,71 @@ class LoginRepositoryImpl extends AbstractLoginRepository {
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure(e.toString(), 0));
+    }
+  }
+
+  @override
+  Future<Either<Failure, Map<String, String>>> setupMfa() async {
+    try {
+      final result = await networkDataSource.setupMfa();
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message, e.statusCode));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> verifyMfa(String code) async {
+    try {
+      await networkDataSource.verifyMfa(code);
+      return const Right(null);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message, e.statusCode));
+    }
+  }
+
+  @override
+  Future<Either<Failure, AuthResponse>> mfaChallenge(
+    String mfaToken,
+    String code,
+  ) async {
+    try {
+      final result = await networkDataSource.mfaChallenge(mfaToken, code);
+      // Cache tokens if successful
+      await localDataSource.cacheTokens(
+        result.accessToken,
+        result.refreshToken,
+      );
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message, e.statusCode));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> initiateRecovery(String email) async {
+    try {
+      await networkDataSource.initiateRecovery(email);
+      return const Right(null);
+    } on ServerException catch (e) {
+      // We don't want to reveal if email exists, but the error message from backend might handles this.
+      // Usually we just say "If an account exists, an email has been sent."
+      // But if backend throws, we propagate.
+      return Left(ServerFailure(e.message, e.statusCode));
+    }
+  }
+
+  @override
+  Future<Either<Failure, AuthResponse>> verifyRecovery(String token) async {
+    try {
+      final result = await networkDataSource.verifyRecovery(token);
+      await localDataSource.cacheTokens(
+        result.accessToken,
+        result.refreshToken,
+      );
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message, e.statusCode));
     }
   }
 }

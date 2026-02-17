@@ -26,6 +26,10 @@ import 'package:barz/features/payment/presentation/pages/checkout_page.dart';
 import 'package:barz/features/authentication/presentation/pages/login_page.dart';
 import 'package:barz/features/authentication/presentation/pages/complete_registration_page.dart';
 import 'package:barz/features/onboarding/presentation/pages/onboarding_page.dart';
+import 'package:barz/features/authentication/presentation/pages/mfa_challenge_page.dart';
+import 'package:barz/features/authentication/presentation/pages/mfa_setup_page.dart';
+import 'package:barz/features/authentication/presentation/pages/recovery/recovery_initiate_page.dart';
+import 'package:barz/features/authentication/presentation/pages/recovery/recovery_verify_page.dart';
 import 'package:barz/features/menu_reader/presentation/bloc/menu_reader_bloc.dart';
 import 'package:barz/features/menu_reader/presentation/pages/menu_reader_page.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
@@ -36,7 +40,7 @@ import 'package:barz/features/legal/domain/models/legal_document.dart';
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 final _businessShellNavigatorKey = GlobalKey<NavigatorState>();
 
-const _publicRoutes = {'/login'};
+const _publicRoutes = {'/login', '/auth/mfa-challenge'};
 
 final appRouter = GoRouter(
   navigatorKey: rootNavigatorKey,
@@ -82,6 +86,29 @@ final appRouter = GoRouter(
           prefilledPhone: extra?['phone'],
         );
       },
+    ),
+    GoRoute(
+      path: AppRoute.mfaChallenge.path,
+      name: AppRoute.mfaChallenge.name,
+      builder: (context, state) {
+        final extra = state.extra as Map<String, dynamic>?;
+        return MfaChallengePage(mfaToken: extra?['token'] as String? ?? '');
+      },
+    ),
+    GoRoute(
+      path: AppRoute.mfaSetup.path,
+      name: AppRoute.mfaSetup.name,
+      builder: (context, state) => const MfaSetupPage(),
+    ),
+    GoRoute(
+      path: AppRoute.recoveryInitiate.path,
+      name: AppRoute.recoveryInitiate.name,
+      builder: (context, state) => const RecoveryInitiatePage(),
+    ),
+    GoRoute(
+      path: AppRoute.recoveryVerify.path,
+      name: AppRoute.recoveryVerify.name,
+      builder: (context, state) => const RecoveryVerifyPage(),
     ),
     GoRoute(
       path: AppRoute.home.path,

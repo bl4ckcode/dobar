@@ -9,6 +9,7 @@ import 'package:barz/features/cart/domain/usecases/cart_usecase.dart';
 import 'package:barz/features/cart/presentation/bloc/cart_event.dart';
 import 'package:barz/features/cart/presentation/bloc/cart_state.dart';
 import 'package:dartz/dartz.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rxdart/rxdart.dart';
 
@@ -354,7 +355,9 @@ class CartBloc extends Bloc<CartEvent, CartState> {
         },
       );
     } catch (e, stackTrace) {
-      print('Error in _onSyncCart: $e\n$stackTrace');
+      if (kDebugMode) {
+        print('Error in _onSyncCart: $e\n$stackTrace');
+      }
       if (state is CartLoaded) {
         emit((state as CartLoaded).copyWith(isLoading: false));
       }

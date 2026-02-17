@@ -1,4 +1,6 @@
 import 'package:barz/core/design/design_system.dart';
+import 'package:barz/features/authentication/presentation/pages/mfa_setup_page.dart';
+import 'package:barz/features/user/domain/repositories/abstract_user_repository.dart';
 import 'package:barz/core/network/dio_network.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/authentication/domain/usecases/login_usecase.dart';
@@ -47,6 +49,70 @@ class _ProfileHomePageState extends State<ProfileHomePage> {
       if (mounted) {
         AppRoute.login.go(context);
       }
+    }
+  }
+
+  Future<void> _handleDeleteAccount() async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Account', style: TextStyle(color: errorRed)),
+        content: const Text(
+          'Are you sure you want to permanently delete your account? This action cannot be undone and you will lose all your data.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              foregroundColor: errorRed,
+              backgroundColor: errorRed.withValues(alpha: 0.1),
+            ),
+            child: const Text('Delete Permanently'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      if (!mounted) return;
+
+      // Show loading overlay
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      final result = await getItInjector<UserRepository>().deleteAccount();
+
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading
+
+      result.fold(
+        (failure) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Failed to delete account: ${failure.errorMessage}',
+              ),
+            ),
+          );
+        },
+        (_) async {
+          await DioNetwork.clearTokens();
+          if (mounted) {
+            AppRoute.login.go(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Your account has been deleted.')),
+            );
+          }
+        },
+      );
     }
   }
 
@@ -109,11 +175,23 @@ class _ProfileHomePageState extends State<ProfileHomePage> {
                   _buildSectionTitle('Settings'),
                   const SizedBox(height: 12),
                   _buildMenuItem(
+                    icon: Icons.security,
+                    title: 'Two-Factor Authentication',
+                    subtitle: 'Secure your account with 2FA',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const MfaSetupPage(),
+                      ),
+                    ),
+                  ).animate().fadeIn(delay: 200.ms).slideX(begin: -0.1, end: 0),
+                  const SizedBox(height: 12),
+                  _buildMenuItem(
                     icon: Icons.settings_outlined,
                     title: 'Settings',
                     subtitle: 'Preferences & notifications',
                     onTap: () {},
-                  ).animate().fadeIn(delay: 200.ms).slideX(begin: -0.1, end: 0),
+                  ).animate().fadeIn(delay: 250.ms).slideX(begin: -0.1, end: 0),
                   _buildMenuItem(
                     icon: Icons.help_outline,
                     title: 'Help & Support',
@@ -125,9 +203,20 @@ class _ProfileHomePageState extends State<ProfileHomePage> {
                     icon: Icons.logout,
                     title: 'Logout',
                     subtitle: 'Sign out of your account',
-                    isDestructive: true,
+                    isDestructive:
+                        false, // Changed to false as it's not destructive data-wise
                     onTap: _handleLogout,
                   ).animate().fadeIn(delay: 300.ms).slideX(begin: -0.1, end: 0),
+                  const SizedBox(height: 24),
+                  _buildSectionTitle('Danger Zone'),
+                  const SizedBox(height: 12),
+                  _buildMenuItem(
+                    icon: Icons.delete_forever,
+                    title: 'Delete Account',
+                    subtitle: 'Permanently remove your data',
+                    isDestructive: true,
+                    onTap: _handleDeleteAccount,
+                  ).animate().fadeIn(delay: 350.ms).slideX(begin: -0.1, end: 0),
                   const SizedBox(height: 100),
                 ],
               ),

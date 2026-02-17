@@ -7,6 +7,11 @@ class ApiEndpoints {
   static const String authApple = '/auth/apple-login';
   static const String authRefresh = '/auth/refresh';
   static const String authLogout = '/auth/logout';
+  static const String authMfaSetup = '/auth/mfa/setup';
+  static const String authMfaVerify = '/auth/mfa/verify';
+  static const String authMfaChallenge = '/auth/mfa/challenge';
+  static const String authRecoveryInitiate = '/auth/recovery/initiate';
+  static const String authRecoveryVerify = '/auth/recovery/verify';
 
   static const String bars = '/bars/';
   static const String barsWizard = '/bars/wizard';
@@ -58,6 +63,7 @@ class ApiEndpoints {
   static const String profile = '/me/profile';
   static const String acceptTerms = '/me/accept-terms';
   static const String acceptPrivacy = '/me/accept-privacy';
+  static const String userDataExclusion = '/me/data';
   static const String onboarding = '/me/onboarding';
   static const String paymentGateway = '/me/payment-gateway';
 
