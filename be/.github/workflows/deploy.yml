@@ -5,87 +5,26 @@ on:
     branches:
       - main
   workflow_dispatch:
-    inputs:
-      run_migrations:
-        description: 'Run database migrations after deploy'
-        required: false
-        default: 'false'
-        type: choice
-        options:
-          - 'false'
-          - 'true'
-          - 'dry-run'
 
 jobs:
+  # 1. Run Unit Tests
   test:
-    name: Run Tests
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: 'pip'
-      
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install -r requirements-test.txt
-          pip install git+https://${{ secrets.GH_PAT }}@github.com/bl4ckcode/dobar-payment-engine.git
-      
-      - name: Run tests
-        run: pytest tests/ --no-cov -q
-        env:
-          DATABASE_URL: sqlite:///./test.db
-          MONGO_URI: mongodb://localhost:27017/test
-          SECRET_KEY: test_secret_key
-          FIREBASE_CREDENTIALS_JSON: '{"type": "service_account", "project_id": "test"}'
-          TESTING: "true"
-          REDIS_URL: "memory://"
+    uses: ./.github/workflows/unit-tests.yml
+    secrets: inherit
 
-  validate_payment_contracts:
-    name: Validate Payment Contracts
+  # 2. Validate Payment Contracts
+  contracts:
     needs: test
     uses: ./.github/workflows/payment-contract-validation.yml
     secrets: inherit
 
+  # 3. Deploy Application
   deploy:
-    name: Deploy to Fly.io
+    name: Deploy Application
     runs-on: ubuntu-latest
-    needs: [test, validate_payment_contracts]
-    outputs:
-      should_migrate: ${{ steps.check_migrate.outputs.should_migrate }}
+    needs: [test, contracts]
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 2
-      
-      - name: Check if migrations should run
-        id: check_migrate
-        env:
-          MANUAL_TRIGGER: ${{ github.event.inputs.run_migrations }}
-        run: |
-          # Get list of changed files in the last commit
-          CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
-          
-          # Check for changes in migrations/versions
-          if echo "$CHANGED_FILES" | grep -q "migrations/versions/"; then
-            echo "🔄 Detected changes in migrations/versions/"
-            echo "should_migrate=true" >> $GITHUB_OUTPUT
-          # Check for manual trigger
-          elif [[ "$MANUAL_TRIGGER" == "true" ]]; then
-            echo "🔄 Manual migration trigger"
-            echo "should_migrate=true" >> $GITHUB_OUTPUT
-          elif [[ "$MANUAL_TRIGGER" == "dry-run" ]]; then
-            echo "🔍 Dry-run migration trigger"
-            echo "should_migrate=dry-run" >> $GITHUB_OUTPUT
-          else
-            echo "⏭️ No migration changes found, skipping migrations"
-            echo "should_migrate=false" >> $GITHUB_OUTPUT
-          fi
       
       - name: Setup Fly CLI
         uses: superfly/flyctl-actions/setup-flyctl@master
@@ -95,70 +34,34 @@ jobs:
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
-  run_migrations:
-    name: Run Database Migrations
+  # 4. Check for Pending Migrations
+  check_migrations:
+    name: Check Pending Migrations
     runs-on: ubuntu-latest
     needs: deploy
-    if: needs.deploy.outputs.should_migrate == 'true' || needs.deploy.outputs.should_migrate == 'dry-run'
+    outputs:
+      should_migrate: ${{ steps.check.outputs.should_migrate }}
     steps:
       - uses: actions/checkout@v4
       
-      - name: Setup Fly CLI
-        uses: superfly/flyctl-actions/setup-flyctl@master
-
-      - name: Check current migration status
+      - name: Check for migration files
+        id: check
         run: |
-          echo "📊 Current database migration status:"
-          flyctl ssh console -a barz-backend-bold-sun-5691 -C "alembic current" || echo "⚠️ Could not check status"
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-
-      - name: Show pending migrations (dry-run)
-        if: needs.deploy.outputs.should_migrate == 'dry-run'
-        run: |
-          echo "🔍 DRY-RUN: Showing migration history..."
-          flyctl ssh console -a barz-backend-bold-sun-5691 -C "alembic history --verbose" || true
-          echo "⚠️ Dry-run complete. No migrations were applied."
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-
-      - name: Run migrations
-        if: needs.deploy.outputs.should_migrate == 'true'
-        run: |
-          echo "🚀 Running database migrations..."
-          flyctl ssh console -a barz-backend-bold-sun-5691 -C "alembic upgrade head"
-          echo "✅ Migrations completed successfully"
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-        timeout-minutes: 5
-
-      - name: Verify migration status
-        if: needs.deploy.outputs.should_migrate == 'true'
-        run: |
-          echo "🔍 Final migration status:"
-          flyctl ssh console -a barz-backend-bold-sun-5691 -C "alembic current"
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-
-      - name: Delete applied migrations from repo
-        if: needs.deploy.outputs.should_migrate == 'true'
-        run: |
-          echo "🧹 Cleaning up applied migration files..."
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # If migration files exist in the folder, we need to migrate
+          # The logic: Successful migrations are deleted from repo. 
+          # So any file remaining in migrations/versions/ is PENDING (or failed previously).
           
-          # Checkout main branch to push changes
-          git checkout main
-          git pull origin main
-          
-          # Delete all python files in versions folder
-          git rm migrations/versions/*.py || echo "No migration files to delete"
-          
-          # Commit and push if there are changes
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
+          if ls migrations/versions/*.py 1> /dev/null 2>&1; then
+            echo "🔄 Found pending migration files."
+            echo "should_migrate=true" >> $GITHUB_OUTPUT
           else
-            git commit -m "chore: remove applied migrations [skip ci]"
-            git push "https://${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git" main
-            echo "✅ Deleted applied migrations from repository"
+            echo "✨ No migration files found. Database is up to date."
+            echo "should_migrate=false" >> $GITHUB_OUTPUT
           fi
+
+  # 5. Run Migrations (Conditional)
+  migrations:
+    needs: check_migrations
+    if: needs.check_migrations.outputs.should_migrate == 'true'
+    uses: ./.github/workflows/run-migrations.yml
+    secrets: inherit
