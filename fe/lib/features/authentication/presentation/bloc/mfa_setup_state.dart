@@ -1,7 +1,9 @@
-part of 'mfa_setup_cubit.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
+
+part 'mfa_setup_state.freezed.dart';
 
 @freezed
-class MfaSetupState with _$MfaSetupState {
+sealed class MfaSetupState with _$MfaSetupState {
   const factory MfaSetupState.initial() = MfaSetupInitial;
   const factory MfaSetupState.loading() = MfaSetupLoading;
   const factory MfaSetupState.loaded({

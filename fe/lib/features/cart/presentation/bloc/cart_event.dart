@@ -1,127 +1,41 @@
-import 'package:equatable/equatable.dart';
+import 'package:freezed_annotation/freezed_annotation.dart';
 
-abstract class CartEvent extends Equatable {
-  const CartEvent();
+part 'cart_event.freezed.dart';
 
-  @override
-  List<Object?> get props => [];
-}
-
-class LoadCart extends CartEvent {
-  final int? barId;
-
-  const LoadCart({this.barId});
-
-  @override
-  List<Object?> get props => [barId];
-}
-
-class AddToCart extends CartEvent {
-  final int menuItemId;
-  final int barId;
-  final String menuItemName;
-  final int quantity;
-  final double unitPrice;
-
-  const AddToCart({
-    required this.menuItemId,
-    required this.barId,
-    required this.menuItemName,
-    required this.quantity,
-    required this.unitPrice,
-  });
-
-  @override
-  List<Object?> get props => [
-    menuItemId,
-    barId,
-    menuItemName,
-    quantity,
-    unitPrice,
-  ];
-}
-
-class UpdateCartItem extends CartEvent {
-  final int menuItemId;
-  final int quantity;
-
-  const UpdateCartItem({required this.menuItemId, required this.quantity});
-
-  @override
-  List<Object?> get props => [menuItemId, quantity];
-}
-
-class RemoveFromCart extends CartEvent {
-  final int menuItemId;
-
-  const RemoveFromCart({required this.menuItemId});
-
-  @override
-  List<Object?> get props => [menuItemId];
-}
-
-class DecreaseCartItem extends CartEvent {
-  final int menuItemId;
-
-  const DecreaseCartItem({required this.menuItemId});
-
-  @override
-  List<Object?> get props => [menuItemId];
-}
-
-class ClearCart extends CartEvent {}
-
-class LoadCheckoutConfig extends CartEvent {
-  final int barId;
-
-  const LoadCheckoutConfig({required this.barId});
-
-  @override
-  List<Object?> get props => [barId];
-}
-
-class Checkout extends CartEvent {
-  final String orderType;
-  final String paymentMethod;
-  final String? tableNumber;
-  final String? specialInstructions;
-  final List<String>? activePromotionIds;
-
-  const Checkout({
-    required this.orderType,
-    required this.paymentMethod,
-    this.tableNumber,
-    this.specialInstructions,
-    this.activePromotionIds,
-  });
-
-  @override
-  List<Object?> get props => [
-    orderType,
-    paymentMethod,
-    tableNumber,
-    specialInstructions,
-    activePromotionIds,
-  ];
-}
-
-class SyncCart extends CartEvent {}
-
-class UpdateActivePromotions extends CartEvent {
-  final List<String> activePromotionIds;
-
-  const UpdateActivePromotions({required this.activePromotionIds});
-
-  @override
-  List<Object?> get props => [activePromotionIds];
-}
-
-class CheckSpotAvailability extends CartEvent {
-  final int barId;
-  final String spotId;
-
-  const CheckSpotAvailability({required this.barId, required this.spotId});
-
-  @override
-  List<Object?> get props => [barId, spotId];
+@freezed
+sealed class CartEvent with _$CartEvent {
+  const factory CartEvent.loadCart({int? barId}) = LoadCart;
+  const factory CartEvent.addToCart({
+    required int menuItemId,
+    required int barId,
+    required String menuItemName,
+    required int quantity,
+    required double unitPrice,
+  }) = AddToCart;
+  const factory CartEvent.updateCartItem({
+    required int menuItemId,
+    required int quantity,
+  }) = UpdateCartItem;
+  const factory CartEvent.removeFromCart({required int menuItemId}) =
+      RemoveFromCart;
+  const factory CartEvent.decreaseCartItem({required int menuItemId}) =
+      DecreaseCartItem;
+  const factory CartEvent.clearCart() = ClearCart;
+  const factory CartEvent.loadCheckoutConfig({required int barId}) =
+      LoadCheckoutConfig;
+  const factory CartEvent.checkout({
+    required String orderType,
+    required String paymentMethod,
+    String? tableNumber,
+    String? specialInstructions,
+    List<String>? activePromotionIds,
+  }) = Checkout;
+  const factory CartEvent.syncCart() = SyncCart;
+  const factory CartEvent.updateActivePromotions({
+    required List<String> activePromotionIds,
+  }) = UpdateActivePromotions;
+  const factory CartEvent.checkSpotAvailability({
+    required int barId,
+    required String spotId,
+  }) = CheckSpotAvailability;
 }

@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 class CartItemModel {
   final int id;
   final int cartId;
@@ -119,6 +121,25 @@ class CartSyncRequest {
       if (couponCode != null) 'coupon_code': couponCode,
     };
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is CartSyncRequest &&
+        listEquals(other.items, items) &&
+        other.locationIdentifier == locationIdentifier &&
+        listEquals(other.activePromotionIds, activePromotionIds) &&
+        other.couponCode == couponCode;
+  }
+
+  @override
+  int get hashCode {
+    return items.hashCode ^
+        locationIdentifier.hashCode ^
+        activePromotionIds.hashCode ^
+        couponCode.hashCode;
+  }
 }
 
 class CartItemInput {
@@ -140,6 +161,20 @@ class CartItemInput {
         'special_instructions': specialInstructions,
     };
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+
+    return other is CartItemInput &&
+        other.menuItemId == menuItemId &&
+        other.quantity == quantity &&
+        other.specialInstructions == specialInstructions;
+  }
+
+  @override
+  int get hashCode =>
+      menuItemId.hashCode ^ quantity.hashCode ^ specialInstructions.hashCode;
 }
 
 class ValidationIssue {
@@ -176,28 +211,112 @@ class LocationStatus {
   }
 }
 
-class CartModel {
+abstract class CartModel {
+  int get id;
+  int get userId;
+  List<CartItemModel> get items;
+  int get totalItems;
+  double get subtotal;
+  double get discount;
+  double get tax;
+  double get tip;
+  double get deliveryFee;
+  double get total;
+  List<AppliedBundleModel> get appliedBundles;
+  double get bundleSavings;
+  double get subtotalAfterBundles;
+  String? get bundleHint;
+  List<PromotionApplied> get appliedPromotions;
+  List<ValidationIssue> get validationIssues;
+  LocationStatus? get locationStatus;
+  DateTime get createdAt;
+  DateTime get updatedAt;
+
+  CartModel copyWith({
+    List<CartItemModel>? items,
+    int? totalItems,
+    double? subtotal,
+    double? discount,
+    double? tax,
+    double? tip,
+    double? deliveryFee,
+    double? total,
+    List<AppliedBundleModel>? appliedBundles,
+    double? bundleSavings,
+    double? subtotalAfterBundles,
+    String? bundleHint,
+    List<PromotionApplied>? appliedPromotions,
+    List<ValidationIssue>? validationIssues,
+    LocationStatus? locationStatus,
+  });
+
+  factory CartModel({
+    required int id,
+    required int userId,
+    required List<CartItemModel> items,
+    required int totalItems,
+    required double subtotal,
+    double discount,
+    double tax,
+    double tip,
+    double deliveryFee,
+    double? total,
+    List<AppliedBundleModel> appliedBundles,
+    double bundleSavings,
+    double? subtotalAfterBundles,
+    String? bundleHint,
+    List<PromotionApplied> appliedPromotions,
+    List<ValidationIssue> validationIssues,
+    LocationStatus? locationStatus,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+  }) = _CartModelImpl;
+
+  factory CartModel.fromJson(Map<String, dynamic> json) =
+      _CartModelImpl.fromJson;
+}
+
+class _CartModelImpl implements CartModel {
+  @override
   final int id;
+  @override
   final int userId;
+  @override
   final List<CartItemModel> items;
+  @override
   final int totalItems;
+  @override
   final double subtotal;
+  @override
   final double discount;
+  @override
   final double tax;
+  @override
   final double tip;
+  @override
   final double deliveryFee;
+  @override
   final double total;
+  @override
   final List<AppliedBundleModel> appliedBundles;
+  @override
   final double bundleSavings;
+  @override
   final double subtotalAfterBundles;
+  @override
   final String? bundleHint;
+  @override
   final List<PromotionApplied> appliedPromotions;
+  @override
   final List<ValidationIssue> validationIssues;
+  @override
   final LocationStatus? locationStatus;
+  @override
   final DateTime createdAt;
+  @override
   final DateTime updatedAt;
 
-  CartModel({
+  _CartModelImpl({
     required this.id,
     required this.userId,
     required this.items,
@@ -220,8 +339,49 @@ class CartModel {
   }) : subtotalAfterBundles = subtotalAfterBundles ?? subtotal,
        total = total ?? subtotal;
 
-  factory CartModel.fromJson(Map<String, dynamic> json) {
-    return CartModel(
+  @override
+  CartModel copyWith({
+    List<CartItemModel>? items,
+    int? totalItems,
+    double? subtotal,
+    double? discount,
+    double? tax,
+    double? tip,
+    double? deliveryFee,
+    double? total,
+    List<AppliedBundleModel>? appliedBundles,
+    double? bundleSavings,
+    double? subtotalAfterBundles,
+    String? bundleHint,
+    List<PromotionApplied>? appliedPromotions,
+    List<ValidationIssue>? validationIssues,
+    LocationStatus? locationStatus,
+  }) {
+    return _CartModelImpl(
+      id: id,
+      userId: userId,
+      items: items ?? this.items,
+      totalItems: totalItems ?? this.totalItems,
+      subtotal: subtotal ?? this.subtotal,
+      discount: discount ?? this.discount,
+      tax: tax ?? this.tax,
+      tip: tip ?? this.tip,
+      deliveryFee: deliveryFee ?? this.deliveryFee,
+      total: total ?? this.total,
+      appliedBundles: appliedBundles ?? this.appliedBundles,
+      bundleSavings: bundleSavings ?? this.bundleSavings,
+      subtotalAfterBundles: subtotalAfterBundles ?? this.subtotalAfterBundles,
+      bundleHint: bundleHint ?? this.bundleHint,
+      appliedPromotions: appliedPromotions ?? this.appliedPromotions,
+      validationIssues: validationIssues ?? this.validationIssues,
+      locationStatus: locationStatus ?? this.locationStatus,
+      createdAt: createdAt,
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  factory _CartModelImpl.fromJson(Map<String, dynamic> json) {
+    return _CartModelImpl(
       id: json['id'] ?? 0,
       userId: json['user_id'] ?? 0,
       items:
@@ -293,46 +453,6 @@ class CartModel {
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
-  }
-
-  CartModel copyWith({
-    List<CartItemModel>? items,
-    int? totalItems,
-    double? subtotal,
-    double? discount,
-    double? tax,
-    double? tip,
-    double? deliveryFee,
-    double? total,
-    List<AppliedBundleModel>? appliedBundles,
-    double? bundleSavings,
-    double? subtotalAfterBundles,
-    String? bundleHint,
-    List<PromotionApplied>? appliedPromotions,
-    List<ValidationIssue>? validationIssues,
-    LocationStatus? locationStatus,
-  }) {
-    return CartModel(
-      id: id,
-      userId: userId,
-      items: items ?? this.items,
-      totalItems: totalItems ?? this.totalItems,
-      subtotal: subtotal ?? this.subtotal,
-      discount: discount ?? this.discount,
-      tax: tax ?? this.tax,
-      tip: tip ?? this.tip,
-      deliveryFee: deliveryFee ?? this.deliveryFee,
-      total: total ?? this.total,
-      appliedBundles: appliedBundles ?? this.appliedBundles,
-      bundleSavings: bundleSavings ?? this.bundleSavings,
-      subtotalAfterBundles: subtotalAfterBundles ?? this.subtotalAfterBundles,
-      bundleHint: bundleHint ?? this.bundleHint,
-      appliedPromotions: appliedPromotions ?? this.appliedPromotions,
-      validationIssues: validationIssues ?? this.validationIssues,
-      locationStatus: locationStatus ?? this.locationStatus,
-      createdAt: createdAt,
-      updatedAt: DateTime.now(),
-    );
   }
 }
 

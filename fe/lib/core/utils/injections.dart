@@ -36,7 +36,7 @@ Future<void> initInjections() async {
   await initDioInjections();
   await initNotificationInjections();
   await initLoginInjections();
-  await initHomeInjections();
+  registerHomeFeature(getItInjector);
   await initPartnersInjection();
   await initBarsInjection();
   await initCartInjection();

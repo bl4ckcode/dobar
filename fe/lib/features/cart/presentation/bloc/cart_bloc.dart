@@ -16,6 +16,7 @@ import 'package:rxdart/rxdart.dart';
 class CartBloc extends Bloc<CartEvent, CartState> {
   final CartUsecase cartUsecase;
   final AbstractBarRepository barRepository;
+  CartSyncRequest? _lastSyncRequest;
 
   CartBloc({required this.cartUsecase, required this.barRepository})
     : super(CartInitial()) {
@@ -70,6 +71,9 @@ class CartBloc extends Bloc<CartEvent, CartState> {
         barId: barId,
       );
     }
+
+    // Clear last sync request to ensure fresh sync
+    _lastSyncRequest = null;
 
     emit(currentState.copyWith(isLoading: true, barId: barId));
 
@@ -330,6 +334,14 @@ class CartBloc extends Bloc<CartEvent, CartState> {
         items: itemsInput,
         activePromotionIds: currentState.selectedPromotionIds,
       );
+
+      if (_lastSyncRequest == request) {
+        if (kDebugMode) {
+          print('[CartBloc] _onSyncCart: Skipping redundant sync request');
+        }
+        return;
+      }
+      _lastSyncRequest = request;
 
       final result = await cartUsecase.syncCart(request);
 

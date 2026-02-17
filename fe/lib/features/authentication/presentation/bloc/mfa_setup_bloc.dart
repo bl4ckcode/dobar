@@ -1,16 +1,20 @@
 import 'package:barz/features/authentication/domain/usecases/login_usecase.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:freezed_annotation/freezed_annotation.dart';
+import 'mfa_setup_event.dart';
+import 'mfa_setup_state.dart';
 
-part 'mfa_setup_state.dart';
-part 'mfa_setup_cubit.freezed.dart';
-
-class MfaSetupCubit extends Cubit<MfaSetupState> {
+class MfaSetupBloc extends Bloc<MfaSetupEvent, MfaSetupState> {
   final LoginUsecase _loginUsecase;
 
-  MfaSetupCubit(this._loginUsecase) : super(const MfaSetupState.initial());
+  MfaSetupBloc(this._loginUsecase) : super(const MfaSetupState.initial()) {
+    on<InitiateSetup>(_onInitiateSetup);
+    on<VerifyAndActivate>(_onVerifyAndActivate);
+  }
 
-  Future<void> initiateSetup() async {
+  Future<void> _onInitiateSetup(
+    InitiateSetup event,
+    Emitter<MfaSetupState> emit,
+  ) async {
     emit(const MfaSetupState.loading());
     final result = await _loginUsecase.setupMfa();
     result.fold(
@@ -24,13 +28,15 @@ class MfaSetupCubit extends Cubit<MfaSetupState> {
     );
   }
 
-  Future<void> verifyAndActivate(String code) async {
+  Future<void> _onVerifyAndActivate(
+    VerifyAndActivate event,
+    Emitter<MfaSetupState> emit,
+  ) async {
     final currentState = state;
     if (currentState is! MfaSetupLoaded && currentState is! MfaSetupVerifying) {
-      return; // simple guard
+      return;
     }
 
-    // Preserve current data if possible, or just go to Verifying
     String secret = '';
     String qrCode = '';
     if (currentState is MfaSetupLoaded) {
@@ -43,7 +49,7 @@ class MfaSetupCubit extends Cubit<MfaSetupState> {
 
     emit(MfaSetupState.verifying(secret: secret, qrCode: qrCode));
 
-    final result = await _loginUsecase.verifyMfa(code);
+    final result = await _loginUsecase.verifyMfa(event.code);
     result.fold(
       (failure) => emit(
         MfaSetupState.errorDuringVerification(

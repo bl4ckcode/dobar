@@ -33,17 +33,18 @@ class CartPage extends StatefulWidget {
 
 class _CartPageState extends State<CartPage> {
   @override
+  void initState() {
+    super.initState();
+    getItInjector<CartBloc>().add(cart_event.LoadCart(barId: widget.barId));
+    getItInjector<CheckinBloc>().add(const checkin_event.LoadActiveCheckin());
+  }
+
+  @override
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider.value(
-          value: getItInjector<CartBloc>()
-            ..add(cart_event.LoadCart(barId: widget.barId)),
-        ),
-        BlocProvider.value(
-          value: getItInjector<CheckinBloc>()
-            ..add(const checkin_event.LoadActiveCheckin()),
-        ),
+        BlocProvider.value(value: getItInjector<CartBloc>()),
+        BlocProvider.value(value: getItInjector<CheckinBloc>()),
       ],
       child: const _CartPageContent(),
     );

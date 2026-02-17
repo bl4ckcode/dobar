@@ -1,34 +1,21 @@
+import 'package:get_it/get_it.dart';
 import 'package:barz/core/network/dio_network.dart';
-import 'package:barz/core/utils/injections.dart';
-import 'package:barz/features/home/data/data_sources/home_impl_api.dart';
-import 'package:barz/features/home/data/data_sources/local/home_shared_prefs.dart';
-import 'package:barz/features/home/data/repositories/home_impl_repo.dart';
-import 'package:barz/features/home/domain/repositories/abstract_home_repository.dart';
-import 'package:barz/features/home/domain/usecases/drinks_home_usecase.dart';
-import 'package:barz/features/home/domain/usecases/home_usecase.dart';
-import 'package:barz/features/home/presentation/bloc/drinks/drinks_home_bloc.dart';
+import 'data/datasources/home_datasource.dart';
+import 'data/repositories/home_repository.dart';
+import 'data/repositories/home_repository_impl.dart';
+import 'presentation/bloc/home_bloc.dart';
 
-import '../partners/domain/repositories/abstract_partners_repository.dart';
+void registerHomeFeature(GetIt getIt) {
+  // Datasource
+  getIt.registerLazySingleton<HomeDatasource>(
+    () => HomeDatasourceImpl(dio: DioNetwork.appAPI),
+  );
 
-Future<void> initHomeInjections() async {
-  // Register HomeImplApi
-  getItInjector.registerSingleton<HomeImplApi>(HomeImplApi(DioNetwork.appAPI));
-  // Register AbstractHomeRepository
-  getItInjector.registerSingleton<AbstractHomeRepository>(HomeRepositoryImpl(getItInjector()));
-  // Register HomeSharedPrefs
-  getItInjector.registerSingleton<HomeSharedPrefs>(HomeSharedPrefs(getItInjector()));
-  // Register HomeUseCase
-  getItInjector.registerSingleton<HomeUseCase>(HomeUseCase(getItInjector()));
-  // Register DrinksHomeUseCase
-  getItInjector.registerLazySingleton<DrinksHomeUseCase>(
-    () => DrinksHomeUseCase(
-      repository: getItInjector<AbstractPartnersRepository>(),
-    ),
+  // Repository
+  getIt.registerLazySingleton<HomeRepository>(
+    () => HomeRepositoryImpl(datasource: getIt<HomeDatasource>()),
   );
-  // Register DrinksHomeBloc
-  getItInjector.registerLazySingleton<DrinksHomeBloc>(
-    () => DrinksHomeBloc(
-      drinksHomeUseCase: getItInjector<DrinksHomeUseCase>(),
-    ),
-  );
+
+  // Bloc
+  getIt.registerFactory<HomeBloc>(() => HomeBloc(getIt<HomeRepository>()));
 }

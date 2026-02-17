@@ -3,7 +3,9 @@ import 'dart:convert';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/authentication/domain/usecases/login_usecase.dart';
-import 'package:barz/features/authentication/presentation/bloc/mfa_setup_cubit.dart';
+import 'package:barz/features/authentication/presentation/bloc/mfa_setup_bloc.dart';
+import 'package:barz/features/authentication/presentation/bloc/mfa_setup_event.dart';
+import 'package:barz/features/authentication/presentation/bloc/mfa_setup_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -16,7 +18,8 @@ class MfaSetupPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) =>
-          MfaSetupCubit(getItInjector<LoginUsecase>())..initiateSetup(),
+          MfaSetupBloc(getItInjector<LoginUsecase>())
+            ..add(const MfaSetupEvent.initiateSetup()),
       child: const _MfaSetupView(),
     );
   }
@@ -41,7 +44,7 @@ class _MfaSetupViewState extends State<_MfaSetupView> {
   void _onVerifyPressed() {
     final code = _codeController.text.trim();
     if (code.length == 6) {
-      context.read<MfaSetupCubit>().verifyAndActivate(code);
+      context.read<MfaSetupBloc>().add(MfaSetupEvent.verifyAndActivate(code));
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter a valid 6-digit code')),
@@ -58,7 +61,7 @@ class _MfaSetupViewState extends State<_MfaSetupView> {
         backgroundColor: Colors.transparent,
         iconTheme: const IconThemeData(color: barzGold),
       ),
-      body: BlocConsumer<MfaSetupCubit, MfaSetupState>(
+      body: BlocConsumer<MfaSetupBloc, MfaSetupState>(
         listener: (context, state) {
           state.maybeWhen(
             success: () {
@@ -96,8 +99,9 @@ class _MfaSetupViewState extends State<_MfaSetupView> {
                   ),
                   const SizedBox(height: 16),
                   ElevatedButton(
-                    onPressed: () =>
-                        context.read<MfaSetupCubit>().initiateSetup(),
+                    onPressed: () => context.read<MfaSetupBloc>().add(
+                      const MfaSetupEvent.initiateSetup(),
+                    ),
                     child: const Text('Retry'),
                   ),
                 ],
