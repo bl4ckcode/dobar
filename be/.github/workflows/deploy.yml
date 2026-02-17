@@ -139,3 +139,26 @@ jobs:
           flyctl ssh console -a barz-backend-bold-sun-5691 -C "alembic current"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Delete applied migrations from repo
+        if: needs.deploy.outputs.should_migrate == 'true'
+        run: |
+          echo "🧹 Cleaning up applied migration files..."
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Checkout main branch to push changes
+          git checkout main
+          git pull origin main
+          
+          # Delete all python files in versions folder
+          git rm migrations/versions/*.py || echo "No migration files to delete"
+          
+          # Commit and push if there are changes
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "chore: remove applied migrations [skip ci]"
+            git push "https://${{ secrets.GH_PAT }}@github.com/${{ github.repository }}.git" main
+            echo "✅ Deleted applied migrations from repository"
+          fi
