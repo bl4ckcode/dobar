@@ -20,6 +20,8 @@ os.environ["MONGO_URI"] = "mongodb://localhost:27017/test"
 os.environ["DATABASE_URL"] = "sqlite:///./test.db"
 os.environ["SECRET_KEY"] = "test_secret_key_for_testing_only"
 os.environ["FIREBASE_CREDENTIALS_JSON"] = '{"type": "service_account", "project_id": "test"}'
+os.environ["TESTING"] = "true"
+os.environ["REDIS_URL"] = "memory://"
 
 # Mock external services before importing app
 mock_firebase_app = MagicMock()
@@ -45,6 +47,8 @@ with patch("firebase_admin.initialize_app", return_value=mock_firebase_app), \
     # Import all models to ensure their tables are registered with Base.metadata
     from app.auth.auth_models import User, Token, RefreshToken
     from app.auth.rbac_models import UserProfile, BarStaff, StaffInvitation
+    from app.auth.mfa_models import MFASecret
+    from app.auth.recovery_models import RecoveryToken
     import fakeredis.aioredis
 
 # Test database URL (use SQLite for testing)

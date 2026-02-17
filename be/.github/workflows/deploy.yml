@@ -43,6 +43,8 @@ jobs:
           MONGO_URI: mongodb://localhost:27017/test
           SECRET_KEY: test_secret_key
           FIREBASE_CREDENTIALS_JSON: '{"type": "service_account", "project_id": "test"}'
+          TESTING: "true"
+          REDIS_URL: "memory://"
 
   validate_payment_contracts:
     name: Validate Payment Contracts

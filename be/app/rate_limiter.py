@@ -3,6 +3,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
+TESTING = os.getenv("TESTING", "false").lower() == "true"
 
 def key_func(request):
     user = getattr(request.state, "user", None)
@@ -12,8 +13,9 @@ def key_func(request):
 
 limiter = Limiter(
     key_func=key_func,
-    storage_uri=REDIS_URL,
+    storage_uri="memory://" if TESTING else REDIS_URL,
     default_limits=["200/minute"],
+    enabled=not TESTING,
 )
 
 class RateLimits:
