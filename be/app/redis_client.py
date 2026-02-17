@@ -5,13 +5,18 @@ from typing import Optional, Any, Callable
 from functools import wraps
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
+TESTING = os.getenv("TESTING", "false").lower() == "true"
 
 _redis_client: Optional[redis.Redis] = None
 
 async def get_redis() -> redis.Redis:
     global _redis_client
     if _redis_client is None:
-        _redis_client = redis.from_url(REDIS_URL, decode_responses=True)
+        if TESTING:
+            import fakeredis.aioredis
+            _redis_client = fakeredis.aioredis.FakeRedis(decode_responses=True)
+        else:
+            _redis_client = redis.from_url(REDIS_URL, decode_responses=True)
     return _redis_client
 
 async def close_redis():
