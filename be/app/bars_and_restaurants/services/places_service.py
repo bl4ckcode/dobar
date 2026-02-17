@@ -181,3 +181,59 @@ def parse_place_for_bar_creation(place_details: dict) -> dict:
         "category": _derive_category(google_types),
         "google_types": google_types,
     }
+
+# =============================================================================
+# GEOSPATIAL UTILS
+# =============================================================================
+
+def haversine(lat1: float, lon1: float, lat2: float, lon2: float) -> float:
+    """
+    Calculate the great-circle distance between two points on the Earth (specified in decimal degrees).
+    Returns distance in meters.
+    """
+    import math
+    R = 6371000  # Earth radius in meters
+    phi1 = math.radians(lat1)
+    phi2 = math.radians(lat2)
+    delta_phi = math.radians(lat2 - lat1)
+    delta_lambda = math.radians(lon2 - lon1)
+    
+    a = math.sin(delta_phi / 2) ** 2 + \
+        math.cos(phi1) * math.cos(phi2) * math.sin(delta_lambda / 2) ** 2
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    
+    return R * c
+
+
+async def find_bars_near_location(latitude: float, longitude: float, max_distance: float):
+    from ..models.nosql_models import bars_collection
+    
+    query = {
+        "location": {
+            "$near": {
+                "$geometry": {"type": "Point", "coordinates": [longitude, latitude]},
+                "$maxDistance": max_distance  # maxDistance is in meters
+            }
+        }
+    }
+    # Perform the query to find bars within the max distance
+    bars_nearby = await bars_collection.find(query).to_list(None)
+    
+    if not bars_nearby:
+        return []
+
+    results = []
+    for bar in bars_nearby:
+        # The 'location' field in MongoDB is stored as GeoJSON, where coordinates are [longitude, latitude]
+        bar_lon, bar_lat = bar["location"]["coordinates"]
+        # Calculate the distance between the bar and the input coordinates
+        distance = haversine(latitude, longitude, bar_lat, bar_lon)
+        results.append({
+            "bar_id": bar["bar_id"],
+            "approximateLocation": distance,
+            "image_url": bar.get("image_url", None),
+            "latitude": bar_lat,
+            "longitude": bar_lon,
+        })
+    
+    return results

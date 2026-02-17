@@ -26,7 +26,13 @@ os.environ["REDIS_URL"] = "memory://"
 # Mock external services before importing app
 mock_firebase_app = MagicMock()
 mock_motor_client = MagicMock()
-mock_mongo_collection = AsyncMock()
+mock_mongo_collection = MagicMock()
+mock_mongo_collection.insert_one = AsyncMock()
+mock_mongo_collection.update_one = AsyncMock()
+mock_mongo_collection.delete_one = AsyncMock()
+mock_mongo_collection.find_one = AsyncMock()
+mock_mongo_collection.aggregate = MagicMock(return_value=AsyncMock()) # aggregate returns cursor
+# aggregate needs a to_list too if used? Check usage.
 
 # Create a mock engine that doesn't try to connect
 mock_engine = MagicMock()
@@ -34,12 +40,29 @@ mock_metadata = MagicMock()
 mock_metadata.create_all = MagicMock()  # Mock the create_all method
 
 # Patch all external dependencies
+# Patch all external dependencies
 with patch("firebase_admin.initialize_app", return_value=mock_firebase_app), \
      patch("firebase_admin.credentials.Certificate", return_value=MagicMock()), \
      patch("motor.motor_asyncio.AsyncIOMotorClient", return_value=mock_motor_client), \
      patch("app.bars_and_restaurants.models.nosql_models.create_geo_index", new_callable=AsyncMock), \
+     patch("app.bars_and_restaurants.models.nosql_models.bars_collection", mock_mongo_collection), \
+     patch("app.bars_and_restaurants.models.nosql_models.orders_collection", mock_mongo_collection), \
+     patch("app.bars_and_restaurants.models.nosql_models.reviews_collection", mock_mongo_collection), \
+     patch("app.bars_and_restaurants.models.nosql_models.menus_collection", mock_mongo_collection), \
      patch("app.database.engine", mock_engine):
     
+    # Configure mock chain for MongoDB
+    mock_db = MagicMock()
+    mock_motor_client.__getitem__.return_value = mock_db
+    mock_db.__getitem__.return_value = mock_mongo_collection
+    
+    # Fix find().to_list() chain
+    # find() should be synchronous (return cursor)
+    # cursor.to_list() should be asynchronous
+    mock_cursor = MagicMock()
+    mock_cursor.to_list = AsyncMock(return_value=[])
+    mock_mongo_collection.find.return_value = mock_cursor
+
     # Now it's safe to import app components
     from app.main import app
     from app.database import Base, database as app_database
@@ -59,6 +82,15 @@ test_engine = create_engine(
     "sqlite:///./test.db",
     connect_args={"check_same_thread": False}
 )
+
+@pytest.fixture(scope="function", autouse=True)
+def mock_mongo_collections():
+    """Ensure MongoDB collections are mocked during tests."""
+    with patch("app.bars_and_restaurants.models.nosql_models.bars_collection", mock_mongo_collection), \
+         patch("app.bars_and_restaurants.models.nosql_models.orders_collection", mock_mongo_collection), \
+         patch("app.bars_and_restaurants.models.nosql_models.reviews_collection", mock_mongo_collection), \
+         patch("app.bars_and_restaurants.models.nosql_models.menus_collection", mock_mongo_collection):
+        yield
 
 # Create test database (for async operations)
 test_database = Database(TEST_DATABASE_URL)

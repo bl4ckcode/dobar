@@ -37,6 +37,7 @@ from .bars_and_restaurants.routes.bundles import bundles_router
 from .auth.api_key_middleware import ApiKeyMiddleware
 from .auth.mfa_routes import mfa_router
 from .auth.recovery_routes import recovery_router
+from .bars_and_restaurants.routes.home import home_router
 
 IS_PRODUCTION = os.getenv("FLY_APP_NAME") is not None or os.getenv("ENVIRONMENT", "development") == "production"
 ENABLE_DOCS = os.getenv("ENABLE_DOCS", "false").lower() == "true" if IS_PRODUCTION else True
@@ -220,6 +221,7 @@ app.include_router(bank_accounts_router)
 app.include_router(dashboard_router)
 app.include_router(advertising_router)
 app.include_router(bundles_router)
+app.include_router(home_router)
 
 def custom_openapi():
     if not ENABLE_DOCS:

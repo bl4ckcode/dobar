@@ -80,6 +80,7 @@ class MenuItem(Base):
     menu_id = Column(Integer, ForeignKey("menus.id", ondelete="CASCADE"), index=True, nullable=False)
     name = Column(String(200), nullable=False)
     price = Column(Float, nullable=False)
+    promotional_price = Column(Float, nullable=True)
     description = Column(String(500), nullable=True)
     category = Column(String(100), nullable=True, index=True)  # drinks, food, appetizers, etc.
     picture = Column(String, nullable=True)

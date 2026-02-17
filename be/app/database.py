@@ -16,12 +16,13 @@ POOL_SIZE = int(os.getenv("DB_POOL_SIZE", "10"))
 MAX_OVERFLOW = int(os.getenv("DB_MAX_OVERFLOW", "20"))
 POOL_RECYCLE = int(os.getenv("DB_POOL_RECYCLE", "300"))
 
-database = Database(
-    DATABASE_URL,
-    min_size=2 if IS_PRODUCTION else 1,
-    max_size=POOL_SIZE,
-    ssl=False
-)
+db_kwargs = {}
+if DATABASE_URL and DATABASE_URL.startswith("postgresql"):
+    db_kwargs["min_size"] = 2 if IS_PRODUCTION else 1
+    db_kwargs["max_size"] = POOL_SIZE
+    db_kwargs["ssl"] = False
+
+database = Database(DATABASE_URL, **db_kwargs)
 
 engine = create_engine(
     DATABASE_URL,
