@@ -4,13 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/core/utils/injections.dart';
-import 'package:barz/features/bars/presentation/bloc/bar_bloc.dart';
-import 'package:barz/features/bars/presentation/bloc/bar_event.dart';
-import 'package:barz/features/promotions/presentation/bloc/promotions_bloc.dart';
-import 'package:barz/features/promotions/presentation/bloc/promotions_event.dart';
-import 'package:barz/features/trending/presentation/bloc/trending_bloc.dart';
-import 'package:barz/features/trending/presentation/bloc/trending_event.dart';
-import 'package:barz/features/location/domain/models/location_model.dart';
 import 'package:barz/features/location/presentation/bloc/location_bloc.dart';
 import 'package:barz/features/location/presentation/bloc/location_event.dart';
 import 'package:barz/features/location/presentation/bloc/location_state.dart';
@@ -36,12 +29,10 @@ class WireframeShell extends StatefulWidget {
 
 class _WireframeShellState extends State<WireframeShell> {
   int _selectedIndex = 0;
-  bool _dataLoaded = false;
-  LocationModel? _lastLocation;
 
   static const List<Widget> _pages = [
-    HomeConnectedView(),
-    FindConnectedView(),
+    HomeConnected(),
+    FindConnected(),
     ProfileWireframe(),
   ];
 
@@ -55,34 +46,7 @@ class _WireframeShellState extends State<WireframeShell> {
     BuildContext context,
     LocationState locationState,
   ) {
-    if (!locationState.hasPermission) return;
-
-    final current = locationState.currentLocation;
-    if (current == null) return;
-
-    final lat = current.latitude;
-    final lng = current.longitude;
-
-    final locationChanged =
-        _lastLocation == null ||
-        _lastLocation!.latitude != lat ||
-        _lastLocation!.longitude != lng;
-    final shouldLoad = !_dataLoaded || locationChanged;
-    if (!shouldLoad) return;
-
-    _lastLocation = current;
-    _dataLoaded = true;
-
-    context.read<BarBloc>().add(LoadNearbyBars(lat: lat, lng: lng));
-    context.read<PromotionsBloc>().add(
-      LoadPromotions(latitude: lat, longitude: lng),
-    );
-    context.read<TrendingBloc>().add(
-      LoadMostWanted(latitude: lat, longitude: lng),
-    );
-    context.read<TrendingBloc>().add(
-      LoadHottest(latitude: lat, longitude: lng),
-    );
+    // Legacy data loading removed in favor of HomeBloc in HomeConnected
   }
 
   @override
@@ -93,10 +57,6 @@ class _WireframeShellState extends State<WireframeShell> {
           create: (_) =>
               getItInjector<LocationBloc>()..add(GetCurrentLocation()),
         ),
-        BlocProvider(create: (_) => getItInjector<BarBloc>()),
-        BlocProvider(create: (_) => getItInjector<PromotionsBloc>()),
-        BlocProvider(create: (_) => getItInjector<PromotionsBloc>()),
-        BlocProvider(create: (_) => getItInjector<TrendingBloc>()),
         BlocProvider.value(value: getItInjector<CartBloc>()),
       ],
       child: BlocListener<LocationBloc, LocationState>(

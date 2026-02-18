@@ -11,6 +11,7 @@ import 'package:barz/features/home/presentation/bloc/home_event.dart';
 import 'package:barz/features/home/presentation/bloc/home_state.dart';
 import 'package:barz/features/location/presentation/bloc/location_bloc.dart';
 import 'package:barz/features/location/presentation/bloc/location_event.dart';
+import 'package:barz/features/location/presentation/bloc/location_state.dart';
 import 'package:barz/l10n/app_localizations.dart';
 
 class HomeConnected extends StatelessWidget {
@@ -18,14 +19,8 @@ class HomeConnected extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider(
-          create: (_) =>
-              getItInjector<LocationBloc>()..add(GetCurrentLocation()),
-        ),
-        BlocProvider(create: (_) => getItInjector<HomeBloc>()),
-      ],
+    return BlocProvider(
+      create: (_) => getItInjector<HomeBloc>(),
       child: const HomeConnectedView(),
     );
   }
@@ -42,15 +37,10 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
   final ScrollController _scrollController = ScrollController();
 
   @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  void _refreshData(BuildContext context) {
+  void initState() {
+    super.initState();
+    // Trigger initial load if location is already available
     final locationState = context.read<LocationBloc>().state;
-    context.read<LocationBloc>().add(GetCurrentLocation());
-
     if (locationState.currentLocation != null) {
       context.read<HomeBloc>().add(
         LoadHomeData(
@@ -58,6 +48,29 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
           lng: locationState.currentLocation!.longitude,
         ),
       );
+    }
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _refreshData(BuildContext context) {
+    // We don't need to ask for location again if we have it, but for refresh we can.
+    // Actually, just triggering GetCurrentLocation will update the state, which listener will catch?
+    // Or just reload home data with current location.
+    final locationState = context.read<LocationBloc>().state;
+    if (locationState.currentLocation != null) {
+      context.read<HomeBloc>().add(
+        LoadHomeData(
+          lat: locationState.currentLocation!.latitude,
+          lng: locationState.currentLocation!.longitude,
+        ),
+      );
+    } else {
+      context.read<LocationBloc>().add(GetCurrentLocation());
     }
   }
 
@@ -77,175 +90,201 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
       }
     }
 
-    return Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.light
-          ? Colors.white
-          : colors.background,
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Positioned.fill(
-              child: Opacity(
-                opacity: 0.6,
-                child: Center(
-                  child: Image.asset(
-                    'assets/icons/dobar-logo-animated-transparent.gif',
-                    height: 300,
-                    fit: BoxFit.contain,
+    return BlocListener<LocationBloc, LocationState>(
+      listener: (context, state) {
+        if (!state.isLoading && state.currentLocation != null) {
+          // Check if we need to load/reload?
+          // For now, let's just ensure we load if HomeBloc is initial
+          final homeState = context.read<HomeBloc>().state;
+          if (homeState is HomeInitial) {
+            context.read<HomeBloc>().add(
+              LoadHomeData(
+                lat: state.currentLocation!.latitude,
+                lng: state.currentLocation!.longitude,
+              ),
+            );
+          }
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Theme.of(context).brightness == Brightness.light
+            ? Colors.white
+            : colors.background,
+        body: SafeArea(
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: Opacity(
+                  opacity: 0.6,
+                  child: Center(
+                    child: Image.asset(
+                      'assets/icons/dobar-logo-animated-transparent.gif',
+                      height: 300,
+                      fit: BoxFit.contain,
+                    ),
                   ),
                 ),
               ),
-            ),
-            RefreshIndicator(
-              onRefresh: () async => _refreshData(context),
-              color: colors.buttonPrimary,
-              backgroundColor: colors.surface,
-              child: ListView(
-                controller: _scrollController,
-                padding: const EdgeInsets.only(top: 16, bottom: BarzSpacing.lg),
-                children: [
-                  const SizedBox(height: 32),
-                  _buildCategoriesSection(context),
-                  const SizedBox(height: BarzSpacing.lg),
+              RefreshIndicator(
+                onRefresh: () async => _refreshData(context),
+                color: colors.buttonPrimary,
+                backgroundColor: colors.surface,
+                child: ListView(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.only(
+                    top: 16,
+                    bottom: BarzSpacing.lg,
+                  ),
+                  children: [
+                    const SizedBox(height: 32),
+                    _buildCategoriesSection(context),
+                    const SizedBox(height: BarzSpacing.lg),
 
-                  // Promotions Section
-                  BlocBuilder<HomeBloc, HomeState>(
-                    builder: (context, state) {
-                      if (state is HomeLoaded &&
-                          state.data.activePromotions.isNotEmpty) {
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            _buildSectionTitleWithSubtitle(
+                    // Promotions Section
+                    BlocBuilder<HomeBloc, HomeState>(
+                      builder: (context, state) {
+                        if (state is HomeLoaded &&
+                            state.data.activePromotions.isNotEmpty) {
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _buildSectionTitleWithSubtitle(
+                                AppLocalizations.of(
+                                  context,
+                                )!.home_promotions_title,
+                                AppLocalizations.of(
+                                  context,
+                                )!.home_promotions_subtitle,
+                                colors,
+                              ),
+                              const SizedBox(height: BarzSpacing.md),
+                              _buildPromotionsList(
+                                context,
+                                state.data.activePromotions,
+                              ),
+                              const SizedBox(height: BarzSpacing.xl),
+                            ],
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+
+                    // Nearby Bars Section
+                    _buildSectionTitleWithSubtitle(
+                      AppLocalizations.of(context)!.meet_our_partners,
+                      AppLocalizations.of(
+                        context,
+                      )!.here_are_the_closest_partners,
+                      colors,
+                    ),
+                    const SizedBox(height: BarzSpacing.md),
+                    BlocBuilder<HomeBloc, HomeState>(
+                      builder: (context, state) {
+                        if (state is HomeLoading) return _buildLoadingCard();
+                        if (state is HomeError) {
+                          return _buildErrorCard(
+                            state.message,
+                            () => _refreshData(context),
+                          );
+                        }
+                        if (state is HomeLoaded) {
+                          if (state.data.nearbyBars.isEmpty) {
+                            return _buildEmptyCard(
                               AppLocalizations.of(
                                 context,
-                              )!.home_promotions_title,
-                              AppLocalizations.of(
-                                context,
-                              )!.home_promotions_subtitle,
-                              colors,
-                            ),
-                            const SizedBox(height: BarzSpacing.md),
-                            _buildPromotionsList(
-                              context,
-                              state.data.activePromotions,
-                            ),
-                            const SizedBox(height: BarzSpacing.xl),
-                          ],
-                        );
-                      }
-                      return const SizedBox.shrink();
-                    },
-                  ),
-
-                  // Nearby Bars Section
-                  _buildSectionTitleWithSubtitle(
-                    AppLocalizations.of(context)!.meet_our_partners,
-                    AppLocalizations.of(context)!.here_are_the_closest_partners,
-                    colors,
-                  ),
-                  const SizedBox(height: BarzSpacing.md),
-                  BlocBuilder<HomeBloc, HomeState>(
-                    builder: (context, state) {
-                      if (state is HomeLoading) return _buildLoadingCard();
-                      if (state is HomeError) {
-                        return _buildErrorCard(
-                          state.message,
-                          () => _refreshData(context),
-                        );
-                      }
-                      if (state is HomeLoaded) {
-                        if (state.data.nearbyBars.isEmpty) {
-                          return _buildEmptyCard(
-                            AppLocalizations.of(context)!.empty_no_bars_nearby,
-                            Icons.store,
+                              )!.empty_no_bars_nearby,
+                              Icons.store,
+                            );
+                          }
+                          return _buildBarsCarousel(
+                            context,
+                            state.data.nearbyBars,
                           );
                         }
-                        return _buildBarsCarousel(
-                          context,
-                          state.data.nearbyBars,
+                        // Initial state or other
+                        return _buildEmptyCard(
+                          AppLocalizations.of(context)!.empty_pull_to_refresh,
+                          Icons.refresh,
                         );
-                      }
-                      // Initial state or other
-                      return _buildEmptyCard(
-                        AppLocalizations.of(context)!.empty_pull_to_refresh,
-                        Icons.refresh,
-                      );
-                    },
-                  ),
-                  const SizedBox(height: BarzSpacing.xl),
+                      },
+                    ),
+                    const SizedBox(height: BarzSpacing.xl),
 
-                  // Most Wanted Drinks
-                  _buildSectionTitleWithSubtitle(
-                    AppLocalizations.of(context)!.most_wanted,
-                    AppLocalizations.of(context)!.want_a_specific_drink,
-                    colors,
-                  ),
-                  const SizedBox(height: BarzSpacing.md),
-                  BlocBuilder<HomeBloc, HomeState>(
-                    builder: (context, state) {
-                      if (state is HomeLoading) return _buildLoadingCard();
-                      if (state is HomeLoaded) {
-                        if (state.data.trendingDrinks.mostWanted.isEmpty) {
-                          return _buildEmptyCard(
-                            AppLocalizations.of(context)!.empty_no_drinks,
-                            Icons.local_bar,
+                    // Most Wanted Drinks
+                    _buildSectionTitleWithSubtitle(
+                      AppLocalizations.of(context)!.most_wanted,
+                      AppLocalizations.of(context)!.want_a_specific_drink,
+                      colors,
+                    ),
+                    const SizedBox(height: BarzSpacing.md),
+                    BlocBuilder<HomeBloc, HomeState>(
+                      builder: (context, state) {
+                        if (state is HomeLoading) return _buildLoadingCard();
+                        if (state is HomeLoaded) {
+                          if (state.data.trendingDrinks.mostWanted.isEmpty) {
+                            return _buildEmptyCard(
+                              AppLocalizations.of(context)!.empty_no_drinks,
+                              Icons.local_bar,
+                            );
+                          }
+                          return _buildDrinksList(
+                            context,
+                            state.data.trendingDrinks.mostWanted,
+                            false,
                           );
                         }
-                        return _buildDrinksList(
-                          context,
-                          state.data.trendingDrinks.mostWanted,
-                          false,
+                        return _buildEmptyCard(
+                          AppLocalizations.of(context)!.empty_no_drinks,
+                          Icons.local_bar,
                         );
-                      }
-                      return _buildEmptyCard(
-                        AppLocalizations.of(context)!.empty_no_drinks,
-                        Icons.local_bar,
-                      );
-                    },
-                  ),
-                  const SizedBox(height: BarzSpacing.xl),
+                      },
+                    ),
+                    const SizedBox(height: BarzSpacing.xl),
 
-                  // Hottest Drinks
-                  _buildSectionTitleWithSubtitle(
-                    AppLocalizations.of(context)!.home_hottest_drinks_title,
-                    AppLocalizations.of(context)!.home_hottest_drinks_subtitle,
-                    colors,
-                  ),
-                  const SizedBox(height: BarzSpacing.md),
-                  BlocBuilder<HomeBloc, HomeState>(
-                    builder: (context, state) {
-                      if (state is HomeLoading) return _buildLoadingCard();
-                      if (state is HomeLoaded) {
-                        if (state.data.trendingDrinks.hottest.isEmpty) {
-                          return _buildEmptyCard(
-                            AppLocalizations.of(context)!.empty_no_hot_deals,
-                            Icons.whatshot,
+                    // Hottest Drinks
+                    _buildSectionTitleWithSubtitle(
+                      AppLocalizations.of(context)!.home_hottest_drinks_title,
+                      AppLocalizations.of(
+                        context,
+                      )!.home_hottest_drinks_subtitle,
+                      colors,
+                    ),
+                    const SizedBox(height: BarzSpacing.md),
+                    BlocBuilder<HomeBloc, HomeState>(
+                      builder: (context, state) {
+                        if (state is HomeLoading) return _buildLoadingCard();
+                        if (state is HomeLoaded) {
+                          if (state.data.trendingDrinks.hottest.isEmpty) {
+                            return _buildEmptyCard(
+                              AppLocalizations.of(context)!.empty_no_hot_deals,
+                              Icons.whatshot,
+                            );
+                          }
+                          return _buildDrinksList(
+                            context,
+                            state.data.trendingDrinks.hottest,
+                            true,
                           );
                         }
-                        return _buildDrinksList(
-                          context,
-                          state.data.trendingDrinks.hottest,
-                          true,
+                        return _buildEmptyCard(
+                          AppLocalizations.of(context)!.empty_no_hot_deals,
+                          Icons.whatshot,
                         );
-                      }
-                      return _buildEmptyCard(
-                        AppLocalizations.of(context)!.empty_no_hot_deals,
-                        Icons.whatshot,
-                      );
-                    },
-                  ),
-                  const SizedBox(height: BarzSpacing.xl),
-                ],
+                      },
+                    ),
+                    const SizedBox(height: BarzSpacing.xl),
+                  ],
+                ),
               ),
-            ),
-            Positioned(
-              top: 0,
-              left: 0,
-              right: 0,
-              child: HomeConnectedHeader(nearbyBarName: nearbyBarName),
-            ),
-          ],
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: HomeConnectedHeader(nearbyBarName: nearbyBarName),
+              ),
+            ],
+          ),
         ),
       ),
     );

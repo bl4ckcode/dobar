@@ -2,7 +2,7 @@ enum PromoDiscountType { percentage, fixed, bogo }
 
 class PromotionModel {
   final int id;
-  final int barId;
+  final int? barId;
   final String title;
   final String? description;
   final PromoDiscountType discountType;
@@ -19,7 +19,7 @@ class PromotionModel {
   final int? imageUrlExpiration;
   final DateTime? createdAt;
   final DateTime? updatedAt;
-  
+
   // For nearby endpoint - includes bar info
   final String? barName;
   final String? barAddress;
@@ -27,7 +27,7 @@ class PromotionModel {
 
   PromotionModel({
     required this.id,
-    required this.barId,
+    this.barId,
     required this.title,
     this.description,
     required this.discountType,
@@ -56,21 +56,31 @@ class PromotionModel {
       title: json['title'],
       description: json['description'],
       discountType: PromoDiscountType.values.firstWhere(
-          (e) => e.name == json['discount_type'],
-          orElse: () => PromoDiscountType.percentage),
+        (e) => e.name == json['discount_type'],
+        orElse: () => PromoDiscountType.percentage,
+      ),
       discountValue: (json['discount_value'] as num?)?.toDouble() ?? 0.0,
       startTime: json['start_time'],
       endTime: json['end_time'],
-      startDate: json['start_date'] != null ? DateTime.tryParse(json['start_date']) : null,
-      endDate: json['end_date'] != null ? DateTime.tryParse(json['end_date']) : null,
+      startDate: json['start_date'] != null
+          ? DateTime.tryParse(json['start_date'])
+          : null,
+      endDate: json['end_date'] != null
+          ? DateTime.tryParse(json['end_date'])
+          : null,
       recurring: json['recurring'] ?? false,
-      recurringDays: (json['recurring_days'] as List<dynamic>?)?.cast<String>() ?? [],
+      recurringDays:
+          (json['recurring_days'] as List<dynamic>?)?.cast<String>() ?? [],
       terms: json['terms'],
       isActive: json['is_active'] ?? true,
       imageUrl: json['image_url'],
       imageUrlExpiration: json['image_url_expiration'],
-      createdAt: json['created_at'] != null ? DateTime.tryParse(json['created_at']) : null,
-      updatedAt: json['updated_at'] != null ? DateTime.tryParse(json['updated_at']) : null,
+      createdAt: json['created_at'] != null
+          ? DateTime.tryParse(json['created_at'])
+          : null,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.tryParse(json['updated_at'])
+          : null,
       // PromotionWithBar fields (from /nearby endpoint)
       barName: json['bar_name'],
       barAddress: json['bar_address'],
