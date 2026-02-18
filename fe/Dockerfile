@@ -4,6 +4,10 @@ FROM ghcr.io/cirruslabs/flutter:3.27.1 AS build
 WORKDIR /app
 COPY . .
 
+RUN sudo chown -R cirrus:cirrus /app
+
+USER cirrus
+
 # Get dependencies
 RUN flutter pub get
 

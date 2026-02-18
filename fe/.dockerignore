@@ -11,8 +11,9 @@ web/test/
 *.iml
 .git
 .gitignore
-*.lock
-*.yaml
+# *.lock
+# *.yaml
+
 *.yml
 *.sh
 *.DS_Store
