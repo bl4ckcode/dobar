@@ -365,5 +365,6 @@ def _campaign_to_response(campaign: dict) -> CampaignResponse:
         creative=CampaignCreative(**campaign.get("creative", {})),
         impressions=impressions, clicks=clicks,
         conversions=campaign.get("conversions", 0) or 0, ctr=ctr,
-        created_at=campaign["created_at"], updated_at=campaign["updated_at"]
+        created_at=campaign.get("created_at") or datetime.now(timezone.utc),
+        updated_at=campaign.get("updated_at") or datetime.now(timezone.utc)
     )
