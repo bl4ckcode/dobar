@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:barz/core/rbac/rbac.dart';
 import 'package:barz/core/design/design_system.dart';
+import 'package:barz/core/design/tokens/dobar_colors.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
 import 'package:barz/features/session/presentation/bloc/session_event.dart';
@@ -152,14 +153,15 @@ class _BusinessShellState extends State<BusinessShell> {
     BarAccess activeBar,
     List<BusinessNavItem> navItems,
   ) {
+    final colors = context.dobarColors;
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: barzDark,
-        foregroundColor: barzGold,
-        title: _buildBarSelector(context, bars, activeBar),
+        backgroundColor: colors.navBackground,
+        foregroundColor: colors.navIconSelected,
+        title: _buildBarSelector(context, bars, activeBar, colors),
         actions: [
           IconButton(
-            icon: const Icon(Icons.person_outline, color: barzGold),
+            icon: Icon(Icons.person_outline, color: colors.navIconSelected),
             tooltip: AppLocalizations.of(context)!.business_client_mode,
             onPressed: () {
               context.read<SessionBloc>().add(
@@ -168,7 +170,7 @@ class _BusinessShellState extends State<BusinessShell> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.logout, color: barzGold),
+            icon: Icon(Icons.logout, color: colors.navIconSelected),
             tooltip: 'Logout',
             onPressed: () {
               context.read<SessionBloc>().add(const SessionEvent.logout());
@@ -184,9 +186,9 @@ class _BusinessShellState extends State<BusinessShell> {
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
         type: BottomNavigationBarType.fixed,
-        backgroundColor: barzDark,
-        selectedItemColor: barzGold,
-        unselectedItemColor: Colors.white60,
+        backgroundColor: colors.navBackground,
+        selectedItemColor: colors.navIconSelected,
+        unselectedItemColor: colors.navIcon,
         items: navItems
             .map(
               (item) => BottomNavigationBarItem(
@@ -223,11 +225,6 @@ class _BusinessShellState extends State<BusinessShell> {
               );
               setState(() => _selectedIndex = 0);
             },
-            onSwitchToClientMode: () {
-              context.read<SessionBloc>().add(
-                const SessionEvent.switchToClientMode(),
-              );
-            },
           ),
           // Vertical divider
           Container(width: 1, color: Colors.grey[300]),
@@ -242,6 +239,7 @@ class _BusinessShellState extends State<BusinessShell> {
     BuildContext context,
     List<BarAccess> bars,
     BarAccess activeBar,
+    DobarColors colors,
   ) {
     if (bars.length == 1) {
       return Column(
@@ -278,7 +276,7 @@ class _BusinessShellState extends State<BusinessShell> {
           value: bar.barId,
           child: ListTile(
             leading: bar.barId == activeBar.barId
-                ? Icon(Icons.check, color: barzGold)
+                ? Icon(Icons.check, color: colors.labelSelected)
                 : const SizedBox(width: 24),
             title: Text(bar.barName),
             subtitle: Text(bar.role.displayName),

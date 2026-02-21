@@ -3,6 +3,20 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'ad_campaign.freezed.dart';
 part 'ad_campaign.g.dart';
 
+double _doubleFromJson(dynamic value) {
+  if (value == null) return 0.0;
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value) ?? 0.0;
+  return 0.0;
+}
+
+double? _doubleOrNullFromJson(dynamic value) {
+  if (value == null) return null;
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value);
+  return null;
+}
+
 /// Campaign type enum
 enum CampaignType {
   featured,
@@ -14,26 +28,17 @@ enum CampaignType {
 }
 
 /// Campaign status enum
-enum CampaignStatus {
-  pending,
-  active,
-  paused,
-  completed,
-  cancelled,
-}
+enum CampaignStatus { pending, active, paused, completed, cancelled }
 
 /// Budget type enum
-enum BudgetType {
-  credits,
-  cash,
-  mixed,
-}
+enum BudgetType { credits, cash, mixed }
 
 /// Campaign targeting options
 @freezed
 abstract class CampaignTargeting with _$CampaignTargeting {
   const factory CampaignTargeting({
-    @JsonKey(name: 'radius_km') double? radiusKm,
+    @JsonKey(name: 'radius_km', fromJson: _doubleOrNullFromJson)
+    double? radiusKm,
     @JsonKey(name: 'target_audience') List<String>? targetAudience,
   }) = _CampaignTargeting;
 
@@ -63,14 +68,20 @@ abstract class AdCampaign with _$AdCampaign {
     @JsonKey(name: 'campaign_type') required CampaignType campaignType,
     required CampaignStatus status,
     @JsonKey(name: 'budget_type') required BudgetType budgetType,
-    @JsonKey(name: 'budget_amount') required double budgetAmount,
-    @JsonKey(name: 'budget_spent') @Default(0.0) double budgetSpent,
+    @JsonKey(name: 'budget_amount', fromJson: _doubleFromJson)
+    required double budgetAmount,
+    @JsonKey(name: 'budget_spent', fromJson: _doubleFromJson)
+    @Default(0.0)
+    double budgetSpent,
+    @JsonKey(name: 'budget_remaining', fromJson: _doubleFromJson)
+    @Default(0.0)
+    double budgetRemaining,
     @Default(0) int impressions,
     @Default(0) int clicks,
     @Default(0) int conversions,
-    double? ctr,
-    @JsonKey(name: 'start_date') required DateTime startDate,
-    @JsonKey(name: 'end_date') DateTime? endDate,
+    @JsonKey(fromJson: _doubleOrNullFromJson) double? ctr,
+    @JsonKey(name: 'start_time') required DateTime startDate,
+    @JsonKey(name: 'end_time') DateTime? endDate,
     CampaignTargeting? targeting,
     CampaignCreative? creative,
     @JsonKey(name: 'created_at') DateTime? createdAt,
@@ -88,9 +99,10 @@ abstract class CreateCampaignRequest with _$CreateCampaignRequest {
     required String name,
     @JsonKey(name: 'campaign_type') required CampaignType campaignType,
     @JsonKey(name: 'budget_type') required BudgetType budgetType,
-    @JsonKey(name: 'budget_amount') required double budgetAmount,
-    @JsonKey(name: 'start_date') required DateTime startDate,
-    @JsonKey(name: 'end_date') DateTime? endDate,
+    @JsonKey(name: 'budget_amount', fromJson: _doubleFromJson)
+    required double budgetAmount,
+    @JsonKey(name: 'start_time') required DateTime startDate,
+    @JsonKey(name: 'end_time') DateTime? endDate,
     CampaignTargeting? targeting,
     CampaignCreative? creative,
   }) = _CreateCampaignRequest;

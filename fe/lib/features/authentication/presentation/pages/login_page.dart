@@ -105,183 +105,171 @@ class _LoginPageState extends State<LoginPage> {
               ).showSnackBar(SnackBar(content: Text(state.error)));
             }
           },
-          child: SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return SingleChildScrollView(
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: constraints.maxHeight,
-                    ),
-                    child: IntrinsicHeight(
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 24,
-                        ),
-                        child: Column(
-                          children: [
-                            SizedBox(
-                              height: 180,
-                              child: Image.asset(
-                                'assets/icons/dobar_logo_animated_fade.gif',
-                                fit: BoxFit.contain,
+          child: ResponsiveCenterContainer(
+            backgroundColor: colors.background,
+            child: SafeArea(
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return SingleChildScrollView(
+                    child: ConstrainedBox(
+                      constraints: BoxConstraints(
+                        minHeight: constraints.maxHeight,
+                      ),
+                      child: IntrinsicHeight(
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 24,
+                            vertical: 24,
+                          ),
+                          child: Column(
+                            children: [
+                              SizedBox(
+                                height: 180,
+                                child: Image.asset(
+                                  'assets/icons/dobar_logo_animated_fade.gif',
+                                  fit: BoxFit.contain,
+                                ),
                               ),
-                            ),
-                            const SizedBox(height: 32),
+                              const SizedBox(height: 32),
 
-                            LoginFieldsWidget(
-                              onLoginPressed: (phone) {
-                                setState(() => _phoneNumber = phone);
-                              },
-                            ),
-
-                            const SizedBox(height: 20),
-
-                            GlowButton(
-                              label: 'Continue',
-                              enabled: _phoneNumber != null,
-                              trailing: Icon(
-                                Icons.arrow_forward,
-                                color: colors.buttonOnPrimary,
-                                size: 20,
+                              LoginFieldsWidget(
+                                onLoginPressed: (phone) {
+                                  setState(() => _phoneNumber = phone);
+                                },
                               ),
-                              onPressed: _handleLogin,
-                            ),
 
-                            const SizedBox(height: 16),
-                            Center(
-                              child: TextButton(
-                                onPressed: () =>
-                                    AppRoute.recoveryInitiate.push(context),
-                                child: Text(
-                                  'Trouble logging in?',
+                              const SizedBox(height: 20),
+
+                              GlowButton(
+                                label: 'Continue',
+                                enabled: _phoneNumber != null,
+                                trailing: Icon(
+                                  Icons.arrow_forward,
+                                  color: colors.buttonOnPrimary,
+                                  size: 20,
+                                ),
+                                onPressed: _handleLogin,
+                              ),
+
+                              const SizedBox(height: 16),
+                              Center(
+                                child: TextButton(
+                                  onPressed: () =>
+                                      AppRoute.recoveryInitiate.push(context),
+                                  child: Text(
+                                    'Trouble logging in?',
+                                    style: TextStyle(
+                                      color: colors.labelSecondary,
+                                      fontSize: 14,
+                                      decoration: TextDecoration.underline,
+                                    ),
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 24),
+
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Divider(
+                                      color: colors.labelSecondary.withValues(
+                                        alpha: 0.3,
+                                      ),
+                                    ),
+                                  ),
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                    ),
+                                    child: Text(
+                                      "or continue with",
+                                      style: TextStyle(
+                                        color: colors.labelSecondary,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                  Expanded(
+                                    child: Divider(
+                                      color: colors.labelSecondary.withValues(
+                                        alpha: 0.3,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 12),
+
+                              LoginButtonsWidget(loginBloc: _loginBloc),
+
+                              const SizedBox(height: 12),
+
+                              RichText(
+                                textAlign: TextAlign.center,
+                                text: TextSpan(
+                                  text: 'By continuing, you agree to our ',
                                   style: TextStyle(
                                     color: colors.labelSecondary,
-                                    fontSize: 14,
-                                    decoration: TextDecoration.underline,
+                                    fontSize: 13,
                                   ),
+                                  children: <TextSpan>[
+                                    TextSpan(
+                                      text: 'Terms of Service',
+                                      style: TextStyle(
+                                        color: colors.labelSelected,
+                                        fontWeight: FontWeight.bold,
+                                        decoration: TextDecoration.underline,
+                                      ),
+                                      recognizer: TapGestureRecognizer()
+                                        ..onTap = () {},
+                                    ),
+                                    TextSpan(
+                                      text: ' and ',
+                                      style: TextStyle(
+                                        color: colors.labelSecondary,
+                                      ),
+                                    ),
+                                    TextSpan(
+                                      text: 'Privacy Policy',
+                                      style: TextStyle(
+                                        color: colors.labelSelected,
+                                        fontWeight: FontWeight.bold,
+                                        decoration: TextDecoration.underline,
+                                      ),
+                                      recognizer: TapGestureRecognizer()
+                                        ..onTap = () {},
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ),
 
-                            const SizedBox(height: 24),
+                              const Spacer(),
 
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Divider(
-                                    color: colors.labelSecondary.withValues(
-                                      alpha: 0.3,
+                              Opacity(
+                                opacity: 0.2,
+                                child:
+                                    Image.asset(
+                                      'assets/login/barz_cup_icon.png',
+                                      height: 180,
+                                      fit: BoxFit.contain,
+                                    ).animate().slideY(
+                                      begin: 1.0,
+                                      end: 0.0,
+                                      duration: 800.ms,
+                                      curve: Curves.easeOutBack,
                                     ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                  ),
-                                  child: Text(
-                                    "or continue with",
-                                    style: TextStyle(
-                                      color: colors.labelSecondary,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                                Expanded(
-                                  child: Divider(
-                                    color: colors.labelSecondary.withValues(
-                                      alpha: 0.3,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-
-                            const SizedBox(height: 12),
-
-                            LoginButtonsWidget(loginBloc: _loginBloc),
-
-                            const SizedBox(height: 12),
-
-                            RichText(
-                              textAlign: TextAlign.center,
-                              text: TextSpan(
-                                text: 'By continuing, you agree to our ',
-                                style: TextStyle(
-                                  color: colors.labelSecondary,
-                                  fontSize: 13,
-                                ),
-                                children: <TextSpan>[
-                                  TextSpan(
-                                    text: 'Terms of Service',
-                                    style: TextStyle(
-                                      color: colors.labelSelected,
-                                      fontWeight: FontWeight.bold,
-                                      decoration: TextDecoration.underline,
-                                    ),
-                                    recognizer: TapGestureRecognizer()
-                                      ..onTap = () {},
-                                  ),
-                                  TextSpan(
-                                    text: ' and ',
-                                    style: TextStyle(
-                                      color: colors.labelSecondary,
-                                    ),
-                                  ),
-                                  TextSpan(
-                                    text: 'Privacy Policy',
-                                    style: TextStyle(
-                                      color: colors.labelSelected,
-                                      fontWeight: FontWeight.bold,
-                                      decoration: TextDecoration.underline,
-                                    ),
-                                    recognizer: TapGestureRecognizer()
-                                      ..onTap = () {},
-                                  ),
-                                ],
                               ),
-                            ),
-
-                            const Spacer(),
-
-                            SizedBox(
-                              height: 100,
-                              child: Stack(
-                                clipBehavior: Clip.none,
-                                alignment: Alignment.bottomCenter,
-                                children: [
-                                  Positioned(
-                                    bottom: -80,
-                                    child: Opacity(
-                                      opacity: 0.2,
-                                      child:
-                                          Image.asset(
-                                            'assets/login/barz_cup_icon.png',
-                                            width:
-                                                MediaQuery.of(
-                                                  context,
-                                                ).size.width *
-                                                0.8,
-                                            fit: BoxFit.contain,
-                                          ).animate().slideY(
-                                            begin: 1.0,
-                                            end: 0.0,
-                                            duration: 800.ms,
-                                            curve: Curves.easeOutBack,
-                                          ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
+                              const SizedBox(height: 16),
+                            ],
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
           ),
         ),

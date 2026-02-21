@@ -44,37 +44,33 @@ class MarkerGenerator {
     }
 
     // Fallback if network failed or null
-    if (image == null) {
-      image = await _loadAssetImage(fallbackAssetPath);
-    }
+    image ??= await _loadAssetImage(fallbackAssetPath);
 
-    if (image != null) {
-      // 4. Clip Path for Circular Image
-      final Path clipPath = Path()
-        ..addOval(
-          Rect.fromCircle(
-            center: Offset(radius, radius),
-            radius: radius - _borderWidth,
-          ),
-        );
-      canvas.clipPath(clipPath);
-
-      // 5. Draw Image
-      // Resize logic: cover
-
-      // We want to draw into the circle rect
-      paint.filterQuality = FilterQuality.high;
-
-      // Calculate source and destination rects
-      // Destination is the circle area
-      final Rect destRect = Rect.fromCircle(
-        center: Offset(radius, radius),
-        radius: radius - _borderWidth,
+    // 4. Clip Path for Circular Image
+    final Path clipPath = Path()
+      ..addOval(
+        Rect.fromCircle(
+          center: Offset(radius, radius),
+          radius: radius - _borderWidth,
+        ),
       );
+    canvas.clipPath(clipPath);
 
-      // Helper to paint image fitting the rect
-      _paintImage(canvas, destRect, image!, paint, BoxFit.cover);
-    }
+    // 5. Draw Image
+    // Resize logic: cover
+
+    // We want to draw into the circle rect
+    paint.filterQuality = FilterQuality.high;
+
+    // Calculate source and destination rects
+    // Destination is the circle area
+    final Rect destRect = Rect.fromCircle(
+      center: Offset(radius, radius),
+      radius: radius - _borderWidth,
+    );
+
+    // Helper to paint image fitting the rect
+    _paintImage(canvas, destRect, image!, paint, BoxFit.cover);
 
     // Convert to BitmapDescriptor
     final img = await pictureRecorder.endRecording().toImage(

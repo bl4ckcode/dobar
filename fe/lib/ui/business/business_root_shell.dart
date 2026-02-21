@@ -37,7 +37,9 @@ class BusinessRootShell extends StatelessWidget {
         if (activeBar == null && session.barAccess.isNotEmpty) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             context.read<SessionBloc>().add(
-              SessionEvent.switchActiveBar(barId: session.barAccess.first.barId),
+              SessionEvent.switchActiveBar(
+                barId: session.barAccess.first.barId,
+              ),
             );
           });
           return const Scaffold(
@@ -49,7 +51,8 @@ class BusinessRootShell extends StatelessWidget {
           return const BusinessOnboardingView();
         }
 
-        final isWide = MediaQuery.of(context).size.width >= kBusinessWebBreakpoint;
+        final isWide =
+            MediaQuery.of(context).size.width >= kBusinessWebBreakpoint;
         final currentRoute = AppRouteX.fromLocation(
           GoRouterState.of(context).uri.toString(),
         );
@@ -61,27 +64,39 @@ class BusinessRootShell extends StatelessWidget {
 
         if (isWide) {
           return Scaffold(
-            body: Row(
-              children: [
-                _BusinessSideNav(
-                  bars: session.barAccess,
-                  activeBar: activeBar,
-                  navItems: navItems,
-                  currentRoute: currentRoute,
-                  onNavItemSelected: (route) => context.go(route.path),
-                  onBarSelected: (barId) {
-                    context.read<SessionBloc>().add(
-                      SessionEvent.switchActiveBar(barId: barId),
-                    );
-                    context.go(AppRoute.businessDashboard.path);
-                  },
-                  onSwitchToClientMode: () {
-                    context.read<SessionBloc>().add(const SessionEvent.switchToClientMode());
-                  },
-                ),
-                Container(width: 1, color: Colors.grey[300]),
-                Expanded(child: child),
-              ],
+            body: Directionality(
+              textDirection: TextDirection.rtl,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: child,
+                    ),
+                  ),
+                  Directionality(
+                    textDirection: TextDirection.ltr,
+                    child: _BusinessSideNav(
+                      bars: session.barAccess,
+                      activeBar: activeBar,
+                      navItems: navItems,
+                      currentRoute: currentRoute,
+                      onNavItemSelected: (route) => context.go(route.path),
+                      onBarSelected: (barId) {
+                        context.read<SessionBloc>().add(
+                          SessionEvent.switchActiveBar(barId: barId),
+                        );
+                        context.go(AppRoute.businessDashboard.path);
+                      },
+                      onSwitchToClientMode: () {
+                        context.read<SessionBloc>().add(
+                          const SessionEvent.switchToClientMode(),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         } else {
@@ -95,13 +110,19 @@ class BusinessRootShell extends StatelessWidget {
                   icon: const Icon(Icons.person_outline),
                   tooltip: 'Client Mode',
                   onPressed: () {
-                    context.read<SessionBloc>().add(const SessionEvent.switchToClientMode());
+                    context.read<SessionBloc>().add(
+                      const SessionEvent.switchToClientMode(),
+                    );
                   },
                 ),
               ],
             ),
             body: child,
-            bottomNavigationBar: _buildBottomNav(context, navItems, currentRoute),
+            bottomNavigationBar: _buildBottomNav(
+              context,
+              navItems,
+              currentRoute,
+            ),
           );
         }
       },
@@ -156,7 +177,9 @@ class BusinessRootShell extends StatelessWidget {
         );
       }).toList(),
       onSelected: (barId) {
-        context.read<SessionBloc>().add(SessionEvent.switchActiveBar(barId: barId));
+        context.read<SessionBloc>().add(
+          SessionEvent.switchActiveBar(barId: barId),
+        );
         context.go(AppRoute.businessDashboard.path);
       },
     );
@@ -167,8 +190,10 @@ class BusinessRootShell extends StatelessWidget {
     List<BusinessNavigationItem> navItems,
     AppRoute? currentRoute,
   ) {
-    final selectedIndex = navItems.indexWhere((item) => item.route == currentRoute);
-    
+    final selectedIndex = navItems.indexWhere(
+      (item) => item.route == currentRoute,
+    );
+
     return BottomNavigationBar(
       currentIndex: selectedIndex >= 0 ? selectedIndex : 0,
       onTap: (index) => context.go(navItems[index].route.path),
@@ -176,15 +201,19 @@ class BusinessRootShell extends StatelessWidget {
       backgroundColor: barzDark,
       selectedItemColor: barzGold,
       unselectedItemColor: Colors.white60,
-      items: navItems.map((item) => BottomNavigationBarItem(
-        icon: Icon(item.icon),
-        label: item.label,
-      )).toList(),
+      items: navItems
+          .map(
+            (item) => BottomNavigationBarItem(
+              icon: Icon(item.icon),
+              label: item.label,
+            ),
+          )
+          .toList(),
     );
   }
 }
 
-class _BusinessSideNav extends StatelessWidget {
+class _BusinessSideNav extends StatefulWidget {
   final List<BarAccess> bars;
   final BarAccess activeBar;
   final List<BusinessNavigationItem> navItems;
@@ -204,148 +233,316 @@ class _BusinessSideNav extends StatelessWidget {
   });
 
   @override
+  State<_BusinessSideNav> createState() => _BusinessSideNavState();
+}
+
+class _BusinessSideNavState extends State<_BusinessSideNav> {
+  bool _isExpanded = true;
+
+  @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 260,
-      color: barzDark,
-      child: Column(
-        children: [
-          _buildHeader(context),
-          const SizedBox(height: 8),
-          Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              itemCount: navItems.length,
-              itemBuilder: (context, i) {
-                final item = navItems[i];
-                final isSelected = item.route == currentRoute;
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Material(
-                    color: Colors.transparent,
-                    borderRadius: BorderRadius.circular(8),
-                    child: InkWell(
-                      borderRadius: BorderRadius.circular(8),
-                      onTap: () => onNavItemSelected(item.route),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: isSelected ? barzGold.withValues(alpha: 0.15) : Colors.transparent,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        child: Row(
-                          children: [
-                            Icon(
-                              item.icon,
-                              color: isSelected ? barzGold : Colors.white70,
-                              size: 22,
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              item.label,
-                              style: TextStyle(
-                                fontSize: 15,
-                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                                color: isSelected ? barzGold : Colors.white70,
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeInOut,
+          width: _isExpanded ? 240 : 64,
+          decoration: const BoxDecoration(
+            color: barzDark,
+            border: Border(right: BorderSide(color: Colors.white12, width: 1)),
+          ),
+          child: ClipRect(
+            child: OverflowBox(
+              alignment: Alignment.centerLeft,
+              minWidth: 240,
+              maxWidth: 240,
+              child: Column(
+                children: [
+                  _buildHeader(context),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: ListView.builder(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      itemCount: widget.navItems.length,
+                      itemBuilder: (context, i) {
+                        final item = widget.navItems[i];
+                        final isSelected = item.route == widget.currentRoute;
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Material(
+                            color: Colors.transparent,
+                            borderRadius: BorderRadius.circular(8),
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(8),
+                              onTap: () => widget.onNavItemSelected(item.route),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? barzGold.withValues(alpha: 0.15)
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 16,
+                                  vertical: 12,
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      item.icon,
+                                      color: isSelected
+                                          ? barzGold
+                                          : Colors.white70,
+                                      size: 22,
+                                    ),
+                                    Expanded(
+                                      child: AnimatedOpacity(
+                                        duration: const Duration(
+                                          milliseconds: 150,
+                                        ),
+                                        opacity: _isExpanded ? 1.0 : 0.0,
+                                        child: Padding(
+                                          padding: const EdgeInsets.only(
+                                            left: 12,
+                                          ),
+                                          child: Text(
+                                            item.label,
+                                            style: TextStyle(
+                                              fontSize: 15,
+                                              fontWeight: isSelected
+                                                  ? FontWeight.w600
+                                                  : FontWeight.w400,
+                                              color: isSelected
+                                                  ? barzGold
+                                                  : Colors.white70,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.clip,
+                                            softWrap: false,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                          ],
-                        ),
-                      ),
+                          ),
+                        );
+                      },
                     ),
                   ),
-                );
-              },
+                  const Divider(color: Colors.white12, height: 1),
+                  // Actions Area
+                  Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      children: [
+                        _buildActionRow(
+                          icon: Icons.logout,
+                          label: 'Logout',
+                          onTap: () => context.read<SessionBloc>().add(
+                            const SessionEvent.logout(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          const Divider(color: Colors.white24, height: 1),
-          _buildClientModeButton(context),
-        ],
-      ),
+        ),
+        Positioned(
+          top: 80,
+          right: -12,
+          child: MouseRegion(
+            cursor: SystemMouseCursors.click,
+            child: GestureDetector(
+              onTap: () => setState(() => _isExpanded = !_isExpanded),
+              child: Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: barzDark,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white24, width: 1),
+                ),
+                alignment: Alignment.center,
+                child: Icon(
+                  _isExpanded ? Icons.chevron_left : Icons.chevron_right,
+                  color: Colors.white70,
+                  size: 16,
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildHeader(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: barzGold,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(Icons.storefront, color: barzDark, size: 28),
+    return InkWell(
+      onTap: widget.bars.length > 1
+          ? () => _showBarSelectorMenu(context)
+          : null,
+      hoverColor: Colors.white10,
+      child: Container(
+        height: 72,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        child: Row(
+          children: [
+            Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                color: barzGold,
+                borderRadius: BorderRadius.circular(12),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              child: const Icon(Icons.storefront, color: barzDark, size: 28),
+            ),
+            Expanded(
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 150),
+                opacity: _isExpanded ? 1.0 : 0.0,
+                child: Row(
                   children: [
-                    Text(
-                      activeBar.barName,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            widget.activeBar.barName,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.clip,
+                            softWrap: false,
+                          ),
+                          Text(
+                            widget.activeBar.role.displayName,
+                            style: const TextStyle(
+                              color: Colors.white54,
+                              fontSize: 12,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.clip,
+                            softWrap: false,
+                          ),
+                        ],
                       ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
-                    Text(
-                      activeBar.role.displayName,
-                      style: const TextStyle(color: Colors.white54, fontSize: 12),
-                    ),
+                    if (widget.bars.length > 1)
+                      const Icon(Icons.unfold_more, color: Colors.white54),
                   ],
                 ),
               ),
-              if (bars.length > 1)
-                PopupMenuButton<int>(
-                  icon: const Icon(Icons.unfold_more, color: Colors.white54),
-                  onSelected: onBarSelected,
-                  itemBuilder: (context) => bars.map((bar) {
-                    return PopupMenuItem<int>(
-                      value: bar.barId,
-                      child: Row(
-                        children: [
-                          if (bar.barId == activeBar.barId)
-                            const Icon(Icons.check, color: barzGold, size: 18)
-                          else
-                            const SizedBox(width: 18),
-                          const SizedBox(width: 8),
-                          Text(bar.barName),
-                        ],
-                      ),
-                    );
-                  }).toList(),
-                ),
-            ],
-          ),
-        ],
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildClientModeButton(BuildContext context) {
-    return InkWell(
-      onTap: onSwitchToClientMode,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-        child: const Row(
+  void _showBarSelectorMenu(BuildContext context) {
+    final RenderBox button = context.findRenderObject() as RenderBox;
+    final RenderBox overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
+
+    final menuItems = widget.bars.map((bar) {
+      final isActive = bar.barId == widget.activeBar.barId;
+      return PopupMenuItem<int>(
+        value: bar.barId,
+        child: Row(
           children: [
-            Icon(Icons.person_outline, color: Colors.white54, size: 22),
-            SizedBox(width: 12),
-            Text(
-              'Switch to Client Mode',
-              style: TextStyle(color: Colors.white54, fontSize: 14),
+            Icon(
+              isActive ? Icons.check_circle : Icons.radio_button_unchecked,
+              color: isActive ? barzGold : Colors.white54,
+              size: 20,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    bar.barName,
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  Text(
+                    bar.role.displayName,
+                    style: const TextStyle(fontSize: 12, color: Colors.white54),
+                  ),
+                ],
+              ),
             ),
           ],
+        ),
+      );
+    }).toList();
+
+    showMenu<int>(
+      context: context,
+      color: barzDarkLight,
+      position: RelativeRect.fromRect(
+        button.localToGlobal(Offset.zero) & button.size,
+        Offset.zero & overlay.size,
+      ),
+      items: menuItems,
+    ).then((value) {
+      if (value != null && value != widget.activeBar.barId) {
+        widget.onBarSelected(value);
+      }
+    });
+  }
+
+  Widget _buildActionRow({
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: onTap,
+        hoverColor: Colors.white10,
+        child: Container(
+          height: 44,
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            children: [
+              Icon(icon, color: Colors.white54, size: 22),
+              Expanded(
+                child: AnimatedOpacity(
+                  duration: const Duration(milliseconds: 150),
+                  opacity: _isExpanded ? 1.0 : 0.0,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 12),
+                    child: Text(
+                      label,
+                      style: const TextStyle(
+                        color: Colors.white54,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.clip,
+                      softWrap: false,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
