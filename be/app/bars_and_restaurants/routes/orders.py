@@ -21,8 +21,11 @@ from app.database import database
 from app.auth.middleware import get_current_active_user, get_optional_user
 from app.auth.auth_models import User
 from app.auth.admin import require_internal_or_admin
+from app.auth.rbac_middleware import BarAuthContext, require_bar_permission
+from app.auth.rbac_models import Permission
 
 orders_router = APIRouter(prefix="/orders", tags=["Orders"])
+bar_orders_router = APIRouter(prefix="/bars/{bar_id}/orders", tags=["Bar Orders"])
 
 @orders_router.websocket("/ws/orders")
 async def orders_websocket(websocket: WebSocket):
@@ -312,3 +315,124 @@ async def sync_offline_operations(
     from ..services.sync_service import sync_operations
     result = await sync_operations(current_user["id"], [op.model_dump() for op in sync_request.operations])
     return SyncResponse(**result)
+
+
+# =============================================================================
+# CASHIER OPERATIONS (BAR-SCOPED ORDERS)
+# =============================================================================
+
+@bar_orders_router.get("/live", response_model=List[OrderSchema])
+async def get_live_orders(
+    bar_id: int,
+    auth: BarAuthContext = Depends(require_bar_permission(Permission.ORDER_VIEW))
+):
+    """
+    Fetch all active (live) orders for a specific bar.
+    Active orders are those not in 'completed' or 'cancelled' status.
+    """
+    query = (
+        OrderModel.__table__
+        .select()
+        .where(
+            and_(
+                OrderModel.bar_id == bar_id,
+                # active statuses typical of a pipeline
+                OrderModel.status.in_(["pending", "confirmed", "preparing", "ready"])
+            )
+        )
+        .order_by(OrderModel.created_at.asc())
+    )
+    
+    orders = await database.fetch_all(query)
+    
+    return [OrderSchema(**dict(order)) for order in orders]
+
+
+@bar_orders_router.put("/{order_id}/status", response_model=OrderSchema)
+async def update_bar_order_status(
+    bar_id: int,
+    order_id: int,
+    status_update: OrderStatusUpdate,
+    auth: BarAuthContext = Depends(require_bar_permission(Permission.ORDER_PROCESS))
+):
+    """
+    Update order status. Protected by RBAC for bar staff.
+    Status flow: pending -> confirmed -> preparing -> ready -> completed
+    """
+    # Fetch the order
+    query = OrderModel.__table__.select().where(
+        and_(OrderModel.id == order_id, OrderModel.bar_id == bar_id)
+    )
+    db_order = await database.fetch_one(query)
+    
+    if db_order is None:
+        raise APIError.order_not_found()
+    
+    # Validate status transition
+    valid_transitions = {
+        "pending": ["confirmed", "cancelled"],
+        "confirmed": ["preparing", "cancelled"],
+        "preparing": ["ready", "cancelled"],
+        "ready": ["completed"],
+        "completed": [],
+        "cancelled": []
+    }
+    
+    if status_update.status not in valid_transitions.get(db_order["status"], []):
+        raise APIError.bad_request(
+            f"Invalid status transition from {db_order['status']} to {status_update.status}"
+        )
+    
+    # Start transaction
+    transaction = await database.transaction()
+    
+    try:
+        update_data = {
+            "status": status_update.status,
+            "updated_at": datetime.now(timezone.utc)
+        }
+        
+        if status_update.status == "completed":
+            update_data["completed_at"] = datetime.now(timezone.utc)
+        
+        if status_update.estimated_ready_time:
+            update_data["estimated_ready_time"] = status_update.estimated_ready_time
+        
+        # Update order status
+        update_query = (
+            OrderModel.__table__
+            .update()
+            .where(OrderModel.id == order_id)
+            .values(**update_data)
+        )
+        await database.execute(update_query)
+        
+        history_data = {
+            "order_id": order_id,
+            "status": status_update.status,
+            "updated_by_user_id": auth.user.id,
+            "notes": status_update.notes
+        }
+        await database.execute(
+            OrderStatusHistoryModel.__table__.insert().values(**history_data)
+        )
+        
+        await transaction.commit()
+        
+        updated_order = await database.fetch_one(
+            OrderModel.__table__.select().where(OrderModel.id == order_id)
+        )
+        
+        # This will trigger the webhooks via order_worker.py -> connection_manager.py
+        await OrderQueue.publish_status_change(
+            order_id=order_id,
+            bar_id=bar_id,
+            old_status=db_order["status"],
+            new_status=status_update.status
+        )
+        
+        return updated_order
+        
+    except Exception as e:
+        await transaction.rollback()
+        raise APIError.server_error(f"Failed to update order status: {str(e)}")

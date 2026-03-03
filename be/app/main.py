@@ -16,7 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from .auth.routes import auth_router
 from .bars_and_restaurants.routes.bars import bars_router
 from .bars_and_restaurants.routes.menus import menus_router
-from .bars_and_restaurants.routes.orders import orders_router
+from .bars_and_restaurants.routes.orders import orders_router, bar_orders_router
 from .bars_and_restaurants.routes.cart import cart_router
 from .bars_and_restaurants.routes.promotions import promotions_router
 from .bars_and_restaurants.services.connection_manager import ws_router
@@ -207,6 +207,7 @@ app.include_router(recovery_router)
 app.include_router(bars_router)
 app.include_router(menus_router)
 app.include_router(orders_router)
+app.include_router(bar_orders_router)
 app.include_router(cart_router)
 app.include_router(promotions_router)
 app.include_router(ws_router)
