@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:barz/core/design/components/responsive_center_container.dart';
-import 'package:barz/core/design/tokens/colors.dart';
-import 'package:barz/core/design/tokens/spacing.dart';
-import 'package:barz/core/design/tokens/radii.dart';
+import 'package:barz/core/design/design_system.dart';
 import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/features/bars/domain/models/menu_model.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
@@ -21,7 +18,7 @@ class MenuManagementPage extends StatelessWidget {
     return BlocBuilder<SessionBloc, SessionState>(
       builder: (context, sessionState) {
         final activeBar = sessionState.currentSession?.activeBar;
-        
+
         if (activeBar == null) {
           return const Center(child: Text('No active bar selected'));
         }
@@ -37,7 +34,7 @@ class MenuManagementPage extends StatelessWidget {
 
 class _MenuManagementContent extends StatefulWidget {
   final int barId;
-  
+
   const _MenuManagementContent({required this.barId});
 
   @override
@@ -46,79 +43,161 @@ class _MenuManagementContent extends StatefulWidget {
 
 class _MenuManagementContentState extends State<_MenuManagementContent> {
   final Set<int> _expandedMenus = {};
+  final Set<String> _expandedCategories = {};
+  bool _initializedCategories = false;
+
+  void _toggleAllCategories(BusinessMenuState state) {
+    int totalCategories = 0;
+    for (final menu in state.menus) {
+      final categories = <String>{};
+      for (final item in menu.items) {
+        categories.add(item.category ?? 'Outros');
+      }
+      totalCategories += categories.length;
+    }
+
+    setState(() {
+      if (_expandedCategories.length >= totalCategories &&
+          totalCategories > 0) {
+        // Expand all was true, so collapse all
+        _expandedCategories.clear();
+      } else {
+        // Expand all
+        for (final menu in state.menus) {
+          for (final item in menu.items) {
+            _expandedCategories.add('${menu.id}-${item.category ?? 'Outros'}');
+          }
+        }
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF9F9F9);
+
     return BlocConsumer<BusinessMenuBloc, BusinessMenuState>(
       listener: (context, state) {
-        if (state.status == BusinessMenuStatus.loaded && state.menus.isNotEmpty) {
+        if (state.status == BusinessMenuStatus.loaded &&
+            state.menus.isNotEmpty) {
           if (_expandedMenus.isEmpty) {
             _expandedMenus.add(state.menus.first.id);
+          }
+          if (!_initializedCategories) {
+            for (final menu in state.menus) {
+              for (final item in menu.items) {
+                _expandedCategories.add(
+                  '${menu.id}-${item.category ?? 'Outros'}',
+                );
+              }
+            }
+            _initializedCategories = true;
           }
         }
       },
       builder: (context, state) {
         return Container(
-          color: barzGoldSoft,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader(context, state),
-              Expanded(
-                child: ResponsiveCenterContainer(
-                  maxWidthPercentage: 0.8,
-                  maxWidth: 1200,
-                  padding: const EdgeInsets.symmetric(horizontal: BarzSpacing.md),
-                  child: _buildContent(context, state),
-                ),
-              ),
-            ],
+          color: bgColor,
+          child: ResponsiveCenterContainer(
+            maxWidthPercentage: 0.8,
+            maxWidth: 1200,
+            padding: const EdgeInsets.symmetric(horizontal: BarzSpacing.md),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildHeader(context, state, isDark),
+                Expanded(child: _buildContent(context, state, isDark)),
+              ],
+            ),
           ),
         );
       },
     );
   }
 
-  Widget _buildHeader(BuildContext context, BusinessMenuState state) {
+  Widget _buildHeader(
+    BuildContext context,
+    BusinessMenuState state,
+    bool isDark,
+  ) {
+    final headerBg = Colors.transparent;
+    final textColor = isDark ? textOnDark : textPrimary;
+    final mutedTextColor = isDark ? textTertiary : textSecondary;
+
+    int totalCategories = 0;
+    for (final menu in state.menus) {
+      final categories = <String>{};
+      for (final item in menu.items) {
+        categories.add(item.category ?? 'Outros');
+      }
+      totalCategories += categories.length;
+    }
+    final allExpanded =
+        totalCategories > 0 && _expandedCategories.length >= totalCategories;
+
     return Container(
-      padding: const EdgeInsets.all(BarzSpacing.lg),
+      color: headerBg,
+      padding: const EdgeInsets.only(
+        top: BarzSpacing.xl,
+        bottom: BarzSpacing.lg,
+      ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Menu',
+              Text(
+                'Menu Management',
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
-                  color: barzDark,
+                  color: textColor,
+                  fontFamily: 'Space Grotesk',
                 ),
               ),
               const SizedBox(height: BarzSpacing.xs),
               Text(
-                '${state.menus.length} ${state.menus.length == 1 ? 'menu' : 'menus'} • ${state.totalItems} itens',
-                style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                '${state.totalItems} items across ${state.menus.length} categories',
+                style: TextStyle(color: mutedTextColor, fontSize: 14),
               ),
             ],
           ),
           Row(
             children: [
               IconButton(
-                onPressed: () => context.read<BusinessMenuBloc>().add(RefreshMenus()),
-                icon: const Icon(Icons.refresh_rounded),
-                tooltip: 'Atualizar',
-                style: IconButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: barzDark,
+                onPressed: () => _toggleAllCategories(state),
+                icon: AnimatedRotation(
+                  turns: allExpanded ? 0.5 : 0,
+                  duration: const Duration(milliseconds: 200),
+                  child: Icon(
+                    Icons.expand_circle_down_outlined,
+                    color: textColor,
+                  ),
+                ),
+                tooltip: allExpanded ? 'Colapsar Tudo' : 'Expandir Tudo',
+              ),
+              const SizedBox(width: BarzSpacing.sm),
+              OutlinedButton.icon(
+                onPressed: () =>
+                    context.read<BusinessMenuBloc>().add(RefreshMenus()),
+                icon: const Icon(Icons.refresh_rounded, size: 18),
+                label: const Text('Refresh'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: textColor,
+                  side: BorderSide(color: isDark ? barzDarkMuted : surfaceDim),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: BarzSpacing.md,
+                    vertical: BarzSpacing.md,
+                  ),
                 ),
               ),
               const SizedBox(width: BarzSpacing.sm),
               FilledButton.icon(
                 onPressed: () => _navigateToMenuReader(context),
                 icon: const Icon(Icons.auto_awesome, size: 18),
-                label: const Text('Escanear Menu'),
+                label: const Text('Scan Menu with AI'),
                 style: FilledButton.styleFrom(
                   backgroundColor: barzGold,
                   foregroundColor: barzDark,
@@ -145,38 +224,52 @@ class _MenuManagementContentState extends State<_MenuManagementContent> {
     }
   }
 
-  Widget _buildContent(BuildContext context, BusinessMenuState state) {
+  Widget _buildContent(
+    BuildContext context,
+    BusinessMenuState state,
+    bool isDark,
+  ) {
     switch (state.status) {
       case BusinessMenuStatus.initial:
       case BusinessMenuStatus.loading:
         return const Center(child: CircularProgressIndicator(color: barzGold));
-      
+
       case BusinessMenuStatus.error:
+        final textColor = isDark ? textOnDark : textPrimary;
         return Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
               const SizedBox(height: BarzSpacing.md),
-              Text(state.errorMessage ?? 'Falha ao carregar menu'),
+              Text(
+                state.errorMessage ?? 'Falha ao carregar menu',
+                style: TextStyle(color: textColor),
+              ),
               const SizedBox(height: BarzSpacing.md),
               FilledButton(
-                onPressed: () => context.read<BusinessMenuBloc>().add(LoadMenus(widget.barId)),
+                onPressed: () => context.read<BusinessMenuBloc>().add(
+                  LoadMenus(widget.barId),
+                ),
                 child: const Text('Tentar novamente'),
               ),
             ],
           ),
         );
-      
+
       case BusinessMenuStatus.loaded:
         if (state.menus.isEmpty) {
-          return _buildEmptyState(context);
+          return _buildEmptyState(context, isDark);
         }
-        return _buildMenusList(context, state);
+        return _buildMenusList(context, state, isDark);
     }
   }
 
-  Widget _buildEmptyState(BuildContext context) {
+  Widget _buildEmptyState(BuildContext context, bool isDark) {
+    final textColor = isDark ? textOnDark : textPrimary;
+    final mutedTextColor = isDark ? textTertiary : textSecondary;
+    final iconBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -184,7 +277,7 @@ class _MenuManagementContentState extends State<_MenuManagementContent> {
           Container(
             padding: const EdgeInsets.all(BarzSpacing.xl),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: iconBg,
               shape: BoxShape.circle,
               boxShadow: [
                 BoxShadow(
@@ -194,17 +287,25 @@ class _MenuManagementContentState extends State<_MenuManagementContent> {
                 ),
               ],
             ),
-            child: Icon(Icons.restaurant_menu, size: 64, color: Colors.grey[400]),
+            child: Icon(
+              Icons.restaurant_menu,
+              size: 64,
+              color: Colors.grey[400],
+            ),
           ),
           const SizedBox(height: BarzSpacing.xl),
-          const Text(
+          Text(
             'Seu menu está vazio',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600, color: barzDark),
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w600,
+              color: textColor,
+            ),
           ),
           const SizedBox(height: BarzSpacing.sm),
           Text(
             'Escaneie um cardápio existente para começar',
-            style: TextStyle(color: Colors.grey[600], fontSize: 15),
+            style: TextStyle(color: mutedTextColor, fontSize: 15),
           ),
           const SizedBox(height: BarzSpacing.xl),
           FilledButton.icon(
@@ -225,7 +326,11 @@ class _MenuManagementContentState extends State<_MenuManagementContent> {
     );
   }
 
-  Widget _buildMenusList(BuildContext context, BusinessMenuState state) {
+  Widget _buildMenusList(
+    BuildContext context,
+    BusinessMenuState state,
+    bool isDark,
+  ) {
     return ListView.builder(
       padding: const EdgeInsets.only(bottom: BarzSpacing.xl),
       itemCount: state.menus.length,
@@ -235,6 +340,18 @@ class _MenuManagementContentState extends State<_MenuManagementContent> {
         return _MenuSection(
           menu: menu,
           isExpanded: isExpanded,
+          isDark: isDark,
+          expandedCategories: _expandedCategories,
+          onToggleCategory: (category) {
+            setState(() {
+              final key = '${menu.id}-$category';
+              if (_expandedCategories.contains(key)) {
+                _expandedCategories.remove(key);
+              } else {
+                _expandedCategories.add(key);
+              }
+            });
+          },
           onToggle: () => setState(() {
             if (isExpanded) {
               _expandedMenus.remove(menu.id);
@@ -258,27 +375,37 @@ class _MenuManagementContentState extends State<_MenuManagementContent> {
   }
 
   void _confirmDeleteMenu(BuildContext context, MenuModel menu) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BarzRadii.md)),
+        backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(BarzRadii.md),
+        ),
         title: Row(
           children: [
             Icon(Icons.warning_amber_rounded, color: Colors.orange[700]),
             const SizedBox(width: BarzSpacing.sm),
-            const Text('Excluir Menu'),
+            Text(
+              'Excluir Menu',
+              style: TextStyle(color: isDark ? textOnDark : textPrimary),
+            ),
           ],
         ),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Tem certeza que deseja excluir o menu "${menu.name ?? 'Menu'}"?'),
+            Text(
+              'Tem certeza que deseja excluir o menu "${menu.name ?? 'Menu'}"?',
+              style: TextStyle(color: isDark ? textOnDark : textPrimary),
+            ),
             const SizedBox(height: BarzSpacing.sm),
             Container(
               padding: const EdgeInsets.all(BarzSpacing.sm),
               decoration: BoxDecoration(
-                color: Colors.red[50],
+                color: Colors.red.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(BarzRadii.sm),
               ),
               child: Row(
@@ -338,13 +465,27 @@ class _MenuManagementContentState extends State<_MenuManagementContent> {
     );
   }
 
-  void _confirmDeleteItem(BuildContext context, int menuId, MenuItemModel item) {
+  void _confirmDeleteItem(
+    BuildContext context,
+    int menuId,
+    MenuItemModel item,
+  ) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BarzRadii.md)),
-        title: const Text('Excluir Item'),
-        content: Text('Tem certeza que deseja excluir "${item.itemName}"?'),
+        backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(BarzRadii.md),
+        ),
+        title: Text(
+          'Excluir Item',
+          style: TextStyle(color: isDark ? textOnDark : textPrimary),
+        ),
+        content: Text(
+          'Tem certeza que deseja excluir "${item.itemName}"?',
+          style: TextStyle(color: isDark ? textOnDark : textPrimary),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext),
@@ -371,6 +512,9 @@ class _MenuManagementContentState extends State<_MenuManagementContent> {
 class _MenuSection extends StatelessWidget {
   final MenuModel menu;
   final bool isExpanded;
+  final bool isDark;
+  final Set<String> expandedCategories;
+  final void Function(String) onToggleCategory;
   final VoidCallback onToggle;
   final VoidCallback onDeleteMenu;
   final void Function(MenuItemModel) onEditItem;
@@ -380,6 +524,9 @@ class _MenuSection extends StatelessWidget {
   const _MenuSection({
     required this.menu,
     required this.isExpanded,
+    required this.isDark,
+    required this.expandedCategories,
+    required this.onToggleCategory,
     required this.onToggle,
     required this.onDeleteMenu,
     required this.onEditItem,
@@ -397,108 +544,38 @@ class _MenuSection extends StatelessWidget {
     final sortedCategories = categories.keys.toList()..sort();
 
     return Container(
-      margin: const EdgeInsets.only(bottom: BarzSpacing.md),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(BarzRadii.md),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
+      margin: const EdgeInsets.only(bottom: BarzSpacing.lg),
       child: Column(
         children: [
-          InkWell(
-            onTap: onToggle,
-            borderRadius: BorderRadius.vertical(
-              top: const Radius.circular(BarzRadii.md),
-              bottom: isExpanded ? Radius.zero : const Radius.circular(BarzRadii.md),
-            ),
-            child: Container(
-              padding: const EdgeInsets.all(BarzSpacing.md),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(BarzSpacing.sm),
-                    decoration: BoxDecoration(
-                      color: barzGold.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(BarzRadii.sm),
-                    ),
-                    child: const Icon(Icons.restaurant_menu, color: barzGold, size: 24),
-                  ),
-                  const SizedBox(width: BarzSpacing.md),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          menu.name ?? 'Menu',
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: barzDark,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${menu.items.length} itens • ${sortedCategories.length} ${sortedCategories.length == 1 ? 'categoria' : 'categorias'}',
-                          style: TextStyle(fontSize: 13, color: Colors.grey[600]),
-                        ),
-                      ],
-                    ),
-                  ),
-                  PopupMenuButton<String>(
-                    icon: Icon(Icons.more_vert, color: Colors.grey[600]),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BarzRadii.sm)),
-                    onSelected: (value) {
-                      if (value == 'delete') onDeleteMenu();
-                    },
-                    itemBuilder: (context) => [
-                      PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(Icons.delete_outline, color: Colors.red[400], size: 20),
-                            const SizedBox(width: BarzSpacing.sm),
-                            Text('Excluir Menu', style: TextStyle(color: Colors.red[400])),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  AnimatedRotation(
-                    turns: isExpanded ? 0.5 : 0,
-                    duration: const Duration(milliseconds: 200),
-                    child: Icon(Icons.keyboard_arrow_down, color: Colors.grey[600]),
-                  ),
-                ],
-              ),
-            ),
-          ),
           AnimatedCrossFade(
             firstChild: const SizedBox.shrink(),
             secondChild: Container(
-              decoration: BoxDecoration(
-                border: Border(top: BorderSide(color: Colors.grey.shade200)),
-              ),
+              padding: const EdgeInsets.only(top: BarzSpacing.sm),
               child: Column(
                 children: sortedCategories.map((category) {
                   final items = categories[category]!;
-                  return _CategorySection(
-                    category: category,
-                    items: items,
-                    menuId: menu.id,
-                    onEditItem: onEditItem,
-                    onToggleItem: onToggleItem,
-                    onDeleteItem: onDeleteItem,
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: BarzSpacing.md),
+                    child: _CategorySection(
+                      category: category,
+                      items: items,
+                      menuId: menu.id,
+                      isDark: isDark,
+                      isExpanded: expandedCategories.contains(
+                        '${menu.id}-$category',
+                      ),
+                      onToggle: () => onToggleCategory(category),
+                      onEditItem: onEditItem,
+                      onToggleItem: onToggleItem,
+                      onDeleteItem: onDeleteItem,
+                    ),
                   );
                 }).toList(),
               ),
             ),
-            crossFadeState: isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            crossFadeState: isExpanded
+                ? CrossFadeState.showSecond
+                : CrossFadeState.showFirst,
             duration: const Duration(milliseconds: 200),
           ),
         ],
@@ -511,6 +588,9 @@ class _CategorySection extends StatelessWidget {
   final String category;
   final List<MenuItemModel> items;
   final int menuId;
+  final bool isDark;
+  final bool isExpanded;
+  final VoidCallback onToggle;
   final void Function(MenuItemModel) onEditItem;
   final void Function(MenuItemModel, bool) onToggleItem;
   final void Function(MenuItemModel) onDeleteItem;
@@ -519,6 +599,9 @@ class _CategorySection extends StatelessWidget {
     required this.category,
     required this.items,
     required this.menuId,
+    required this.isDark,
+    required this.isExpanded,
+    required this.onToggle,
     required this.onEditItem,
     required this.onToggleItem,
     required this.onDeleteItem,
@@ -526,49 +609,91 @@ class _CategorySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final headerBg = isDark ? const Color(0xFF1F1F1F) : Colors.grey[200];
+    final textColor = isDark ? textOnDark : textPrimary;
+    final pillBg = isDark ? const Color(0xFF242424) : Colors.grey[300];
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: BarzSpacing.md,
-            vertical: BarzSpacing.sm,
-          ),
-          color: Colors.grey[50],
-          child: Row(
-            children: [
-              Icon(Icons.category_outlined, size: 16, color: Colors.grey[600]),
-              const SizedBox(width: BarzSpacing.xs),
-              Text(
-                category,
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[700],
-                  letterSpacing: 0.5,
+        InkWell(
+          onTap: onToggle,
+          borderRadius: BorderRadius.circular(12),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: headerBg,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Text(
+                      category,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: textColor,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: pillBg,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${items.length}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: textColor.withValues(alpha: 0.8),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(width: BarzSpacing.xs),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: barzGold.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(10),
+                AnimatedRotation(
+                  turns: isExpanded ? 0 : -0.25,
+                  duration: const Duration(milliseconds: 200),
+                  child: Icon(
+                    Icons.keyboard_arrow_down,
+                    color: textColor.withValues(alpha: 0.7),
+                  ),
                 ),
-                child: Text(
-                  '${items.length}',
-                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: barzDark),
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
-        ...items.map((item) => _MenuItemTile(
-          item: item,
-          onEdit: () => onEditItem(item),
-          onToggle: (value) => onToggleItem(item, value),
-          onDelete: () => onDeleteItem(item),
-        )),
+        AnimatedCrossFade(
+          firstChild: const SizedBox.shrink(),
+          secondChild: Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 8),
+            child: Column(
+              children: items
+                  .map(
+                    (item) => _MenuItemTile(
+                      item: item,
+                      isDark: isDark,
+                      onEdit: () => onEditItem(item),
+                      onToggle: (value) => onToggleItem(item, value),
+                      onDelete: () => onDeleteItem(item),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+          crossFadeState: isExpanded
+              ? CrossFadeState.showSecond
+              : CrossFadeState.showFirst,
+          duration: const Duration(milliseconds: 200),
+        ),
       ],
     );
   }
@@ -576,124 +701,164 @@ class _CategorySection extends StatelessWidget {
 
 class _MenuItemTile extends StatelessWidget {
   final MenuItemModel item;
+  final bool isDark;
   final VoidCallback onEdit;
   final ValueChanged<bool> onToggle;
   final VoidCallback onDelete;
 
   const _MenuItemTile({
     required this.item,
+    required this.isDark,
     required this.onEdit,
     required this.onToggle,
     required this.onDelete,
   });
 
+  Widget _buildPlaceholder() {
+    return Container(
+      width: 64,
+      height: 64,
+      decoration: BoxDecoration(
+        color: barzGold.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(BarzRadii.sm),
+      ),
+      child: Icon(
+        Icons.local_bar,
+        color: barzGold.withValues(alpha: 0.6),
+        size: 28,
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onEdit,
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: BarzSpacing.md,
-          vertical: BarzSpacing.sm,
-        ),
-        decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: Colors.grey.shade100)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: barzGold.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(BarzRadii.sm),
+    final cardBg = isDark ? const Color(0xFF121212) : Colors.white;
+    final textColor = isDark ? textOnDark : textPrimary;
+    final mutedColor = isDark ? textTertiary : textSecondary;
+    final hoverColor = isDark ? Colors.white12 : Colors.black12;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onEdit,
+        hoverColor: hoverColor,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: cardBg,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Row(
+            children: [
+              // Image Thumbnail
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: item.picture != null && item.picture!.isNotEmpty
+                    ? Image.network(
+                        item.picture!,
+                        width: 64,
+                        height: 64,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            _buildPlaceholder(),
+                      )
+                    : _buildPlaceholder(),
               ),
-              child: Icon(
-                Icons.local_bar,
-                color: barzGold.withValues(alpha: 0.6),
-                size: 24,
-              ),
-            ),
-            const SizedBox(width: BarzSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    item.itemName,
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
-                      color: item.available ? barzDark : Colors.grey,
-                      decoration: item.available ? null : TextDecoration.lineThrough,
-                    ),
-                  ),
-                  if (item.description != null && item.description!.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 2),
-                      child: Text(
-                        item.description!,
-                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+              const SizedBox(width: 16),
+              // Content
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.itemName,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: item.available ? textColor : mutedColor,
+                        decoration: item.available
+                            ? null
+                            : TextDecoration.lineThrough,
                       ),
                     ),
-                ],
+                    if (item.description != null &&
+                        item.description!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          item.description!,
+                          style: TextStyle(fontSize: 13, color: mutedColor),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                  ],
+                ),
               ),
-            ),
-            const SizedBox(width: BarzSpacing.sm),
-            Text(
-              'R\$ ${item.price.toStringAsFixed(2)}',
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: successGreen,
+              const SizedBox(width: 16),
+              // Price
+              Text(
+                'R\$ ${item.price.toStringAsFixed(2)}',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w700,
+                  color: isDark ? barzGold : barzDark,
+                ),
               ),
-            ),
-            Transform.scale(
-              scale: 0.7,
-              child: Switch(
+              const SizedBox(width: 16),
+              // Switch
+              Switch(
                 value: item.available,
                 onChanged: item.id != null ? onToggle : null,
                 activeTrackColor: successGreen.withValues(alpha: 0.4),
                 activeThumbColor: successGreen,
               ),
-            ),
-            SizedBox(
-              width: 32,
-              child: PopupMenuButton<String>(
-                icon: Icon(Icons.more_vert, size: 18, color: Colors.grey[400]),
-                padding: EdgeInsets.zero,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BarzRadii.sm)),
-                onSelected: (value) {
-                  if (value == 'edit') onEdit();
-                  if (value == 'delete') onDelete();
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'edit',
-                    child: Row(
-                      children: [
-                        Icon(Icons.edit_outlined, size: 18),
-                        SizedBox(width: BarzSpacing.sm),
-                        Text('Editar'),
-                      ],
-                    ),
+              // Action Menu
+              SizedBox(
+                width: 32,
+                child: PopupMenuButton<String>(
+                  icon: Icon(Icons.more_vert, size: 20, color: mutedColor),
+                  padding: EdgeInsets.zero,
+                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(BarzRadii.sm),
                   ),
-                  PopupMenuItem(
-                    value: 'delete',
-                    child: Row(
-                      children: [
-                        Icon(Icons.delete_outline, size: 18, color: Colors.red[400]),
-                        const SizedBox(width: BarzSpacing.sm),
-                        Text('Excluir', style: TextStyle(color: Colors.red[400])),
-                      ],
+                  onSelected: (value) {
+                    if (value == 'edit') {
+                      onEdit();
+                    }
+                    if (value == 'delete') {
+                      onDelete();
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    PopupMenuItem(
+                      value: 'edit',
+                      child: Row(
+                        children: [
+                          Icon(Icons.edit_outlined, size: 18, color: textColor),
+                          const SizedBox(width: BarzSpacing.sm),
+                          Text('Editar', style: TextStyle(color: textColor)),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                    PopupMenuItem(
+                      value: 'delete',
+                      child: Row(
+                        children: [
+                          Icon(Icons.delete_outline, size: 18, color: errorRed),
+                          const SizedBox(width: BarzSpacing.sm),
+                          Text('Excluir', style: TextStyle(color: errorRed)),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -702,7 +867,13 @@ class _MenuItemTile extends StatelessWidget {
 
 class _EditItemSheet extends StatefulWidget {
   final MenuItemModel item;
-  final void Function(String name, String? description, double price, String? category) onSave;
+  final void Function(
+    String name,
+    String? description,
+    double price,
+    String? category,
+  )
+  onSave;
 
   const _EditItemSheet({required this.item, required this.onSave});
 
@@ -721,9 +892,15 @@ class _EditItemSheetState extends State<_EditItemSheet> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.item.itemName);
-    _descController = TextEditingController(text: widget.item.description ?? '');
-    _priceController = TextEditingController(text: widget.item.price.toStringAsFixed(2));
-    _categoryController = TextEditingController(text: widget.item.category ?? '');
+    _descController = TextEditingController(
+      text: widget.item.description ?? '',
+    );
+    _priceController = TextEditingController(
+      text: widget.item.price.toStringAsFixed(2),
+    );
+    _categoryController = TextEditingController(
+      text: widget.item.category ?? '',
+    );
   }
 
   @override
@@ -737,10 +914,15 @@ class _EditItemSheetState extends State<_EditItemSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgSurface = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final textColor = isDark ? textOnDark : textPrimary;
+    final dividerColor = isDark ? barzDarkMuted : Colors.grey[300];
+
     return Container(
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: bgSurface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       padding: EdgeInsets.only(
         bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -758,22 +940,28 @@ class _EditItemSheetState extends State<_EditItemSheet> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.grey[300],
+                    color: dividerColor,
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
               const SizedBox(height: BarzSpacing.lg),
-              const Text(
+              Text(
                 'Editar Item',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: barzDark),
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: textColor,
+                ),
               ),
               const SizedBox(height: BarzSpacing.lg),
               _buildTextField(
                 controller: _nameController,
                 label: 'Nome',
                 icon: Icons.restaurant,
-                validator: (v) => v == null || v.isEmpty ? 'Nome obrigatório' : null,
+                isDark: isDark,
+                validator: (v) =>
+                    v == null || v.isEmpty ? 'Nome obrigatório' : null,
               ),
               const SizedBox(height: BarzSpacing.md),
               _buildTextField(
@@ -781,6 +969,7 @@ class _EditItemSheetState extends State<_EditItemSheet> {
                 label: 'Descrição',
                 icon: Icons.description_outlined,
                 maxLines: 2,
+                isDark: isDark,
               ),
               const SizedBox(height: BarzSpacing.md),
               Row(
@@ -790,10 +979,17 @@ class _EditItemSheetState extends State<_EditItemSheet> {
                       controller: _priceController,
                       label: 'Preço',
                       icon: Icons.attach_money,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType: const TextInputType.numberWithOptions(
+                        decimal: true,
+                      ),
+                      isDark: isDark,
                       validator: (v) {
-                        if (v == null || v.isEmpty) return 'Preço obrigatório';
-                        if (double.tryParse(v.replaceAll(',', '.')) == null) return 'Preço inválido';
+                        if (v == null || v.isEmpty) {
+                          return 'Preço obrigatório';
+                        }
+                        if (double.tryParse(v.replaceAll(',', '.')) == null) {
+                          return 'Preço inválido';
+                        }
                         return null;
                       },
                     ),
@@ -804,6 +1000,7 @@ class _EditItemSheetState extends State<_EditItemSheet> {
                       controller: _categoryController,
                       label: 'Categoria',
                       icon: Icons.category_outlined,
+                      isDark: isDark,
                     ),
                   ),
                 ],
@@ -815,8 +1012,11 @@ class _EditItemSheetState extends State<_EditItemSheet> {
                     child: OutlinedButton(
                       onPressed: () => Navigator.pop(context),
                       style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: BarzSpacing.md),
-                        side: BorderSide(color: Colors.grey[300]!),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: BarzSpacing.md,
+                        ),
+                        side: BorderSide(color: dividerColor!),
+                        foregroundColor: textColor,
                       ),
                       child: const Text('Cancelar'),
                     ),
@@ -829,7 +1029,9 @@ class _EditItemSheetState extends State<_EditItemSheet> {
                       style: FilledButton.styleFrom(
                         backgroundColor: barzGold,
                         foregroundColor: barzDark,
-                        padding: const EdgeInsets.symmetric(vertical: BarzSpacing.md),
+                        padding: const EdgeInsets.symmetric(
+                          vertical: BarzSpacing.md,
+                        ),
                       ),
                       child: const Text('Salvar Alterações'),
                     ),
@@ -848,27 +1050,35 @@ class _EditItemSheetState extends State<_EditItemSheet> {
     required TextEditingController controller,
     required String label,
     required IconData icon,
+    required bool isDark,
     int maxLines = 1,
     TextInputType? keyboardType,
     String? Function(String?)? validator,
   }) {
+    final fillColor = isDark ? const Color(0xFF262626) : Colors.grey[50];
+    final borderColor = isDark ? const Color(0xFF333333) : Colors.grey[200];
+    final textColor = isDark ? textOnDark : textPrimary;
+    final hintColor = isDark ? textTertiary : textSecondary;
+
     return TextFormField(
       controller: controller,
       maxLines: maxLines,
       keyboardType: keyboardType,
       validator: validator,
+      style: TextStyle(color: textColor),
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(icon, color: Colors.grey[600]),
+        labelStyle: TextStyle(color: hintColor),
+        prefixIcon: Icon(icon, color: hintColor),
         filled: true,
-        fillColor: Colors.grey[50],
+        fillColor: fillColor,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(BarzRadii.sm),
-          borderSide: BorderSide(color: Colors.grey[200]!),
+          borderSide: BorderSide(color: borderColor!),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(BarzRadii.sm),
-          borderSide: BorderSide(color: Colors.grey[200]!),
+          borderSide: BorderSide(color: borderColor),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(BarzRadii.sm),
@@ -882,9 +1092,13 @@ class _EditItemSheetState extends State<_EditItemSheet> {
     if (_formKey.currentState?.validate() ?? false) {
       widget.onSave(
         _nameController.text.trim(),
-        _descController.text.trim().isEmpty ? null : _descController.text.trim(),
+        _descController.text.trim().isEmpty
+            ? null
+            : _descController.text.trim(),
         double.parse(_priceController.text.replaceAll(',', '.')),
-        _categoryController.text.trim().isEmpty ? null : _categoryController.text.trim(),
+        _categoryController.text.trim().isEmpty
+            ? null
+            : _categoryController.text.trim(),
       );
     }
   }

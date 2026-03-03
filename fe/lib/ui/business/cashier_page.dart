@@ -1,19 +1,22 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:barz/core/design/design_system.dart';
+import 'package:get_it/get_it.dart';
+import 'package:barz/features/orders/domain/models/live_order_model.dart';
+import 'package:barz/features/orders/presentation/bloc/live_orders_bloc.dart';
+import 'package:barz/features/orders/presentation/bloc/live_orders_event.dart';
+import 'package:barz/features/orders/presentation/bloc/live_orders_state.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
 
-/// Order status for filtering
-enum OrderFilter { all, pending, preparing, ready, completed }
+// --- CONSTANTS ---
+const String statusPending = 'pending';
+const String statusPreparing = 'preparing';
+const String statusReady = 'ready';
+const String statusCompleted = 'completed';
 
-/// Cashier page for managing orders in real-time.
-///
-/// This is the main view for cashiers and staff who process orders.
-/// Shows:
-/// - Live order feed with WebSocket updates
-/// - Order status tabs (pending, preparing, ready)
-/// - Quick actions to confirm/prepare/complete orders
 class CashierPage extends StatefulWidget {
   const CashierPage({super.key});
 
@@ -23,258 +26,779 @@ class CashierPage extends StatefulWidget {
 
 class _CashierPageState extends State<CashierPage>
     with SingleTickerProviderStateMixin {
-  late TabController _tabController;
+  String? _activeFilter; // null means 'All'
+  bool _soundOn = true;
+  Timer? _uiRefreshTimer;
+  late LiveOrdersBloc _liveOrdersBloc;
+  int? _activeBarId;
+
+  final Set<String> _urgentAlertedIds = {};
+
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 4, vsync: this);
+    // Get the injected bloc
+    _liveOrdersBloc = GetIt.I<LiveOrdersBloc>();
+
+    // Initial load happens below in BlocBuilder when we get the activeBar
+
+    // Refresh UI every 10s to update wait times and check urgency for UI effects.
+    _uiRefreshTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+      if (mounted) setState(() {});
+    });
   }
 
   @override
   void dispose() {
-    _tabController.dispose();
+    _uiRefreshTimer?.cancel();
+    _pulseController.dispose();
+    _liveOrdersBloc.close();
     super.dispose();
+  }
+
+  void _playSound(SystemSoundType type) {
+    if (_soundOn) {
+      SystemSound.play(type);
+      HapticFeedback.lightImpact();
+    }
+  }
+
+  void _checkUrgentAlerts(List<LiveOrderModel> orders) {
+    final now = DateTime.now();
+    for (final order in orders) {
+      if (order.status != statusCompleted) {
+        final mins = now.difference(order.createdAt).inMinutes;
+        if (mins >= 15 && !_urgentAlertedIds.contains(order.id)) {
+          _urgentAlertedIds.add(order.id);
+          _playSound(SystemSoundType.alert); // Urgent sound
+        }
+      }
+    }
+  }
+
+  void _handleAction(int barId, String orderId, String newStatus) {
+    _liveOrdersBloc.add(
+      LiveOrdersEvent.updateOrderStatus(barId, orderId, newStatus),
+    );
+    _playSound(SystemSoundType.click); // Action sound
   }
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<SessionBloc, SessionState>(
-      builder: (context, state) {
-        if (state is! SessionReady) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    bool isDark = Theme.of(context).brightness == Brightness.dark;
+    Color bgColor = isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF5F5F7);
+    Color cardColor = isDark ? const Color(0xFF2C2C2E) : Colors.white;
+    Color textColor = isDark ? Colors.white : Colors.black87;
+    Color mutedColor = isDark ? Colors.white54 : Colors.black54;
+    Color borderColor = isDark ? Colors.white12 : Colors.black12;
 
-        final activeBar = state.session.activeBar;
-        if (activeBar == null) {
-          return const Center(child: Text('No bar selected'));
-        }
-
-        return Scaffold(
-          backgroundColor: barzGoldSoft,
-          body: Column(
-            children: [
-              _buildOrderTabs(),
-              Expanded(child: _buildOrderList()),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildOrderTabs() {
-    return Container(
-      color: Colors.white,
-      child: TabBar(
-        controller: _tabController,
-        labelColor: barzDark,
-        unselectedLabelColor: Colors.grey,
-        indicatorColor: barzGold,
-        tabs: [
-          _buildTab('Pending', 0, Colors.orange),
-          _buildTab('Preparing', 0, Colors.blue),
-          _buildTab('Ready', 0, Colors.green),
-          _buildTab('All', 0, Colors.grey),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildTab(String label, int count, Color color) {
-    return Tab(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(label),
-          if (count > 0) ...[
-            const SizedBox(width: 4),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                count.toString(),
-                style: const TextStyle(color: Colors.white, fontSize: 12),
-              ),
+    return Scaffold(
+      backgroundColor: bgColor,
+      appBar: AppBar(
+        title: const Text(
+          'Caixa',
+          style: TextStyle(fontWeight: FontWeight.w600),
+        ),
+        backgroundColor: cardColor,
+        foregroundColor: textColor,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: Icon(
+              _soundOn ? Icons.volume_up : Icons.volume_off,
+              color: _soundOn ? barzGold : mutedColor,
             ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildOrderList() {
-    return TabBarView(
-      controller: _tabController,
-      children: [
-        _buildEmptyOrdersView('pending'),
-        _buildEmptyOrdersView('preparing'),
-        _buildEmptyOrdersView('ready'),
-        _buildEmptyOrdersView('all'),
-      ],
-    );
-  }
-
-  Widget _buildEmptyOrdersView(String filter) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.receipt_long, size: 64, color: Colors.grey[400]),
-          const SizedBox(height: 16),
-          Text(
-            'No $filter orders',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w500,
-              color: Colors.grey[600],
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Orders will appear here when customers place them',
-            style: TextStyle(color: Colors.grey[500]),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-          OutlinedButton.icon(
             onPressed: () {
-              // TODO: Refresh orders
+              setState(() {
+                _soundOn = !_soundOn;
+              });
             },
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
-            label: const Text('Refresh'),
+            onPressed: () {
+              if (_activeBarId != null) {
+                _liveOrdersBloc.add(LiveOrdersEvent.loadOrders(_activeBarId!));
+              }
+            },
           ),
         ],
+      ),
+      body: BlocBuilder<SessionBloc, SessionState>(
+        builder: (context, sessionState) {
+          final activeBar = sessionState.maybeMap(
+            ready: (s) => s.session.activeBar,
+            orElse: () => null,
+          );
+          if (activeBar == null) {
+            return Center(
+              child: Text(
+                'Selecione um bar para gerenciar o caixa',
+                style: TextStyle(color: mutedColor),
+              ),
+            );
+          }
+
+          if (_activeBarId != activeBar.barId) {
+            _activeBarId = activeBar.barId;
+            // Kickoff load orders
+            _liveOrdersBloc.add(LiveOrdersEvent.loadOrders(_activeBarId!));
+          }
+
+          return BlocConsumer<LiveOrdersBloc, LiveOrdersState>(
+            listener: (context, state) {
+              state.maybeMap(
+                loaded: (s) => _checkUrgentAlerts(s.orders),
+                error: (s) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(s.message),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                },
+                orElse: () {},
+              );
+            },
+            builder: (context, state) {
+              int totalOrders = 0;
+              List<LiveOrderModel> currentOrders = [];
+
+              state.maybeMap(
+                loaded: (s) {
+                  totalOrders = s.orders.length;
+                  currentOrders = s.orders;
+                },
+                orElse: () {},
+              );
+
+              final filteredOrders = _activeFilter == null
+                  ? currentOrders
+                  : currentOrders
+                        .where((o) => o.status == _activeFilter)
+                        .toList();
+
+              return Scaffold(
+                backgroundColor: bgColor,
+                body: Column(
+                  children: [
+                    _buildHeader(
+                      isDark,
+                      cardColor,
+                      borderColor,
+                      textColor,
+                      mutedColor,
+                      totalOrders,
+                    ),
+                    _buildTabs(isDark, cardColor, borderColor, currentOrders),
+                    Expanded(
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 1200),
+                          child: Builder(
+                            builder: (context) {
+                              return state.maybeMap(
+                                loading: (_) => Center(
+                                  child: CircularProgressIndicator(
+                                    color: barzGold,
+                                  ),
+                                ),
+                                orElse: () {
+                                  if (filteredOrders.isEmpty) {
+                                    return _buildEmptyState(mutedColor);
+                                  }
+                                  return _buildOrderGrid(
+                                    filteredOrders,
+                                    isDark,
+                                    cardColor,
+                                    borderColor,
+                                    textColor,
+                                    mutedColor,
+                                    activeBar.barId,
+                                  );
+                                },
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        },
       ),
     );
   }
 
-  // TODO(cashier): Use this method when order backend is integrated
-  // ignore: unused_element
-  Widget _buildOrderCard({
-    required int orderId,
-    required String status,
-    required String customerName,
-    required double total,
-    required List<String> items,
-    required DateTime createdAt,
-  }) {
-    Color statusColor;
-    switch (status.toLowerCase()) {
-      case 'pending':
-        statusColor = Colors.orange;
-        break;
-      case 'preparing':
-        statusColor = Colors.blue;
-        break;
-      case 'ready':
-        statusColor = Colors.green;
-        break;
-      default:
-        statusColor = Colors.grey;
-    }
-
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+  Widget _buildHeader(
+    bool isDark,
+    Color cardColor,
+    Color borderColor,
+    Color textColor,
+    Color mutedColor,
+    int totalCount,
+  ) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: cardColor,
+        border: Border(bottom: BorderSide(color: borderColor)),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 1200),
+            child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Order #$orderId',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusColor.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    status.toUpperCase(),
-                    style: TextStyle(
-                      color: statusColor,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
+                Row(
+                  children: [
+                    Icon(Icons.terminal, color: barzGold, size: 22),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Cashier Terminal',
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: -0.5,
+                      ),
                     ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(customerName, style: TextStyle(color: Colors.grey[600])),
-            const Divider(),
-            ...items.map(
-              (item) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 2),
-                child: Text(item),
-              ),
-            ),
-            const Divider(),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  'R\$ ${total.toStringAsFixed(2)}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
+                  ],
                 ),
                 Row(
                   children: [
-                    if (status.toLowerCase() == 'pending')
-                      ElevatedButton(
-                        onPressed: () {
-                          // TODO: Confirm order
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green,
-                        ),
-                        child: const Text('Confirm'),
+                    IconButton(
+                      icon: Icon(
+                        _soundOn ? Icons.volume_up : Icons.volume_off,
+                        size: 20,
+                        color: mutedColor,
                       ),
-                    if (status.toLowerCase() == 'preparing')
-                      ElevatedButton(
-                        onPressed: () {
-                          // TODO: Mark as ready
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                        ),
-                        child: const Text('Ready'),
+                      onPressed: () {
+                        setState(() => _soundOn = !_soundOn);
+                      },
+                      tooltip: _soundOn ? 'Mute sounds' : 'Enable sounds',
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      '$totalCount orders',
+                      style: const TextStyle(
+                        fontFamily: 'JetBrains Mono',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey,
                       ),
-                    if (status.toLowerCase() == 'ready')
-                      ElevatedButton(
-                        onPressed: () {
-                          // TODO: Complete order
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: barzGold,
-                          foregroundColor: barzDark,
+                    ),
+                    const SizedBox(width: 12),
+                    AnimatedBuilder(
+                      animation: _pulseAnimation,
+                      builder: (context, child) {
+                        return Opacity(
+                          opacity: _pulseAnimation.value,
+                          child: child,
+                        );
+                      },
+                      child: Container(
+                        width: 8,
+                        height: 8,
+                        decoration: const BoxDecoration(
+                          color: Colors.green,
+                          shape: BoxShape.circle,
                         ),
-                        child: const Text('Complete'),
                       ),
+                    ),
+                    const SizedBox(width: 6),
+                    const Text(
+                      'LIVE',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
+                      ),
+                    ),
                   ],
                 ),
               ],
             ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabs(
+    bool isDark,
+    Color cardColor,
+    Color borderColor,
+    List<LiveOrderModel> allOrders,
+  ) {
+    final counts = {
+      statusPending: 0,
+      statusPreparing: 0,
+      statusReady: 0,
+      statusCompleted: 0,
+    };
+    int total = allOrders.length;
+    for (var o in allOrders) {
+      counts[o.status] = (counts[o.status] ?? 0) + 1;
+    }
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF141416) : Colors.white,
+        border: Border(bottom: BorderSide(color: borderColor)),
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1200),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Container(
+              padding: const EdgeInsets.all(4),
+              decoration: BoxDecoration(
+                color: isDark ? const Color(0xFF1F1F22) : Colors.grey[200],
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  _buildTabItem(
+                    'Pending',
+                    statusPending,
+                    counts[statusPending]!,
+                  ),
+                  _buildTabItem(
+                    'Preparing',
+                    statusPreparing,
+                    counts[statusPreparing]!,
+                  ),
+                  _buildTabItem('Ready', statusReady, counts[statusReady]!),
+                  _buildTabItem(
+                    'Completed',
+                    statusCompleted,
+                    counts[statusCompleted]!,
+                  ),
+                  _buildTabItem('All', null, total),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTabItem(String label, String? statusFilter, int count) {
+    final isSelected = _activeFilter == statusFilter;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return GestureDetector(
+      onTap: () => setState(() => _activeFilter = statusFilter),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? (isDark ? barzGold : barzDark)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(8),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Row(
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: isSelected
+                    ? (isDark ? Colors.black : Colors.white)
+                    : (isDark ? Colors.grey[400] : Colors.grey[600]),
+              ),
+            ),
+            if (count > 0) ...[
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: isSelected
+                      ? (isDark ? Colors.black : Colors.white24)
+                      : (isDark ? Colors.grey[800] : Colors.grey[300]),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  count.toString(),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: isSelected
+                        ? (isDark ? Colors.white : Colors.white)
+                        : (isDark ? Colors.white : Colors.black87),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildEmptyState(Color mutedColor) {
+    return Center(
+      child: Text(
+        'No orders in this pipeline.',
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: mutedColor,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOrderGrid(
+    List<LiveOrderModel> orders,
+    bool isDark,
+    Color cardColor,
+    Color borderColor,
+    Color textColor,
+    Color mutedColor,
+    int barId,
+  ) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        int crossAxisCount = 1;
+        if (constraints.maxWidth > 1000) {
+          crossAxisCount = 4;
+        } else if (constraints.maxWidth > 700) {
+          crossAxisCount = 3;
+        } else if (constraints.maxWidth > 500) {
+          crossAxisCount = 2;
+        }
+
+        return GridView.builder(
+          padding: const EdgeInsets.all(16),
+          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: crossAxisCount,
+            childAspectRatio: 0.85,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+          ),
+          itemCount: orders.length,
+          itemBuilder: (context, index) {
+            final order = orders[index];
+            return _OrderCard(
+              order: order,
+              isDark: isDark,
+              pulseAnimation: _pulseAnimation,
+              onAction: (orderId, status) =>
+                  _handleAction(barId, orderId, status),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _OrderCard extends StatelessWidget {
+  final LiveOrderModel order;
+  final bool isDark;
+  final Animation<double> pulseAnimation;
+  final Function(String, String) onAction;
+
+  const _OrderCard({
+    required this.order,
+    required this.isDark,
+    required this.pulseAnimation,
+    required this.onAction,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final now = DateTime.now();
+    final minsWait = now.difference(order.createdAt).inMinutes;
+    final isUrgent = order.status != statusCompleted && minsWait >= 15;
+
+    final cardColor = isDark ? const Color(0xFF18181B) : Colors.white;
+    Color borderColor = isDark ? const Color(0xFF27272A) : Colors.grey[200]!;
+    if (isUrgent) {
+      borderColor = Colors.red.withValues(alpha: 0.6);
+    }
+
+    // Status config
+    Color statusColor;
+    switch (order.status) {
+      case statusPending:
+        statusColor = Colors.amber;
+        break;
+      case statusPreparing:
+        statusColor = const Color(0xFF3B82F6); // info -> Blue
+        break;
+      case statusReady:
+        statusColor = const Color(0xFF16A34A); // success -> Green
+        break;
+      case statusCompleted:
+        statusColor = Colors.grey;
+        break;
+      default:
+        statusColor = Colors.grey;
+        break;
+    }
+
+    String? actionLabel;
+    String? nextStatus;
+    Color? actionColor;
+    Color? actionTextColor;
+
+    switch (order.status) {
+      case statusPending:
+        actionLabel = 'Confirm';
+        nextStatus = statusPreparing;
+        actionColor = const Color(0xFF16A34A); // Success
+        actionTextColor = Colors.white;
+        break;
+      case statusPreparing:
+        actionLabel = 'Ready';
+        nextStatus = statusReady;
+        actionColor = const Color(0xFF3B82F6); // Info
+        actionTextColor = Colors.white;
+        break;
+      case statusReady:
+        actionLabel = 'Complete';
+        nextStatus = statusCompleted;
+        actionColor = barzDark; // Use primary text/color depending on theme
+        actionTextColor = Colors.white;
+        if (isDark) {
+          actionColor = barzGold;
+          actionTextColor = Colors.black;
+        }
+        break;
+      case statusCompleted:
+        break;
+    }
+
+    return Container(
+      decoration: BoxDecoration(
+        color: cardColor,
+        border: Border.all(color: borderColor, width: isUrgent ? 1.5 : 1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              border: Border(
+                bottom: BorderSide(
+                  color: isDark ? const Color(0xFF27272A) : Colors.grey[200]!,
+                ),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: statusColor,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      order.id,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'JetBrains Mono',
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
+                    ),
+                  ],
+                ),
+                isUrgent
+                    ? AnimatedBuilder(
+                        animation: pulseAnimation,
+                        builder: (context, child) => Opacity(
+                          opacity: pulseAnimation.value,
+                          child: child,
+                        ),
+                        child: _buildTimeText(minsWait, isUrgent),
+                      )
+                    : _buildTimeText(minsWait, isUrgent),
+              ],
+            ),
+          ),
+
+          // Body
+          Expanded(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.person_outline,
+                        size: 14,
+                        color: isDark ? Colors.grey[400] : Colors.grey[600],
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        order.customerName,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: isDark ? Colors.white : Colors.black,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Expanded(
+                    child: ListView(
+                      physics: const BouncingScrollPhysics(),
+                      children: order.items
+                          .map(
+                            (item) => Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 2),
+                              child: Text.rich(
+                                TextSpan(
+                                  children: [
+                                    TextSpan(
+                                      text: '${item.quantity}× ',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: isDark
+                                            ? Colors.white
+                                            : Colors.black,
+                                      ),
+                                    ),
+                                    TextSpan(
+                                      text: item.name,
+                                      style: TextStyle(
+                                        color: isDark
+                                            ? Colors.grey[400]
+                                            : Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                style: const TextStyle(fontSize: 12),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // Footer
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: isDark ? const Color(0xFF141416) : Colors.grey[50],
+              border: Border(
+                top: BorderSide(
+                  color: isDark ? const Color(0xFF27272A) : Colors.grey[200]!,
+                ),
+              ),
+              borderRadius: const BorderRadius.only(
+                bottomLeft: Radius.circular(12),
+                bottomRight: Radius.circular(12),
+              ),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  'R\$ ${order.total.toStringAsFixed(2)}',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? barzGold : barzDark,
+                    fontFamily: 'JetBrains Mono',
+                  ),
+                ),
+                if (actionLabel != null && nextStatus != null)
+                  InkWell(
+                    onTap: () => onAction(order.id, nextStatus!),
+                    borderRadius: BorderRadius.circular(6),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
+                      ),
+                      decoration: BoxDecoration(
+                        color: actionColor,
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        actionLabel,
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: actionTextColor,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTimeText(int minsWait, bool isUrgent) {
+    String timeStr = minsWait == 0 ? 'Just now' : '${minsWait}m ago';
+    return Row(
+      children: [
+        Icon(
+          Icons.access_time,
+          size: 14,
+          color: isUrgent ? Colors.red : Colors.grey,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          timeStr,
+          style: TextStyle(
+            fontSize: 12,
+            fontFamily: 'JetBrains Mono',
+            fontWeight: isUrgent ? FontWeight.bold : FontWeight.w500,
+            color: isUrgent ? Colors.red : Colors.grey,
+          ),
+        ),
+      ],
     );
   }
 }

@@ -59,6 +59,9 @@ class ApiEndpoints {
   static String order(int id) => '/orders/$id';
   static String orderTimeline(int id) => '/orders/$id/timeline';
   static String cancelOrder(int id) => '/orders/$id/cancel';
+  static String barOrdersLive(int barId) => '/bars/$barId/orders/live';
+  static String barOrderStatus(int barId, String orderId) =>
+      '/bars/$barId/orders/$orderId/status';
 
   // Profile endpoints (updated to /me prefix)
   static const String profile = '/me/profile';

@@ -1,12 +1,7 @@
 import 'package:barz/core/rbac/rbac.dart';
 
 /// Status of a staff invitation
-enum InvitationStatus {
-  pending,
-  accepted,
-  expired,
-  revoked,
-}
+enum InvitationStatus { pending, accepted, expired, revoked }
 
 extension InvitationStatusExtension on InvitationStatus {
   static InvitationStatus fromString(String value) {
@@ -57,7 +52,9 @@ class StaffInvitation {
       email: json['email'] as String?,
       phoneNumber: json['phone'] as String?,
       role: BarRoleExtension.fromString(json['role'] as String? ?? 'staff'),
-      status: InvitationStatusExtension.fromString(json['status'] as String? ?? 'pending'),
+      status: InvitationStatusExtension.fromString(
+        json['status'] as String? ?? 'pending',
+      ),
       invitationCode: json['invitation_code'] as String?,
       createdAt: DateTime.parse(json['created_at'] as String),
       expiresAt: DateTime.parse(json['expires_at'] as String),
@@ -82,5 +79,6 @@ class StaffInvitation {
   }
 
   @override
-  String toString() => 'StaffInvitation(id: $id, barName: $barName, role: ${role.name}, status: ${status.name})';
+  String toString() =>
+      'StaffInvitation(id: $id, barName: $barName, role: ${role.name}, status: ${status.name})';
 }
