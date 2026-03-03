@@ -11,7 +11,8 @@ from app.errors import APIError
 from app.redis_client import get_redis
 from ..models.nosql_models import menus_collection, orders_collection
 from app.database import database
-from app.bars_and_restaurants.models.relational_models import Order, Bar, BarOwner
+from app.bars_and_restaurants.models.relational_models import Order, Bar
+from app.auth.rbac_models import BarStaff
 
 ws_router = APIRouter(tags=["WebSocket"])
 
@@ -172,42 +173,42 @@ manager = ConnectionManager()
 # =============================================================================
 
 async def verify_token_and_get_user_id(token: str) -> int:
-    """Verify JWT token and extract user_id."""
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: int = payload.get("user_id")
+        user_id = payload.get("sub")
         if user_id is None:
             raise APIError.invalid_token()
-        return user_id
+        return int(user_id)
     except JWTError:
         raise APIError.invalid_token()
 
 
-async def verify_bar_owner(token: str, bar_id: int) -> dict:
-    """
-    Verify that the token belongs to an owner of the specified bar.
-    Returns owner info if valid.
-    """
+async def verify_bar_staff_access(token: str, bar_id: int) -> Optional[dict]:
+    ALLOWED_ROLES = {"owner", "admin", "manager", "cashier"}
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        owner_id = payload.get("owner_id") or payload.get("user_id")
-        
-        if owner_id is None:
+        user_id = payload.get("sub")
+        if user_id is None:
             return None
-        
-        # Check if this owner owns the bar
-        query = Bar.__table__.select().where(Bar.id == bar_id)
-        bar = await database.fetch_one(query)
-        
-        if not bar:
-            return None
-        
-        if bar["owner_id"] != owner_id:
-            return None
-        
-        return {"owner_id": owner_id, "bar_id": bar_id, "bar_name": bar["name"]}
+        user_id = int(user_id)
     except JWTError:
         return None
+
+    bar_query = Bar.__table__.select().where(Bar.id == bar_id)
+    bar = await database.fetch_one(bar_query)
+    if not bar:
+        return None
+
+    staff_query = BarStaff.__table__.select().where(
+        (BarStaff.user_id == user_id) &
+        (BarStaff.bar_id == bar_id) &
+        (BarStaff.is_active == True)
+    )
+    staff = await database.fetch_one(staff_query)
+    if not staff or staff["role"] not in ALLOWED_ROLES:
+        return None
+
+    return {"user_id": user_id, "bar_id": bar_id, "bar_name": bar["name"], "role": staff["role"]}
 
 
 def get_status_message(status: str) -> str:
@@ -291,33 +292,30 @@ async def websocket_bar_owner_dashboard(
     - {"action": "complete", "order_id": 456}
     - {"action": "cancel", "order_id": 456, "reason": "Out of stock"}
     """
-    # Verify bar owner authentication
-    owner_info = await verify_bar_owner(token, bar_id)
-    
-    if not owner_info:
+    staff_info = await verify_bar_staff_access(token, bar_id)
+
+    if not staff_info:
+        await websocket.accept()
         await websocket.close(
-            code=status.WS_1008_POLICY_VIOLATION, 
+            code=status.WS_1008_POLICY_VIOLATION,
             reason="Not authorized to access this bar's orders"
         )
         return
     
-    # Connect to bar-specific channel
     await manager.connect_to_bar(websocket, bar_id)
-    
+
     try:
-        # Get count of pending orders
         pending_query = Order.__table__.select().where(
             (Order.bar_id == bar_id) & (Order.status == "pending")
         )
         pending_orders = await database.fetch_all(pending_query)
-        
-        # Send connection confirmation with pending orders count
+
         welcome_message = {
             "type": "connected",
             "bar_id": bar_id,
-            "bar_name": owner_info["bar_name"],
+            "bar_name": staff_info["bar_name"],
             "timestamp": datetime.now(timezone.utc).isoformat(),
-            "message": f"Connected to {owner_info['bar_name']} order updates",
+            "message": f"Connected to {staff_info['bar_name']} order updates",
             "pending_orders_count": len(pending_orders),
             "active_connections": manager.get_bar_connection_count(bar_id)
         }
