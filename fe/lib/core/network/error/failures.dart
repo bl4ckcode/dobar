@@ -25,9 +25,9 @@ class NetworkFailure extends Failure {
 
 class SyncFailure extends Failure {
   final int pendingCount;
-  
+
   const SyncFailure(super.errorMessage, {this.pendingCount = 0});
-  
+
   @override
   List<Object> get props => [errorMessage, pendingCount];
 }

@@ -14,7 +14,8 @@ Future<void> initBarsInjection() async {
 
   getItInjector.registerLazySingleton<AbstractBarRepository>(
     () => BarRepositoryImpl(
-        networkDataSource: getItInjector<BarNetworkDataSource>()),
+      networkDataSource: getItInjector<BarNetworkDataSource>(),
+    ),
   );
 
   getItInjector.registerLazySingleton<BarUsecase>(

@@ -54,17 +54,43 @@ class _CreateBarScreenState extends State<CreateBarScreen> {
   ];
 
   final List<Map<String, dynamic>> _testMenuItems = [
-    {'name': 'Brahma Chopp', 'description': 'Chopp gelado 300ml', 'price': 8.90, 'category': 'Cervejas'},
-    {'name': 'Heineken', 'description': 'Long neck 330ml', 'price': 12.90, 'category': 'Cervejas'},
-    {'name': 'Caipirinha', 'description': 'Limão, cachaça e açúcar', 'price': 18.00, 'category': 'Drinks'},
-    {'name': 'Batata Frita', 'description': 'Porção 400g com cheddar e bacon', 'price': 32.00, 'category': 'Petiscos'},
-    {'name': 'Picanha na Chapa', 'description': 'Com farofa e vinagrete', 'price': 65.00, 'category': 'Petiscos'},
+    {
+      'name': 'Brahma Chopp',
+      'description': 'Chopp gelado 300ml',
+      'price': 8.90,
+      'category': 'Cervejas',
+    },
+    {
+      'name': 'Heineken',
+      'description': 'Long neck 330ml',
+      'price': 12.90,
+      'category': 'Cervejas',
+    },
+    {
+      'name': 'Caipirinha',
+      'description': 'Limão, cachaça e açúcar',
+      'price': 18.00,
+      'category': 'Drinks',
+    },
+    {
+      'name': 'Batata Frita',
+      'description': 'Porção 400g com cheddar e bacon',
+      'price': 32.00,
+      'category': 'Petiscos',
+    },
+    {
+      'name': 'Picanha na Chapa',
+      'description': 'Com farofa e vinagrete',
+      'price': 65.00,
+      'category': 'Petiscos',
+    },
   ];
 
   final List<Map<String, dynamic>> _testPromotions = [
     {
       'title': 'Happy Hour 2x1',
-      'description': 'Compre um chopp, leve dois! Válido de segunda a quinta das 17h às 20h.',
+      'description':
+          'Compre um chopp, leve dois! Válido de segunda a quinta das 17h às 20h.',
       'discount_type': 'bogo',
       'discount_value': 100.0,
       'start_time': '17:00',
@@ -76,7 +102,8 @@ class _CreateBarScreenState extends State<CreateBarScreen> {
     },
     {
       'title': '20% OFF Caipirinha',
-      'description': 'Desconto especial em todas as caipirinhas aos fins de semana.',
+      'description':
+          'Desconto especial em todas as caipirinhas aos fins de semana.',
       'discount_type': 'percentage',
       'discount_value': 20.0,
       'start_time': '12:00',
@@ -174,10 +201,7 @@ class _CreateBarScreenState extends State<CreateBarScreen> {
 
   Future<void> _createPromotion(int barId, Map<String, dynamic> promo) async {
     try {
-      final formData = FormData.fromMap({
-        'bar_id': barId,
-        ...promo,
-      });
+      final formData = FormData.fromMap({'bar_id': barId, ...promo});
 
       await DioNetwork.appAPI.post(
         '${ApiEndpoints.baseUrl}${ApiEndpoints.promotions}',
@@ -243,12 +267,76 @@ class _CreateBarScreenState extends State<CreateBarScreen> {
 
   List<int> _generatePlaceholderImage() {
     return [
-      0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,
-      0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
-      0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53, 0xDE, 0x00, 0x00, 0x00,
-      0x0C, 0x49, 0x44, 0x41, 0x54, 0x08, 0xD7, 0x63, 0xF8, 0xCF, 0xC0, 0x00,
-      0x00, 0x00, 0x03, 0x00, 0x01, 0x00, 0x05, 0xFE, 0xD4, 0xEB, 0x00, 0x00,
-      0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82,
+      0x89,
+      0x50,
+      0x4E,
+      0x47,
+      0x0D,
+      0x0A,
+      0x1A,
+      0x0A,
+      0x00,
+      0x00,
+      0x00,
+      0x0D,
+      0x49,
+      0x48,
+      0x44,
+      0x52,
+      0x00,
+      0x00,
+      0x00,
+      0x01,
+      0x00,
+      0x00,
+      0x00,
+      0x01,
+      0x08,
+      0x02,
+      0x00,
+      0x00,
+      0x00,
+      0x90,
+      0x77,
+      0x53,
+      0xDE,
+      0x00,
+      0x00,
+      0x00,
+      0x0C,
+      0x49,
+      0x44,
+      0x41,
+      0x54,
+      0x08,
+      0xD7,
+      0x63,
+      0xF8,
+      0xCF,
+      0xC0,
+      0x00,
+      0x00,
+      0x00,
+      0x03,
+      0x00,
+      0x01,
+      0x00,
+      0x05,
+      0xFE,
+      0xD4,
+      0xEB,
+      0x00,
+      0x00,
+      0x00,
+      0x00,
+      0x49,
+      0x45,
+      0x4E,
+      0x44,
+      0xAE,
+      0x42,
+      0x60,
+      0x82,
     ];
   }
 

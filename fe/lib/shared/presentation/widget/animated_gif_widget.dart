@@ -43,7 +43,9 @@ class _AnimatedGifWidgetState extends State<AnimatedGifWidget> {
           isStateOne = !isStateOne;
         });
       },
-      child: Image.memory(Uint8List.fromList(img.encodeGif(frames[isStateOne ? 0 : 1]))),
+      child: Image.memory(
+        Uint8List.fromList(img.encodeGif(frames[isStateOne ? 0 : 1])),
+      ),
     );
   }
 }

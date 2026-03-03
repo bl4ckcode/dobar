@@ -10,7 +10,7 @@ ThemeData getLightTheme() {
   return ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
-    
+
     // Color Scheme
     colorScheme: ColorScheme.light(
       primary: barzYellow,
@@ -27,10 +27,10 @@ ThemeData getLightTheme() {
       error: errorColor,
       onError: Colors.white,
     ),
-    
+
     // Scaffold
     scaffoldBackgroundColor: backgroundYellow,
-    
+
     // App Bar
     appBarTheme: AppBarTheme(
       backgroundColor: barzBlack,
@@ -43,7 +43,7 @@ ThemeData getLightTheme() {
         color: Colors.white,
       ),
     ),
-    
+
     // Bottom Navigation Bar
     bottomNavigationBarTheme: BottomNavigationBarThemeData(
       backgroundColor: navBarBackground,
@@ -60,7 +60,7 @@ ThemeData getLightTheme() {
         fontWeight: FontWeight.w400,
       ),
     ),
-    
+
     // Navigation Rail (for web/tablet)
     navigationRailTheme: NavigationRailThemeData(
       backgroundColor: sideMenuBackground,
@@ -75,7 +75,7 @@ ThemeData getLightTheme() {
       ),
       indicatorColor: barzYellow.withValues(alpha: 0.2),
     ),
-    
+
     // Card Theme
     cardTheme: CardThemeData(
       color: cardBackground,
@@ -87,7 +87,7 @@ ThemeData getLightTheme() {
       ),
       margin: const EdgeInsets.symmetric(vertical: 8),
     ),
-    
+
     // Elevated Button
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
@@ -95,43 +95,30 @@ ThemeData getLightTheme() {
         foregroundColor: barzBlack,
         elevation: 2,
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        textStyle: GoogleFonts.inter(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        textStyle: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
       ),
     ),
-    
+
     // Outlined Button
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
         foregroundColor: barzBlack,
         side: const BorderSide(color: barzYellow, width: 2),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        textStyle: GoogleFonts.inter(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        textStyle: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
       ),
     ),
-    
+
     // Text Button
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         foregroundColor: barzYellowDark,
-        textStyle: GoogleFonts.inter(
-          fontSize: 14,
-          fontWeight: FontWeight.w600,
-        ),
+        textStyle: GoogleFonts.inter(fontSize: 14, fontWeight: FontWeight.w600),
       ),
     ),
-    
+
     // Input Decoration
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
@@ -156,7 +143,7 @@ ThemeData getLightTheme() {
       labelStyle: GoogleFonts.inter(color: textSecondary),
       hintStyle: GoogleFonts.inter(color: textTertiary),
     ),
-    
+
     // Text Theme
     textTheme: TextTheme(
       displayLarge: GoogleFonts.inter(
@@ -235,13 +222,10 @@ ThemeData getLightTheme() {
         color: textSecondary,
       ),
     ),
-    
+
     // Divider
-    dividerTheme: const DividerThemeData(
-      color: cardBorder,
-      thickness: 1,
-    ),
-    
+    dividerTheme: const DividerThemeData(color: cardBorder, thickness: 1),
+
     // Chip
     chipTheme: ChipThemeData(
       backgroundColor: barzYellowSoft,
@@ -251,30 +235,21 @@ ThemeData getLightTheme() {
         fontWeight: FontWeight.w500,
         color: textPrimary,
       ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
     ),
-    
+
     // Snackbar
     snackBarTheme: SnackBarThemeData(
       backgroundColor: barzBlack,
-      contentTextStyle: GoogleFonts.inter(
-        color: Colors.white,
-        fontSize: 14,
-      ),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(8),
-      ),
+      contentTextStyle: GoogleFonts.inter(color: Colors.white, fontSize: 14),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       behavior: SnackBarBehavior.floating,
     ),
-    
+
     // Dialog
     dialogTheme: DialogThemeData(
       backgroundColor: Colors.white,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       titleTextStyle: GoogleFonts.inter(
         fontSize: 20,
         fontWeight: FontWeight.w600,
@@ -288,7 +263,7 @@ ThemeData getDarkTheme() {
   return ThemeData(
     useMaterial3: true,
     brightness: Brightness.dark,
-    
+
     colorScheme: ColorScheme.dark(
       primary: barzYellow,
       onPrimary: barzBlack,
@@ -301,9 +276,9 @@ ThemeData getDarkTheme() {
       error: errorColor,
       onError: Colors.white,
     ),
-    
+
     scaffoldBackgroundColor: backgroundColorDark,
-    
+
     appBarTheme: AppBarTheme(
       backgroundColor: const Color(0xFF1E1E2E),
       foregroundColor: Colors.white,
@@ -315,7 +290,7 @@ ThemeData getDarkTheme() {
         color: Colors.white,
       ),
     ),
-    
+
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
       backgroundColor: Color(0xFF1E1E2E),
       selectedItemColor: barzYellow,
@@ -323,15 +298,13 @@ ThemeData getDarkTheme() {
       type: BottomNavigationBarType.fixed,
       elevation: 8,
     ),
-    
+
     cardTheme: CardThemeData(
       color: const Color(0xFF252538),
       elevation: 2,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     ),
-    
+
     textTheme: TextTheme(
       headlineLarge: GoogleFonts.inter(
         fontSize: 32,

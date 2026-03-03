@@ -16,8 +16,8 @@ class PromotionDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => getItInjector<PromotionsBloc>()
-        ..add(LoadPromotionById(promotionId)),
+      create: (_) =>
+          getItInjector<PromotionsBloc>()..add(LoadPromotionById(promotionId)),
       child: Scaffold(
         backgroundColor: barzYellowSoft,
         appBar: AppBar(
@@ -37,7 +37,10 @@ class PromotionDetailPage extends StatelessWidget {
                   children: [
                     Icon(Icons.error_outline, size: 48, color: Colors.red[300]),
                     const SizedBox(height: 16),
-                    Text(state.error!, style: const TextStyle(color: Colors.red)),
+                    Text(
+                      state.error!,
+                      style: const TextStyle(color: Colors.red),
+                    ),
                   ],
                 ),
               );
@@ -69,7 +72,7 @@ class PromotionDetailPage extends StatelessWidget {
               child: const Icon(Icons.local_offer, size: 64, color: barzBlack),
             ),
           ),
-          
+
           Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -78,7 +81,7 @@ class PromotionDetailPage extends StatelessWidget {
                 // Discount badge
                 _buildDiscountBadge(promo),
                 const SizedBox(height: 16),
-                
+
                 // Title
                 Text(
                   promo.title,
@@ -89,26 +92,24 @@ class PromotionDetailPage extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 8),
-                
+
                 // Description
                 if (promo.description != null && promo.description!.isNotEmpty)
                   Text(
                     promo.description!,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[700],
-                    ),
+                    style: TextStyle(fontSize: 16, color: Colors.grey[700]),
                   ),
                 const SizedBox(height: 24),
-                
+
                 // Time info
                 _buildInfoCard(
                   icon: Icons.access_time,
                   title: 'Valid Hours',
-                  content: '${promo.startTime ?? '00:00'} - ${promo.endTime ?? '23:59'}',
+                  content:
+                      '${promo.startTime ?? '00:00'} - ${promo.endTime ?? '23:59'}',
                 ),
                 const SizedBox(height: 12),
-                
+
                 // Days info
                 if (promo.recurringDays.isNotEmpty)
                   _buildInfoCard(
@@ -117,7 +118,7 @@ class PromotionDetailPage extends StatelessWidget {
                     content: _formatDays(promo.recurringDays),
                   ),
                 const SizedBox(height: 12),
-                
+
                 // Date range
                 if (promo.startDate != null || promo.endDate != null)
                   _buildInfoCard(
@@ -126,7 +127,7 @@ class PromotionDetailPage extends StatelessWidget {
                     content: _formatDateRange(promo.startDate, promo.endDate),
                   ),
                 const SizedBox(height: 12),
-                
+
                 // Terms
                 if (promo.terms != null && promo.terms!.isNotEmpty)
                   _buildInfoCard(
@@ -135,10 +136,13 @@ class PromotionDetailPage extends StatelessWidget {
                     content: promo.terms!,
                   ),
                 const SizedBox(height: 24),
-                
+
                 // Status badge
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: promo.isActive ? Colors.green[100] : Colors.red[100],
                     borderRadius: BorderRadius.circular(20),
@@ -149,13 +153,17 @@ class PromotionDetailPage extends StatelessWidget {
                       Icon(
                         promo.isActive ? Icons.check_circle : Icons.cancel,
                         size: 18,
-                        color: promo.isActive ? Colors.green[700] : Colors.red[700],
+                        color: promo.isActive
+                            ? Colors.green[700]
+                            : Colors.red[700],
                       ),
                       const SizedBox(width: 8),
                       Text(
                         promo.isActive ? 'Active' : 'Inactive',
                         style: TextStyle(
-                          color: promo.isActive ? Colors.green[700] : Colors.red[700],
+                          color: promo.isActive
+                              ? Colors.green[700]
+                              : Colors.red[700],
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -264,10 +272,10 @@ class PromotionDetailPage extends StatelessWidget {
   }
 
   String _formatDateRange(DateTime? start, DateTime? end) {
-    final startStr = start != null 
+    final startStr = start != null
         ? '${start.day}/${start.month}/${start.year}'
         : 'Now';
-    final endStr = end != null 
+    final endStr = end != null
         ? '${end.day}/${end.month}/${end.year}'
         : 'Ongoing';
     return '$startStr - $endStr';

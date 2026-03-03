@@ -22,11 +22,7 @@ class ApiResponse<T> {
 
   // Factory method to create an error response
   factory ApiResponse.error(String statusCode, T error) {
-    return ApiResponse<T>(
-      statusCode: statusCode,
-      result: null,
-      error: error,
-    );
+    return ApiResponse<T>(statusCode: statusCode, result: null, error: error);
   }
 
   static ApiResponse<T> fromJson<T>(Map<dynamic, dynamic> json) {
@@ -37,7 +33,10 @@ class ApiResponse<T> {
     );
   }
 
-  static ApiResponse<T> fromJsonList<T>(Map<dynamic, dynamic> json, Function tFromJson) {
+  static ApiResponse<T> fromJsonList<T>(
+    Map<dynamic, dynamic> json,
+    Function tFromJson,
+  ) {
     return ApiResponse<T>(
       statusCode: json['statusCode'],
       result: tFromJson(json['result']),

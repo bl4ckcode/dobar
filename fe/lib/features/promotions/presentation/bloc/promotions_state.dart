@@ -47,13 +47,13 @@ class PromotionsState extends Equatable {
 
   @override
   List<Object?> get props => [
-        promotions,
-        offers,
-        isLoading,
-        isLoadingOffers,
-        error,
-        selectedPromotion,
-        selectedOffer,
-        redeemedOffer,
-      ];
+    promotions,
+    offers,
+    isLoading,
+    isLoadingOffers,
+    error,
+    selectedPromotion,
+    selectedOffer,
+    redeemedOffer,
+  ];
 }

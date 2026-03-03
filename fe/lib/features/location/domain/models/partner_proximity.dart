@@ -27,7 +27,8 @@ class PartnerProximity {
       partnerLocation: LocationModel.fromJson(json['partner_location']),
       distanceInMeters: (json['distance_in_meters'] as num).toDouble(),
       isWithinRange: json['is_within_range'] ?? false,
-      availableOffers: (json['available_offers'] as List<dynamic>?)
+      availableOffers:
+          (json['available_offers'] as List<dynamic>?)
               ?.map((e) => ProximityOffer.fromJson(e))
               .toList() ??
           [],

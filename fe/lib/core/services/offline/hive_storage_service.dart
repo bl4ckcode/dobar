@@ -18,13 +18,13 @@ class HiveStorageService {
 
   Future<void> initialize() async {
     if (_isInitialized) return;
-    
+
     await Hive.initFlutter();
-    
+
     _ordersBox = await Hive.openBox<Map>(_ordersBoxName);
     _syncQueueBox = await Hive.openBox<Map>(_syncQueueBoxName);
     _metadataBox = await Hive.openBox<dynamic>(_metadataBoxName);
-    
+
     _isInitialized = true;
     debugPrint('[Hive] Storage initialized');
   }
@@ -54,12 +54,12 @@ class HiveStorageService {
   }
 
   List<Map<String, dynamic>> getAllCachedOrders() {
-    return _ordersBox.values
-        .map((e) => Map<String, dynamic>.from(e))
-        .toList()
+    return _ordersBox.values.map((e) => Map<String, dynamic>.from(e)).toList()
       ..sort((a, b) {
-        final aDate = DateTime.tryParse(a['created_at'] ?? '') ?? DateTime(2000);
-        final bDate = DateTime.tryParse(b['created_at'] ?? '') ?? DateTime(2000);
+        final aDate =
+            DateTime.tryParse(a['created_at'] ?? '') ?? DateTime(2000);
+        final bDate =
+            DateTime.tryParse(b['created_at'] ?? '') ?? DateTime(2000);
         return bDate.compareTo(aDate);
       });
   }
@@ -103,7 +103,7 @@ class HiveStorageService {
     if (data != null) {
       final task = SyncTask.fromJson(Map<String, dynamic>.from(data));
       await _syncQueueBox.put(
-        taskId, 
+        taskId,
         task.copyWith(retryCount: task.retryCount + 1).toJson(),
       );
     }
@@ -115,7 +115,7 @@ class HiveStorageService {
         .where((t) => t.completed)
         .map((t) => t.id)
         .toList();
-    
+
     for (final id in completed) {
       await _syncQueueBox.delete(id);
     }
@@ -131,7 +131,10 @@ class HiveStorageService {
     return timestamp != null ? DateTime.tryParse(timestamp) : null;
   }
 
-  bool isCacheStale(String key, {Duration maxAge = const Duration(minutes: 5)}) {
+  bool isCacheStale(
+    String key, {
+    Duration maxAge = const Duration(minutes: 5),
+  }) {
     final timestamp = getCacheTimestamp(key);
     if (timestamp == null) return true;
     return DateTime.now().difference(timestamp) > maxAge;

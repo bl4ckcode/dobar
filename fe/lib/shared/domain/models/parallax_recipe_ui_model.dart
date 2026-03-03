@@ -12,7 +12,7 @@ class ParallaxRecipeUiModel {
     required this.name,
     this.adress = "",
     this.approximateLocation = "",
-    this.imageUrlExpiration = 0.0
+    this.imageUrlExpiration = 0.0,
   });
 
   bool isImageUrlExpired() {

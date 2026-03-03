@@ -5,7 +5,7 @@ class ServerException implements Exception {
   ServerException(this.message, this.statusCode);
 
   @override
-  bool operator == (Object other) {
+  bool operator ==(Object other) {
     if (identical(this, other)) {
       return true;
     }
@@ -21,5 +21,4 @@ class ServerException implements Exception {
 
   @override
   int get hashCode => ServerException(message, statusCode).hashCode;
-
 }

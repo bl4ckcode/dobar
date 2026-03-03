@@ -94,9 +94,9 @@ class ExtractedItemCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             item.description!,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: textSecondary,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: textSecondary),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),

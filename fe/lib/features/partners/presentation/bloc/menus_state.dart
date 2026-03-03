@@ -9,4 +9,3 @@ sealed class MenusState with _$MenusState {
   const factory MenusState.success() = Success;
   const factory MenusState.failure({required String error}) = Failure;
 }
-

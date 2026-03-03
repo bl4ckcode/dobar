@@ -10,12 +10,13 @@ class OrderSyncExecutor {
   final OrderNetworkDataSource networkDataSource;
   final OrderLocalDataSource localDataSource;
   final SyncService syncService;
-  
+
   final _conflictController = StreamController<SyncConflict>.broadcast();
   Stream<SyncConflict> get conflicts => _conflictController.stream;
-  
+
   final List<SyncConflict> _unresolvedConflicts = [];
-  List<SyncConflict> get unresolvedConflicts => List.unmodifiable(_unresolvedConflicts);
+  List<SyncConflict> get unresolvedConflicts =>
+      List.unmodifiable(_unresolvedConflicts);
 
   OrderSyncExecutor({
     required this.networkDataSource,
@@ -26,7 +27,10 @@ class OrderSyncExecutor {
   void register() {
     syncService.registerExecutor(SyncTaskType.createOrder, _executeOrderSync);
     syncService.registerExecutor(SyncTaskType.updateOrder, _executeOrderSync);
-    syncService.registerExecutor(SyncTaskType.cancelOrder, _executeOrderStatusSync);
+    syncService.registerExecutor(
+      SyncTaskType.cancelOrder,
+      _executeOrderStatusSync,
+    );
   }
 
   void unregister() {
@@ -40,7 +44,7 @@ class OrderSyncExecutor {
     final orderId = payload['order_id'] as int;
     final operation = payload['operation'] as String? ?? 'update';
     final data = payload['data'] as Map<String, dynamic>? ?? {};
-    final clientTimestamp = payload['client_timestamp'] != null 
+    final clientTimestamp = payload['client_timestamp'] != null
         ? DateTime.parse(payload['client_timestamp'] as String)
         : task.createdAt;
 
@@ -53,16 +57,18 @@ class OrderSyncExecutor {
     );
 
     final response = await networkDataSource.syncOrders([syncOperation]);
-    
+
     if (response.hasConflicts) {
       for (final conflict in response.conflicts) {
         _unresolvedConflicts.add(conflict);
         _conflictController.add(conflict);
-        debugPrint('[OrderSyncExecutor] Conflict for order ${conflict.orderId}: ${conflict.conflictType}');
+        debugPrint(
+          '[OrderSyncExecutor] Conflict for order ${conflict.orderId}: ${conflict.conflictType}',
+        );
       }
       throw ConflictException(response.conflicts);
     }
-    
+
     debugPrint('[OrderSyncExecutor] Successfully synced order $orderId');
   }
 
@@ -70,7 +76,7 @@ class OrderSyncExecutor {
     final payload = task.payload;
     final orderId = payload['order_id'] as int;
     final newStatus = payload['status'] as String;
-    
+
     final syncOperation = SyncOperation(
       clientId: task.id,
       orderId: orderId,
@@ -80,7 +86,7 @@ class OrderSyncExecutor {
     );
 
     final response = await networkDataSource.syncOrders([syncOperation]);
-    
+
     if (response.hasConflicts) {
       for (final conflict in response.conflicts) {
         _unresolvedConflicts.add(conflict);
@@ -88,11 +94,16 @@ class OrderSyncExecutor {
       }
       throw ConflictException(response.conflicts);
     }
-    
-    debugPrint('[OrderSyncExecutor] Successfully synced order status: $orderId -> $newStatus');
+
+    debugPrint(
+      '[OrderSyncExecutor] Successfully synced order status: $orderId -> $newStatus',
+    );
   }
 
-  Future<void> resolveConflict(SyncConflict conflict, Resolution resolution) async {
+  Future<void> resolveConflict(
+    SyncConflict conflict,
+    Resolution resolution,
+  ) async {
     switch (resolution) {
       case Resolution.useServer:
         final freshOrder = await networkDataSource.getOrder(conflict.orderId);
@@ -100,7 +111,8 @@ class OrderSyncExecutor {
         break;
       case Resolution.useClient:
         final syncOp = SyncOperation(
-          clientId: 'resolve_${conflict.orderId}_${DateTime.now().millisecondsSinceEpoch}',
+          clientId:
+              'resolve_${conflict.orderId}_${DateTime.now().millisecondsSinceEpoch}',
           orderId: conflict.orderId,
           operation: 'force_update',
           data: conflict.clientState,
@@ -111,7 +123,8 @@ class OrderSyncExecutor {
       case Resolution.merge:
         final mergedData = {...conflict.serverState, ...conflict.clientState};
         final syncOp = SyncOperation(
-          clientId: 'merge_${conflict.orderId}_${DateTime.now().millisecondsSinceEpoch}',
+          clientId:
+              'merge_${conflict.orderId}_${DateTime.now().millisecondsSinceEpoch}',
           orderId: conflict.orderId,
           operation: 'merge',
           data: mergedData,
@@ -120,7 +133,7 @@ class OrderSyncExecutor {
         await networkDataSource.syncOrders([syncOp]);
         break;
     }
-    
+
     _unresolvedConflicts.removeWhere((c) => c.orderId == conflict.orderId);
   }
 
@@ -132,7 +145,7 @@ class OrderSyncExecutor {
 class ConflictException implements Exception {
   final List<SyncConflict> conflicts;
   ConflictException(this.conflicts);
-  
+
   @override
   String toString() => 'ConflictException: ${conflicts.length} conflicts';
 }

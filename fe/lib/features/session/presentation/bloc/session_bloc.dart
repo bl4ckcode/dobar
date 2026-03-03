@@ -4,7 +4,7 @@ import 'session_event.dart';
 import 'session_state.dart';
 
 /// Manages the user session state across the entire app.
-/// 
+///
 /// This BLoC is responsible for:
 /// - Initializing the session after login
 /// - Determining whether to show client or business experience
@@ -14,8 +14,8 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
   final SessionUsecase _sessionUsecase;
 
   SessionBloc({required SessionUsecase sessionUsecase})
-      : _sessionUsecase = sessionUsecase,
-        super(const SessionState.initial()) {
+    : _sessionUsecase = sessionUsecase,
+      super(const SessionState.initial()) {
     on<InitializeSession>(_onInitialize);
     on<RefreshBarAccess>(_onRefreshBarAccess);
     on<SwitchActiveBar>(_onSwitchActiveBar);
@@ -55,26 +55,27 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
       },
       (bars) {
         final newSession = currentState.session.withBarAccess(bars);
-        emit(SessionState.ready(
-          session: newSession,
-          forceClientMode: currentState.forceClientMode,
-        ));
+        emit(
+          SessionState.ready(
+            session: newSession,
+            forceClientMode: currentState.forceClientMode,
+          ),
+        );
       },
     );
   }
 
-  void _onSwitchActiveBar(
-    SwitchActiveBar event,
-    Emitter<SessionState> emit,
-  ) {
+  void _onSwitchActiveBar(SwitchActiveBar event, Emitter<SessionState> emit) {
     final currentState = state;
     if (currentState is! SessionReady) return;
 
     final newSession = currentState.session.withActiveBar(event.barId);
-    emit(SessionState.ready(
-      session: newSession,
-      forceClientMode: false, // Exit client mode when switching bars
-    ));
+    emit(
+      SessionState.ready(
+        session: newSession,
+        forceClientMode: false, // Exit client mode when switching bars
+      ),
+    );
   }
 
   Future<void> _onAcceptInvitation(
@@ -93,33 +94,26 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
       (newBarAccess) {
         final updatedBars = [...currentState.session.barAccess, newBarAccess];
         final newSession = currentState.session.withBarAccess(updatedBars);
-        emit(SessionState.ready(
-          session: newSession,
-          forceClientMode: false,
-        ));
+        emit(SessionState.ready(session: newSession, forceClientMode: false));
       },
     );
   }
 
-  void _onBarCreated(
-    BarCreated event,
-    Emitter<SessionState> emit,
-  ) {
+  void _onBarCreated(BarCreated event, Emitter<SessionState> emit) {
     final currentState = state;
     if (currentState is! SessionReady) return;
 
     final updatedBars = [...currentState.session.barAccess, event.newBar];
     final newSession = currentState.session.withBarAccess(updatedBars);
-    emit(SessionState.ready(
-      session: newSession.withActiveBar(event.newBar.barId),
-      forceClientMode: false,
-    ));
+    emit(
+      SessionState.ready(
+        session: newSession.withActiveBar(event.newBar.barId),
+        forceClientMode: false,
+      ),
+    );
   }
 
-  void _onLogout(
-    LogoutSession event,
-    Emitter<SessionState> emit,
-  ) {
+  void _onLogout(LogoutSession event, Emitter<SessionState> emit) {
     emit(const SessionState.loggedOut());
   }
 
@@ -130,10 +124,9 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     final currentState = state;
     if (currentState is! SessionReady) return;
 
-    emit(SessionState.ready(
-      session: currentState.session,
-      forceClientMode: true,
-    ));
+    emit(
+      SessionState.ready(session: currentState.session, forceClientMode: true),
+    );
   }
 
   void _onSwitchToBusinessMode(
@@ -148,9 +141,8 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
       return;
     }
 
-    emit(SessionState.ready(
-      session: currentState.session,
-      forceClientMode: false,
-    ));
+    emit(
+      SessionState.ready(session: currentState.session, forceClientMode: false),
+    );
   }
 }

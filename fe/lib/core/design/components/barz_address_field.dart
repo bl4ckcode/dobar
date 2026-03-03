@@ -139,7 +139,7 @@ class _BarzAddressFieldState extends State<BarzAddressField> {
       query,
       countries: widget.countries,
     );
-    
+
     if (mounted && _controller.text == query) {
       setState(() {
         _predictions = results;
@@ -165,9 +165,10 @@ class _BarzAddressFieldState extends State<BarzAddressField> {
   }
 
   Widget _buildOverlay() {
-    final renderBox = _textFieldKey.currentContext?.findRenderObject() as RenderBox?;
+    final renderBox =
+        _textFieldKey.currentContext?.findRenderObject() as RenderBox?;
     final width = renderBox?.size.width ?? 300;
-    
+
     return Positioned(
       width: width,
       child: CompositedTransformFollower(
@@ -189,10 +190,17 @@ class _BarzAddressFieldState extends State<BarzAddressField> {
                 return InkWell(
                   onTap: () => _selectPlace(prediction),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     child: Row(
                       children: [
-                        const Icon(Icons.location_on, color: barzGold, size: 20),
+                        const Icon(
+                          Icons.location_on,
+                          color: barzGold,
+                          size: 20,
+                        ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
@@ -200,7 +208,9 @@ class _BarzAddressFieldState extends State<BarzAddressField> {
                             children: [
                               Text(
                                 prediction.mainText,
-                                style: const TextStyle(fontWeight: FontWeight.w600),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                               if (prediction.secondaryText.isNotEmpty)
                                 Text(
@@ -231,7 +241,7 @@ class _BarzAddressFieldState extends State<BarzAddressField> {
     _isSelecting = true;
     _removeOverlay();
     _controller.text = prediction.description;
-    
+
     final details = await PlacesService.getDetails(prediction.placeId);
     if (details != null && widget.onPlaceSelected != null) {
       widget.onPlaceSelected!(PlaceDetails.fromParsed(details));
@@ -271,27 +281,38 @@ class _BarzAddressFieldState extends State<BarzAddressField> {
               filled: true,
               fillColor: widget.enabled ? barzGoldMuted : surfaceMuted,
               hintText: widget.hintText,
-              hintStyle: theme.textTheme.bodyLarge?.copyWith(color: textTertiary),
-              prefixIcon: const Icon(Icons.location_on_outlined, color: textSecondary),
+              hintStyle: theme.textTheme.bodyLarge?.copyWith(
+                color: textTertiary,
+              ),
+              prefixIcon: const Icon(
+                Icons.location_on_outlined,
+                color: textSecondary,
+              ),
               suffixIcon: _isLoading
                   ? const Padding(
                       padding: EdgeInsets.all(12),
                       child: SizedBox(
                         width: 20,
                         height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: barzGold),
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: barzGold,
+                        ),
                       ),
                     )
                   : _controller.text.isNotEmpty
-                      ? IconButton(
-                          icon: const Icon(Icons.clear, color: textSecondary),
-                          onPressed: () {
-                            _controller.clear();
-                            _removeOverlay();
-                          },
-                        )
-                      : null,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, color: textSecondary),
+                      onPressed: () {
+                        _controller.clear();
+                        _removeOverlay();
+                      },
+                    )
+                  : null,
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16,
+                vertical: 16,
+              ),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(BarzRadii.md),
                 borderSide: BorderSide.none,

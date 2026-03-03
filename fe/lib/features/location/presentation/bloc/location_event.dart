@@ -10,7 +10,8 @@ sealed class LocationEvent with _$LocationEvent {
   const factory LocationEvent.getCurrentLocation() = GetCurrentLocation;
   const factory LocationEvent.startTracking() = StartLocationTracking;
   const factory LocationEvent.stopTracking() = StopLocationTracking;
-  const factory LocationEvent.locationUpdated(LocationModel location) = LocationUpdated;
+  const factory LocationEvent.locationUpdated(LocationModel location) =
+      LocationUpdated;
   const factory LocationEvent.checkNearbyPartners() = CheckNearbyPartners;
   const factory LocationEvent.dismissProximityAlert() = DismissProximityAlert;
   const factory LocationEvent.clearError() = ClearLocationError;

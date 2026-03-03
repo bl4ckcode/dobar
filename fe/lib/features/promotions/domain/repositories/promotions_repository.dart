@@ -11,8 +11,13 @@ abstract class PromotionsRepository {
     double maxDistance = 5000,
     bool activeOnly = true,
   });
-  Future<Either<Failure, List<PromotionModel>>> getPromotionsByDiscountType(PromoDiscountType type);
-  Future<Either<Failure, List<PromotionModel>>> getPromotionsByBar(int barId, {bool activeOnly = true});
+  Future<Either<Failure, List<PromotionModel>>> getPromotionsByDiscountType(
+    PromoDiscountType type,
+  );
+  Future<Either<Failure, List<PromotionModel>>> getPromotionsByBar(
+    int barId, {
+    bool activeOnly = true,
+  });
   Future<Either<Failure, PromotionModel>> getPromotionById(int id);
   Future<Either<Failure, List<OfferModel>>> getOffers();
   Future<Either<Failure, List<OfferModel>>> getOffersByPartnerId(int partnerId);

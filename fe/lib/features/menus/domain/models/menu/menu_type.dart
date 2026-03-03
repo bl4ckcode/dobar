@@ -1,5 +1,1 @@
-enum MenuType {
-  drinks,
-  food,
-  other
-}
+enum MenuType { drinks, food, other }

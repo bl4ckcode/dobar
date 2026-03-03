@@ -7,14 +7,14 @@ class SecureStorage {
   // Legacy keys (for migration compatibility)
   static const _jwtKey = 'jwt_token';
   static const _userKey = 'user_profile';
-  
+
   // New keys (aligned with TokenStorageService)
   static const String _accessTokenKey = 'access_token';
   static const String _refreshTokenKey = 'refresh_token';
   static const String _userIdKey = 'user_id';
   static const String _userEmailKey = 'user_email';
   static const String _userNameKey = 'user_name';
-  
+
   late final FlutterSecureStorage _storage;
 
   SecureStorage() {
@@ -28,12 +28,8 @@ class SecureStorage {
       );
     } else {
       _storage = const FlutterSecureStorage(
-        aOptions: AndroidOptions(
-          encryptedSharedPreferences: true,
-        ),
-        iOptions: IOSOptions(
-          accessibility: KeychainAccessibility.first_unlock,
-        ),
+        aOptions: AndroidOptions(encryptedSharedPreferences: true),
+        iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
       );
     }
   }
@@ -46,7 +42,7 @@ class SecureStorage {
   }
 
   // ============ JWT / Access Token ============
-  
+
   /// Save JWT/access token - uses new key but checks legacy for migration
   Future<void> saveJwt(String token) async {
     await _storage.write(key: _accessTokenKey, value: token);
@@ -77,7 +73,7 @@ class SecureStorage {
   }
 
   // ============ Refresh Token ============
-  
+
   Future<void> saveRefreshToken(String token) async {
     await _storage.write(key: _refreshTokenKey, value: token);
     _log('Refresh token saved');
@@ -93,7 +89,7 @@ class SecureStorage {
   }
 
   // ============ User Profile ============
-  
+
   Future<void> saveUserProfile(String userJson) async {
     await _storage.write(key: _userKey, value: userJson);
     _log('User profile saved');
@@ -109,7 +105,7 @@ class SecureStorage {
   }
 
   // ============ User Info (Individual Fields) ============
-  
+
   Future<void> saveUserInfo({
     required String userId,
     String? email,
@@ -130,7 +126,7 @@ class SecureStorage {
   }
 
   // ============ Utilities ============
-  
+
   /// Check if user has valid authentication
   Future<bool> hasValidTokens() async {
     final token = await getJwt();
@@ -146,15 +142,15 @@ class SecureStorage {
   /// Debug print all tokens (only in debug mode)
   Future<void> debugPrint() async {
     if (!kDebugMode) return;
-    
+
     final accessToken = await getJwt();
     final refreshToken = await getRefreshToken();
     final userInfo = await getUserInfo();
-    
-    final tokenPreview = accessToken != null && accessToken.length > 20 
-        ? '${accessToken.substring(0, 20)}...' 
+
+    final tokenPreview = accessToken != null && accessToken.length > 20
+        ? '${accessToken.substring(0, 20)}...'
         : accessToken ?? 'null';
-    
+
     _log('Access Token: $tokenPreview');
     _log('Refresh Token: ${refreshToken != null ? "present" : "null"}');
     _log('User Info: $userInfo');

@@ -14,12 +14,13 @@ class TitleSubtitleWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     Widget titleWidget = Text(
       title,
-      style: Theme.of(context)
-          .textTheme
-          .headlineMedium!
-          .copyWith(color: mainColor, fontWeight: FontWeight.bold),
+      style: theme.textTheme.headlineMedium!.copyWith(
+        color: mainColor,
+        fontWeight: FontWeight.bold,
+      ),
     );
 
     Widget subtitleWidget = Text(
@@ -37,25 +38,26 @@ class TitleSubtitleWidget extends StatelessWidget {
         .slide();
 
     return Column(
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: MainAxisAlignment.start,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Column(
-            mainAxisSize: MainAxisSize.min,
-            mainAxisAlignment: MainAxisAlignment.start,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(left: 16, top: 16),
-                child: titleWidget,
-              ),
-              Padding(
-                padding: const EdgeInsets.only(left: 16, bottom: 16),
-                child: subtitleWidget,
-              ),
-            ],
-          )
-        ]);
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.start,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Column(
+          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(left: 16, top: 16),
+              child: titleWidget,
+            ),
+            Padding(
+              padding: const EdgeInsets.only(left: 16, bottom: 16),
+              child: subtitleWidget,
+            ),
+          ],
+        ),
+      ],
+    );
   }
 }

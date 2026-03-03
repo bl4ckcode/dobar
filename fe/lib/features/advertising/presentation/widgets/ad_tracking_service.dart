@@ -9,8 +9,8 @@ enum AdPlacement {
   search('search'),
   map('map'),
   promo('promo'),
-  trending('trending'),  // For "Most Desired Drinks" section
-  category('category'),  // For category-specific pages
+  trending('trending'), // For "Most Desired Drinks" section
+  category('category'), // For category-specific pages
   unknown('unknown');
 
   final String value;
@@ -28,14 +28,14 @@ enum AdAction {
 }
 
 /// Service for tracking ad impressions, clicks, and conversions.
-/// 
+///
 /// Usage:
 /// ```dart
 /// final tracker = AdTrackingService(dio);
 /// await tracker.trackImpression(campaignId, AdPlacement.home);
 /// await tracker.trackClick(campaignId, AdPlacement.home);
 /// ```
-/// 
+///
 /// Best practices:
 /// - Track impressions when ad becomes visible (use VisibilityDetector)
 /// - Track clicks before navigation (don't wait for response)
@@ -61,7 +61,13 @@ class AdTrackingService {
       return;
     }
     _trackedImpressions.add(key);
-    await _track(campaignId, AdAction.impression, placement, latitude, longitude);
+    await _track(
+      campaignId,
+      AdAction.impression,
+      placement,
+      latitude,
+      longitude,
+    );
   }
 
   /// Track an ad click.
@@ -81,7 +87,13 @@ class AdTrackingService {
     double? latitude,
     double? longitude,
   }) async {
-    await _track(campaignId, AdAction.conversion, placement, latitude, longitude);
+    await _track(
+      campaignId,
+      AdAction.conversion,
+      placement,
+      latitude,
+      longitude,
+    );
   }
 
   Future<void> _track(
@@ -102,7 +114,9 @@ class AdTrackingService {
           if (longitude != null) 'longitude': longitude,
         },
       );
-      debugPrint('[AdTracking] Tracked ${action.value} for campaign $campaignId');
+      debugPrint(
+        '[AdTracking] Tracked ${action.value} for campaign $campaignId',
+      );
     } catch (e) {
       // Silent fail - don't block UX for tracking
       debugPrint('[AdTracking] Failed to track: $e');

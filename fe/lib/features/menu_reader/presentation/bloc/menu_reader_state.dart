@@ -1,7 +1,15 @@
 import 'package:equatable/equatable.dart';
 import 'package:barz/features/menu_reader/domain/models/menu_extraction.dart';
 
-enum MenuReaderStatus { initial, extracting, extracted, editing, saving, saved, error }
+enum MenuReaderStatus {
+  initial,
+  extracting,
+  extracted,
+  editing,
+  saving,
+  saved,
+  error,
+}
 
 class MenuReaderState extends Equatable {
   final MenuReaderStatus status;
@@ -51,5 +59,11 @@ class MenuReaderState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [status, extraction, editableCategories, errorMessage, confidence];
+  List<Object?> get props => [
+    status,
+    extraction,
+    editableCategories,
+    errorMessage,
+    confidence,
+  ];
 }

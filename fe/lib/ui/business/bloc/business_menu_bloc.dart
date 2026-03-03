@@ -8,8 +8,8 @@ class BusinessMenuBloc extends Bloc<BusinessMenuEvent, BusinessMenuState> {
   final BarNetworkDataSource _dataSource;
 
   BusinessMenuBloc({BarNetworkDataSource? dataSource})
-      : _dataSource = dataSource ?? getItInjector<BarNetworkDataSource>(),
-        super(const BusinessMenuState()) {
+    : _dataSource = dataSource ?? getItInjector<BarNetworkDataSource>(),
+      super(const BusinessMenuState()) {
     on<LoadMenus>(_onLoadMenus);
     on<RefreshMenus>(_onRefreshMenus);
     on<DeleteMenuItem>(_onDeleteMenuItem);
@@ -18,29 +18,39 @@ class BusinessMenuBloc extends Bloc<BusinessMenuEvent, BusinessMenuState> {
     on<DeleteMenu>(_onDeleteMenu);
   }
 
-  Future<void> _onLoadMenus(LoadMenus event, Emitter<BusinessMenuState> emit) async {
-    emit(state.copyWith(status: BusinessMenuStatus.loading, barId: event.barId));
-    
+  Future<void> _onLoadMenus(
+    LoadMenus event,
+    Emitter<BusinessMenuState> emit,
+  ) async {
+    emit(
+      state.copyWith(status: BusinessMenuStatus.loading, barId: event.barId),
+    );
+
     try {
       final menus = await _dataSource.getBarMenusWithItems(event.barId);
-      emit(state.copyWith(
-        status: BusinessMenuStatus.loaded,
-        menus: menus,
-      ));
+      emit(state.copyWith(status: BusinessMenuStatus.loaded, menus: menus));
     } catch (e) {
-      emit(state.copyWith(
-        status: BusinessMenuStatus.error,
-        errorMessage: 'Failed to load menus: $e',
-      ));
+      emit(
+        state.copyWith(
+          status: BusinessMenuStatus.error,
+          errorMessage: 'Failed to load menus: $e',
+        ),
+      );
     }
   }
 
-  Future<void> _onRefreshMenus(RefreshMenus event, Emitter<BusinessMenuState> emit) async {
+  Future<void> _onRefreshMenus(
+    RefreshMenus event,
+    Emitter<BusinessMenuState> emit,
+  ) async {
     if (state.barId == null) return;
     add(LoadMenus(state.barId!));
   }
 
-  Future<void> _onDeleteMenuItem(DeleteMenuItem event, Emitter<BusinessMenuState> emit) async {
+  Future<void> _onDeleteMenuItem(
+    DeleteMenuItem event,
+    Emitter<BusinessMenuState> emit,
+  ) async {
     try {
       await _dataSource.deleteMenuItem(event.menuId, event.itemId);
       if (state.barId != null) {
@@ -51,7 +61,10 @@ class BusinessMenuBloc extends Bloc<BusinessMenuEvent, BusinessMenuState> {
     }
   }
 
-  Future<void> _onUpdateMenuItem(UpdateMenuItem event, Emitter<BusinessMenuState> emit) async {
+  Future<void> _onUpdateMenuItem(
+    UpdateMenuItem event,
+    Emitter<BusinessMenuState> emit,
+  ) async {
     try {
       await _dataSource.updateMenuItem(
         event.menuId,
@@ -87,7 +100,10 @@ class BusinessMenuBloc extends Bloc<BusinessMenuEvent, BusinessMenuState> {
     }
   }
 
-  Future<void> _onDeleteMenu(DeleteMenu event, Emitter<BusinessMenuState> emit) async {
+  Future<void> _onDeleteMenu(
+    DeleteMenu event,
+    Emitter<BusinessMenuState> emit,
+  ) async {
     try {
       await _dataSource.deleteMenu(event.menuId);
       if (state.barId != null) {

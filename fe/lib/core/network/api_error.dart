@@ -100,31 +100,45 @@ class ApiError {
 
   static ErrorCode _codeFromStatus(int? status) {
     switch (status) {
-      case 400: return ErrorCode.badRequest;
-      case 401: return ErrorCode.unauthorized;
-      case 403: return ErrorCode.forbidden;
-      case 404: return ErrorCode.notFound;
-      case 409: return ErrorCode.conflict;
-      case 422: return ErrorCode.validationError;
-      case 429: return ErrorCode.rateLimited;
-      case 500: return ErrorCode.serverUnavailable;
-      case 502: return ErrorCode.serverUnavailable;
-      case 503: return ErrorCode.maintenanceMode;
-      case 504: return ErrorCode.networkTimeout;
-      default: return ErrorCode.unknown;
+      case 400:
+        return ErrorCode.badRequest;
+      case 401:
+        return ErrorCode.unauthorized;
+      case 403:
+        return ErrorCode.forbidden;
+      case 404:
+        return ErrorCode.notFound;
+      case 409:
+        return ErrorCode.conflict;
+      case 422:
+        return ErrorCode.validationError;
+      case 429:
+        return ErrorCode.rateLimited;
+      case 500:
+        return ErrorCode.serverUnavailable;
+      case 502:
+        return ErrorCode.serverUnavailable;
+      case 503:
+        return ErrorCode.maintenanceMode;
+      case 504:
+        return ErrorCode.networkTimeout;
+      default:
+        return ErrorCode.unknown;
     }
   }
 
-  bool get isAuthError => code == ErrorCode.unauthorized || 
-                          code == ErrorCode.forbidden ||
-                          code == ErrorCode.sessionExpired ||
-                          code == ErrorCode.invalidToken;
+  bool get isAuthError =>
+      code == ErrorCode.unauthorized ||
+      code == ErrorCode.forbidden ||
+      code == ErrorCode.sessionExpired ||
+      code == ErrorCode.invalidToken;
 
-  bool get isPaymentError => code.name.contains('payment') || 
-                             code.name.contains('card') ||
-                             code.name.contains('pix') ||
-                             code.name.contains('wallet') ||
-                             code.name.contains('funds');
+  bool get isPaymentError =>
+      code.name.contains('payment') ||
+      code.name.contains('card') ||
+      code.name.contains('pix') ||
+      code.name.contains('wallet') ||
+      code.name.contains('funds');
 
   @override
   String toString() => 'ApiError($code): $message';

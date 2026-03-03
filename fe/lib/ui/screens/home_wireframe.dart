@@ -13,9 +13,7 @@ class HomeWireframe extends StatelessWidget {
       appBar: const BarzAppBar(title: 'Home'),
       // Using gradient background for softer appearance
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: yellowBackgroundGradient,
-        ),
+        decoration: const BoxDecoration(gradient: yellowBackgroundGradient),
         child: ListView(
           padding: const EdgeInsets.all(20),
           children: [
@@ -106,7 +104,10 @@ class HomeWireframe extends StatelessWidget {
           ),
         ],
       ),
-    ).animate().fadeIn().scale(begin: const Offset(0.95, 0.95), end: const Offset(1, 1));
+    ).animate().fadeIn().scale(
+      begin: const Offset(0.95, 0.95),
+      end: const Offset(1, 1),
+    );
   }
 
   Widget _buildSectionTitle(String title) {
@@ -157,18 +158,12 @@ class HomeWireframe extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: TextStyle(
-                    color: textSecondary,
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: textSecondary, fontSize: 14),
                 ),
               ],
             ),
           ),
-          Icon(
-            Icons.chevron_right,
-            color: textTertiary,
-          ),
+          Icon(Icons.chevron_right, color: textTertiary),
         ],
       ),
     );

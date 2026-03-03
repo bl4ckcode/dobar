@@ -34,7 +34,8 @@ class IncomingOrder {
       userId: json['user_id'] ?? 0,
       userName: json['user_name'] ?? 'Cliente',
       tableNumber: json['table_number'],
-      items: (json['items'] as List<dynamic>?)
+      items:
+          (json['items'] as List<dynamic>?)
               ?.map((e) => OrderLineItem.fromJson(e))
               .toList() ??
           [],
@@ -112,25 +113,25 @@ class OrderCancelledEvent extends DashboardEvent {
 }
 
 /// Service for bar owner real-time order dashboard
-/// 
+///
 /// Usage:
 /// ```dart
 /// final dashboard = BarDashboardService(barId: 1, token: ownerToken);
-/// 
+///
 /// dashboard.events.listen((event) {
 ///   if (event is NewOrderEvent) {
 ///     print('New order: ${event.order.orderId}');
 ///   }
 /// });
-/// 
+///
 /// await dashboard.connect();
-/// 
+///
 /// // Confirm an order
 /// dashboard.confirmOrder(orderId: 123);
-/// 
+///
 /// // Mark as preparing
 /// dashboard.markPreparing(orderId: 123);
-/// 
+///
 /// // Mark as ready
 /// dashboard.markReady(orderId: 123);
 /// ```
@@ -141,14 +142,11 @@ class BarDashboardService {
   late final WebSocketService _ws;
   final _eventsController = StreamController<DashboardEvent>.broadcast();
   final _ordersController = StreamController<List<IncomingOrder>>.broadcast();
-  
+
   // Active orders cache
   final Map<int, IncomingOrder> _activeOrders = {};
 
-  BarDashboardService({
-    required this.barId,
-    required this.token,
-  }) {
+  BarDashboardService({required this.barId, required this.token}) {
     // Convert https to wss for WebSocket
     final wsBaseUrl = ApiEndpoints.baseUrl
         .replaceFirst('https://', 'wss://')
@@ -165,17 +163,18 @@ class BarDashboardService {
 
   /// Stream of dashboard events (new orders, updates, cancellations)
   Stream<DashboardEvent> get events => _eventsController.stream;
-  
+
   /// Stream of active orders list (updated whenever orders change)
   Stream<List<IncomingOrder>> get ordersStream => _ordersController.stream;
-  
+
   /// Current list of active orders
-  List<IncomingOrder> get activeOrders => _activeOrders.values.toList()
-    ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  List<IncomingOrder> get activeOrders =>
+      _activeOrders.values.toList()
+        ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
   /// Connection state
   Stream<WebSocketState> get connectionState => _ws.stateStream;
-  
+
   /// Whether currently connected
   bool get isConnected => _ws.isConnected;
 
@@ -215,18 +214,11 @@ class BarDashboardService {
 
   /// Cancel an order with optional reason
   void cancelOrder({required int orderId, String? reason}) {
-    _ws.send({
-      'action': 'cancel',
-      'order_id': orderId,
-      'reason': reason,
-    });
+    _ws.send({'action': 'cancel', 'order_id': orderId, 'reason': reason});
   }
 
   void _sendAction(String action, int orderId) {
-    _ws.send({
-      'action': action,
-      'order_id': orderId,
-    });
+    _ws.send({'action': action, 'order_id': orderId});
   }
 
   void _handleMessage(WebSocketMessage message) {
@@ -254,10 +246,14 @@ class BarDashboardService {
 
       case 'order_updated':
         final orderId = message.data['order_id'] as int? ?? 0;
-        final newStatus = OrderStatus.fromString(message.data['status'] ?? 'pending');
-        
+        final newStatus = OrderStatus.fromString(
+          message.data['status'] ?? 'pending',
+        );
+
         if (_activeOrders.containsKey(orderId)) {
-          _activeOrders[orderId] = _activeOrders[orderId]!.copyWith(status: newStatus);
+          _activeOrders[orderId] = _activeOrders[orderId]!.copyWith(
+            status: newStatus,
+          );
           _eventsController.add(OrderUpdatedEvent(orderId, newStatus));
           _ordersController.add(activeOrders);
         }
@@ -267,7 +263,7 @@ class BarDashboardService {
       case 'order_cancelled':
         final orderId = message.data['order_id'] as int? ?? 0;
         final reason = message.data['reason'] as String?;
-        
+
         _activeOrders.remove(orderId);
         _eventsController.add(OrderCancelledEvent(orderId, reason));
         _ordersController.add(activeOrders);

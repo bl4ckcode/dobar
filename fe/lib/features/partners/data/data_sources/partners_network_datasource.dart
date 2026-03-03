@@ -11,13 +11,12 @@ import '../../domain/models/partner/partner_menu_model.dart';
 class PartnersNetworkDataSource {
   final Dio dio;
 
-  PartnersNetworkDataSource({
-    required this.dio,
-  });
+  PartnersNetworkDataSource({required this.dio});
 
   // Existing method to get partners (adjusted as needed)
   Future<ApiResponse<List<PartnersBaseModel>>> getPartners(
-      PartnersParams params) async {
+    PartnersParams params,
+  ) async {
     try {
       final response = await dio.get(
         '${baseUrl}bars/',
@@ -38,21 +37,28 @@ class PartnersNetworkDataSource {
           partnersJson = response.data['partners'];
         } else {
           throw ServerException(
-              'Unexpected response format', response.statusCode);
+            'Unexpected response format',
+            response.statusCode,
+          );
         }
         final partnersList = partnersJson
-            .map((json) =>
-            PartnersBaseModel.fromJson(json as Map<String, dynamic>))
+            .map(
+              (json) =>
+                  PartnersBaseModel.fromJson(json as Map<String, dynamic>),
+            )
             .toList();
         return ApiResponse.success(partnersList);
       } else {
         throw ServerException(
-            'Failed to load partners: ${response.statusCode}',
-            response.statusCode);
+          'Failed to load partners: ${response.statusCode}',
+          response.statusCode,
+        );
       }
     } on DioException catch (e) {
-      throw ServerException(e.message ?? 'Dio error occurred',
-          e.response?.statusCode);
+      throw ServerException(
+        e.message ?? 'Dio error occurred',
+        e.response?.statusCode,
+      );
     } catch (e) {
       throw ServerException(e.toString(), null);
     }
@@ -76,22 +82,26 @@ class PartnersNetworkDataSource {
           menusJson = response.data['menus'];
         } else {
           throw ServerException(
-              'Unexpected response format for menus', response.statusCode);
+            'Unexpected response format for menus',
+            response.statusCode,
+          );
         }
 
         final menus = menusJson
-            .map((json) =>
-            PartnerMenu.fromJson(json as Map<String, dynamic>))
+            .map((json) => PartnerMenu.fromJson(json as Map<String, dynamic>))
             .toList();
         return ApiResponse.success(menus);
       } else {
         throw ServerException(
-            'Failed to load menus: ${response.statusCode}',
-            response.statusCode);
+          'Failed to load menus: ${response.statusCode}',
+          response.statusCode,
+        );
       }
     } on DioException catch (e) {
-      throw ServerException(e.message ?? 'Dio error occurred',
-          e.response?.statusCode);
+      throw ServerException(
+        e.message ?? 'Dio error occurred',
+        e.response?.statusCode,
+      );
     } catch (e) {
       throw ServerException(e.toString(), null);
     }

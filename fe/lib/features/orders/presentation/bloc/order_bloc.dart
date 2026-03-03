@@ -14,7 +14,9 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
   }
 
   Future<void> _onLoadMyOrders(
-      LoadMyOrders event, Emitter<OrderState> emit) async {
+    LoadMyOrders event,
+    Emitter<OrderState> emit,
+  ) async {
     emit(OrderLoading());
     final result = await orderUsecase.getMyOrders(
       page: event.page,
@@ -23,8 +25,7 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     );
     result.fold(
       (failure) => emit(OrderError(message: failure.errorMessage)),
-      (paginatedOrders) =>
-          emit(OrdersLoaded(paginatedOrders: paginatedOrders)),
+      (paginatedOrders) => emit(OrdersLoaded(paginatedOrders: paginatedOrders)),
     );
   }
 
@@ -38,7 +39,9 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
   }
 
   Future<void> _onLoadOrderTimeline(
-      LoadOrderTimeline event, Emitter<OrderState> emit) async {
+    LoadOrderTimeline event,
+    Emitter<OrderState> emit,
+  ) async {
     emit(OrderLoading());
     final result = await orderUsecase.getOrderTimeline(event.orderId);
     result.fold(
@@ -48,7 +51,9 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
   }
 
   Future<void> _onCancelOrder(
-      CancelOrder event, Emitter<OrderState> emit) async {
+    CancelOrder event,
+    Emitter<OrderState> emit,
+  ) async {
     emit(OrderLoading());
     final result = await orderUsecase.cancelOrder(event.orderId);
     result.fold(

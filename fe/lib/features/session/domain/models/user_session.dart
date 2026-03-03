@@ -3,11 +3,11 @@ import 'package:barz/features/user/domain/models/user_model.dart';
 import 'bar_access.dart';
 
 /// Represents the complete user session in the Barz app.
-/// 
+///
 /// This is the central model for determining which UI experience to show:
 /// - User type is determined by `user.userType` from the backend profile
 /// - Business users have [barAccess] populated with their bar list
-/// 
+///
 /// The session is initialized after login by calling GET /me/profile
 class UserSession {
   final UserModel user;
@@ -66,11 +66,7 @@ class UserSession {
       (access) => access.barId == barId,
       orElse: () => barAccess.first,
     );
-    return UserSession(
-      user: user,
-      barAccess: barAccess,
-      activeBar: bar,
-    );
+    return UserSession(user: user, barAccess: barAccess, activeBar: bar);
   }
 
   /// Create a new session with updated bar access
@@ -80,11 +76,11 @@ class UserSession {
       barAccess: newBarAccess,
       activeBar: newBarAccess.isNotEmpty
           ? (activeBar != null
-              ? newBarAccess.firstWhere(
-                  (b) => b.barId == activeBar!.barId,
-                  orElse: () => newBarAccess.first,
-                )
-              : newBarAccess.first)
+                ? newBarAccess.firstWhere(
+                    (b) => b.barId == activeBar!.barId,
+                    orElse: () => newBarAccess.first,
+                  )
+                : newBarAccess.first)
           : null,
     );
   }

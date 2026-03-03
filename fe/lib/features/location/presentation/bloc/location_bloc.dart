@@ -34,8 +34,10 @@ class LocationBloc extends Bloc<LocationEvent, LocationState> {
     emit(state.copyWith(isLoading: true, error: null));
     final result = await _usecase.requestLocationPermission();
     result.fold(
-      (failure) => emit(state.copyWith(isLoading: false, error: failure.errorMessage)),
-      (granted) => emit(state.copyWith(isLoading: false, hasPermission: granted)),
+      (failure) =>
+          emit(state.copyWith(isLoading: false, error: failure.errorMessage)),
+      (granted) =>
+          emit(state.copyWith(isLoading: false, hasPermission: granted)),
     );
   }
 
@@ -71,10 +73,13 @@ class LocationBloc extends Bloc<LocationEvent, LocationState> {
       );
 
       if (!serviceGranted) {
-        emit(state.copyWith(
-          isLoading: false,
-          error: 'Location services are disabled. Please enable location services in Settings > Privacy & Security > Location Services.',
-        ));
+        emit(
+          state.copyWith(
+            isLoading: false,
+            error:
+                'Location services are disabled. Please enable location services in Settings > Privacy & Security > Location Services.',
+          ),
+        );
         return;
       }
     }
@@ -98,10 +103,12 @@ class LocationBloc extends Bloc<LocationEvent, LocationState> {
       emit(state.copyWith(hasPermission: granted));
 
       if (!granted) {
-        emit(state.copyWith(
-          isLoading: false,
-          error: 'Location permission is required to show nearby bars.',
-        ));
+        emit(
+          state.copyWith(
+            isLoading: false,
+            error: 'Location permission is required to show nearby bars.',
+          ),
+        );
         return;
       }
     } else {
@@ -120,14 +127,23 @@ class LocationBloc extends Bloc<LocationEvent, LocationState> {
           speed: 0.0,
           timestamp: DateTime.now(),
         );
-        emit(state.copyWith(
-          isLoading: false,
-          currentLocation: fallbackLocation,
-          error: 'Using default Belo Horizonte location (location unavailable)',
-        ));
+        emit(
+          state.copyWith(
+            isLoading: false,
+            currentLocation: fallbackLocation,
+            error:
+                'Using default Belo Horizonte location (location unavailable)',
+          ),
+        );
       },
       (location) {
-        emit(state.copyWith(isLoading: false, currentLocation: location, error: null));
+        emit(
+          state.copyWith(
+            isLoading: false,
+            currentLocation: location,
+            error: null,
+          ),
+        );
       },
     );
   }
@@ -138,8 +154,8 @@ class LocationBloc extends Bloc<LocationEvent, LocationState> {
   ) {
     _locationSubscription?.cancel();
     _locationSubscription = _usecase.getLocationStream().listen(
-          (location) => add(LocationUpdated(location)),
-        );
+      (location) => add(LocationUpdated(location)),
+    );
     emit(state.copyWith(isTracking: true));
   }
 
@@ -166,16 +182,15 @@ class LocationBloc extends Bloc<LocationEvent, LocationState> {
   ) async {
     if (state.currentLocation == null) return;
     final result = await _usecase.getNearbyPartners(state.currentLocation!);
-    result.fold(
-      (failure) => {},
-      (partners) {
-        final withinRange = partners.where((p) => p.isWithinRange).toList();
-        emit(state.copyWith(
+    result.fold((failure) => {}, (partners) {
+      final withinRange = partners.where((p) => p.isWithinRange).toList();
+      emit(
+        state.copyWith(
           nearbyPartners: partners,
           proximityAlert: withinRange.isNotEmpty ? withinRange.first : null,
-        ));
-      },
-    );
+        ),
+      );
+    });
   }
 
   void _onDismissProximityAlert(
@@ -185,10 +200,7 @@ class LocationBloc extends Bloc<LocationEvent, LocationState> {
     emit(state.copyWith(proximityAlert: null));
   }
 
-  void _onClearError(
-    ClearLocationError event,
-    Emitter<LocationState> emit,
-  ) {
+  void _onClearError(ClearLocationError event, Emitter<LocationState> emit) {
     emit(state.copyWith(error: null));
   }
 }

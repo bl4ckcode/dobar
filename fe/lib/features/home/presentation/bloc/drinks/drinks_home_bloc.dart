@@ -8,11 +8,8 @@ import 'drinks_model_mapper.dart';
 class DrinksHomeBloc extends Bloc<DrinksHomeEvent, DrinksHomeState> {
   final DrinksHomeUseCase drinksHomeUseCase;
 
-  DrinksHomeBloc({
-    required this.drinksHomeUseCase,
-  }) : super(
-          const DrinksHomeState.initial(),
-        ) {
+  DrinksHomeBloc({required this.drinksHomeUseCase})
+    : super(const DrinksHomeState.initial()) {
     on<DrinksHomeLoadPartners>(_onLoadPartners);
   }
 
@@ -30,12 +27,8 @@ class DrinksHomeBloc extends Bloc<DrinksHomeEvent, DrinksHomeState> {
       ),
     );
     result.fold(
-      (failure) => emit(
-        DrinksHomeState.failure(error: failure.errorMessage),
-      ),
-      (data) => emit(
-        DrinksHomeState.success(mapPartnersToUiModel(data)),
-      ),
+      (failure) => emit(DrinksHomeState.failure(error: failure.errorMessage)),
+      (data) => emit(DrinksHomeState.success(mapPartnersToUiModel(data))),
     );
   }
 }

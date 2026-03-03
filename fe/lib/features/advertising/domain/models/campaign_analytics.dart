@@ -51,10 +51,8 @@ abstract class BudgetBreakdown with _$BudgetBreakdown {
 /// Date range for analytics
 @freezed
 abstract class DateRange with _$DateRange {
-  const factory DateRange({
-    required DateTime start,
-    required DateTime end,
-  }) = _DateRange;
+  const factory DateRange({required DateTime start, required DateTime end}) =
+      _DateRange;
 
   factory DateRange.fromJson(Map<String, dynamic> json) =>
       _$DateRangeFromJson(json);
@@ -71,7 +69,8 @@ abstract class CampaignAnalytics with _$CampaignAnalytics {
     @JsonKey(name: 'date_range') required DateRange dateRange,
     required CampaignMetrics metrics,
     required BudgetBreakdown budget,
-    @JsonKey(name: 'daily_breakdown') required List<DailyMetrics> dailyBreakdown,
+    @JsonKey(name: 'daily_breakdown')
+    required List<DailyMetrics> dailyBreakdown,
   }) = _CampaignAnalytics;
 
   factory CampaignAnalytics.fromJson(Map<String, dynamic> json) =>

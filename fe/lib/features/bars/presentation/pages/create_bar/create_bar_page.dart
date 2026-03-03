@@ -50,12 +50,12 @@ class _CreateBarPageState extends State<CreateBarPage> {
 
   Future<void> _submit() async {
     if (_isSubmitting) return;
-    
+
     setState(() => _isSubmitting = true);
-    
+
     final l10n = AppLocalizations.of(context)!;
     final barUsecase = getItInjector<BarUsecase>();
-    
+
     // Convert operating hours to API format
     final operatingHoursMap = <String, dynamic>{};
     for (final entry in _formData.operatingHours.entries) {
@@ -63,12 +63,14 @@ class _CreateBarPageState extends State<CreateBarPage> {
       operatingHoursMap[entry.key] = {
         'is_closed': !hours.isOpen,
         if (hours.isOpen && hours.openTime != null)
-          'open': '${hours.openTime!.hour.toString().padLeft(2, '0')}:${hours.openTime!.minute.toString().padLeft(2, '0')}',
+          'open':
+              '${hours.openTime!.hour.toString().padLeft(2, '0')}:${hours.openTime!.minute.toString().padLeft(2, '0')}',
         if (hours.isOpen && hours.closeTime != null)
-          'close': '${hours.closeTime!.hour.toString().padLeft(2, '0')}:${hours.closeTime!.minute.toString().padLeft(2, '0')}',
+          'close':
+              '${hours.closeTime!.hour.toString().padLeft(2, '0')}:${hours.closeTime!.minute.toString().padLeft(2, '0')}',
       };
     }
-    
+
     final result = await barUsecase.createBar(
       name: _formData.name,
       address: _formData.address,
@@ -85,11 +87,11 @@ class _CreateBarPageState extends State<CreateBarPage> {
       operatingHours: operatingHoursMap.isNotEmpty ? operatingHoursMap : null,
       bankAccount: _formData.bankAccount.toJson(_formData.countryCode),
     );
-    
+
     if (!mounted) return;
-    
+
     setState(() => _isSubmitting = false);
-    
+
     result.fold(
       (failure) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -155,10 +157,7 @@ class _CreateBarPageState extends State<CreateBarPage> {
               controller: _pageController,
               physics: const NeverScrollableScrollPhysics(),
               children: [
-                FindBarStep(
-                  formData: _formData,
-                  onNext: _nextStep,
-                ),
+                FindBarStep(formData: _formData, onNext: _nextStep),
                 BasicInfoStep(
                   formData: _formData,
                   onNext: _nextStep,
@@ -225,32 +224,40 @@ class _CreateBarPageState extends State<CreateBarPage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Container(
-                      width: 28,
-                      height: 28,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: isCompleted
-                            ? barzGold
-                            : isCurrent
+                          width: 28,
+                          height: 28,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: isCompleted
+                                ? barzGold
+                                : isCurrent
                                 ? barzDark
                                 : surfaceDim,
-                        border: isCurrent
-                            ? Border.all(color: barzGold, width: 2)
-                            : null,
-                      ),
-                      child: Center(
-                        child: isCompleted
-                            ? const Icon(Icons.check, size: 16, color: barzDark)
-                            : Text(
-                                '${index + 1}',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  color: isCurrent ? Colors.white : textSecondary,
-                                ),
-                              ),
-                      ),
-                    ).animate(target: isCurrent ? 1 : 0).scale(
+                            border: isCurrent
+                                ? Border.all(color: barzGold, width: 2)
+                                : null,
+                          ),
+                          child: Center(
+                            child: isCompleted
+                                ? const Icon(
+                                    Icons.check,
+                                    size: 16,
+                                    color: barzDark,
+                                  )
+                                : Text(
+                                    '${index + 1}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                      color: isCurrent
+                                          ? Colors.white
+                                          : textSecondary,
+                                    ),
+                                  ),
+                          ),
+                        )
+                        .animate(target: isCurrent ? 1 : 0)
+                        .scale(
                           begin: const Offset(1, 1),
                           end: const Offset(1.1, 1.1),
                           duration: 200.ms,
@@ -260,7 +267,9 @@ class _CreateBarPageState extends State<CreateBarPage> {
                       stepLabels[index],
                       style: TextStyle(
                         fontSize: 10,
-                        fontWeight: isCurrent ? FontWeight.w600 : FontWeight.w500,
+                        fontWeight: isCurrent
+                            ? FontWeight.w600
+                            : FontWeight.w500,
                         color: isCurrent ? barzDark : textSecondary,
                       ),
                       textAlign: TextAlign.center,
@@ -300,9 +309,7 @@ class _CreateBarPageState extends State<CreateBarPage> {
               Navigator.pop(ctx);
               context.pop();
             },
-            style: FilledButton.styleFrom(
-              backgroundColor: errorRed,
-            ),
+            style: FilledButton.styleFrom(backgroundColor: errorRed),
             child: Text(l10n.discard),
           ),
         ],
@@ -325,40 +332,44 @@ class CreateBarFormData {
   List<String> photoPaths = [];
   Map<String, OperatingHours> operatingHours = {};
   BankAccountData bankAccount = BankAccountData();
-  
+
   bool get isBasicInfoValid =>
-      name.isNotEmpty && address.isNotEmpty && phone.isNotEmpty && email.isNotEmpty;
+      name.isNotEmpty &&
+      address.isNotEmpty &&
+      phone.isNotEmpty &&
+      email.isNotEmpty;
 
   bool get isLocationValid => latitude != null && longitude != null;
-  
-  CountryFormConfig get countryConfig => CountryFormConfig.forCountry(countryCode);
+
+  CountryFormConfig get countryConfig =>
+      CountryFormConfig.forCountry(countryCode);
 }
 
 /// Bank account data for payouts - varies by country
 class BankAccountData {
   // Brazil-specific
-  String bankCode = '';      // 3 digits (e.g., 001 = Banco do Brasil)
-  String branchCode = '';    // 4 digits (agência)
-  String pixKey = '';        // CPF/CNPJ/email/phone/random
-  String pixKeyType = '';    // cpf | cnpj | email | phone | random
-  
+  String bankCode = ''; // 3 digits (e.g., 001 = Banco do Brasil)
+  String branchCode = ''; // 4 digits (agência)
+  String pixKey = ''; // CPF/CNPJ/email/phone/random
+  String pixKeyType = ''; // cpf | cnpj | email | phone | random
+
   // Mexico
-  String clabe = '';         // 18 digits - Clave Bancaria Estandarizada
-  
+  String clabe = ''; // 18 digits - Clave Bancaria Estandarizada
+
   // Argentina
-  String cbu = '';           // 22 digits - Clave Bancaria Uniforme
-  
+  String cbu = ''; // 22 digits - Clave Bancaria Uniforme
+
   // USA
   String routingNumber = ''; // 9 digits (ABA routing)
-  
+
   // Common fields
   String accountNumber = '';
-  String accountType = '';   // checking | savings
+  String accountType = ''; // checking | savings
   String accountHolderName = '';
-  
+
   Map<String, dynamic> toJson(String countryCode) {
     final base = {'country_code': countryCode.toUpperCase()};
-    
+
     switch (countryCode.toUpperCase()) {
       case 'BR':
         if (pixKey.isNotEmpty) {
@@ -379,13 +390,15 @@ class BankAccountData {
         return {
           ...base,
           'clabe': clabe,
-          if (accountHolderName.isNotEmpty) 'account_holder_name': accountHolderName,
+          if (accountHolderName.isNotEmpty)
+            'account_holder_name': accountHolderName,
         };
       case 'AR':
         return {
           ...base,
           'cbu': cbu,
-          if (accountHolderName.isNotEmpty) 'account_holder_name': accountHolderName,
+          if (accountHolderName.isNotEmpty)
+            'account_holder_name': accountHolderName,
         };
       case 'US':
         return {
@@ -398,7 +411,8 @@ class BankAccountData {
         return {
           ...base,
           'account_number': accountNumber,
-          if (accountHolderName.isNotEmpty) 'account_holder_name': accountHolderName,
+          if (accountHolderName.isNotEmpty)
+            'account_holder_name': accountHolderName,
         };
     }
   }
@@ -409,9 +423,5 @@ class OperatingHours {
   final TimeOfDay? openTime;
   final TimeOfDay? closeTime;
 
-  OperatingHours({
-    this.isOpen = false,
-    this.openTime,
-    this.closeTime,
-  });
+  OperatingHours({this.isOpen = false, this.openTime, this.closeTime});
 }

@@ -40,7 +40,9 @@ class _SubscriptionPlansContent extends StatelessWidget {
         child: BlocBuilder<AdvertisingBloc, AdvertisingState>(
           builder: (context, state) {
             if (state.isLoadingPlans) {
-              return const Center(child: CircularProgressIndicator(color: barzGold));
+              return const Center(
+                child: CircularProgressIndicator(color: barzGold),
+              );
             }
             if (state.error != null) {
               return _buildErrorState(context, state.error!, l10n);
@@ -48,14 +50,23 @@ class _SubscriptionPlansContent extends StatelessWidget {
             if (state.plans == null) {
               return _buildEmptyState(l10n);
             }
-            return _buildContent(context, state.plans!, state.subscription, l10n);
+            return _buildContent(
+              context,
+              state.plans!,
+              state.subscription,
+              l10n,
+            );
           },
         ),
       ),
     );
   }
 
-  Widget _buildErrorState(BuildContext context, String error, AppLocalizations l10n) {
+  Widget _buildErrorState(
+    BuildContext context,
+    String error,
+    AppLocalizations l10n,
+  ) {
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -67,7 +78,8 @@ class _SubscriptionPlansContent extends StatelessWidget {
             Text(error, textAlign: TextAlign.center),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: () => context.read<AdvertisingBloc>().add(const LoadPlans()),
+              onPressed: () =>
+                  context.read<AdvertisingBloc>().add(const LoadPlans()),
               icon: const Icon(Icons.refresh),
               label: Text(l10n.retry),
             ),
@@ -82,7 +94,11 @@ class _SubscriptionPlansContent extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.card_membership, size: 80, color: barzGold.withValues(alpha: 0.6)),
+          Icon(
+            Icons.card_membership,
+            size: 80,
+            color: barzGold.withValues(alpha: 0.6),
+          ),
           const SizedBox(height: 24),
           Text(l10n.no_plans_available, style: const TextStyle(fontSize: 18)),
         ],
@@ -102,7 +118,10 @@ class _SubscriptionPlansContent extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (currentSubscription != null) ...[
-            _CurrentSubscriptionCard(subscription: currentSubscription, l10n: l10n),
+            _CurrentSubscriptionCard(
+              subscription: currentSubscription,
+              l10n: l10n,
+            ),
             const SizedBox(height: 24),
           ],
           Text(
@@ -110,23 +129,35 @@ class _SubscriptionPlansContent extends StatelessWidget {
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
-          Text(l10n.boost_your_bar_visibility, style: TextStyle(color: textSecondary)),
+          Text(
+            l10n.boost_your_bar_visibility,
+            style: TextStyle(color: textSecondary),
+          ),
           const SizedBox(height: 24),
-          ...plans.plans.map((plan) => _PlanCard(
-                plan: plan,
-                currency: plans.currency,
-                isCurrentPlan: currentSubscription?.tier == plan.tier,
-                onSelect: () => _selectPlan(context, plan, l10n),
-              )),
+          ...plans.plans.map(
+            (plan) => _PlanCard(
+              plan: plan,
+              currency: plans.currency,
+              isCurrentPlan: currentSubscription?.tier == plan.tier,
+              onSelect: () => _selectPlan(context, plan, l10n),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  void _selectPlan(BuildContext context, SubscriptionPlan plan, AppLocalizations l10n) {
+  void _selectPlan(
+    BuildContext context,
+    SubscriptionPlan plan,
+    AppLocalizations l10n,
+  ) {
     final sessionState = context.read<SessionBloc>().state;
-    if (sessionState is! SessionReady || sessionState.session.activeBar == null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.select_bar_first)));
+    if (sessionState is! SessionReady ||
+        sessionState.session.activeBar == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.select_bar_first)));
       return;
     }
 
@@ -136,20 +167,28 @@ class _SubscriptionPlansContent extends StatelessWidget {
         title: Text('${l10n.subscribe_to} ${plan.name}'),
         content: Text('${l10n.confirm_subscription_message} ${plan.name}?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.cancel)),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.cancel),
+          ),
           FilledButton(
             onPressed: () {
               context.read<AdvertisingBloc>().add(
-                    CreateSubscription(
-                      barId: sessionState.session.activeBar!.barId,
-                      tier: plan.tier,
-                      regionCode: 'BR',
-                    ),
-                  );
+                CreateSubscription(
+                  barId: sessionState.session.activeBar!.barId,
+                  tier: plan.tier,
+                  regionCode: 'BR',
+                ),
+              );
               Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.subscription_created)));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(l10n.subscription_created)),
+              );
             },
-            style: FilledButton.styleFrom(backgroundColor: barzGold, foregroundColor: barzDark),
+            style: FilledButton.styleFrom(
+              backgroundColor: barzGold,
+              foregroundColor: barzDark,
+            ),
             child: Text(l10n.confirm),
           ),
         ],
@@ -162,13 +201,18 @@ class _CurrentSubscriptionCard extends StatelessWidget {
   final AdSubscription subscription;
   final AppLocalizations l10n;
 
-  const _CurrentSubscriptionCard({required this.subscription, required this.l10n});
+  const _CurrentSubscriptionCard({
+    required this.subscription,
+    required this.l10n,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Card(
       color: barzDark,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BarzRadii.md)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(BarzRadii.md),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -178,14 +222,30 @@ class _CurrentSubscriptionCard extends StatelessWidget {
               children: [
                 const Icon(Icons.check_circle, color: successGreen),
                 const SizedBox(width: 8),
-                Text(l10n.current_plan, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                Text(
+                  l10n.current_plan,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
                 const Spacer(),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(color: barzGold, borderRadius: BorderRadius.circular(BarzRadii.full)),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: barzGold,
+                    borderRadius: BorderRadius.circular(BarzRadii.full),
+                  ),
                   child: Text(
                     subscription.tier.name.toUpperCase(),
-                    style: const TextStyle(color: barzDark, fontWeight: FontWeight.bold, fontSize: 12),
+                    style: const TextStyle(
+                      color: barzDark,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
               ],
@@ -228,7 +288,9 @@ class _PlanCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(BarzRadii.md),
-        side: isVip ? const BorderSide(color: barzGold, width: 2) : BorderSide.none,
+        side: isVip
+            ? const BorderSide(color: barzGold, width: 2)
+            : BorderSide.none,
       ),
       child: Column(
         children: [
@@ -246,7 +308,11 @@ class _PlanCard extends StatelessWidget {
               child: Text(
                 l10n.most_popular,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: barzDark, fontWeight: FontWeight.bold, fontSize: 12),
+                style: const TextStyle(
+                  color: barzDark,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
               ),
             ),
           Padding(
@@ -256,30 +322,50 @@ class _PlanCard extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(plan.name, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    Text(
+                      plan.name,
+                      style: const TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     const Spacer(),
-                    Text('$currency ${plan.price.toStringAsFixed(0)}', style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                    Text(
+                      '$currency ${plan.price.toStringAsFixed(0)}',
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     Text('/mo', style: TextStyle(color: textSecondary)),
                   ],
                 ),
                 const SizedBox(height: 8),
-                Text('${l10n.commission}: ${(plan.commissionRate * 100).toStringAsFixed(0)}%', style: TextStyle(color: textSecondary)),
+                Text(
+                  '${l10n.commission}: ${(plan.commissionRate * 100).toStringAsFixed(0)}%',
+                  style: TextStyle(color: textSecondary),
+                ),
                 const SizedBox(height: 16),
-                ...plan.features.map((feature) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.check, color: successGreen, size: 20),
-                          const SizedBox(width: 8),
-                          Expanded(child: Text(feature)),
-                        ],
-                      ),
-                    )),
+                ...plan.features.map(
+                  (feature) => Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.check, color: successGreen, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(feature)),
+                      ],
+                    ),
+                  ),
+                ),
                 const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
                   child: isCurrentPlan
-                      ? OutlinedButton(onPressed: null, child: Text(l10n.current_plan))
+                      ? OutlinedButton(
+                          onPressed: null,
+                          child: Text(l10n.current_plan),
+                        )
                       : FilledButton(
                           onPressed: onSelect,
                           style: FilledButton.styleFrom(

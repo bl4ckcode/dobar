@@ -12,10 +12,10 @@ class ConnectivityService {
   final Connectivity _connectivity = Connectivity();
   final _statusController = StreamController<NetworkStatus>.broadcast();
   StreamSubscription<List<ConnectivityResult>>? _subscription;
-  
+
   NetworkStatus _currentStatus = NetworkStatus.online;
   bool _isInitialized = false;
-  
+
   final List<VoidCallback> _onReconnectCallbacks = [];
 
   NetworkStatus get currentStatus => _currentStatus;
@@ -34,7 +34,7 @@ class ConnectivityService {
       final newStatus = _mapResults(results);
       final wasOffline = _currentStatus == NetworkStatus.offline;
       _updateStatus(newStatus);
-      
+
       if (wasOffline && newStatus == NetworkStatus.online) {
         debugPrint('[Connectivity] Back online - triggering sync callbacks');
         _triggerReconnectCallbacks();

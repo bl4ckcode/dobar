@@ -6,7 +6,8 @@ class SecurityIndicators extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final mutedColor = isDark ? const Color(0xFF888888) : textSecondary;
 
     return Padding(

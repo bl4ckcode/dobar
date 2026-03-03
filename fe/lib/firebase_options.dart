@@ -60,8 +60,10 @@ class DefaultFirebaseOptions {
     messagingSenderId: '505844682559',
     projectId: 'barz777',
     storageBucket: 'barz777.firebasestorage.app',
-    androidClientId: '505844682559-7hq3os8bgvg7p6moqekvrrev5r2j2gk3.apps.googleusercontent.com',
-    iosClientId: '505844682559-5qciiqhmad3v412i2jlmivok1lk5ls08.apps.googleusercontent.com',
+    androidClientId:
+        '505844682559-7hq3os8bgvg7p6moqekvrrev5r2j2gk3.apps.googleusercontent.com',
+    iosClientId:
+        '505844682559-5qciiqhmad3v412i2jlmivok1lk5ls08.apps.googleusercontent.com',
     iosBundleId: 'com.dobar.app',
   );
 
@@ -76,5 +78,4 @@ class DefaultFirebaseOptions {
     authDomain: 'barz777.firebaseapp.com',
     measurementId: 'G-WQ02MVL783',
   );
-
 }

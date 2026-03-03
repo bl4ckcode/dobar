@@ -13,7 +13,8 @@ sealed class UserEvent with _$UserEvent {
     String? phoneNumber,
     String? profilePictureUrl,
   }) = UpdateProfile;
-  const factory UserEvent.updatePreferences(UserPreferences preferences) = UpdatePreferences;
+  const factory UserEvent.updatePreferences(UserPreferences preferences) =
+      UpdatePreferences;
   const factory UserEvent.addDocument(UserDocument document) = AddDocument;
   const factory UserEvent.removeDocument(int documentId) = RemoveDocument;
   const factory UserEvent.acceptTerms() = AcceptTerms;

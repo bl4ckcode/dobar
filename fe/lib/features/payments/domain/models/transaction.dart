@@ -1,6 +1,13 @@
 import 'payment_method.dart';
 
-enum TransactionStatus { pending, processing, approved, declined, refunded, cancelled }
+enum TransactionStatus {
+  pending,
+  processing,
+  approved,
+  declined,
+  refunded,
+  cancelled,
+}
 
 enum TransactionType { payment, refund, cashback, walletTopUp, walletWithdraw }
 
@@ -50,17 +57,21 @@ class Transaction {
       userId: json['user_id'],
       orderId: json['order_id'],
       gateway: PaymentGateway.values.firstWhere(
-          (e) => e.name == json['gateway'],
-          orElse: () => PaymentGateway.pagarme),
+        (e) => e.name == json['gateway'],
+        orElse: () => PaymentGateway.pagarme,
+      ),
       paymentType: PaymentType.values.firstWhere(
-          (e) => e.name == json['payment_type'],
-          orElse: () => PaymentType.credit),
+        (e) => e.name == json['payment_type'],
+        orElse: () => PaymentType.credit,
+      ),
       transactionType: TransactionType.values.firstWhere(
-          (e) => e.name == json['transaction_type'],
-          orElse: () => TransactionType.payment),
+        (e) => e.name == json['transaction_type'],
+        orElse: () => TransactionType.payment,
+      ),
       status: TransactionStatus.values.firstWhere(
-          (e) => e.name == json['status'],
-          orElse: () => TransactionStatus.pending),
+        (e) => e.name == json['status'],
+        orElse: () => TransactionStatus.pending,
+      ),
       amount: (json['amount'] as num).toDouble(),
       currency: json['currency'] ?? 'BRL',
       fee: (json['fee'] as num?)?.toDouble(),
@@ -100,5 +111,7 @@ class Transaction {
   bool get isPending => status == TransactionStatus.pending;
   bool get isProcessing => status == TransactionStatus.processing;
   bool get isApproved => status == TransactionStatus.approved;
-  bool get isFailed => status == TransactionStatus.declined || status == TransactionStatus.cancelled;
+  bool get isFailed =>
+      status == TransactionStatus.declined ||
+      status == TransactionStatus.cancelled;
 }

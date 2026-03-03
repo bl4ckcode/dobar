@@ -10,7 +10,8 @@ extension HexColor on Color {
   }
 
   /// Prefixes a hash sign if [leadingHashSign] is set to `true` (default is `true`).
-  String toHex({bool leadingHashSign = true}) => '${leadingHashSign ? '#' : ''}'
+  String toHex({bool leadingHashSign = true}) =>
+      '${leadingHashSign ? '#' : ''}'
       '${((a * 255.0).round() & 0xff).toRadixString(16).padLeft(2, '0')}'
       '${((r * 255.0).round() & 0xff).toRadixString(16).padLeft(2, '0')}'
       '${((g * 255.0).round() & 0xff).toRadixString(16).padLeft(2, '0')}'

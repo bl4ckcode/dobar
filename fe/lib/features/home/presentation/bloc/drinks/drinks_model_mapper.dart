@@ -27,6 +27,7 @@ extension PartnersBaseModelX on PartnersBaseModel {
 }
 
 List<ParallaxRecipeUiModel> mapPartnersToUiModel(
-    List<PartnersBaseModel> partners) {
+  List<PartnersBaseModel> partners,
+) {
   return partners.map((partner) => partner.toParallaxRecipeUiModel()).toList();
 }

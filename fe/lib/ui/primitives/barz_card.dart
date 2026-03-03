@@ -3,7 +3,7 @@ import '../../core/utils/constant/colors.dart';
 import '../../core/utils/constant/styles.dart';
 
 /// Enhanced Barz Card component
-/// 
+///
 /// Features:
 /// - Subtle shadow instead of harsh border
 /// - Soft border color for better appearance

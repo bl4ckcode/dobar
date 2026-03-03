@@ -22,4 +22,3 @@ extension PersonalDataX on PersonalData {
   /// Returns the full address (or performs any custom logic)
   String? getAddress() => completeAddress;
 }
-

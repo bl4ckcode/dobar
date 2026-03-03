@@ -13,40 +13,25 @@ class CardContent extends StatelessWidget {
       children: <Widget>[
         Text(
           parallaxRecipeUiModel.name.length > 15
-              ? '${parallaxRecipeUiModel.name.substring(
-                  0,
-                  15,
-                )}...'
+              ? '${parallaxRecipeUiModel.name.substring(0, 15)}...'
               : parallaxRecipeUiModel.name,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-          ),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
         ),
         Row(
           children: <Widget>[
             Text(
               parallaxRecipeUiModel.adress.length > 15
-                  ? '${parallaxRecipeUiModel.adress.substring(
-                      0,
-                      15,
-                    )}...'
+                  ? '${parallaxRecipeUiModel.adress.substring(0, 15)}...'
                   : parallaxRecipeUiModel.adress,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w300,
-              ),
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w300),
             ),
             const Spacer(),
             Text(
               parallaxRecipeUiModel.approximateLocation,
-              style: const TextStyle(
-                fontWeight: FontWeight.w300,
-                fontSize: 14,
-              ),
+              style: const TextStyle(fontWeight: FontWeight.w300, fontSize: 14),
             ),
           ],
-        )
+        ),
       ],
     );
   }

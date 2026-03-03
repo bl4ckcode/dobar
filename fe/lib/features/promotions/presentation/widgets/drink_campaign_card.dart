@@ -21,6 +21,7 @@ class DrinkCampaignCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -79,17 +80,16 @@ class DrinkCampaignCard extends StatelessWidget {
                       children: [
                         Text(
                           barName,
-                          style: Theme.of(context).textTheme.bodyMedium
-                              ?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w500,
-                                shadows: [
-                                  Shadow(
-                                    color: Colors.black.withValues(alpha: 0.8),
-                                    blurRadius: 2,
-                                  ),
-                                ],
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                            shadows: [
+                              Shadow(
+                                color: Colors.black.withValues(alpha: 0.8),
+                                blurRadius: 2,
                               ),
+                            ],
+                          ),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -99,19 +99,16 @@ class DrinkCampaignCard extends StatelessWidget {
                           children: [
                             Text(
                               'R\$ ${price.toStringAsFixed(2).replaceAll('.', ',')}',
-                              style: Theme.of(context).textTheme.titleLarge
-                                  ?.copyWith(
-                                    color: barzGold,
-                                    fontWeight: FontWeight.bold,
-                                    shadows: [
-                                      Shadow(
-                                        color: Colors.black.withValues(
-                                          alpha: 0.8,
-                                        ),
-                                        blurRadius: 2,
-                                      ),
-                                    ],
+                              style: theme.textTheme.titleLarge?.copyWith(
+                                color: barzGold,
+                                fontWeight: FontWeight.bold,
+                                shadows: [
+                                  Shadow(
+                                    color: Colors.black.withValues(alpha: 0.8),
+                                    blurRadius: 2,
                                   ),
+                                ],
+                              ),
                             ),
                           ],
                         ),

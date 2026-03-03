@@ -1,8 +1,8 @@
 /// Barz Spacing System
-/// 
+///
 /// Based on an 8px grid system with golden ratio relationships.
 /// This creates visual harmony and consistent rhythm throughout the app.
-/// 
+///
 /// The 8px base aligns with:
 /// - iOS Human Interface Guidelines (8pt grid)
 /// - Material Design (4dp increments, 8dp common)
@@ -17,28 +17,28 @@ library;
 abstract final class BarzSpacing {
   /// Extra extra small: 2px - hairline gaps
   static const double xxs = 2.0;
-  
+
   /// Extra small: 4px - tight spacing
   static const double xs = 4.0;
-  
+
   /// Small: 8px - base unit
   static const double sm = 8.0;
-  
+
   /// Medium: 12px - comfortable spacing
   static const double md = 12.0;
-  
+
   /// Large: 16px - standard padding
   static const double lg = 16.0;
-  
+
   /// Extra large: 24px - section spacing
   static const double xl = 24.0;
-  
+
   /// Extra extra large: 32px - major sections
   static const double xxl = 32.0;
-  
+
   /// Triple extra large: 48px - page margins
   static const double xxxl = 48.0;
-  
+
   /// Huge: 64px - hero sections
   static const double huge = 64.0;
 }
@@ -89,10 +89,10 @@ abstract final class PageSpacing {
 abstract final class TouchTargets {
   /// Minimum touch target (WCAG 2.5.5, iOS HIG)
   static const double minimum = 44.0;
-  
+
   /// Comfortable touch target
   static const double comfortable = 48.0;
-  
+
   /// Large touch target (accessibility)
   static const double large = 56.0;
 }

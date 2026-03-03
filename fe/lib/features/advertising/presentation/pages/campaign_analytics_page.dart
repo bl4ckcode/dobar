@@ -16,8 +16,9 @@ class CampaignAnalyticsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => getItInjector<AdvertisingBloc>()
-        ..add(LoadAnalytics(campaignId: campaignId)),
+      create: (_) =>
+          getItInjector<AdvertisingBloc>()
+            ..add(LoadAnalytics(campaignId: campaignId)),
       child: _CampaignAnalyticsContent(campaignId: campaignId),
     );
   }
@@ -89,7 +90,11 @@ class _CampaignAnalyticsContent extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.analytics_outlined, size: 80, color: barzGold.withValues(alpha: 0.6)),
+          Icon(
+            Icons.analytics_outlined,
+            size: 80,
+            color: barzGold.withValues(alpha: 0.6),
+          ),
           const SizedBox(height: 24),
           Text(l10n.no_data_available, style: const TextStyle(fontSize: 18)),
         ],
@@ -97,10 +102,16 @@ class _CampaignAnalyticsContent extends StatelessWidget {
     );
   }
 
-  Widget _buildContent(BuildContext context, CampaignAnalytics analytics, AppLocalizations l10n) {
+  Widget _buildContent(
+    BuildContext context,
+    CampaignAnalytics analytics,
+    AppLocalizations l10n,
+  ) {
     return RefreshIndicator(
       onRefresh: () async {
-        context.read<AdvertisingBloc>().add(LoadAnalytics(campaignId: campaignId));
+        context.read<AdvertisingBloc>().add(
+          LoadAnalytics(campaignId: campaignId),
+        );
       },
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
@@ -123,7 +134,9 @@ class _CampaignAnalyticsContent extends StatelessWidget {
 
   Widget _buildHeader(CampaignAnalytics analytics) {
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BarzRadii.md)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(BarzRadii.md),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Row(
@@ -144,7 +157,10 @@ class _CampaignAnalyticsContent extends StatelessWidget {
                 children: [
                   Text(
                     analytics.campaignName,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Row(
@@ -170,53 +186,68 @@ class _CampaignAnalyticsContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(l10n.performance, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        Text(
+          l10n.performance,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         const SizedBox(height: 12),
         Row(
           children: [
-            Expanded(child: _MetricCard(
-              icon: Icons.visibility,
-              label: l10n.impressions,
-              value: _formatNumber(metrics.impressions),
-            )),
+            Expanded(
+              child: _MetricCard(
+                icon: Icons.visibility,
+                label: l10n.impressions,
+                value: _formatNumber(metrics.impressions),
+              ),
+            ),
             const SizedBox(width: 12),
-            Expanded(child: _MetricCard(
-              icon: Icons.touch_app,
-              label: l10n.clicks,
-              value: _formatNumber(metrics.clicks),
-            )),
+            Expanded(
+              child: _MetricCard(
+                icon: Icons.touch_app,
+                label: l10n.clicks,
+                value: _formatNumber(metrics.clicks),
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 12),
         Row(
           children: [
-            Expanded(child: _MetricCard(
-              icon: Icons.shopping_bag,
-              label: l10n.conversions,
-              value: _formatNumber(metrics.conversions),
-            )),
+            Expanded(
+              child: _MetricCard(
+                icon: Icons.shopping_bag,
+                label: l10n.conversions,
+                value: _formatNumber(metrics.conversions),
+              ),
+            ),
             const SizedBox(width: 12),
-            Expanded(child: _MetricCard(
-              icon: Icons.percent,
-              label: 'CTR',
-              value: '${metrics.ctr.toStringAsFixed(2)}%',
-            )),
+            Expanded(
+              child: _MetricCard(
+                icon: Icons.percent,
+                label: 'CTR',
+                value: '${metrics.ctr.toStringAsFixed(2)}%',
+              ),
+            ),
           ],
         ),
         const SizedBox(height: 12),
         Row(
           children: [
-            Expanded(child: _MetricCard(
-              icon: Icons.attach_money,
-              label: l10n.cost_per_click,
-              value: 'R\$ ${metrics.costPerClick.toStringAsFixed(2)}',
-            )),
+            Expanded(
+              child: _MetricCard(
+                icon: Icons.attach_money,
+                label: l10n.cost_per_click,
+                value: 'R\$ ${metrics.costPerClick.toStringAsFixed(2)}',
+              ),
+            ),
             const SizedBox(width: 12),
-            Expanded(child: _MetricCard(
-              icon: Icons.trending_up,
-              label: l10n.conversion_rate,
-              value: '${metrics.conversionRate.toStringAsFixed(1)}%',
-            )),
+            Expanded(
+              child: _MetricCard(
+                icon: Icons.trending_up,
+                label: l10n.conversion_rate,
+                value: '${metrics.conversionRate.toStringAsFixed(1)}%',
+              ),
+            ),
           ],
         ),
       ],
@@ -224,22 +255,34 @@ class _CampaignAnalyticsContent extends StatelessWidget {
   }
 
   Widget _buildBudgetCard(BudgetBreakdown budget, AppLocalizations l10n) {
-    final progress = budget.total > 0 ? (budget.spent / budget.total).clamp(0.0, 1.0) : 0.0;
+    final progress = budget.total > 0
+        ? (budget.spent / budget.total).clamp(0.0, 1.0)
+        : 0.0;
 
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BarzRadii.md)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(BarzRadii.md),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l10n.budget, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            Text(
+              l10n.budget,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text('R\$ ${budget.spent.toStringAsFixed(0)} / R\$ ${budget.total.toStringAsFixed(0)}'),
-                Text('${(progress * 100).toStringAsFixed(0)}%', style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(
+                  'R\$ ${budget.spent.toStringAsFixed(0)} / R\$ ${budget.total.toStringAsFixed(0)}',
+                ),
+                Text(
+                  '${(progress * 100).toStringAsFixed(0)}%',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
               ],
             ),
             const SizedBox(height: 8),
@@ -248,7 +291,9 @@ class _CampaignAnalyticsContent extends StatelessWidget {
               child: LinearProgressIndicator(
                 value: progress,
                 backgroundColor: surfaceMuted,
-                valueColor: AlwaysStoppedAnimation(progress > 0.9 ? warningOrange : barzGold),
+                valueColor: AlwaysStoppedAnimation(
+                  progress > 0.9 ? warningOrange : barzGold,
+                ),
                 minHeight: 8,
               ),
             ),
@@ -256,8 +301,14 @@ class _CampaignAnalyticsContent extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _BudgetStat(label: l10n.remaining, value: 'R\$ ${budget.remaining.toStringAsFixed(0)}'),
-                _BudgetStat(label: l10n.daily_average, value: 'R\$ ${budget.dailyAverage.toStringAsFixed(0)}'),
+                _BudgetStat(
+                  label: l10n.remaining,
+                  value: 'R\$ ${budget.remaining.toStringAsFixed(0)}',
+                ),
+                _BudgetStat(
+                  label: l10n.daily_average,
+                  value: 'R\$ ${budget.dailyAverage.toStringAsFixed(0)}',
+                ),
               ],
             ),
           ],
@@ -269,16 +320,23 @@ class _CampaignAnalyticsContent extends StatelessWidget {
   Widget _buildDailyChart(List<DailyMetrics> daily, AppLocalizations l10n) {
     if (daily.isEmpty) return const SizedBox.shrink();
 
-    final maxImpressions = daily.map((d) => d.impressions).reduce((a, b) => a > b ? a : b);
+    final maxImpressions = daily
+        .map((d) => d.impressions)
+        .reduce((a, b) => a > b ? a : b);
 
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BarzRadii.md)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(BarzRadii.md),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(l10n.daily_breakdown, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            Text(
+              l10n.daily_breakdown,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 16),
             SizedBox(
               height: 150,
@@ -365,19 +423,28 @@ class _MetricCard extends StatelessWidget {
   final String label;
   final String value;
 
-  const _MetricCard({required this.icon, required this.label, required this.value});
+  const _MetricCard({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Card(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BarzRadii.md)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(BarzRadii.md),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           children: [
             Icon(icon, color: barzGold, size: 24),
             const SizedBox(height: 8),
-            Text(value, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            Text(
+              value,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 4),
             Text(label, style: TextStyle(fontSize: 12, color: textSecondary)),
           ],
@@ -397,7 +464,10 @@ class _BudgetStat extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        ),
         Text(label, style: TextStyle(fontSize: 12, color: textSecondary)),
       ],
     );

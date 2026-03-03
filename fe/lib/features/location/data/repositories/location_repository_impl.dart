@@ -67,7 +67,10 @@ class LocationRepositoryImpl implements LocationRepository {
     double radiusInMeters = 100,
   }) async {
     try {
-      final result = await _datasource.getNearbyPartners(location, radiusInMeters: radiusInMeters);
+      final result = await _datasource.getNearbyPartners(
+        location,
+        radiusInMeters: radiusInMeters,
+      );
       return Right(result);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message, e.statusCode));
@@ -75,7 +78,9 @@ class LocationRepositoryImpl implements LocationRepository {
   }
 
   @override
-  Future<Either<Failure, void>> updateUserLocation(LocationModel location) async {
+  Future<Either<Failure, void>> updateUserLocation(
+    LocationModel location,
+  ) async {
     try {
       await _datasource.updateUserLocation(location);
       return const Right(null);
@@ -90,7 +95,9 @@ class LocationRepositoryImpl implements LocationRepository {
   }
 
   @override
-  Future<Either<Failure, String>> getWazeDeepLink(LocationModel destination) async {
+  Future<Either<Failure, String>> getWazeDeepLink(
+    LocationModel destination,
+  ) async {
     try {
       final result = _datasource.getWazeDeepLink(destination);
       return Right(result);
@@ -100,7 +107,9 @@ class LocationRepositoryImpl implements LocationRepository {
   }
 
   @override
-  Future<Either<Failure, String>> getGoogleMapsDeepLink(LocationModel destination) async {
+  Future<Either<Failure, String>> getGoogleMapsDeepLink(
+    LocationModel destination,
+  ) async {
     try {
       final result = _datasource.getGoogleMapsDeepLink(destination);
       return Right(result);
@@ -110,7 +119,9 @@ class LocationRepositoryImpl implements LocationRepository {
   }
 
   @override
-  Future<Either<Failure, String>> getAppleMapsDeepLink(LocationModel destination) async {
+  Future<Either<Failure, String>> getAppleMapsDeepLink(
+    LocationModel destination,
+  ) async {
     try {
       final result = _datasource.getAppleMapsDeepLink(destination);
       return Right(result);

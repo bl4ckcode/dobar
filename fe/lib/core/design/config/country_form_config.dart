@@ -1,12 +1,4 @@
-enum CountryCode {
-  br,
-  pt,
-  us,
-  es,
-  mx,
-  ar,
-  other,
-}
+enum CountryCode { br, pt, us, es, mx, ar, other }
 
 class CountryFormConfig {
   final CountryCode code;
@@ -32,7 +24,14 @@ class CountryFormConfig {
     this.businessIdMask,
     this.businessIdHint,
     this.requiresStateRegistration = false,
-    this.addressFields = const ['street', 'number', 'neighborhood', 'city', 'state', 'postalCode'],
+    this.addressFields = const [
+      'street',
+      'number',
+      'neighborhood',
+      'city',
+      'state',
+      'postalCode',
+    ],
   });
 
   static CountryFormConfig forCountry(String countryCode) {
@@ -52,7 +51,15 @@ class CountryFormConfig {
       businessIdMask: '##.###.###/####-##',
       businessIdHint: '00.000.000/0000-00',
       requiresStateRegistration: true,
-      addressFields: ['street', 'number', 'complement', 'neighborhood', 'city', 'state', 'cep'],
+      addressFields: [
+        'street',
+        'number',
+        'complement',
+        'neighborhood',
+        'city',
+        'state',
+        'cep',
+      ],
     ),
     'PT': CountryFormConfig(
       code: CountryCode.pt,
@@ -64,7 +71,14 @@ class CountryFormConfig {
       businessIdLabel: 'NIF',
       businessIdMask: '#########',
       businessIdHint: '123456789',
-      addressFields: ['street', 'number', 'floor', 'postalCode', 'city', 'district'],
+      addressFields: [
+        'street',
+        'number',
+        'floor',
+        'postalCode',
+        'city',
+        'district',
+      ],
     ),
     'US': CountryFormConfig(
       code: CountryCode.us,
@@ -88,7 +102,14 @@ class CountryFormConfig {
       businessIdLabel: 'CIF',
       businessIdMask: 'A########',
       businessIdHint: 'B12345678',
-      addressFields: ['street', 'number', 'floor', 'postalCode', 'city', 'province'],
+      addressFields: [
+        'street',
+        'number',
+        'floor',
+        'postalCode',
+        'city',
+        'province',
+      ],
     ),
     'MX': CountryFormConfig(
       code: CountryCode.mx,
@@ -100,7 +121,15 @@ class CountryFormConfig {
       businessIdLabel: 'RFC',
       businessIdMask: 'AAAA######AAA',
       businessIdHint: 'XAXX010101000',
-      addressFields: ['street', 'extNumber', 'intNumber', 'neighborhood', 'city', 'state', 'postalCode'],
+      addressFields: [
+        'street',
+        'extNumber',
+        'intNumber',
+        'neighborhood',
+        'city',
+        'state',
+        'postalCode',
+      ],
     ),
     'AR': CountryFormConfig(
       code: CountryCode.ar,
@@ -112,7 +141,15 @@ class CountryFormConfig {
       businessIdLabel: 'CUIT',
       businessIdMask: '##-########-#',
       businessIdHint: '20-12345678-9',
-      addressFields: ['street', 'number', 'floor', 'apartment', 'city', 'province', 'postalCode'],
+      addressFields: [
+        'street',
+        'number',
+        'floor',
+        'apartment',
+        'city',
+        'province',
+        'postalCode',
+      ],
     ),
     'OTHER': CountryFormConfig(
       code: CountryCode.other,
@@ -125,5 +162,6 @@ class CountryFormConfig {
     ),
   };
 
-  static List<String> get supportedCountries => _configs.keys.where((k) => k != 'OTHER').toList();
+  static List<String> get supportedCountries =>
+      _configs.keys.where((k) => k != 'OTHER').toList();
 }

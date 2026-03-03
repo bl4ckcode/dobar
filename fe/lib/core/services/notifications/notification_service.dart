@@ -97,7 +97,8 @@ class NotificationService {
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
   FlutterLocalNotificationsPlugin? _localNotifications;
 
-  final _notificationController = StreamController<BarzNotification>.broadcast();
+  final _notificationController =
+      StreamController<BarzNotification>.broadcast();
   final _tokenController = StreamController<String>.broadcast();
 
   String? _fcmToken;
@@ -133,12 +134,15 @@ class NotificationService {
     try {
       // Check current permission status first (doesn't prompt)
       final currentSettings = await _fcm.getNotificationSettings();
-      
-      if (currentSettings.authorizationStatus == AuthorizationStatus.authorized ||
-          currentSettings.authorizationStatus == AuthorizationStatus.provisional) {
+
+      if (currentSettings.authorizationStatus ==
+              AuthorizationStatus.authorized ||
+          currentSettings.authorizationStatus ==
+              AuthorizationStatus.provisional) {
         // Already authorized, proceed with full setup
         await _setupNotifications();
-      } else if (currentSettings.authorizationStatus == AuthorizationStatus.notDetermined) {
+      } else if (currentSettings.authorizationStatus ==
+          AuthorizationStatus.notDetermined) {
         // Not yet asked - we'll request later when appropriate
         debugPrint('[FCM] Permission not yet requested, will ask later');
         _initialized = true; // Mark as "initialized" so we don't block
@@ -228,7 +232,9 @@ class NotificationService {
   Future<void> _initLocalNotifications() async {
     _localNotifications = FlutterLocalNotificationsPlugin();
 
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
     const iosSettings = DarwinInitializationSettings(
       requestAlertPermission: false,
       requestBadgePermission: false,
@@ -274,7 +280,8 @@ class NotificationService {
 
       await _localNotifications
           ?.resolvePlatformSpecificImplementation<
-              AndroidFlutterLocalNotificationsPlugin>()
+            AndroidFlutterLocalNotificationsPlugin
+          >()
           ?.createNotificationChannel(channel);
     }
   }

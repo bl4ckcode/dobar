@@ -14,9 +14,7 @@ class BarMenuCard extends StatelessWidget {
     return Card(
       color: backgroundColorDark,
       elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Column(
         children: [
           Image.network(item.img),

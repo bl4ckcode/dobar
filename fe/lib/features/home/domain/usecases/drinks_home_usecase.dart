@@ -10,7 +10,9 @@ class DrinksHomeUseCase {
 
   DrinksHomeUseCase({required this.repository});
 
-  Future<Either<Failure, List<PartnersBaseModel>>> getPartners(PartnersParams params) async {
+  Future<Either<Failure, List<PartnersBaseModel>>> getPartners(
+    PartnersParams params,
+  ) async {
     return await repository.getPartners(params);
   }
 }

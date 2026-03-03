@@ -24,11 +24,16 @@ class PromotionsUsecase {
     );
   }
 
-  Future<Either<Failure, List<PromotionModel>>> getPromotionsByDiscountType(PromoDiscountType type) {
+  Future<Either<Failure, List<PromotionModel>>> getPromotionsByDiscountType(
+    PromoDiscountType type,
+  ) {
     return _repository.getPromotionsByDiscountType(type);
   }
 
-  Future<Either<Failure, List<PromotionModel>>> getPromotionsByBar(int barId, {bool activeOnly = true}) {
+  Future<Either<Failure, List<PromotionModel>>> getPromotionsByBar(
+    int barId, {
+    bool activeOnly = true,
+  }) {
     return _repository.getPromotionsByBar(barId, activeOnly: activeOnly);
   }
 
@@ -40,7 +45,9 @@ class PromotionsUsecase {
     return _repository.getOffers();
   }
 
-  Future<Either<Failure, List<OfferModel>>> getOffersByPartnerId(int partnerId) {
+  Future<Either<Failure, List<OfferModel>>> getOffersByPartnerId(
+    int partnerId,
+  ) {
     return _repository.getOffersByPartnerId(partnerId);
   }
 

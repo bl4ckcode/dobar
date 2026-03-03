@@ -17,6 +17,7 @@ sealed class SessionState with _$SessionState {
   /// Session is ready - user is authenticated
   const factory SessionState.ready({
     required UserSession session,
+
     /// Allows user to temporarily view client mode even if they have bar access
     @Default(false) bool forceClientMode,
   }) = SessionReady;
@@ -28,22 +29,20 @@ sealed class SessionState with _$SessionState {
   const factory SessionState.loggedOut() = SessionLoggedOut;
 
   /// Helper to get current session if in ready state
-  UserSession? get currentSession => maybeMap(
-        ready: (state) => state.session,
-        orElse: () => null,
-      );
+  UserSession? get currentSession =>
+      maybeMap(ready: (state) => state.session, orElse: () => null);
 
   /// Check if session is ready
   bool get isReady => this is SessionReady;
 
   /// Get effective user type considering forceClientMode
   UserType? get effectiveUserType => maybeMap(
-        ready: (state) {
-          if (state.forceClientMode) return UserType.client;
-          return state.session.userType;
-        },
-        orElse: () => null,
-      );
+    ready: (state) {
+      if (state.forceClientMode) return UserType.client;
+      return state.session.userType;
+    },
+    orElse: () => null,
+  );
 
   /// Check if currently showing business mode
   bool get isBusinessMode => effectiveUserType == UserType.business;

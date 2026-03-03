@@ -17,11 +17,7 @@ class MenuReaderPage extends StatefulWidget {
   final int barId;
   final int menuId;
 
-  const MenuReaderPage({
-    super.key,
-    required this.barId,
-    required this.menuId,
-  });
+  const MenuReaderPage({super.key, required this.barId, required this.menuId});
 
   @override
   State<MenuReaderPage> createState() => _MenuReaderPageState();
@@ -96,10 +92,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
           const Expanded(
             child: Text(
               'Menu Reader AI',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -112,23 +105,20 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          LoadingAnimationWidget.staggeredDotsWave(
-            color: barzGold,
-            size: 60,
-          ),
+          LoadingAnimationWidget.staggeredDotsWave(color: barzGold, size: 60),
           const SizedBox(height: BarzSpacing.lg),
           Text(
             'Analyzing your menu...',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: textSecondary,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(color: textSecondary),
           ),
           const SizedBox(height: BarzSpacing.sm),
           Text(
             'This may take a few seconds',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: textTertiary,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: textTertiary),
           ),
         ],
       ),
@@ -194,9 +184,9 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
         Text(
           'Take a photo of your physical menu and our AI will extract all items automatically',
           textAlign: TextAlign.center,
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: textSecondary,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyLarge?.copyWith(color: textSecondary),
         ),
       ],
     );
@@ -220,7 +210,9 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
         context.read<MenuReaderBloc>().add(
           ExtractMenuFromImage(
             imageBytes: _selectedImageBytes!,
-            fileName: _selectedImageName ?? 'menu_${DateTime.now().millisecondsSinceEpoch}.jpg',
+            fileName:
+                _selectedImageName ??
+                'menu_${DateTime.now().millisecondsSinceEpoch}.jpg',
             barId: widget.barId,
             languageHint: 'pt-BR',
           ),
@@ -310,14 +302,18 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
                   color: barzGold.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(BarzRadii.sm),
                 ),
-                child: const Icon(Icons.link_rounded, color: barzGold, size: 24),
+                child: const Icon(
+                  Icons.link_rounded,
+                  color: barzGold,
+                  size: 24,
+                ),
               ),
               const SizedBox(width: BarzSpacing.md),
               Text(
                 'Menu URL',
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -345,14 +341,14 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
           const SizedBox(height: BarzSpacing.sm),
           Text(
             'Supports: PDF menus, images (JPG, PNG), and web pages',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: textTertiary,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: textTertiary),
           ),
           const SizedBox(height: BarzSpacing.lg),
           ElevatedButton.icon(
-            onPressed: _urlController.text.trim().isEmpty 
-                ? null 
+            onPressed: _urlController.text.trim().isEmpty
+                ? null
                 : () => _extractFromUrl(context),
             icon: const Icon(Icons.auto_awesome),
             label: const Text('Analyze Menu'),
@@ -393,7 +389,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
   void _extractFromUrl(BuildContext context) {
     final url = _urlController.text.trim();
     if (url.isEmpty) return;
-    
+
     final uri = Uri.tryParse(url);
     if (uri == null || !uri.hasScheme) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -404,7 +400,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
       );
       return;
     }
-    
+
     context.read<MenuReaderBloc>().add(
       ExtractMenuFromUrl(
         menuUrl: url,
@@ -453,9 +449,9 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: textSecondary,
-                      ),
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium?.copyWith(color: textSecondary),
                     ),
                   ],
                 ),
@@ -512,9 +508,9 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
           Expanded(
             child: Text(
               text,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: textSecondary,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: textSecondary),
             ),
           ),
         ],
@@ -530,7 +526,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
         maxHeight: 2048,
         imageQuality: 85,
       );
-      
+
       if (image != null) {
         final bytes = await image.readAsBytes();
         setState(() {

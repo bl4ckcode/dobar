@@ -4,19 +4,10 @@ part 'ad_subscription.freezed.dart';
 part 'ad_subscription.g.dart';
 
 /// Subscription tier enum
-enum SubscriptionTier {
-  regular,
-  master,
-  vip,
-}
+enum SubscriptionTier { regular, master, vip }
 
 /// Subscription status enum
-enum SubscriptionStatus {
-  active,
-  cancelled,
-  expired,
-  pending,
-}
+enum SubscriptionStatus { active, cancelled, expired, pending }
 
 /// Subscription plan model (from GET /advertising/plans)
 @freezed

@@ -64,6 +64,7 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return MultiBlocProvider(
       providers: [BlocProvider.value(value: _staffBloc)],
       child: BlocBuilder<SessionBloc, SessionState>(
@@ -82,10 +83,9 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
             _staffBloc.add(StaffEvent.loadStaff(barId: activeBar.barId));
           }
 
-          final isDark = Theme.of(context).brightness == Brightness.dark;
-          final bgColor = isDark
-              ? const Color(0xFF0A0A0A)
-              : const Color(0xFFF9F9F9);
+          final dobar = context.dobarColors;
+          final isDark = theme.brightness == Brightness.dark;
+          final bgColor = dobar.background;
 
           return Scaffold(
             backgroundColor: bgColor,
@@ -171,9 +171,10 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
   }
 
   Widget _buildHeader(bool isDark, StaffState staffState, int barId) {
-    final textColor = isDark ? textOnDark : textPrimary;
-    final mutedTextColor = isDark ? textTertiary : textSecondary;
-    final iconBg = isDark ? const Color(0xFF1E1E1E) : Colors.grey[200];
+    final dobar = context.dobarColors;
+    final textColor = dobar.labelPrimary;
+    final mutedTextColor = dobar.labelSecondary;
+    final iconBg = dobar.surfaceElevated;
 
     final staffCount = staffState.maybeWhen(
       loaded: (list) => list.length,
@@ -253,7 +254,7 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+      backgroundColor: context.dobarColors.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -289,14 +290,12 @@ class _StaffRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark
-        ? const Color(0xFF18181B)
-        : Colors.white; // zinc-900 equivalent approx
-    final textColor = isDark ? Colors.white : Colors.black87;
-    final mutedColor = isDark ? Colors.white54 : Colors.black54;
-    final avatarBg = isDark
-        ? const Color(0xFF27272A)
-        : Colors.grey[200]; // zinc-800
+    final theme = Theme.of(context);
+    final dobar = context.dobarColors;
+    final cardBg = dobar.surface;
+    final textColor = dobar.labelPrimary;
+    final mutedColor = dobar.labelSecondary;
+    final avatarBg = dobar.surfaceElevated;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
@@ -306,7 +305,6 @@ class _StaffRow extends StatelessWidget {
       ),
       child: Row(
         children: [
-          // Avatar
           Container(
             width: 40,
             height: 40,
@@ -317,13 +315,11 @@ class _StaffRow extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
-                color: isDark ? Colors.white70 : Colors.black87,
+                color: dobar.labelPrimary.withValues(alpha: 0.7),
               ),
             ),
           ),
           const SizedBox(width: 16),
-
-          // Info
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -348,16 +344,12 @@ class _StaffRow extends StatelessWidget {
               ],
             ),
           ),
-
-          // Badge
           _RoleBadge(role: member.role),
           const SizedBox(width: 8),
-
-          // Actions
           Theme(
-            data: Theme.of(context).copyWith(
+            data: theme.copyWith(
               popupMenuTheme: PopupMenuThemeData(
-                color: isDark ? const Color(0xFF27272A) : Colors.white,
+                color: dobar.surface,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -369,7 +361,7 @@ class _StaffRow extends StatelessWidget {
               offset: const Offset(0, 40),
               itemBuilder: (context) => [
                 PopupMenuItem<String>(
-                  enabled: false,
+                  value: 'change_role',
                   child: Row(
                     children: [
                       Icon(Icons.shield_outlined, size: 16, color: textColor),
@@ -382,34 +374,15 @@ class _StaffRow extends StatelessWidget {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
+                      const Spacer(),
+                      Icon(Icons.chevron_right, size: 16, color: mutedColor),
                     ],
-                  ),
-                ),
-                ...BarRole.values.map(
-                  (r) => PopupMenuItem<String>(
-                    value: 'role_${r.name}',
-                    height: 40,
-                    onTap: () => onChangeRole(r),
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 24.0),
-                      child: Text(
-                        r.displayName,
-                        style: TextStyle(
-                          color: member.role == r ? barzGold : textColor,
-                          fontSize: 13,
-                          fontWeight: member.role == r
-                              ? FontWeight.w600
-                              : FontWeight.normal,
-                        ),
-                      ),
-                    ),
                   ),
                 ),
                 const PopupMenuDivider(),
                 PopupMenuItem<String>(
                   value: 'remove',
                   height: 40,
-                  onTap: onRemove,
                   child: Row(
                     children: [
                       const Icon(
@@ -426,11 +399,58 @@ class _StaffRow extends StatelessWidget {
                   ),
                 ),
               ],
+              onSelected: (value) {
+                if (value == 'change_role') {
+                  _showRoleSelector(context, dobar);
+                } else if (value == 'remove') {
+                  onRemove();
+                }
+              },
             ),
           ),
         ],
       ),
     );
+  }
+
+  void _showRoleSelector(BuildContext ctx, DobarColors dobar) {
+    final renderBox = ctx.findRenderObject() as RenderBox;
+    final offset = renderBox.localToGlobal(Offset.zero);
+    final size = renderBox.size;
+
+    showMenu<BarRole>(
+      context: ctx,
+      position: RelativeRect.fromLTRB(
+        offset.dx + size.width - 200,
+        offset.dy + size.height,
+        offset.dx + size.width,
+        offset.dy + size.height + 200,
+      ),
+      color: dobar.surface,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      items: BarRole.values
+          .map(
+            (r) => PopupMenuItem<BarRole>(
+              value: r,
+              height: 40,
+              child: Text(
+                r.displayName,
+                style: TextStyle(
+                  color: member.role == r ? barzGold : dobar.labelPrimary,
+                  fontSize: 13,
+                  fontWeight: member.role == r
+                      ? FontWeight.w600
+                      : FontWeight.normal,
+                ),
+              ),
+            ),
+          )
+          .toList(),
+    ).then((selected) {
+      if (selected != null) {
+        onChangeRole(selected);
+      }
+    });
   }
 }
 
@@ -508,14 +528,12 @@ class _InviteStaffSheetState extends State<_InviteStaffSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final textColor = widget.isDark ? Colors.white : Colors.black87;
-    final mutedColor = widget.isDark ? Colors.white54 : Colors.black54;
-    final inputBg = widget.isDark
-        ? const Color(0xFF27272A)
-        : Colors.grey[100]; // zinc-800
-    final borderColor = widget.isDark
-        ? const Color(0xFF3F3F46)
-        : Colors.grey[300]!; // zinc-700
+    final theme = Theme.of(context);
+    final dobar = context.dobarColors;
+    final textColor = dobar.labelPrimary;
+    final mutedColor = dobar.labelSecondary;
+    final inputBg = dobar.surfaceElevated;
+    final borderColor = theme.colorScheme.outline;
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -535,9 +553,7 @@ class _InviteStaffSheetState extends State<_InviteStaffSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: widget.isDark
-                    ? const Color(0xFF3F3F46)
-                    : Colors.grey[300],
+                color: theme.colorScheme.outline,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -559,9 +575,7 @@ class _InviteStaffSheetState extends State<_InviteStaffSheet> {
                 onPressed: () => Navigator.pop(context),
                 icon: Icon(Icons.close, color: mutedColor, size: 20),
                 style: IconButton.styleFrom(
-                  backgroundColor: widget.isDark
-                      ? const Color(0xFF27272A)
-                      : Colors.grey[100],
+                  backgroundColor: dobar.surfaceElevated,
                 ),
               ),
             ],
@@ -619,9 +633,7 @@ class _InviteStaffSheetState extends State<_InviteStaffSheet> {
           const SizedBox(height: 6),
           DropdownButtonFormField<BarRole>(
             initialValue: _selectedRole,
-            dropdownColor: widget.isDark
-                ? const Color(0xFF27272A)
-                : Colors.white,
+            dropdownColor: dobar.surface,
             style: TextStyle(color: textColor, fontSize: 14),
             icon: Icon(Icons.keyboard_arrow_down, color: mutedColor),
             decoration: InputDecoration(

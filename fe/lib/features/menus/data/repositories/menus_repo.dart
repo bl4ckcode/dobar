@@ -10,13 +10,14 @@ class MenusRepositoryImpl implements AbstractMenusRepository {
   Stream<Either<Failure, List<Product>>> subscribeToMenuUpdates(int barId) {
     final socketService = MenuSocketService(barId);
 
-    return socketService.menuStream.map((items) {
-      return right<Failure, List<Product>>(items);
-    }).handleError((error) {
-      return left<Failure, List<Product>>(ServerFailure(
-        error.toString(),
-        500,
-      ));
-    });
+    return socketService.menuStream
+        .map((items) {
+          return right<Failure, List<Product>>(items);
+        })
+        .handleError((error) {
+          return left<Failure, List<Product>>(
+            ServerFailure(error.toString(), 500),
+          );
+        });
   }
 }

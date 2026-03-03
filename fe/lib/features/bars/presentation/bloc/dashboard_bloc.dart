@@ -67,7 +67,10 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     on<ToggleBarOpen>(_onToggleBarOpen);
   }
 
-  Future<void> _onLoadDashboard(LoadDashboard event, Emitter<DashboardState> emit) async {
+  Future<void> _onLoadDashboard(
+    LoadDashboard event,
+    Emitter<DashboardState> emit,
+  ) async {
     emit(DashboardLoading());
     try {
       final results = await Future.wait([
@@ -76,11 +79,13 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         dataSource.getBarOrders(event.barId, limit: 5),
       ]);
 
-      emit(DashboardLoaded(
-        stats: results[0] as DashboardStats,
-        status: results[1] as BarStatus,
-        recentOrders: results[2] as RecentOrdersResponse,
-      ));
+      emit(
+        DashboardLoaded(
+          stats: results[0] as DashboardStats,
+          status: results[1] as BarStatus,
+          recentOrders: results[2] as RecentOrdersResponse,
+        ),
+      );
     } on ServerException catch (e) {
       emit(DashboardError(message: e.message));
     } catch (e) {
@@ -88,7 +93,10 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     }
   }
 
-  Future<void> _onRefreshDashboard(RefreshDashboard event, Emitter<DashboardState> emit) async {
+  Future<void> _onRefreshDashboard(
+    RefreshDashboard event,
+    Emitter<DashboardState> emit,
+  ) async {
     final currentState = state;
     try {
       final results = await Future.wait([
@@ -97,11 +105,13 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
         dataSource.getBarOrders(event.barId, limit: 5),
       ]);
 
-      emit(DashboardLoaded(
-        stats: results[0] as DashboardStats,
-        status: results[1] as BarStatus,
-        recentOrders: results[2] as RecentOrdersResponse,
-      ));
+      emit(
+        DashboardLoaded(
+          stats: results[0] as DashboardStats,
+          status: results[1] as BarStatus,
+          recentOrders: results[2] as RecentOrdersResponse,
+        ),
+      );
     } catch (e) {
       if (currentState is DashboardLoaded) {
         emit(currentState);
@@ -109,12 +119,19 @@ class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
     }
   }
 
-  Future<void> _onToggleBarOpen(ToggleBarOpen event, Emitter<DashboardState> emit) async {
+  Future<void> _onToggleBarOpen(
+    ToggleBarOpen event,
+    Emitter<DashboardState> emit,
+  ) async {
     final currentState = state;
     if (currentState is! DashboardLoaded) return;
 
     try {
-      final newStatus = await dataSource.toggleBarStatus(event.barId, event.isOpen, reason: event.reason);
+      final newStatus = await dataSource.toggleBarStatus(
+        event.barId,
+        event.isOpen,
+        reason: event.reason,
+      );
       emit(currentState.copyWith(status: newStatus));
     } on ServerException catch (e) {
       emit(DashboardError(message: e.message));

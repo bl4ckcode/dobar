@@ -3,7 +3,7 @@ import 'package:barz/core/storage/secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Service to handle app version migrations and prevent logout issues during updates
-/// 
+///
 /// This service is critical for a payments app because:
 /// 1. Tracks the app version that was last run
 /// 2. Validates storage integrity on app startup
@@ -15,7 +15,7 @@ class VersionMigrationService {
   static const _buildNumberKey = 'barz_build_number';
   static const _lastRunKey = 'barz_last_run_timestamp';
   static const _migrationCompleteKey = 'barz_migration_complete';
-  
+
   // Current app version - should match pubspec.yaml
   static const String currentVersion = '1.0.0';
   static const int currentBuildNumber = 1;
@@ -24,9 +24,8 @@ class VersionMigrationService {
   late final SharedPreferences _prefs;
   bool _initialized = false;
 
-  VersionMigrationService({
-    required SecureStorage secureStorage,
-  }) : _secureStorage = secureStorage;
+  VersionMigrationService({required SecureStorage secureStorage})
+    : _secureStorage = secureStorage;
 
   void _debugLog(String message) {
     if (kDebugMode) {
@@ -47,15 +46,17 @@ class VersionMigrationService {
     if (!_initialized) {
       await init();
     }
-    
+
     try {
       _debugLog('🔄 Starting version migration check...');
 
       final storedVersion = _prefs.getString(_versionKey);
       final storedBuildNumber = _prefs.getString(_buildNumberKey);
-      
+
       _debugLog('Stored version: $storedVersion (build: $storedBuildNumber)');
-      _debugLog('Current version: $currentVersion (build: $currentBuildNumber)');
+      _debugLog(
+        'Current version: $currentVersion (build: $currentBuildNumber)',
+      );
 
       // First run or fresh install
       if (storedVersion == null) {
@@ -66,8 +67,9 @@ class VersionMigrationService {
       }
 
       // Check if app was updated
-      final wasUpdated = storedVersion != currentVersion || 
-                        storedBuildNumber != currentBuildNumber.toString();
+      final wasUpdated =
+          storedVersion != currentVersion ||
+          storedBuildNumber != currentBuildNumber.toString();
 
       if (wasUpdated) {
         _debugLog('🆕 App update detected: $storedVersion → $currentVersion');
@@ -92,13 +94,18 @@ class VersionMigrationService {
   }
 
   /// Handles app update scenarios
-  Future<void> _handleAppUpdate(String? oldVersion, String? oldBuildNumber) async {
+  Future<void> _handleAppUpdate(
+    String? oldVersion,
+    String? oldBuildNumber,
+  ) async {
     try {
       // Validate that storage is still accessible after update
       final storageValid = await _validateStorageIntegrity();
 
       if (!storageValid) {
-        _debugLog('⚠️ Storage validation failed after update - clearing storage');
+        _debugLog(
+          '⚠️ Storage validation failed after update - clearing storage',
+        );
         await _clearAllStorageOnError();
         await _saveCurrentVersion();
         return;
@@ -127,14 +134,19 @@ class VersionMigrationService {
   }
 
   /// Run migrations specific to version transitions
-  Future<void> _runVersionSpecificMigrations(String? oldVersion, String newVersion) async {
+  Future<void> _runVersionSpecificMigrations(
+    String? oldVersion,
+    String newVersion,
+  ) async {
     // Example: Migrate from 1.0.0 to 1.1.0
     // if (oldVersion == '1.0.0' && _compareVersions(newVersion, '1.1.0') >= 0) {
     //   await _migrate_1_0_0_to_1_1_0();
     // }
-    
+
     // Add your version-specific migrations here
-    _debugLog('Running version-specific migrations from $oldVersion to $newVersion');
+    _debugLog(
+      'Running version-specific migrations from $oldVersion to $newVersion',
+    );
   }
 
   /// Validates that all critical storage keys are accessible and valid
@@ -144,7 +156,7 @@ class VersionMigrationService {
 
       // Check if tokens are accessible
       final jwt = await _secureStorage.getJwt();
-      
+
       // If user was logged in but token is not readable, storage is corrupted
       if (jwt != null && jwt.isEmpty) {
         _debugLog('⚠️ Empty JWT token detected - storage may be corrupted');
@@ -172,7 +184,7 @@ class VersionMigrationService {
   bool _validateTokenFormat(String token) {
     // JWT tokens should be at least 20 characters and contain dots
     if (token.length < 20) return false;
-    
+
     // Most tokens (JWT, Bearer) have some structure
     return token.isNotEmpty && !token.contains('null');
   }
@@ -181,12 +193,12 @@ class VersionMigrationService {
   Future<void> _clearAllStorageOnError() async {
     try {
       _debugLog('🗑️ Clearing all storage due to error...');
-      
+
       await _secureStorage.deleteJwt();
       await _secureStorage.deleteUserProfile();
-      
+
       // Don't clear version info - keep it for tracking
-      
+
       _debugLog('✅ Storage cleared');
     } catch (e) {
       _debugLog('❌ Error clearing storage: $e');

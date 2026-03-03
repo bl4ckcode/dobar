@@ -5,11 +5,7 @@ import '../../../domain/models/menu/menu_type.dart';
 import '../../../../menus/presentation/widgets/menu_card.dart';
 
 class BarMenusList extends StatefulWidget {
-  const BarMenusList({
-    super.key,
-    required this.list,
-    required this.menuType,
-  });
+  const BarMenusList({super.key, required this.list, required this.menuType});
 
   final List<ItemMenuUiModel> list;
   final MenuType menuType;

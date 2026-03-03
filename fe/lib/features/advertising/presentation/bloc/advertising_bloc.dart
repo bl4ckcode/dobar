@@ -46,10 +46,7 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
       );
       emit(state.copyWith(featuredAds: ads, isLoadingFeatured: false));
     } catch (e) {
-      emit(state.copyWith(
-        isLoadingFeatured: false,
-        error: e.toString(),
-      ));
+      emit(state.copyWith(isLoadingFeatured: false, error: e.toString()));
     }
   }
 
@@ -68,10 +65,7 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
       );
       emit(state.copyWith(searchAds: ads, isLoadingSearch: false));
     } catch (e) {
-      emit(state.copyWith(
-        isLoadingSearch: false,
-        error: e.toString(),
-      ));
+      emit(state.copyWith(isLoadingSearch: false, error: e.toString()));
     }
   }
 
@@ -89,10 +83,7 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
       );
       emit(state.copyWith(mapAds: ads, isLoadingMap: false));
     } catch (e) {
-      emit(state.copyWith(
-        isLoadingMap: false,
-        error: e.toString(),
-      ));
+      emit(state.copyWith(isLoadingMap: false, error: e.toString()));
     }
   }
 
@@ -135,10 +126,7 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
       final plans = await _usecase.getPlans(regionCode: event.regionCode);
       emit(state.copyWith(plans: plans, isLoadingPlans: false));
     } catch (e) {
-      emit(state.copyWith(
-        isLoadingPlans: false,
-        error: e.toString(),
-      ));
+      emit(state.copyWith(isLoadingPlans: false, error: e.toString()));
     }
   }
 
@@ -149,15 +137,14 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
     emit(state.copyWith(isLoadingSubscription: true, error: null));
     try {
       final subscription = await _usecase.getSubscription(event.barId);
-      emit(state.copyWith(
-        subscription: subscription,
-        isLoadingSubscription: false,
-      ));
+      emit(
+        state.copyWith(
+          subscription: subscription,
+          isLoadingSubscription: false,
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        isLoadingSubscription: false,
-        error: e.toString(),
-      ));
+      emit(state.copyWith(isLoadingSubscription: false, error: e.toString()));
     }
   }
 
@@ -172,16 +159,15 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
         tier: event.tier,
         regionCode: event.regionCode,
       );
-      emit(state.copyWith(
-        subscription: subscription,
-        isLoadingSubscription: false,
-        successMessage: 'Subscription created successfully!',
-      ));
+      emit(
+        state.copyWith(
+          subscription: subscription,
+          isLoadingSubscription: false,
+          successMessage: 'Subscription created successfully!',
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        isLoadingSubscription: false,
-        error: e.toString(),
-      ));
+      emit(state.copyWith(isLoadingSubscription: false, error: e.toString()));
     }
   }
 
@@ -192,16 +178,15 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
     emit(state.copyWith(isLoadingSubscription: true, error: null));
     try {
       await _usecase.cancelSubscription(event.subscriptionId);
-      emit(state.copyWith(
-        subscription: null,
-        isLoadingSubscription: false,
-        successMessage: 'Subscription cancelled',
-      ));
+      emit(
+        state.copyWith(
+          subscription: null,
+          isLoadingSubscription: false,
+          successMessage: 'Subscription cancelled',
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        isLoadingSubscription: false,
-        error: e.toString(),
-      ));
+      emit(state.copyWith(isLoadingSubscription: false, error: e.toString()));
     }
   }
 
@@ -214,10 +199,7 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
       final campaigns = await _usecase.getCampaigns(event.barId);
       emit(state.copyWith(campaigns: campaigns, isLoadingCampaigns: false));
     } catch (e) {
-      emit(state.copyWith(
-        isLoadingCampaigns: false,
-        error: e.toString(),
-      ));
+      emit(state.copyWith(isLoadingCampaigns: false, error: e.toString()));
     }
   }
 
@@ -228,15 +210,11 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
     emit(state.copyWith(isLoadingCampaign: true, error: null));
     try {
       final campaign = await _usecase.getCampaign(event.campaignId);
-      emit(state.copyWith(
-        selectedCampaign: campaign,
-        isLoadingCampaign: false,
-      ));
+      emit(
+        state.copyWith(selectedCampaign: campaign, isLoadingCampaign: false),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        isLoadingCampaign: false,
-        error: e.toString(),
-      ));
+      emit(state.copyWith(isLoadingCampaign: false, error: e.toString()));
     }
   }
 
@@ -248,17 +226,16 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
     try {
       final campaign = await _usecase.createCampaign(event.request);
       final updatedCampaigns = [...state.campaigns, campaign];
-      emit(state.copyWith(
-        campaigns: updatedCampaigns,
-        selectedCampaign: campaign,
-        isLoadingCampaign: false,
-        successMessage: 'Campaign created successfully!',
-      ));
+      emit(
+        state.copyWith(
+          campaigns: updatedCampaigns,
+          selectedCampaign: campaign,
+          isLoadingCampaign: false,
+          successMessage: 'Campaign created successfully!',
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        isLoadingCampaign: false,
-        error: e.toString(),
-      ));
+      emit(state.copyWith(isLoadingCampaign: false, error: e.toString()));
     }
   }
 
@@ -272,17 +249,16 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
       final updatedCampaigns = state.campaigns
           .map((c) => c.id == campaign.id ? campaign : c)
           .toList();
-      emit(state.copyWith(
-        campaigns: updatedCampaigns,
-        selectedCampaign: campaign,
-        isLoadingCampaign: false,
-        successMessage: 'Campaign paused',
-      ));
+      emit(
+        state.copyWith(
+          campaigns: updatedCampaigns,
+          selectedCampaign: campaign,
+          isLoadingCampaign: false,
+          successMessage: 'Campaign paused',
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        isLoadingCampaign: false,
-        error: e.toString(),
-      ));
+      emit(state.copyWith(isLoadingCampaign: false, error: e.toString()));
     }
   }
 
@@ -296,17 +272,16 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
       final updatedCampaigns = state.campaigns
           .map((c) => c.id == campaign.id ? campaign : c)
           .toList();
-      emit(state.copyWith(
-        campaigns: updatedCampaigns,
-        selectedCampaign: campaign,
-        isLoadingCampaign: false,
-        successMessage: 'Campaign resumed',
-      ));
+      emit(
+        state.copyWith(
+          campaigns: updatedCampaigns,
+          selectedCampaign: campaign,
+          isLoadingCampaign: false,
+          successMessage: 'Campaign resumed',
+        ),
+      );
     } catch (e) {
-      emit(state.copyWith(
-        isLoadingCampaign: false,
-        error: e.toString(),
-      ));
+      emit(state.copyWith(isLoadingCampaign: false, error: e.toString()));
     }
   }
 
@@ -319,10 +294,7 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
       final analytics = await _usecase.getCampaignAnalytics(event.campaignId);
       emit(state.copyWith(analytics: analytics, isLoadingAnalytics: false));
     } catch (e) {
-      emit(state.copyWith(
-        isLoadingAnalytics: false,
-        error: e.toString(),
-      ));
+      emit(state.copyWith(isLoadingAnalytics: false, error: e.toString()));
     }
   }
 }

@@ -24,13 +24,16 @@ class ServerException extends AppException {
     super.originalError,
   });
 
-  factory ServerException.fromResponse(Map<String, dynamic>? data, int? statusCode) {
+  factory ServerException.fromResponse(
+    Map<String, dynamic>? data,
+    int? statusCode,
+  ) {
     final errorCode = data?['error_code'] as String?;
     final message = data?['message'] ?? data?['detail'] as String?;
-    
+
     return ServerException(
-      errorCode: errorCode != null 
-          ? ErrorCode.fromCode(errorCode) 
+      errorCode: errorCode != null
+          ? ErrorCode.fromCode(errorCode)
           : ErrorCode.fromHttpStatus(statusCode ?? 500),
       message: message,
       statusCode: statusCode,
@@ -38,10 +41,7 @@ class ServerException extends AppException {
   }
 
   factory ServerException.unknown([String? message]) {
-    return ServerException(
-      errorCode: ErrorCode.unknown,
-      message: message,
-    );
+    return ServerException(errorCode: ErrorCode.unknown, message: message);
   }
 }
 
@@ -61,7 +61,10 @@ class NetworkException extends AppException {
   }
 
   factory NetworkException.connectionError([String? message]) {
-    return NetworkException(errorCode: ErrorCode.networkError, message: message);
+    return NetworkException(
+      errorCode: ErrorCode.networkError,
+      message: message,
+    );
   }
 }
 
@@ -98,7 +101,10 @@ class PaymentException extends AppException {
   });
 
   factory PaymentException.declined([String? message]) {
-    return PaymentException(errorCode: ErrorCode.paymentDeclined, message: message);
+    return PaymentException(
+      errorCode: ErrorCode.paymentDeclined,
+      message: message,
+    );
   }
 
   factory PaymentException.insufficientFunds() {
@@ -117,19 +123,17 @@ class PaymentException extends AppException {
 class ValidationException extends AppException {
   final Map<String, List<String>>? fieldErrors;
 
-  const ValidationException({
-    super.message,
-    this.fieldErrors,
-  }) : super(errorCode: ErrorCode.validationError);
+  const ValidationException({super.message, this.fieldErrors})
+    : super(errorCode: ErrorCode.validationError);
 
   factory ValidationException.fromResponse(Map<String, dynamic>? data) {
     final errors = data?['errors'] as Map<String, dynamic>?;
     return ValidationException(
       message: data?['message'] as String?,
-      fieldErrors: errors?.map((key, value) => MapEntry(
-        key,
-        (value as List).map((e) => e.toString()).toList(),
-      )),
+      fieldErrors: errors?.map(
+        (key, value) =>
+            MapEntry(key, (value as List).map((e) => e.toString()).toList()),
+      ),
     );
   }
 
@@ -139,16 +143,17 @@ class ValidationException extends AppException {
 }
 
 class LocationException extends AppException {
-  const LocationException({
-    required super.errorCode,
-    super.message,
-  });
+  const LocationException({required super.errorCode, super.message});
 
   factory LocationException.permissionDenied() {
-    return const LocationException(errorCode: ErrorCode.locationPermissionDenied);
+    return const LocationException(
+      errorCode: ErrorCode.locationPermissionDenied,
+    );
   }
 
   factory LocationException.serviceDisabled() {
-    return const LocationException(errorCode: ErrorCode.locationServiceDisabled);
+    return const LocationException(
+      errorCode: ErrorCode.locationServiceDisabled,
+    );
   }
 }

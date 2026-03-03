@@ -23,10 +23,8 @@ class EmailPromptModal extends StatefulWidget {
     return showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => EmailPromptModal(
-        onSubmit: onSubmit,
-        onDismiss: onDismiss,
-      ),
+      builder: (ctx) =>
+          EmailPromptModal(onSubmit: onSubmit, onDismiss: onDismiss),
     );
   }
 }
@@ -108,9 +106,15 @@ class _EmailPromptModalState extends State<EmailPromptModal> {
               ),
             ),
             const SizedBox(height: 8),
-            _BenefitRow(icon: Icons.receipt_long, text: l10n.email_benefit_receipts),
+            _BenefitRow(
+              icon: Icons.receipt_long,
+              text: l10n.email_benefit_receipts,
+            ),
             _BenefitRow(icon: Icons.history, text: l10n.email_benefit_history),
-            _BenefitRow(icon: Icons.lock_reset, text: l10n.email_benefit_recovery),
+            _BenefitRow(
+              icon: Icons.lock_reset,
+              text: l10n.email_benefit_recovery,
+            ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _controller,
@@ -161,18 +165,14 @@ class _BenefitRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
           Icon(icon, size: 16, color: Colors.green),
           const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ),
+          Expanded(child: Text(text, style: theme.textTheme.bodySmall)),
         ],
       ),
     );

@@ -30,10 +30,10 @@ class SyncService {
 
   final ConnectivityService _connectivity = ConnectivityService();
   final HiveStorageService _storage = HiveStorageService();
-  
+
   final _syncEventController = StreamController<SyncEvent>.broadcast();
   final Map<SyncTaskType, SyncTaskExecutor> _executors = {};
-  
+
   bool _isInitialized = false;
   bool _isSyncing = false;
   Timer? _syncTimer;
@@ -46,12 +46,12 @@ class SyncService {
     _isInitialized = true;
 
     _connectivity.registerOnReconnect(_onReconnect);
-    
+
     _syncTimer = Timer.periodic(
       const Duration(minutes: 5),
       (_) => processPendingTasks(),
     );
-    
+
     debugPrint('[SyncService] Initialized');
   }
 
@@ -75,9 +75,9 @@ class SyncService {
       payload: payload,
       createdAt: DateTime.now(),
     );
-    
+
     await _storage.addToSyncQueue(task);
-    
+
     if (_connectivity.isOnline) {
       processPendingTasks();
     }
@@ -97,7 +97,7 @@ class SyncService {
 
     _isSyncing = true;
     final tasks = _storage.getPendingSyncTasks();
-    
+
     if (tasks.isEmpty) {
       debugPrint('[SyncService] No pending tasks');
       _isSyncing = false;
@@ -108,7 +108,7 @@ class SyncService {
 
     for (final task in tasks) {
       final executor = _executors[task.type];
-      
+
       if (executor == null) {
         debugPrint('[SyncService] No executor for ${task.type.name}');
         continue;
@@ -123,9 +123,14 @@ class SyncService {
         debugPrint('[SyncService] Task ${task.id} completed');
       } catch (e) {
         await _storage.incrementSyncTaskRetry(task.id);
-        _emitEvent(task.id, task.type, SyncStatus.failed, message: e.toString());
+        _emitEvent(
+          task.id,
+          task.type,
+          SyncStatus.failed,
+          message: e.toString(),
+        );
         debugPrint('[SyncService] Task ${task.id} failed: $e');
-        
+
         if (task.retryCount >= 4) {
           debugPrint('[SyncService] Task ${task.id} exceeded max retries');
         }
@@ -136,13 +141,15 @@ class SyncService {
     _isSyncing = false;
   }
 
-  void _emitEvent(String taskId, SyncTaskType type, SyncStatus status, {String? message}) {
-    _syncEventController.add(SyncEvent(
-      taskId: taskId,
-      type: type,
-      status: status,
-      message: message,
-    ));
+  void _emitEvent(
+    String taskId,
+    SyncTaskType type,
+    SyncStatus status, {
+    String? message,
+  }) {
+    _syncEventController.add(
+      SyncEvent(taskId: taskId, type: type, status: status, message: message),
+    );
   }
 
   int getPendingTaskCount() {

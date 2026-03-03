@@ -13,9 +13,7 @@ class FindWireframe extends StatelessWidget {
     return Scaffold(
       appBar: const BarzAppBar(title: 'Find'),
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: yellowBackgroundGradient,
-        ),
+        decoration: const BoxDecoration(gradient: yellowBackgroundGradient),
         child: ListView(
           padding: const EdgeInsets.all(BarzSpacing.lg),
           children: [
@@ -44,7 +42,9 @@ class FindWireframe extends StatelessWidget {
                         hintText: 'Search bars, restaurants...',
                         hintStyle: TextStyle(color: textTertiary),
                         border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                        contentPadding: const EdgeInsets.symmetric(
+                          vertical: 16,
+                        ),
                       ),
                     ),
                   ),
@@ -123,10 +123,7 @@ class FindWireframe extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   subtitle,
-                  style: TextStyle(
-                    color: textSecondary,
-                    fontSize: 14,
-                  ),
+                  style: TextStyle(color: textSecondary, fontSize: 14),
                 ),
               ],
             ),

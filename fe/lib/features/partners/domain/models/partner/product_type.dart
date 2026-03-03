@@ -1,5 +1,1 @@
-enum ProductType {
-  aqua,
-  drink,
-  food
-}
+enum ProductType { aqua, drink, food }

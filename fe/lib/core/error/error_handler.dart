@@ -10,16 +10,19 @@ class ErrorHandler {
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
         return NetworkException.timeout();
-      
+
       case DioExceptionType.connectionError:
         return NetworkException.noInternet();
-      
+
       case DioExceptionType.badResponse:
         return _handleBadResponse(exception);
-      
+
       case DioExceptionType.cancel:
-        return const NetworkException(errorCode: ErrorCode.unknown, message: 'Request cancelled');
-      
+        return const NetworkException(
+          errorCode: ErrorCode.unknown,
+          message: 'Request cancelled',
+        );
+
       default:
         return NetworkException.connectionError(exception.message);
     }

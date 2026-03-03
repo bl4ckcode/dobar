@@ -43,7 +43,8 @@ class LocationModel {
     const double earthRadius = 6371000;
     final dLat = _toRadians(other.latitude - latitude);
     final dLon = _toRadians(other.longitude - longitude);
-    final a = _sin(dLat / 2) * _sin(dLat / 2) +
+    final a =
+        _sin(dLat / 2) * _sin(dLat / 2) +
         _cos(_toRadians(latitude)) *
             _cos(_toRadians(other.latitude)) *
             _sin(dLon / 2) *
@@ -63,6 +64,7 @@ class LocationModel {
     }
     return guess;
   }
+
   double _taylor(double x, bool isSin) {
     x = x % (2 * 3.141592653589793);
     if (x > 3.141592653589793) x -= 2 * 3.141592653589793;
@@ -79,6 +81,7 @@ class LocationModel {
     }
     return result;
   }
+
   double _atan2(double y, double x) {
     if (x > 0) return _atan(y / x);
     if (x < 0 && y >= 0) return _atan(y / x) + 3.141592653589793;
@@ -87,6 +90,7 @@ class LocationModel {
     if (x == 0 && y < 0) return -3.141592653589793 / 2;
     return 0;
   }
+
   double _atan(double x) {
     double result = 0;
     double term = x;

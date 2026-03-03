@@ -4,7 +4,7 @@ part 'drink_category.freezed.dart';
 part 'drink_category.g.dart';
 
 /// Known drink categories for filtering and display.
-/// 
+///
 /// These match the backend's category system and include
 /// both drink and food categories.
 enum DrinkCategoryType {
@@ -37,7 +37,7 @@ enum DrinkCategoryType {
 abstract class DrinkCategory with _$DrinkCategory {
   const factory DrinkCategory({
     required String category,
-    required String label,  // e.g., "🔥 Em Alta"
+    required String label, // e.g., "🔥 Em Alta"
     required String description,
   }) = _DrinkCategory;
 
@@ -49,8 +49,10 @@ abstract class DrinkCategory with _$DrinkCategory {
 @freezed
 abstract class TrendingCategoriesResponse with _$TrendingCategoriesResponse {
   const factory TrendingCategoriesResponse({
-    @JsonKey(name: 'drink_categories') required List<DrinkCategory> drinkCategories,
-    @JsonKey(name: 'food_categories') required List<DrinkCategory> foodCategories,
+    @JsonKey(name: 'drink_categories')
+    required List<DrinkCategory> drinkCategories,
+    @JsonKey(name: 'food_categories')
+    required List<DrinkCategory> foodCategories,
     @JsonKey(name: 'category_counts') required Map<String, int> categoryCounts,
   }) = _TrendingCategoriesResponse;
 

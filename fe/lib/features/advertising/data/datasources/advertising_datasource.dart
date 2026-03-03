@@ -10,7 +10,7 @@ abstract class AdvertisingDatasource {
     required double longitude,
     int limit = 5,
   });
-  
+
   Future<List<SearchAd>> getSearchAds({
     required double latitude,
     required double longitude,
@@ -18,14 +18,14 @@ abstract class AdvertisingDatasource {
     String? category,
     int limit = 3,
   });
-  
+
   Future<List<MapAd>> getMapAds({
     required double latitude,
     required double longitude,
     int? zoomLevel,
     int limit = 5,
   });
-  
+
   Future<void> trackAdEvent({
     required int campaignId,
     required String action,
@@ -34,7 +34,7 @@ abstract class AdvertisingDatasource {
     double? latitude,
     double? longitude,
   });
-  
+
   Future<PlansResponse> getPlans({String? regionCode});
 
   // Authenticated endpoints
@@ -177,9 +177,7 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
     try {
       final response = await dio.get(
         '${ApiEndpoints.baseUrl}${ApiEndpoints.adPlans}',
-        queryParameters: {
-          if (regionCode != null) 'region_code': regionCode,
-        },
+        queryParameters: {if (regionCode != null) 'region_code': regionCode},
       );
       return PlansResponse.fromJson(response.data);
     } on DioException catch (e) {
@@ -221,11 +219,7 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
     try {
       final response = await dio.post(
         '${ApiEndpoints.baseUrl}${ApiEndpoints.subscriptions}',
-        data: {
-          'bar_id': barId,
-          'tier': tier.name,
-          'region_code': regionCode,
-        },
+        data: {'bar_id': barId, 'tier': tier.name, 'region_code': regionCode},
       );
       return AdSubscription.fromJson(response.data);
     } on DioException catch (e) {
@@ -258,9 +252,7 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
         queryParameters: {'bar_id': barId},
       );
       final campaignsList = response.data['campaigns'] as List? ?? [];
-      return campaignsList
-          .map((json) => AdCampaign.fromJson(json))
-          .toList();
+      return campaignsList.map((json) => AdCampaign.fromJson(json)).toList();
     } on DioException catch (e) {
       throw ServerException(
         e.response?.data?['detail'] ?? 'Failed to get campaigns',
@@ -298,18 +290,20 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
           'start_date': request.startDate.toIso8601String(),
           if (request.endDate != null)
             'end_date': request.endDate!.toIso8601String(),
-          if (request.targeting != null) 'targeting': {
-            if (request.targeting!.radiusKm != null)
-              'radius_km': request.targeting!.radiusKm,
-            if (request.targeting!.targetAudience != null)
-              'target_audience': request.targeting!.targetAudience,
-          },
-          if (request.creative != null) 'creative': {
-            if (request.creative!.tagline != null)
-              'tagline': request.creative!.tagline,
-            if (request.creative!.imageUrl != null)
-              'image_url': request.creative!.imageUrl,
-          },
+          if (request.targeting != null)
+            'targeting': {
+              if (request.targeting!.radiusKm != null)
+                'radius_km': request.targeting!.radiusKm,
+              if (request.targeting!.targetAudience != null)
+                'target_audience': request.targeting!.targetAudience,
+            },
+          if (request.creative != null)
+            'creative': {
+              if (request.creative!.tagline != null)
+                'tagline': request.creative!.tagline,
+              if (request.creative!.imageUrl != null)
+                'image_url': request.creative!.imageUrl,
+            },
         },
       );
       return AdCampaign.fromJson(response.data);

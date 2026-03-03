@@ -11,7 +11,10 @@ class BarzAppBar extends StatelessWidget implements PreferredSizeWidget {
   Widget build(BuildContext context) {
     return AppBar(
       backgroundColor: barzBlack,
-      title: Text(title, style: BarzTextStyles.headline.copyWith(color: barzYellow)),
+      title: Text(
+        title,
+        style: BarzTextStyles.headline.copyWith(color: barzYellow),
+      ),
       actions: actions,
       centerTitle: true,
       elevation: 0,

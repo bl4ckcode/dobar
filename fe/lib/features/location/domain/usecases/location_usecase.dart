@@ -34,7 +34,10 @@ class LocationUsecase {
     LocationModel location, {
     double radiusInMeters = 100,
   }) {
-    return _repository.getNearbyPartners(location, radiusInMeters: radiusInMeters);
+    return _repository.getNearbyPartners(
+      location,
+      radiusInMeters: radiusInMeters,
+    );
   }
 
   Future<Either<Failure, void>> updateUserLocation(LocationModel location) {
@@ -49,11 +52,15 @@ class LocationUsecase {
     return _repository.getWazeDeepLink(destination);
   }
 
-  Future<Either<Failure, String>> getGoogleMapsDeepLink(LocationModel destination) {
+  Future<Either<Failure, String>> getGoogleMapsDeepLink(
+    LocationModel destination,
+  ) {
     return _repository.getGoogleMapsDeepLink(destination);
   }
 
-  Future<Either<Failure, String>> getAppleMapsDeepLink(LocationModel destination) {
+  Future<Either<Failure, String>> getAppleMapsDeepLink(
+    LocationModel destination,
+  ) {
     return _repository.getAppleMapsDeepLink(destination);
   }
 

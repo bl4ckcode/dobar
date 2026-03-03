@@ -8,7 +8,7 @@ import 'package:barz/ui/screens/profile_wireframe.dart';
 /// Responsive shell that adapts based on platform:
 /// - Mobile: Bottom navigation bar
 /// - Web/Tablet: Fixed left side menu
-/// 
+///
 /// This shell only shows AFTER authentication.
 /// Login is handled separately before reaching this shell.
 class ResponsiveShell extends StatefulWidget {
@@ -22,9 +22,21 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
   int _selectedIndex = 0;
 
   static final List<_NavItem> _navItems = [
-    _NavItem(icon: Icons.home_outlined, selectedIcon: Icons.home, label: 'Home'),
-    _NavItem(icon: Icons.search_outlined, selectedIcon: Icons.search, label: 'Find'),
-    _NavItem(icon: Icons.person_outline, selectedIcon: Icons.person, label: 'Profile'),
+    _NavItem(
+      icon: Icons.home_outlined,
+      selectedIcon: Icons.home,
+      label: 'Home',
+    ),
+    _NavItem(
+      icon: Icons.search_outlined,
+      selectedIcon: Icons.search,
+      label: 'Find',
+    ),
+    _NavItem(
+      icon: Icons.person_outline,
+      selectedIcon: Icons.person,
+      label: 'Profile',
+    ),
   ];
 
   static final List<Widget> _pages = [
@@ -145,7 +157,11 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
                     color: barzYellow,
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(Icons.local_bar, color: barzBlack, size: 28),
+                  child: const Icon(
+                    Icons.local_bar,
+                    color: barzBlack,
+                    size: 28,
+                  ),
                 ),
                 const SizedBox(width: 16),
                 Text(
@@ -160,11 +176,11 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
               ],
             ),
           ),
-          
+
           const Divider(color: sideMenuDivider, height: 1),
-          
+
           const SizedBox(height: 16),
-          
+
           // Navigation items
           Expanded(
             child: ListView.builder(
@@ -173,7 +189,7 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
               itemBuilder: (context, index) {
                 final item = _navItems[index];
                 final isSelected = index == _selectedIndex;
-                
+
                 return Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   child: Material(
@@ -184,30 +200,42 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
                       borderRadius: BorderRadius.circular(12),
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 14,
+                        ),
                         decoration: BoxDecoration(
-                          color: isSelected 
+                          color: isSelected
                               ? barzYellow.withValues(alpha: 0.15)
                               : Colors.transparent,
                           borderRadius: BorderRadius.circular(12),
-                          border: isSelected 
-                              ? Border.all(color: barzYellow.withValues(alpha: 0.3), width: 1)
+                          border: isSelected
+                              ? Border.all(
+                                  color: barzYellow.withValues(alpha: 0.3),
+                                  width: 1,
+                                )
                               : null,
                         ),
                         child: Row(
                           children: [
                             Icon(
                               isSelected ? item.selectedIcon : item.icon,
-                              color: isSelected ? barzYellow : sideMenuUnselectedItem,
+                              color: isSelected
+                                  ? barzYellow
+                                  : sideMenuUnselectedItem,
                               size: 24,
                             ),
                             const SizedBox(width: 16),
                             Text(
                               item.label,
                               style: TextStyle(
-                                color: isSelected ? barzYellow : sideMenuUnselectedItem,
+                                color: isSelected
+                                    ? barzYellow
+                                    : sideMenuUnselectedItem,
                                 fontSize: 16,
-                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                                fontWeight: isSelected
+                                    ? FontWeight.w600
+                                    : FontWeight.w400,
                               ),
                             ),
                           ],
@@ -219,9 +247,9 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
               },
             ),
           ),
-          
+
           const Divider(color: sideMenuDivider, height: 1),
-          
+
           // Bottom section (settings, logout, etc.)
           Padding(
             padding: const EdgeInsets.all(16),
@@ -254,7 +282,7 @@ class _ResponsiveShellState extends State<ResponsiveShell> {
               ],
             ),
           ),
-          
+
           const SizedBox(height: 16),
         ],
       ),
@@ -290,7 +318,7 @@ class _SideMenuItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = isDestructive ? errorColor : sideMenuUnselectedItem;
-    
+
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(8),

@@ -14,7 +14,10 @@ class OrderUsecase {
     String? status,
   }) {
     return repository.getMyOrders(
-        page: page, pageSize: pageSize, status: status);
+      page: page,
+      pageSize: pageSize,
+      status: status,
+    );
   }
 
   Future<Either<Failure, OrderModel>> getOrder(int orderId) {

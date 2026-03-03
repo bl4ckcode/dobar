@@ -114,10 +114,7 @@ class _HoursStepState extends State<HoursStep> {
             ),
           ),
         ),
-        WizardFooter(
-          onBack: widget.onBack,
-          onNext: widget.onNext,
-        ),
+        WizardFooter(onBack: widget.onBack, onNext: widget.onNext),
       ],
     );
   }
@@ -155,14 +152,11 @@ class _HoursStepState extends State<HoursStep> {
           Row(
             children: [
               Expanded(
-                child: _buildTimeButton(
-                  context,
-                  l10n.opens,
-                  _generalOpenTime,
-                  (time) {
-                    setState(() => _generalOpenTime = time);
-                  },
-                ),
+                child: _buildTimeButton(context, l10n.opens, _generalOpenTime, (
+                  time,
+                ) {
+                  setState(() => _generalOpenTime = time);
+                }),
               ),
               const SizedBox(width: 12),
               Expanded(

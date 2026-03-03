@@ -36,7 +36,8 @@ class _BusinessSideMenuState extends State<BusinessSideMenu> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final bgColor = isDark ? const Color(0xFF1A1A1A) : surfaceWhite;
     final borderColor = isDark ? barzDarkMuted : surfaceDim;
 

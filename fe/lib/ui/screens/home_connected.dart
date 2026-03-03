@@ -76,6 +76,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final colors = context.dobarColors;
     final homeState = context.watch<HomeBloc>().state;
     String? nearbyBarName;
@@ -107,7 +108,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
         }
       },
       child: Scaffold(
-        backgroundColor: Theme.of(context).brightness == Brightness.light
+        backgroundColor: theme.brightness == Brightness.light
             ? Colors.white
             : colors.background,
         body: SafeArea(

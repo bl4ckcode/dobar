@@ -1,2 +1,1 @@
-class PartnerRating {
-}
+class PartnerRating {}

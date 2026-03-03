@@ -31,7 +31,9 @@ class UserUsecase {
     );
   }
 
-  Future<Either<Failure, UserModel>> updatePreferences(UserPreferences preferences) {
+  Future<Either<Failure, UserModel>> updatePreferences(
+    UserPreferences preferences,
+  ) {
     return _repository.updatePreferences(preferences);
   }
 

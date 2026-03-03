@@ -15,7 +15,8 @@ class PlacePrediction {
   });
 
   factory PlacePrediction.fromJson(Map<String, dynamic> json) {
-    final structured = json['structured_formatting'] as Map<String, dynamic>? ?? {};
+    final structured =
+        json['structured_formatting'] as Map<String, dynamic>? ?? {};
     return PlacePrediction(
       placeId: json['place_id'] as String? ?? '',
       description: json['description'] as String? ?? '',

@@ -42,10 +42,7 @@ class _MenusPageState extends State<MenusPage> {
             curve: Curves.fastOutSlowIn,
             left: 0,
             top: 0,
-            child: BarMenusList(
-              list: menuItems,
-              menuType: menuType,
-            ),
+            child: BarMenusList(list: menuItems, menuType: menuType),
           ),
         ],
       ),

@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 
 class AnimatedBar extends StatelessWidget {
-  const AnimatedBar({
-    super.key,
-    required this.isActive,
-  });
+  const AnimatedBar({super.key, required this.isActive});
 
   final bool isActive;
 
@@ -17,9 +14,7 @@ class AnimatedBar extends StatelessWidget {
       width: isActive ? 20 : 0,
       decoration: const BoxDecoration(
         color: Color(0xFF81B4FF),
-        borderRadius: BorderRadius.all(
-          Radius.circular(12),
-        ),
+        borderRadius: BorderRadius.all(Radius.circular(12)),
       ),
     );
   }

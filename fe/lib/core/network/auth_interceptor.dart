@@ -15,19 +15,24 @@ class AuthInterceptor extends QueuedInterceptor {
   String? _accessToken;
   String? _refreshToken;
   bool _isRefreshing = false;
-  final Dio _refreshDio = Dio(BaseOptions(
-    baseUrl: ApiEndpoints.baseUrl,
-    connectTimeout: const Duration(seconds: 30),
-    receiveTimeout: const Duration(seconds: 30),
-  ));
+  final Dio _refreshDio = Dio(
+    BaseOptions(
+      baseUrl: ApiEndpoints.baseUrl,
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 30),
+    ),
+  );
 
   AuthInterceptor({this.tokenStorage, this.onAuthExpired});
 
   @override
-  void onRequest(RequestOptions options, RequestInterceptorHandler handler) async {
+  void onRequest(
+    RequestOptions options,
+    RequestInterceptorHandler handler,
+  ) async {
     _accessToken ??= await tokenStorage?.getAccessToken();
     _refreshToken ??= await tokenStorage?.getRefreshToken();
-    
+
     if (_accessToken != null) {
       options.headers['Authorization'] = 'Bearer $_accessToken';
     }
@@ -37,7 +42,8 @@ class AuthInterceptor extends QueuedInterceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) async {
-    if (err.response?.statusCode == 401 && !_isAuthEndpoint(err.requestOptions.path)) {
+    if (err.response?.statusCode == 401 &&
+        !_isAuthEndpoint(err.requestOptions.path)) {
       final refreshed = await _tryRefreshToken();
       if (refreshed) {
         try {
@@ -61,15 +67,17 @@ class AuthInterceptor extends QueuedInterceptor {
       print('[DIO] status: ${err.response?.statusCode}');
       print('[DIO] message: ${message ?? err.message}');
     }
-    
+
     if (message != null) {
-      return handler.reject(DioException(
-        requestOptions: err.requestOptions,
-        response: err.response,
-        type: err.type,
-        error: message,
-        message: message,
-      ));
+      return handler.reject(
+        DioException(
+          requestOptions: err.requestOptions,
+          response: err.response,
+          type: err.type,
+          error: message,
+          message: message,
+        ),
+      );
     }
     super.onError(err, handler);
   }
@@ -81,15 +89,15 @@ class AuthInterceptor extends QueuedInterceptor {
   Future<bool> _tryRefreshToken() async {
     if (_isRefreshing || _refreshToken == null) return false;
     _isRefreshing = true;
-    
+
     try {
       if (kDebugMode) print('[AUTH] Attempting token refresh...');
-      
+
       final response = await _refreshDio.post(
         ApiEndpoints.authRefresh,
         data: {'refresh_token': _refreshToken},
       );
-      
+
       if (response.statusCode == 200) {
         final authResponse = AuthResponse.fromJson(response.data);
         await _saveTokens(authResponse.accessToken, authResponse.refreshToken);
@@ -142,42 +150,46 @@ class AuthInterceptor extends QueuedInterceptor {
 
   String? _extractFromJson(dynamic json) {
     if (json is! Map<String, dynamic>) return null;
-    
+
     // dobar API Error Contract format (primary)
     // {error_code: "...", message: "...", details: {...}}
     if (json['message'] is String) {
       final message = json['message'] as String;
-      
+
       // Append field-specific errors from details if present
       final details = json['details'];
       if (details is Map<String, dynamic> && details.isNotEmpty) {
         final fieldErrors = details.entries
-            .map((e) => e.value is List 
-                ? (e.value as List).join(', ') 
-                : e.value.toString())
+            .map(
+              (e) => e.value is List
+                  ? (e.value as List).join(', ')
+                  : e.value.toString(),
+            )
             .join('; ');
         return '$message: $fieldErrors';
       }
       return message;
     }
-    
+
     // Fallback: simple error field
     if (json['error'] is String) return json['error'] as String;
-    
+
     // Fallback: FastAPI default format (detail can be string or array)
     final detail = json['detail'];
     if (detail is String) return detail;
     if (detail is List && detail.isNotEmpty) {
-      final messages = detail.map((e) {
-        if (e is String) return e;
-        if (e is Map<String, dynamic>) {
-          return e['msg'] as String? ?? e.toString();
-        }
-        return e.toString();
-      }).join(', ');
+      final messages = detail
+          .map((e) {
+            if (e is String) return e;
+            if (e is Map<String, dynamic>) {
+              return e['msg'] as String? ?? e.toString();
+            }
+            return e.toString();
+          })
+          .join(', ');
       return messages;
     }
-    
+
     return null;
   }
 
@@ -200,27 +212,37 @@ class AuthInterceptor extends QueuedInterceptor {
     _refreshToken = await tokenStorage?.getRefreshToken();
     if (kDebugMode) {
       print('[AUTH] loadTokens() called');
-      print('[AUTH] Access token from storage: ${_accessToken != null ? "exists (${_accessToken!.length} chars)" : "null"}');
-      print('[AUTH] Refresh token from storage: ${_refreshToken != null ? "exists" : "null"}');
+      print(
+        '[AUTH] Access token from storage: ${_accessToken != null ? "exists (${_accessToken!.length} chars)" : "null"}',
+      );
+      print(
+        '[AUTH] Refresh token from storage: ${_refreshToken != null ? "exists" : "null"}',
+      );
     }
   }
 
   Future<bool> isAuthenticated() async {
-    if (kDebugMode) print('[AUTH] isAuthenticated() check - cached token: ${_accessToken != null}');
-    
+    if (kDebugMode) {
+      print(
+        '[AUTH] isAuthenticated() check - cached token: ${_accessToken != null}',
+      );
+    }
+
     if (_accessToken != null) {
       if (kDebugMode) print('[AUTH] Using cached token - authenticated: true');
       return true;
     }
-    
+
     final stored = await tokenStorage?.getAccessToken();
     final isAuth = stored != null && stored.isNotEmpty;
-    
+
     if (kDebugMode) {
-      print('[AUTH] Checked storage - token: ${stored != null ? "exists (${stored.length} chars)" : "null"}');
+      print(
+        '[AUTH] Checked storage - token: ${stored != null ? "exists (${stored.length} chars)" : "null"}',
+      );
       print('[AUTH] isAuthenticated result: $isAuth');
     }
-    
+
     return isAuth;
   }
 }

@@ -1,16 +1,10 @@
 /// Defines roles a user can have at a specific bar.
-/// 
+///
 /// Hierarchy: OWNER > ADMIN > MANAGER > CASHIER > STAFF
-/// 
+///
 /// Each role has specific permissions that determine what actions
 /// the user can perform within that bar's context.
-enum BarRole {
-  owner,
-  admin,
-  manager,
-  cashier,
-  staff,
-}
+enum BarRole { owner, admin, manager, cashier, staff }
 
 extension BarRoleExtension on BarRole {
   String get displayName {

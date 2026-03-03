@@ -19,7 +19,8 @@ class DashboardStats {
       orders: OrderStats.fromJson(json['orders'] ?? {}),
       revenue: RevenueStats.fromJson(json['revenue'] ?? {}),
       averageTicket: AverageTicketStats.fromJson(json['average_ticket'] ?? {}),
-      topItems: (json['top_items'] as List<dynamic>?)
+      topItems:
+          (json['top_items'] as List<dynamic>?)
               ?.map((e) => TopItem.fromJson(e))
               .toList() ??
           [],
@@ -63,7 +64,13 @@ class OrderStats {
   }
 
   factory OrderStats.empty() {
-    return OrderStats(total: 0, pending: 0, completed: 0, cancelled: 0, trendPercent: 0);
+    return OrderStats(
+      total: 0,
+      pending: 0,
+      completed: 0,
+      cancelled: 0,
+      trendPercent: 0,
+    );
   }
 }
 
@@ -134,11 +141,7 @@ class TopItem {
   final int quantity;
   final double revenue;
 
-  TopItem({
-    required this.name,
-    required this.quantity,
-    required this.revenue,
-  });
+  TopItem({required this.name, required this.quantity, required this.revenue});
 
   factory TopItem.fromJson(Map<String, dynamic> json) {
     return TopItem(
@@ -194,11 +197,7 @@ class ScheduleInfo {
   final String open;
   final String close;
 
-  ScheduleInfo({
-    required this.day,
-    required this.open,
-    required this.close,
-  });
+  ScheduleInfo({required this.day, required this.open, required this.close});
 
   factory ScheduleInfo.fromJson(Map<String, dynamic> json) {
     return ScheduleInfo(
@@ -277,7 +276,8 @@ class RecentOrdersResponse {
   factory RecentOrdersResponse.fromJson(Map<String, dynamic> json) {
     final pagination = json['pagination'] ?? {};
     return RecentOrdersResponse(
-      orders: (json['orders'] as List<dynamic>?)
+      orders:
+          (json['orders'] as List<dynamic>?)
               ?.map((e) => RecentOrder.fromJson(e))
               .toList() ??
           [],

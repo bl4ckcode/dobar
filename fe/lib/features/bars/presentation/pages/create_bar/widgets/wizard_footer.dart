@@ -31,7 +31,7 @@ class WizardFooter extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final effectiveNextLabel = nextLabel ?? l10n.next;
     final effectiveIcon = nextIcon ?? Icons.arrow_forward;
-    
+
     final buttonColor = isPrimaryAction ? successGreen : barzGold;
     final textColor = isPrimaryAction ? textOnDark : barzDark;
 
@@ -50,10 +50,7 @@ class WizardFooter extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (topWidget != null) ...[
-            topWidget!,
-            const SizedBox(height: 12),
-          ],
+          if (topWidget != null) ...[topWidget!, const SizedBox(height: 12)],
           Row(
             children: [
               if (onBack != null) ...[
@@ -73,7 +70,10 @@ class WizardFooter extends StatelessWidget {
                         const SizedBox(width: 8),
                         Text(
                           l10n.back,
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 16,
+                          ),
                         ),
                       ],
                     ),
@@ -99,7 +99,9 @@ class WizardFooter extends StatelessWidget {
                           height: 24,
                           child: CircularProgressIndicator(
                             strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(textColor),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              textColor,
+                            ),
                           ),
                         )
                       : Row(
@@ -110,7 +112,10 @@ class WizardFooter extends StatelessWidget {
                             if (isPrimaryAction) const SizedBox(width: 8),
                             Text(
                               effectiveNextLabel,
-                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 16,
+                              ),
                             ),
                             if (!isPrimaryAction) ...[
                               const SizedBox(width: 8),

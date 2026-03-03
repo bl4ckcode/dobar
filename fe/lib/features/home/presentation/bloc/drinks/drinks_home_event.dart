@@ -9,8 +9,6 @@ sealed class DrinksHomeEvent with _$DrinksHomeEvent {
     double? longitude,
     double? maxDistance,
   }) = DrinksHomeLoadPartners;
-  const factory DrinksHomeEvent.cardClicked({
-    required int partnerIdentifier,
-  }) = DrinksHomeCardClicked;
+  const factory DrinksHomeEvent.cardClicked({required int partnerIdentifier}) =
+      DrinksHomeCardClicked;
 }
-

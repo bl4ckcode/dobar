@@ -9,9 +9,7 @@ import 'package:dartz/dartz.dart';
 class HomeRepositoryImpl extends AbstractHomeRepository {
   final HomeImplApi homeApi;
 
-  HomeRepositoryImpl(
-    this.homeApi,
-  );
+  HomeRepositoryImpl(this.homeApi);
 
   @override
   Future<Either<Failure, HomeModel?>> getHome(HomeParams params) async {

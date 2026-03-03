@@ -16,6 +16,5 @@ abstract class MapAd with _$MapAd {
     @JsonKey(name: 'campaign_id') required int campaignId,
   }) = _MapAd;
 
-  factory MapAd.fromJson(Map<String, dynamic> json) =>
-      _$MapAdFromJson(json);
+  factory MapAd.fromJson(Map<String, dynamic> json) => _$MapAdFromJson(json);
 }

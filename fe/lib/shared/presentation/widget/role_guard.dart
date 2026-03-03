@@ -5,10 +5,10 @@ import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
 
 /// A widget that conditionally renders its child based on user permissions.
-/// 
+///
 /// This widget is used to show/hide UI elements based on the current user's
 /// permissions for the active bar.
-/// 
+///
 /// Example:
 /// ```dart
 /// RoleGuard(
@@ -55,57 +55,50 @@ class RoleGuard extends StatelessWidget {
     this.businessOnly = false,
     this.clientOnly = false,
   }) : assert(
-          permission != null || anyOf != null || allOf != null || minRole != null || businessOnly || clientOnly,
-          'At least one permission condition must be specified',
-        );
+         permission != null ||
+             anyOf != null ||
+             allOf != null ||
+             minRole != null ||
+             businessOnly ||
+             clientOnly,
+         'At least one permission condition must be specified',
+       );
 
   /// Convenience constructor for business-only content
-  const RoleGuard.business({
-    super.key,
-    required this.child,
-    this.fallback,
-  })  : permission = null,
-        anyOf = null,
-        allOf = null,
-        minRole = null,
-        businessOnly = true,
-        clientOnly = false;
+  const RoleGuard.business({super.key, required this.child, this.fallback})
+    : permission = null,
+      anyOf = null,
+      allOf = null,
+      minRole = null,
+      businessOnly = true,
+      clientOnly = false;
 
   /// Convenience constructor for client-only content
-  const RoleGuard.client({
-    super.key,
-    required this.child,
-    this.fallback,
-  })  : permission = null,
-        anyOf = null,
-        allOf = null,
-        minRole = null,
-        businessOnly = false,
-        clientOnly = true;
+  const RoleGuard.client({super.key, required this.child, this.fallback})
+    : permission = null,
+      anyOf = null,
+      allOf = null,
+      minRole = null,
+      businessOnly = false,
+      clientOnly = true;
 
   /// Convenience constructor for owner-only content
-  const RoleGuard.owner({
-    super.key,
-    required this.child,
-    this.fallback,
-  })  : permission = null,
-        anyOf = null,
-        allOf = null,
-        minRole = BarRole.owner,
-        businessOnly = false,
-        clientOnly = false;
+  const RoleGuard.owner({super.key, required this.child, this.fallback})
+    : permission = null,
+      anyOf = null,
+      allOf = null,
+      minRole = BarRole.owner,
+      businessOnly = false,
+      clientOnly = false;
 
   /// Convenience constructor for manager+ content
-  const RoleGuard.manager({
-    super.key,
-    required this.child,
-    this.fallback,
-  })  : permission = null,
-        anyOf = null,
-        allOf = null,
-        minRole = BarRole.manager,
-        businessOnly = false,
-        clientOnly = false;
+  const RoleGuard.manager({super.key, required this.child, this.fallback})
+    : permission = null,
+      anyOf = null,
+      allOf = null,
+      minRole = BarRole.manager,
+      businessOnly = false,
+      clientOnly = false;
 
   @override
   Widget build(BuildContext context) {

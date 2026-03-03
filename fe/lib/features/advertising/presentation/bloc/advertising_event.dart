@@ -7,7 +7,7 @@ part 'advertising_event.freezed.dart';
 @freezed
 sealed class AdvertisingEvent with _$AdvertisingEvent {
   // AD SERVING EVENTS (Client App)
-  
+
   /// Load featured ads for home carousel.
   const factory AdvertisingEvent.loadFeaturedAds({
     required double latitude,
@@ -51,14 +51,11 @@ sealed class AdvertisingEvent with _$AdvertisingEvent {
   // BUSINESS EVENTS (Business App)
 
   /// Load subscription plans.
-  const factory AdvertisingEvent.loadPlans({
-    String? regionCode,
-  }) = LoadPlans;
+  const factory AdvertisingEvent.loadPlans({String? regionCode}) = LoadPlans;
 
   /// Load subscription for a bar.
-  const factory AdvertisingEvent.loadSubscription({
-    required int barId,
-  }) = LoadSubscription;
+  const factory AdvertisingEvent.loadSubscription({required int barId}) =
+      LoadSubscription;
 
   /// Create subscription.
   const factory AdvertisingEvent.createSubscription({
@@ -73,14 +70,12 @@ sealed class AdvertisingEvent with _$AdvertisingEvent {
   }) = CancelSubscription;
 
   /// Load campaigns for a bar.
-  const factory AdvertisingEvent.loadCampaigns({
-    required int barId,
-  }) = LoadCampaigns;
+  const factory AdvertisingEvent.loadCampaigns({required int barId}) =
+      LoadCampaigns;
 
   /// Load campaign details.
-  const factory AdvertisingEvent.loadCampaign({
-    required int campaignId,
-  }) = LoadCampaign;
+  const factory AdvertisingEvent.loadCampaign({required int campaignId}) =
+      LoadCampaign;
 
   /// Create a new campaign.
   const factory AdvertisingEvent.createCampaign({
@@ -88,17 +83,14 @@ sealed class AdvertisingEvent with _$AdvertisingEvent {
   }) = CreateCampaignEvent;
 
   /// Pause a campaign.
-  const factory AdvertisingEvent.pauseCampaign({
-    required int campaignId,
-  }) = PauseCampaign;
+  const factory AdvertisingEvent.pauseCampaign({required int campaignId}) =
+      PauseCampaign;
 
   /// Resume a campaign.
-  const factory AdvertisingEvent.resumeCampaign({
-    required int campaignId,
-  }) = ResumeCampaign;
+  const factory AdvertisingEvent.resumeCampaign({required int campaignId}) =
+      ResumeCampaign;
 
   /// Load campaign analytics.
-  const factory AdvertisingEvent.loadAnalytics({
-    required int campaignId,
-  }) = LoadAnalytics;
+  const factory AdvertisingEvent.loadAnalytics({required int campaignId}) =
+      LoadAnalytics;
 }

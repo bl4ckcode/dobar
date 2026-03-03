@@ -33,7 +33,8 @@ class OrderSummarySection extends StatefulWidget {
 class _OrderSummarySectionState extends State<OrderSummarySection> {
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     final subtotal = widget.items.fold<double>(
       0,

@@ -34,11 +34,13 @@ class PaymentMethod {
       id: json['id'],
       externalId: json['external_id'],
       gateway: PaymentGateway.values.firstWhere(
-          (e) => e.name == json['gateway'],
-          orElse: () => PaymentGateway.pagarme),
+        (e) => e.name == json['gateway'],
+        orElse: () => PaymentGateway.pagarme,
+      ),
       type: PaymentType.values.firstWhere(
-          (e) => e.name == json['type'],
-          orElse: () => PaymentType.credit),
+        (e) => e.name == json['type'],
+        orElse: () => PaymentType.credit,
+      ),
       brand: json['brand'],
       lastFourDigits: json['last_four_digits'],
       holderName: json['holder_name'],

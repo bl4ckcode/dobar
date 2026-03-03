@@ -4,19 +4,19 @@ import 'package:barz/core/api/api_endpoints.dart';
 /// Service to handle presigned S3 URL expiration and refresh
 class ImageRefreshService {
   final Dio _dio;
-  
+
   // Cache of refreshed URLs: barId -> (imageUrl, expirationTimestamp)
   final Map<int, ({String url, int expiration})> _urlCache = {};
-  
+
   // Track bars currently being refreshed (deduplication)
   final Set<int> _pendingRefreshes = {};
-  
+
   // Track failed refreshes with cooldown: barId -> failedTimestamp
   final Map<int, int> _failedRefreshes = {};
-  
+
   // Buffer time before expiration to preemptively refresh (5 minutes)
   static const int _expirationBufferSeconds = 5 * 60;
-  
+
   // Cooldown period after a failed refresh (30 seconds)
   static const int _failureCooldownSeconds = 30;
 
@@ -26,17 +26,17 @@ class ImageRefreshService {
   /// Returns true if the URL is expired or about to expire
   bool isExpired(int? expirationTimestamp) {
     if (expirationTimestamp == null) return false;
-    
+
     final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
     return now >= (expirationTimestamp - _expirationBufferSeconds);
   }
 
   /// Gets a valid image URL for a bar, refreshing if necessary
-  /// 
+  ///
   /// [barId] - The bar's ID
   /// [currentUrl] - The current image URL
   /// [expirationTimestamp] - Unix timestamp when the URL expires
-  /// 
+  ///
   /// Returns the valid URL (either current or refreshed)
   Future<String?> getValidImageUrl({
     required int barId,
@@ -66,7 +66,8 @@ class ImageRefreshService {
     // URL is expired, refresh it
     try {
       final refreshedUrl = await _refreshBarImageUrl(barId);
-      return refreshedUrl ?? currentUrl; // Fall back to current if refresh fails
+      return refreshedUrl ??
+          currentUrl; // Fall back to current if refresh fails
     } catch (e) {
       // If refresh fails, still return current URL (might work, might not)
       return currentUrl;
@@ -77,12 +78,12 @@ class ImageRefreshService {
   Future<String?> _refreshBarImageUrl(int barId) async {
     try {
       final response = await _dio.get(ApiEndpoints.refreshBarImage(barId));
-      
+
       if (response.statusCode == 200 && response.data != null) {
         final data = response.data;
         final newUrl = data['image_url'] as String?;
         final newExpiration = data['image_url_expiration'] as int?;
-        
+
         if (newUrl != null && newExpiration != null) {
           _urlCache[barId] = (url: newUrl, expiration: newExpiration);
           return newUrl;
@@ -108,7 +109,7 @@ class ImageRefreshService {
     if (_pendingRefreshes.contains(barId)) {
       return null;
     }
-    
+
     // Cooldown: Don't refresh if recently failed
     final failedAt = _failedRefreshes[barId];
     if (failedAt != null) {
@@ -119,12 +120,12 @@ class ImageRefreshService {
       // Cooldown expired, remove from failed set
       _failedRefreshes.remove(barId);
     }
-    
+
     _pendingRefreshes.add(barId);
     _urlCache.remove(barId);
     return _refreshBarImageUrl(barId);
   }
-  
+
   /// Check if a bar is in cooldown after a failed refresh
   bool isInCooldown(int barId) {
     final failedAt = _failedRefreshes[barId];

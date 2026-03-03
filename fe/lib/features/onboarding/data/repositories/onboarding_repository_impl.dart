@@ -13,7 +13,9 @@ class OnboardingRepositoryImpl implements OnboardingRepository {
   OnboardingRepositoryImpl(this.datasource);
 
   @override
-  Future<Either<Failure, UserModel>> completeOnboarding(OnboardingRequest request) async {
+  Future<Either<Failure, UserModel>> completeOnboarding(
+    OnboardingRequest request,
+  ) async {
     try {
       final user = await datasource.completeOnboarding(request);
       return Right(user);

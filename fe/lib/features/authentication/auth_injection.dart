@@ -19,13 +19,16 @@ Future<void> initLoginInjections() async {
   // Register LoginNetworkDataSource
   getItInjector.registerLazySingleton<LoginNetworkDataSource>(
     () => LoginNetworkDataSource(
-        dio: DioNetwork.appAPI, firebaseAuth: getItInjector<FirebaseAuth>()),
+      dio: DioNetwork.appAPI,
+      firebaseAuth: getItInjector<FirebaseAuth>(),
+    ),
   );
 
   // Register LoginLocalDataSource
   getItInjector.registerLazySingleton<LoginLocalDataSource>(
     () => LoginLocalDataSource(
-        sharedPreferences: getItInjector<SharedPreferences>()),
+      sharedPreferences: getItInjector<SharedPreferences>(),
+    ),
   );
 
   // Register LoginRepositoryImpl
@@ -44,7 +47,8 @@ Future<void> initLoginInjections() async {
   // Register LoginBloc
   getItInjector.registerFactory<LoginBloc>(
     () => LoginBloc(
-        loginUseCase: getItInjector<LoginUsecase>(),
-        firebaseAuth: getItInjector<FirebaseAuth>()),
+      loginUseCase: getItInjector<LoginUsecase>(),
+      firebaseAuth: getItInjector<FirebaseAuth>(),
+    ),
   );
 }

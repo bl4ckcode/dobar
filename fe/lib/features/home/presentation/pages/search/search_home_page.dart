@@ -54,38 +54,34 @@ class _SearchHomePageState extends State<SearchHomePage> {
     Location location = Location();
     GoogleMapController googleMapController = await _controller.future;
 
-    location.getLocation().then(
-      (loc) {
-        currentLocation = loc;
-        _loadMapAds();
-      },
-    );
+    location.getLocation().then((loc) {
+      currentLocation = loc;
+      _loadMapAds();
+    });
 
-    location.onLocationChanged.listen(
-      (newLocation) {
-        currentLocation = newLocation;
+    location.onLocationChanged.listen((newLocation) {
+      currentLocation = newLocation;
 
-        googleMapController.animateCamera(
-          CameraUpdate.newCameraPosition(
-            CameraPosition(
-              zoom: 13.5,
-              target: LatLng(
-                newLocation.latitude ??
-                    currentLocation?.latitude ??
-                    brasiliaLatLng.latitude,
-                newLocation.longitude ??
-                    currentLocation?.latitude ??
-                    brasiliaLatLng.latitude,
-              ),
+      googleMapController.animateCamera(
+        CameraUpdate.newCameraPosition(
+          CameraPosition(
+            zoom: 13.5,
+            target: LatLng(
+              newLocation.latitude ??
+                  currentLocation?.latitude ??
+                  brasiliaLatLng.latitude,
+              newLocation.longitude ??
+                  currentLocation?.latitude ??
+                  brasiliaLatLng.latitude,
             ),
           ),
-        );
+        ),
+      );
 
-        if (mounted) {
-          setState(() {});
-        }
-      },
-    );
+      if (mounted) {
+        setState(() {});
+      }
+    });
   }
 
   void _loadMapAds() {
@@ -93,11 +89,7 @@ class _SearchHomePageState extends State<SearchHomePage> {
     final lng = currentLocation?.longitude;
     if (lat != null && lng != null) {
       _advertisingBloc.add(
-        AdvertisingEvent.loadMapAds(
-          latitude: lat,
-          longitude: lng,
-          limit: 10,
-        ),
+        AdvertisingEvent.loadMapAds(latitude: lat, longitude: lng, limit: 10),
       );
     }
   }
@@ -162,11 +154,9 @@ class _SearchHomePageState extends State<SearchHomePage> {
     BitmapDescriptor.asset(
       ImageConfiguration.empty,
       "assets/pin_current_location.png",
-    ).then(
-      (icon) {
-        currentLocationIcon = icon;
-      },
-    );
+    ).then((icon) {
+      currentLocationIcon = icon;
+    });
   }
 
   double getProperZoom() {
@@ -220,7 +210,8 @@ class _SearchHomePageState extends State<SearchHomePage> {
       },
       gestureRecognizers: {
         Factory<OneSequenceGestureRecognizer>(
-            () => PanGestureRecognizer()..onEnd = (drag) {})
+          () => PanGestureRecognizer()..onEnd = (drag) {},
+        ),
       },
     );
   }

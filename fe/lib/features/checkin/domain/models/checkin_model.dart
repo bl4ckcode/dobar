@@ -83,16 +83,16 @@ class CheckinModel extends Equatable {
 
   @override
   List<Object?> get props => [
-        id,
-        userId,
-        barId,
-        barName,
-        barImageUrl,
-        tableNumber,
-        status,
-        checkedInAt,
-        checkedOutAt,
-      ];
+    id,
+    userId,
+    barId,
+    barName,
+    barImageUrl,
+    tableNumber,
+    status,
+    checkedInAt,
+    checkedOutAt,
+  ];
 }
 
 /// Check-in status
@@ -121,11 +121,7 @@ class QrScanResult {
   final String? tableNumber;
   final String? specialCode;
 
-  QrScanResult({
-    required this.barId,
-    this.tableNumber,
-    this.specialCode,
-  });
+  QrScanResult({required this.barId, this.tableNumber, this.specialCode});
 
   /// Parse QR code data
   /// Expected format: barz://bar/{barId}?table={tableNumber}

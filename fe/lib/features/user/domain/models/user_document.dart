@@ -23,8 +23,9 @@ class UserDocument {
     return UserDocument(
       id: json['id'],
       type: DocumentType.values.firstWhere(
-          (e) => e.name == json['type'],
-          orElse: () => DocumentType.other),
+        (e) => e.name == json['type'],
+        orElse: () => DocumentType.other,
+      ),
       number: json['number'],
       issuingAuthority: json['issuing_authority'],
       issueDate: json['issue_date'] != null

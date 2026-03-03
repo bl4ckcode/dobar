@@ -3,10 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../domain/models/parallax_recipe_ui_model.dart';
 
 class CircleCard extends StatelessWidget {
-  const CircleCard({
-    super.key,
-    required this.bar,
-  });
+  const CircleCard({super.key, required this.bar});
 
   final ParallaxRecipeUiModel bar;
 
@@ -27,18 +24,13 @@ class CircleCard extends StatelessWidget {
             ),
           ),
         ),
-        const SizedBox(
-          height: 4,
-        ),
+        const SizedBox(height: 4),
         Align(
           child: Text(
             bar.name,
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
           ),
-        )
+        ),
       ],
     );
   }

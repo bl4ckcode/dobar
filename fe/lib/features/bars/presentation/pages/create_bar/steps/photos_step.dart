@@ -55,7 +55,10 @@ class _PhotosStepState extends State<PhotosStep> {
                     aspectRatio: 16 / 9,
                   ),
                   const SizedBox(height: BarzSpacing.xl),
-                  _buildSectionHeader(l10n.gallery_photos, Icons.photo_library_rounded),
+                  _buildSectionHeader(
+                    l10n.gallery_photos,
+                    Icons.photo_library_rounded,
+                  ),
                   const SizedBox(height: BarzSpacing.sm),
                   Text(
                     l10n.gallery_photos_hint,
@@ -110,10 +113,7 @@ class _PhotosStepState extends State<PhotosStep> {
       children: [
         _buildSectionHeader(title, icon),
         const SizedBox(height: BarzSpacing.xs),
-        Text(
-          subtitle,
-          style: TextStyle(color: textSecondary, fontSize: 14),
-        ),
+        Text(subtitle, style: TextStyle(color: textSecondary, fontSize: 14)),
         const SizedBox(height: BarzSpacing.md),
         GestureDetector(
           onTap: onTap,
@@ -137,7 +137,11 @@ class _PhotosStepState extends State<PhotosStep> {
                   : Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.add_a_photo_rounded, size: 48, color: textSecondary),
+                        Icon(
+                          Icons.add_a_photo_rounded,
+                          size: 48,
+                          color: textSecondary,
+                        ),
                         const SizedBox(height: 8),
                         Text(
                           'Tap to add',
@@ -201,7 +205,11 @@ class _PhotosStepState extends State<PhotosStep> {
                       color: errorRed,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.close, size: 16, color: Colors.white),
+                    child: const Icon(
+                      Icons.close,
+                      size: 16,
+                      color: Colors.white,
+                    ),
                   ),
                 ),
               ),
@@ -213,9 +221,9 @@ class _PhotosStepState extends State<PhotosStep> {
   }
 
   void _pickImage(ImageType type) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Image picker coming soon')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Image picker coming soon')));
   }
 
   void _removePhoto(int index) {

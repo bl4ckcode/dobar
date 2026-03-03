@@ -43,8 +43,9 @@ class _BarDetailContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = theme.brightness == Brightness.dark;
 
     return BlocBuilder<BarBloc, BarState>(
       builder: (context, state) {
@@ -251,7 +252,8 @@ class _MenuPageViewState extends State<_MenuPageView> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     return BlocBuilder<CartBloc, CartState>(
       builder: (context, cartState) {
         final totalItems = _getTotalItemsFromState(cartState);

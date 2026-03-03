@@ -1,5 +1,5 @@
 /// Advertising Widgets
-/// 
+///
 /// Reusable widgets for displaying and tracking ads.
 library;
 

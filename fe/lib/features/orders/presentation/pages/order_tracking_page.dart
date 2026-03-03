@@ -90,7 +90,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage>
   void _showStatusNotification(OrderStatusUpdate update) {
     final l10n = AppLocalizations.of(context)!;
     String message;
-    
+
     switch (update.status) {
       case OrderStatus.confirmed:
         message = l10n.notification_order_confirmed;
@@ -133,7 +133,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage>
 
     final emailPromptService = getItInjector<EmailPromptService>();
     final hasEmail = user.email != null && user.email!.isNotEmpty;
-    
+
     if (!emailPromptService.shouldShowPrompt(hasEmail: hasEmail)) return;
 
     _hasShownEmailPrompt = true;
@@ -173,14 +173,13 @@ class _OrderTrackingPageState extends State<OrderTrackingPage>
     final theme = Theme.of(context);
 
     return BlocProvider(
-      create: (_) => getItInjector<OrderBloc>()
-        ..add(LoadOrderTimeline(orderId: widget.orderId)),
+      create: (_) =>
+          getItInjector<OrderBloc>()
+            ..add(LoadOrderTimeline(orderId: widget.orderId)),
       child: Scaffold(
         appBar: AppBar(
           title: Text(l10n.order_number(widget.orderId)),
-          actions: [
-            _buildConnectionIndicator(),
-          ],
+          actions: [_buildConnectionIndicator()],
         ),
         body: Column(
           children: [
@@ -241,7 +240,8 @@ class _OrderTrackingPageState extends State<OrderTrackingPage>
           AnimatedBuilder(
             animation: _pulseController,
             builder: (context, child) {
-              final isActive = _currentStatus != OrderStatus.completed &&
+              final isActive =
+                  _currentStatus != OrderStatus.completed &&
                   _currentStatus != OrderStatus.cancelled;
               return Transform.scale(
                 scale: isActive ? 1.0 + (_pulseController.value * 0.1) : 1.0,
@@ -249,7 +249,9 @@ class _OrderTrackingPageState extends State<OrderTrackingPage>
                   width: 80,
                   height: 80,
                   decoration: BoxDecoration(
-                    color: _getStatusColor(_currentStatus).withValues(alpha: 0.2),
+                    color: _getStatusColor(
+                      _currentStatus,
+                    ).withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                     border: Border.all(
                       color: _getStatusColor(_currentStatus),
@@ -355,27 +357,28 @@ class _OrderTrackingPageState extends State<OrderTrackingPage>
                     style: theme.textTheme.titleMedium,
                   ),
                   const Divider(),
-                  ...order.items.map((item) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              radius: 16,
-                              backgroundColor:
-                                  theme.colorScheme.primaryContainer,
-                              child: Text('${item.quantity}x'),
+                  ...order.items.map(
+                    (item) => Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 16,
+                            backgroundColor: theme.colorScheme.primaryContainer,
+                            child: Text('${item.quantity}x'),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(child: Text(item.menuItemName)),
+                          Text(
+                            '\$${item.totalPrice.toStringAsFixed(2)}',
+                            style: theme.textTheme.bodyLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(child: Text(item.menuItemName)),
-                            Text(
-                              '\$${item.totalPrice.toStringAsFixed(2)}',
-                              style: theme.textTheme.bodyLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      )),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -391,10 +394,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage>
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    l10n.order_total,
-                    style: theme.textTheme.titleLarge,
-                  ),
+                  Text(l10n.order_total, style: theme.textTheme.titleLarge),
                   Text(
                     '\$${order.totalPrice.toStringAsFixed(2)}',
                     style: theme.textTheme.headlineSmall?.copyWith(
@@ -442,9 +442,9 @@ class _OrderTrackingPageState extends State<OrderTrackingPage>
           const SizedBox(height: 16),
           ElevatedButton(
             onPressed: () {
-              context
-                  .read<OrderBloc>()
-                  .add(LoadOrderTimeline(orderId: widget.orderId));
+              context.read<OrderBloc>().add(
+                LoadOrderTimeline(orderId: widget.orderId),
+              );
             },
             child: Text(l10n.error_retry),
           ),
@@ -467,7 +467,9 @@ class _OrderTrackingPageState extends State<OrderTrackingPage>
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
-              context.read<OrderBloc>().add(CancelOrder(orderId: widget.orderId));
+              context.read<OrderBloc>().add(
+                CancelOrder(orderId: widget.orderId),
+              );
               context.pop();
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),

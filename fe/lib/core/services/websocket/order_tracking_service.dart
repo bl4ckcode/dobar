@@ -18,7 +18,7 @@ enum OrderStatus {
       orElse: () => OrderStatus.pending,
     );
   }
-  
+
   String get displayName {
     switch (this) {
       case OrderStatus.pending:
@@ -35,7 +35,7 @@ enum OrderStatus {
         return 'Cancelado';
     }
   }
-  
+
   String get emoji {
     switch (this) {
       case OrderStatus.pending:
@@ -52,7 +52,7 @@ enum OrderStatus {
         return '❌';
     }
   }
-  
+
   double get progressValue {
     switch (this) {
       case OrderStatus.pending:
@@ -96,53 +96,50 @@ class OrderStatusUpdate {
 }
 
 /// Service for tracking a user's order in real-time
-/// 
+///
 /// Usage:
 /// ```dart
 /// final tracker = OrderTrackingService(orderId: 123, token: userToken);
-/// 
+///
 /// tracker.statusUpdates.listen((update) {
 ///   print('Order ${update.orderId} is now ${update.status.displayName}');
 /// });
-/// 
+///
 /// await tracker.startTracking();
 /// ```
 class OrderTrackingService {
   final int orderId;
   final String token;
-  
+
   late final WebSocketService _ws;
   final _statusController = StreamController<OrderStatusUpdate>.broadcast();
-  
+
   OrderStatus _currentStatus = OrderStatus.pending;
 
-  OrderTrackingService({
-    required this.orderId,
-    required this.token,
-  }) {
+  OrderTrackingService({required this.orderId, required this.token}) {
     // Convert https to wss for WebSocket
     final wsBaseUrl = ApiEndpoints.baseUrl
         .replaceFirst('https://', 'wss://')
         .replaceFirst('http://', 'ws://');
-    
+
     _ws = WebSocketService(
       baseUrl: wsBaseUrl,
       path: '/ws/orders/$orderId/status',
       token: token,
     );
-    
+
     _ws.messages.listen(_handleMessage);
   }
 
   /// Stream of order status updates
   Stream<OrderStatusUpdate> get statusUpdates => _statusController.stream;
-  
+
   /// Current order status
   OrderStatus get currentStatus => _currentStatus;
-  
+
   /// WebSocket connection state
   Stream<WebSocketState> get connectionState => _ws.stateStream;
-  
+
   /// Whether currently connected
   bool get isConnected => _ws.isConnected;
 
@@ -161,20 +158,24 @@ class OrderTrackingService {
     switch (message.type) {
       case 'connected':
         // Initial connection - extract current status
-        final status = OrderStatus.fromString(message.data['status'] ?? 'pending');
-        _updateStatus(OrderStatusUpdate(
-          orderId: orderId,
-          status: status,
-          message: 'Conectado ao rastreamento',
-          timestamp: message.timestamp,
-        ));
+        final status = OrderStatus.fromString(
+          message.data['status'] ?? 'pending',
+        );
+        _updateStatus(
+          OrderStatusUpdate(
+            orderId: orderId,
+            status: status,
+            message: 'Conectado ao rastreamento',
+            timestamp: message.timestamp,
+          ),
+        );
         break;
-        
+
       case 'status_update':
         final update = OrderStatusUpdate.fromWebSocketMessage(message);
         _updateStatus(update);
         break;
-        
+
       default:
         debugPrint('[OrderTracking] Unknown message type: ${message.type}');
     }
@@ -183,6 +184,8 @@ class OrderTrackingService {
   void _updateStatus(OrderStatusUpdate update) {
     _currentStatus = update.status;
     _statusController.add(update);
-    debugPrint('[OrderTracking] Order $orderId -> ${update.status.displayName}');
+    debugPrint(
+      '[OrderTracking] Order $orderId -> ${update.status.displayName}',
+    );
   }
 }

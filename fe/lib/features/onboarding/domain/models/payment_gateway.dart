@@ -9,10 +9,10 @@ abstract class PaymentGateway with _$PaymentGateway {
   const factory PaymentGateway({
     /// Gateway name (stone, mercadopago, stripe)
     required String gateway,
-    
+
     /// Country code
     @JsonKey(name: 'country_code') required String countryCode,
-    
+
     /// Available payment methods
     @JsonKey(name: 'payment_methods') required List<String> paymentMethods,
   }) = _PaymentGateway;

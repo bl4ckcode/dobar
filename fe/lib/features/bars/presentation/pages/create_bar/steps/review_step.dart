@@ -51,8 +51,14 @@ class ReviewStep extends StatelessWidget {
                     icon: Icons.photo_library_rounded,
                     title: l10n.photos,
                     children: [
-                      _buildPhotoStatus(l10n.bar_logo, formData.logoPath != null),
-                      _buildPhotoStatus(l10n.cover_photo, formData.coverPath != null),
+                      _buildPhotoStatus(
+                        l10n.bar_logo,
+                        formData.logoPath != null,
+                      ),
+                      _buildPhotoStatus(
+                        l10n.cover_photo,
+                        formData.coverPath != null,
+                      ),
                       _buildPhotoStatus(
                         l10n.gallery_photos,
                         formData.photoPaths.isNotEmpty,
@@ -222,9 +228,7 @@ class ReviewStep extends StatelessWidget {
           const SizedBox(width: 8),
           Text(
             count > 0 ? '$label ($count)' : label,
-            style: TextStyle(
-              color: hasPhoto ? textPrimary : textSecondary,
-            ),
+            style: TextStyle(color: hasPhoto ? textPrimary : textSecondary),
           ),
         ],
       ),
@@ -245,13 +249,16 @@ class ReviewStep extends StatelessWidget {
     return formData.operatingHours.entries.map((entry) {
       final hours = entry.value;
       final dayName = dayLabels[entry.key] ?? entry.key;
-      
+
       if (!hours.isOpen) {
         return Padding(
           padding: const EdgeInsets.only(bottom: 4),
           child: Row(
             children: [
-              SizedBox(width: 100, child: Text(dayName, style: TextStyle(color: textSecondary))),
+              SizedBox(
+                width: 100,
+                child: Text(dayName, style: TextStyle(color: textSecondary)),
+              ),
               Text(l10n.closed, style: TextStyle(color: textSecondary)),
             ],
           ),
@@ -266,7 +273,10 @@ class ReviewStep extends StatelessWidget {
         child: Row(
           children: [
             SizedBox(width: 100, child: Text(dayName)),
-            Text('$open - $close', style: const TextStyle(fontWeight: FontWeight.w500)),
+            Text(
+              '$open - $close',
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
           ],
         ),
       );
@@ -280,7 +290,12 @@ class ReviewStep extends StatelessWidget {
 
     // Business ID
     if (config.requiresBusinessId && formData.businessId.isNotEmpty) {
-      widgets.add(_buildInfoRow(config.businessIdLabel ?? l10n.business_id, _maskSensitive(formData.businessId)));
+      widgets.add(
+        _buildInfoRow(
+          config.businessIdLabel ?? l10n.business_id,
+          _maskSensitive(formData.businessId),
+        ),
+      );
     }
 
     // Bank account info based on country
@@ -288,11 +303,18 @@ class ReviewStep extends StatelessWidget {
       case CountryCode.br:
         if (bank.pixKey.isNotEmpty) {
           widgets.add(_buildInfoRow(l10n.pix_key, _maskSensitive(bank.pixKey)));
-          widgets.add(_buildInfoRow(l10n.pix_key_type, bank.pixKeyType.toUpperCase()));
+          widgets.add(
+            _buildInfoRow(l10n.pix_key_type, bank.pixKeyType.toUpperCase()),
+          );
         } else if (bank.accountNumber.isNotEmpty) {
           widgets.add(_buildInfoRow(l10n.bank_code, bank.bankCode));
           widgets.add(_buildInfoRow(l10n.branch_code, bank.branchCode));
-          widgets.add(_buildInfoRow(l10n.account_number, _maskSensitive(bank.accountNumber)));
+          widgets.add(
+            _buildInfoRow(
+              l10n.account_number,
+              _maskSensitive(bank.accountNumber),
+            ),
+          );
         }
         break;
       case CountryCode.mx:
@@ -308,12 +330,22 @@ class ReviewStep extends StatelessWidget {
       case CountryCode.us:
         if (bank.routingNumber.isNotEmpty) {
           widgets.add(_buildInfoRow(l10n.routing_number, bank.routingNumber));
-          widgets.add(_buildInfoRow(l10n.account_number, _maskSensitive(bank.accountNumber)));
+          widgets.add(
+            _buildInfoRow(
+              l10n.account_number,
+              _maskSensitive(bank.accountNumber),
+            ),
+          );
         }
         break;
       default:
         if (bank.accountNumber.isNotEmpty) {
-          widgets.add(_buildInfoRow(l10n.account_number, _maskSensitive(bank.accountNumber)));
+          widgets.add(
+            _buildInfoRow(
+              l10n.account_number,
+              _maskSensitive(bank.accountNumber),
+            ),
+          );
         }
     }
 

@@ -68,17 +68,20 @@ class UpdateItemDetails extends MenuReaderEvent {
   });
 
   @override
-  List<Object?> get props => [categoryIndex, itemIndex, name, price, description];
+  List<Object?> get props => [
+    categoryIndex,
+    itemIndex,
+    name,
+    price,
+    description,
+  ];
 }
 
 class UpdateCategoryName extends MenuReaderEvent {
   final int categoryIndex;
   final String name;
 
-  const UpdateCategoryName({
-    required this.categoryIndex,
-    required this.name,
-  });
+  const UpdateCategoryName({required this.categoryIndex, required this.name});
 
   @override
   List<Object?> get props => [categoryIndex, name];

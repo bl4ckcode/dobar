@@ -6,7 +6,7 @@ const menuTitles = [
   'Alterar localização',
   'Politica de Reembolso',
   'FAQ',
-  'Seja um parceiro'
+  'Seja um parceiro',
 ];
 const initialDelayTime = Duration(milliseconds: 50);
 const itemSlideTime = Duration(milliseconds: 250);
@@ -26,7 +26,8 @@ class _MenuState extends State<Menu> with SingleTickerProviderStateMixin {
   late Interval buttonInterval;
   late AnimationController animationController;
 
-  final _animationDuration = initialDelayTime +
+  final _animationDuration =
+      initialDelayTime +
       (staggerTime * menuTitles.length) +
       buttonDelayTime +
       buttonTime;
@@ -132,24 +133,21 @@ class _MenuState extends State<Menu> with SingleTickerProviderStateMixin {
         child: AnimatedBuilder(
           animation: animationController,
           builder: (context, child) {
-            final animationPercent = Curves.elasticOut
-                .transform(buttonInterval.transform(animationController.value));
+            final animationPercent = Curves.elasticOut.transform(
+              buttonInterval.transform(animationController.value),
+            );
             final opacity = animationPercent.clamp(0.0, 1.0);
             final scale = (animationPercent * 0.5) + 0.5;
 
             return Opacity(
               opacity: opacity,
-              child: Transform.scale(
-                scale: scale,
-                child: child,
-              ),
+              child: Transform.scale(scale: scale, child: child),
             );
           },
           child: ElevatedButton(
             style: ElevatedButton.styleFrom(
               shape: const StadiumBorder(),
-              backgroundColor:
-                  mainColor.withValues(alpha: 0.6),
+              backgroundColor: mainColor.withValues(alpha: 0.6),
               padding: const EdgeInsets.symmetric(horizontal: 48, vertical: 14),
             ),
             onPressed: () {},

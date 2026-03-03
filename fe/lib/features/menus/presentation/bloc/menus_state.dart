@@ -7,7 +7,7 @@ part 'menus_state.freezed.dart';
 sealed class MenusState with _$MenusState {
   const factory MenusState.initial() = Initial;
   const factory MenusState.loading() = Loading;
-  const factory MenusState.successWithItems(List<Product> items) = SuccessWithItems;
+  const factory MenusState.successWithItems(List<Product> items) =
+      SuccessWithItems;
   const factory MenusState.failure({required String error}) = Failure;
 }
-

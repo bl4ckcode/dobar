@@ -13,9 +13,7 @@ class HomeImplApi extends AbstractHomeApi {
   @override
   Future<ApiResponse<HomeModel>> getHome(HomeParams params) async {
     try {
-      final result = (await dio.get(
-       " getArticlePath(params.identification)",
-      ));
+      final result = (await dio.get(" getArticlePath(params.identification)"));
       if (result.data == null) {
         throw ServerException("Unknown Error", result.statusCode);
       }
@@ -23,7 +21,9 @@ class HomeImplApi extends AbstractHomeApi {
       return ApiResponse.fromJson<HomeModel>(result.data);
     } on DioException catch (e) {
       throw ServerException(
-          e.message ?? "Unknown error", e.response?.statusCode);
+        e.message ?? "Unknown error",
+        e.response?.statusCode,
+      );
     } on ServerException {
       rethrow;
     } catch (e) {

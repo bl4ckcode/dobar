@@ -32,7 +32,9 @@ class _HorizontalSlidingCardsState extends State<HorizontalSlidingCards> {
         itemCount: widget.list.length,
         itemBuilder: (context, index) {
           final ParallaxRecipeUiModel bar = widget.list[index];
-          final card = widget.cardsType == CardType.circle ? CircleCard(bar: bar) : RectangleCard(bar: bar);
+          final card = widget.cardsType == CardType.circle
+              ? CircleCard(bar: bar)
+              : RectangleCard(bar: bar);
           return Container(
             padding: const EdgeInsets.only(left: 16, right: 16),
             child: GestureDetector(

@@ -32,7 +32,9 @@ class PromotionsRepositoryImpl implements PromotionsRepository {
   }
 
   @override
-  Future<Either<Failure, List<PromotionModel>>> getPromotionsByDiscountType(PromoDiscountType type) async {
+  Future<Either<Failure, List<PromotionModel>>> getPromotionsByDiscountType(
+    PromoDiscountType type,
+  ) async {
     try {
       final result = await _datasource.getPromotionsByDiscountType(type);
       return Right(result);
@@ -42,9 +44,15 @@ class PromotionsRepositoryImpl implements PromotionsRepository {
   }
 
   @override
-  Future<Either<Failure, List<PromotionModel>>> getPromotionsByBar(int barId, {bool activeOnly = true}) async {
+  Future<Either<Failure, List<PromotionModel>>> getPromotionsByBar(
+    int barId, {
+    bool activeOnly = true,
+  }) async {
     try {
-      final result = await _datasource.getPromotionsByBar(barId, activeOnly: activeOnly);
+      final result = await _datasource.getPromotionsByBar(
+        barId,
+        activeOnly: activeOnly,
+      );
       return Right(result);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message, e.statusCode));
@@ -72,7 +80,9 @@ class PromotionsRepositoryImpl implements PromotionsRepository {
   }
 
   @override
-  Future<Either<Failure, List<OfferModel>>> getOffersByPartnerId(int partnerId) async {
+  Future<Either<Failure, List<OfferModel>>> getOffersByPartnerId(
+    int partnerId,
+  ) async {
     try {
       final result = await _datasource.getOffersByPartnerId(partnerId);
       return Right(result);

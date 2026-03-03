@@ -34,7 +34,8 @@ class _AppShellState extends State<AppShell> {
         listener: (context, state) {
           state.whenOrNull(
             ready: (session, forceClientMode) {
-              if (!forceClientMode && (session.isBusiness || session.barAccess.isNotEmpty)) {
+              if (!forceClientMode &&
+                  (session.isBusiness || session.barAccess.isNotEmpty)) {
                 context.go(AppRoute.businessDashboard.path);
               }
             },
@@ -45,7 +46,8 @@ class _AppShellState extends State<AppShell> {
             initial: () => const _LoadingView(),
             loading: () => const _LoadingView(),
             ready: (session, forceClientMode) {
-              if (!_redirectedToOnboarding && !session.user.hasCompletedOnboarding) {
+              if (!_redirectedToOnboarding &&
+                  !session.user.hasCompletedOnboarding) {
                 _redirectedToOnboarding = true;
                 final phone = session.user.phoneNumber;
                 WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -57,11 +59,11 @@ class _AppShellState extends State<AppShell> {
               if (forceClientMode) {
                 return const WireframeShell();
               }
-              
+
               if (session.isBusiness || session.barAccess.isNotEmpty) {
                 return const _LoadingView();
               }
-              
+
               return const WireframeShell();
             },
             error: (message) => const WireframeShell(),

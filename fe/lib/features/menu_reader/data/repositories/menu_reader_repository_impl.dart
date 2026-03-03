@@ -12,10 +12,7 @@ class MenuReaderRepositoryImpl implements MenuReaderRepository {
   final MenuReaderDatasource datasource;
   final Dio dio;
 
-  MenuReaderRepositoryImpl({
-    required this.datasource,
-    required this.dio,
-  });
+  MenuReaderRepositoryImpl({required this.datasource, required this.dio});
 
   @override
   Future<Either<Failure, MenuExtraction>> extractMenuFromImage({
@@ -95,10 +92,12 @@ class MenuReaderRepositoryImpl implements MenuReaderRepository {
 
       return const Right(true);
     } on DioException catch (e) {
-      return Left(ServerFailure(
-        e.response?.data?['message'] ?? 'Failed to save menu items',
-        e.response?.statusCode,
-      ));
+      return Left(
+        ServerFailure(
+          e.response?.data?['message'] ?? 'Failed to save menu items',
+          e.response?.statusCode,
+        ),
+      );
     } catch (e) {
       return Left(ServerFailure('Failed to save menu items: $e', null));
     }
@@ -109,12 +108,12 @@ class MenuReaderRepositoryImpl implements MenuReaderRepository {
       final response = await dio.get(
         '${ApiEndpoints.baseUrl}${ApiEndpoints.menusForBar(barId)}',
       );
-      
+
       final menus = response.data as List<dynamic>;
       if (menus.isNotEmpty) {
         return menus.first['id'] as int;
       }
-      
+
       final createResponse = await dio.post(
         '${ApiEndpoints.baseUrl}${ApiEndpoints.menusCreate}',
         data: {
@@ -124,7 +123,7 @@ class MenuReaderRepositoryImpl implements MenuReaderRepository {
           'is_active': true,
         },
       );
-      
+
       return createResponse.data['id'] as int;
     } catch (e) {
       return null;

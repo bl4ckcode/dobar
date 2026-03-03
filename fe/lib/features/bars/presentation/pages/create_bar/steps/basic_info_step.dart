@@ -46,7 +46,9 @@ class _BasicInfoStepState extends State<BasicInfoStep> {
 
   bool _isValidEmail(String email) {
     if (email.isEmpty) return false;
-    final emailRegex = RegExp(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$');
+    final emailRegex = RegExp(
+      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$',
+    );
     return emailRegex.hasMatch(email);
   }
 
@@ -87,7 +89,10 @@ class _BasicInfoStepState extends State<BasicInfoStep> {
                       },
                     ),
                     const SizedBox(height: BarzSpacing.xl),
-                    _buildSectionHeader(l10n.address, Icons.location_on_rounded),
+                    _buildSectionHeader(
+                      l10n.address,
+                      Icons.location_on_rounded,
+                    ),
                     const SizedBox(height: BarzSpacing.sm),
                     FormBuilderTextField(
                       name: 'address',
@@ -121,7 +126,7 @@ class _BasicInfoStepState extends State<BasicInfoStep> {
                       name: 'email',
                       initialValue: widget.formData.email,
                       decoration: _inputDecoration(
-                        l10n.email_hint, 
+                        l10n.email_hint,
                         prefixIcon: Icons.email_rounded,
                         iconSize: 28,
                       ),
@@ -192,18 +197,22 @@ class _BasicInfoStepState extends State<BasicInfoStep> {
     );
   }
 
-  InputDecoration _inputDecoration(String hint, {IconData? prefixIcon, double iconSize = 24}) {
+  InputDecoration _inputDecoration(
+    String hint, {
+    IconData? prefixIcon,
+    double iconSize = 24,
+  }) {
     return InputDecoration(
       hintText: hint,
       filled: true,
       fillColor: barzGoldMuted,
-      prefixIcon: prefixIcon != null 
+      prefixIcon: prefixIcon != null
           ? Padding(
               padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Icon(prefixIcon, color: textSecondary, size: iconSize),
             )
           : null,
-      prefixIconConstraints: prefixIcon != null 
+      prefixIconConstraints: prefixIcon != null
           ? const BoxConstraints(minWidth: 48, minHeight: 48)
           : null,
       border: OutlineInputBorder(

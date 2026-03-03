@@ -33,10 +33,7 @@ class MenuReaderNetworkDatasource implements MenuReaderDatasource {
   }) async {
     try {
       final formData = FormData.fromMap({
-        'image': MultipartFile.fromBytes(
-          imageBytes,
-          filename: fileName,
-        ),
+        'image': MultipartFile.fromBytes(imageBytes, filename: fileName),
         'bar_id': barId,
         if (languageHint != null) 'language_hint': languageHint,
       });
@@ -88,7 +85,10 @@ class MenuReaderNetworkDatasource implements MenuReaderDatasource {
     final detail = e.response?.data?['detail'];
 
     if (statusCode == 400) {
-      throw ServerException(detail ?? 'Image quality too low for text extraction', statusCode);
+      throw ServerException(
+        detail ?? 'Image quality too low for text extraction',
+        statusCode,
+      );
     } else if (statusCode == 422) {
       throw ServerException(detail ?? 'No menu items detected', statusCode);
     }

@@ -11,6 +11,7 @@ import 'package:barz/features/session/presentation/bloc/session_event.dart';
 import 'package:barz/features/session/domain/models/bar_access.dart';
 import 'package:barz/features/bars/presentation/bloc/dashboard_bloc.dart';
 import 'package:barz/features/bars/domain/models/dashboard_models.dart';
+import 'package:barz/shared/presentation/widget/theme_toggle_button.dart';
 
 class BusinessDashboardPage extends StatelessWidget {
   const BusinessDashboardPage({super.key});
@@ -53,13 +54,12 @@ class _DashboardContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final isOwnerOrAdmin =
         activeBar.role == BarRole.owner || activeBar.role == BarRole.admin;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF121212) : const Color(0xFFF9F9F9);
+    final dobar = context.dobarColors;
 
     return BlocBuilder<DashboardBloc, DashboardState>(
       builder: (context, dashboardState) {
         return Scaffold(
-          backgroundColor: bgColor,
+          backgroundColor: dobar.background,
           body: RefreshIndicator(
             onRefresh: () async {
               context.read<DashboardBloc>().add(
@@ -144,11 +144,12 @@ class _BusinessDashboardHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final headerBg = isDark ? const Color(0xFF1E1E1E) : surfaceWhite;
-    final borderColor = isDark ? barzDarkMuted : surfaceDim;
-    final textColor = isDark ? textOnDark : textPrimary;
-    final mutedTextColor = isDark ? textTertiary : textSecondary;
+    final theme = Theme.of(context);
+    final dobar = context.dobarColors;
+    final headerBg = dobar.surfaceElevated;
+    final borderColor = theme.colorScheme.outline;
+    final textColor = dobar.labelPrimary;
+    final mutedTextColor = dobar.labelSecondary;
 
     return Container(
       height: 64,
@@ -267,6 +268,9 @@ class _BusinessDashboardHeader extends StatelessWidget {
                 ],
               ),
               const SizedBox(width: 12),
+              // Theme Toggle
+              const ThemeToggleButton(),
+              const SizedBox(width: 12),
               // Switch to client
               TextButton.icon(
                 icon: Icon(
@@ -276,7 +280,7 @@ class _BusinessDashboardHeader extends StatelessWidget {
                 ),
                 label: Text(
                   'Switch to Client Mode',
-                  style: TextStyle(
+                  style: theme.textTheme.labelLarge?.copyWith(
                     color: mutedTextColor,
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
@@ -428,11 +432,13 @@ class _BusinessSummaryCardState extends State<_BusinessSummaryCard> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? const Color(0xFF1E1E1E) : surfaceWhite;
-    final borderColor = isDark ? barzDarkMuted : surfaceDim;
-    final textColor = isDark ? textOnDark : textPrimary;
-    final mutedColor = isDark ? textTertiary : textSecondary;
+    final theme = Theme.of(context);
+    final dobar = context.dobarColors;
+    final isDark = context.isDark;
+    final cardBg = dobar.surface;
+    final borderColor = theme.colorScheme.outline;
+    final textColor = dobar.labelPrimary;
+    final mutedColor = dobar.labelSecondary;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovering = true),
@@ -446,7 +452,7 @@ class _BusinessSummaryCardState extends State<_BusinessSummaryCard> {
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: _isHovering
-                ? (isDark ? const Color(0xFF262626) : Colors.white)
+                ? (isDark ? const Color(0xFF262626) : dobar.surfaceElevated)
                 : cardBg,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
@@ -550,11 +556,13 @@ class _LiveOrderQueue extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final cardBg = isDark ? const Color(0xFF1E1E1E) : surfaceWhite;
-    final borderColor = isDark ? barzDarkMuted : surfaceDim;
-    final textColor = isDark ? textOnDark : textPrimary;
-    final mutedColor = isDark ? textTertiary : textSecondary;
+    final theme = Theme.of(context);
+    final dobar = context.dobarColors;
+    final isDark = context.isDark;
+    final cardBg = dobar.surface;
+    final borderColor = theme.colorScheme.outline;
+    final textColor = dobar.labelPrimary;
+    final mutedColor = dobar.labelSecondary;
 
     final activeOrdersCount =
         orders?.orders
@@ -864,7 +872,8 @@ class _BarsOverviewSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final textColor = isDark ? textOnDark : textPrimary;
 
     return Column(
@@ -886,7 +895,10 @@ class _BarsOverviewSection extends StatelessWidget {
               icon: Icon(Icons.add, size: 18, color: barzGold),
               label: Text(
                 'Add Bar',
-                style: TextStyle(color: barzGold, fontWeight: FontWeight.w600),
+                style: theme.textTheme.labelLarge?.copyWith(
+                  color: barzGold,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ),
           ],
@@ -919,7 +931,8 @@ class _AddBarCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final cardBg = isDark ? const Color(0xFF1E1E1E) : surfaceWhite;
 
     return Material(
@@ -979,7 +992,8 @@ class _BarMiniCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final cardBg = isDark ? const Color(0xFF1E1E1E) : surfaceWhite;
     final borderColor = isDark ? barzDarkMuted : surfaceDim;
     final textColor = isDark ? textOnDark : textPrimary;
@@ -1060,9 +1074,10 @@ class _QuickActionsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final isOwnerOrAdmin =
         activeBar.role == BarRole.owner || activeBar.role == BarRole.admin;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = theme.brightness == Brightness.dark;
     final textColor = isDark ? textOnDark : textPrimary;
 
     return Column(
@@ -1133,7 +1148,8 @@ class _QuickActionChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final cardBg = isDark ? const Color(0xFF1E1E1E) : surfaceWhite;
     final borderColor = isDark ? barzDarkMuted : surfaceDim;
     final textColor = isDark ? textOnDark : textPrimary;

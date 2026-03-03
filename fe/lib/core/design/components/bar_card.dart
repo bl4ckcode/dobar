@@ -21,6 +21,7 @@ class BarCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final colors = context.dobarColors;
     return GestureDetector(
       onTap: onTap,
@@ -59,7 +60,7 @@ class BarCard extends StatelessWidget {
                       end: Alignment.bottomCenter,
                       colors: [
                         Colors.transparent,
-                        Theme.of(context).brightness == Brightness.light
+                        theme.brightness == Brightness.light
                             ? const Color(0xFFFFFDE7).withValues(
                                 alpha: 0.8,
                               ) // barzGoldSoft
@@ -105,7 +106,7 @@ class BarCard extends StatelessWidget {
             ),
             Container(
               decoration: BoxDecoration(
-                color: Theme.of(context).brightness == Brightness.light
+                color: theme.brightness == Brightness.light
                     ? const Color(0xFFFFFDF5) // Very light yellow
                     : null,
                 borderRadius: const BorderRadius.only(

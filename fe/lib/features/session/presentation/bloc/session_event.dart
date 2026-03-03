@@ -12,13 +12,17 @@ sealed class SessionEvent with _$SessionEvent {
   const factory SessionEvent.refreshBarAccess() = RefreshBarAccess;
 
   /// Switch the active bar for business users
-  const factory SessionEvent.switchActiveBar({required int barId}) = SwitchActiveBar;
+  const factory SessionEvent.switchActiveBar({required int barId}) =
+      SwitchActiveBar;
 
   /// Accept a staff invitation using invitation code
-  const factory SessionEvent.acceptInvitation({required String invitationCode}) = AcceptInvitation;
+  const factory SessionEvent.acceptInvitation({
+    required String invitationCode,
+  }) = AcceptInvitation;
 
   /// Handle when a new bar is created (user becomes owner)
-  const factory SessionEvent.barCreated({required BarAccess newBar}) = BarCreated;
+  const factory SessionEvent.barCreated({required BarAccess newBar}) =
+      BarCreated;
 
   /// Clear session on logout
   const factory SessionEvent.logout() = LogoutSession;

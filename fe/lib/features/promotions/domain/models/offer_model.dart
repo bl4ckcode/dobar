@@ -60,12 +60,14 @@ class OfferModel {
       title: json['title'],
       description: json['description'],
       type: OfferType.values.firstWhere(
-          (e) => e.name == json['type'],
-          orElse: () => OfferType.discount),
+        (e) => e.name == json['type'],
+        orElse: () => OfferType.discount,
+      ),
       discountType: json['discount_type'] != null
           ? DiscountType.values.firstWhere(
               (e) => e.name == json['discount_type'],
-              orElse: () => DiscountType.percentage)
+              orElse: () => DiscountType.percentage,
+            )
           : null,
       discountValue: (json['discount_value'] as num?)?.toDouble(),
       minOrderValue: (json['min_order_value'] as num?)?.toDouble(),

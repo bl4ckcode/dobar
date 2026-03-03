@@ -12,10 +12,7 @@ class BarzTextStyles {
     fontWeight: FontWeight.w500,
     color: barzBlack,
   );
-  static const TextStyle body = TextStyle(
-    fontSize: 16,
-    color: barzBlack,
-  );
+  static const TextStyle body = TextStyle(fontSize: 16, color: barzBlack);
   static const TextStyle button = TextStyle(
     fontSize: 16,
     fontWeight: FontWeight.bold,

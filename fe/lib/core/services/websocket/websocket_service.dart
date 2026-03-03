@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
-import 'package:web_socket_channel/status.dart' as ws_status;
 
 /// Represents a WebSocket message from the server
 class WebSocketMessage {
@@ -158,7 +157,11 @@ class WebSocketService {
     _reconnectTimer?.cancel();
 
     if (_channel != null) {
-      await _channel!.sink.close(ws_status.normalClosure);
+      try {
+        await _channel!.sink.close();
+      } catch (e) {
+        debugPrint('[WebSocket] Error closing sink: $e');
+      }
       _channel = null;
     }
 

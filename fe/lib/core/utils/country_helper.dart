@@ -41,7 +41,7 @@ enum SupportedCountry {
   static SupportedCountry? fromPhonePrefix(String prefix) {
     // Normalize prefix
     final normalizedPrefix = prefix.startsWith('+') ? prefix : '+$prefix';
-    
+
     try {
       return SupportedCountry.values.firstWhere(
         (c) => normalizedPrefix.startsWith(c.phonePrefix),
@@ -58,7 +58,7 @@ class CountryHelper {
   /// Returns country code (BR, AR, US, etc.) or default 'BR'
   static String detectCountryFromPhone(String? phone) {
     if (phone == null || phone.isEmpty) return 'BR';
-    
+
     final country = SupportedCountry.fromPhonePrefix(phone);
     return country?.code ?? 'BR';
   }

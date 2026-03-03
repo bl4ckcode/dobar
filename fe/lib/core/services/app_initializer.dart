@@ -2,7 +2,7 @@ import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:barz/core/services/version_migration_service.dart';
 
 /// AppInitializer handles all startup tasks for the app
-/// 
+///
 /// This is critical for a payments app to ensure:
 /// 1. Version migrations are run before the app starts
 /// 2. Storage integrity is validated
@@ -11,9 +11,8 @@ import 'package:barz/core/services/version_migration_service.dart';
 class AppInitializer {
   final VersionMigrationService _versionMigrationService;
 
-  AppInitializer({
-    required VersionMigrationService versionMigrationService,
-  }) : _versionMigrationService = versionMigrationService;
+  AppInitializer({required VersionMigrationService versionMigrationService})
+    : _versionMigrationService = versionMigrationService;
 
   void _debugLog(String message) {
     if (kDebugMode) {
@@ -26,17 +25,17 @@ class AppInitializer {
   /// This should be called after dependencies are registered but before runApp
   Future<void> run() async {
     _debugLog('🚀 Starting app initialization...');
-    
+
     try {
       // 1. Run version migrations first
       await _runVersionMigrations();
-      
+
       // 2. Initialize any other startup services
       await _initializeServices();
-      
+
       // 3. Preload any necessary data
       await _preloadData();
-      
+
       _debugLog('✅ App initialization complete');
     } catch (e, stackTrace) {
       _debugLog('❌ App initialization failed: $e');

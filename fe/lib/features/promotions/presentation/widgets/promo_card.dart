@@ -18,6 +18,7 @@ class PromoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -63,12 +64,11 @@ class PromoCard extends StatelessWidget {
                         const SizedBox(width: 4),
                         Text(
                           'ATIVO AGORA',
-                          style: Theme.of(context).textTheme.labelSmall
-                              ?.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 0.5,
-                              ),
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
                         ),
                       ],
                     ),
@@ -103,7 +103,7 @@ class PromoCard extends StatelessWidget {
                     ),
                     child: Text(
                       timeRange,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      style: theme.textTheme.titleMedium?.copyWith(
                         color: barzGold,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 1.2,

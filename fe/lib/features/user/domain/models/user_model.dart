@@ -57,8 +57,10 @@ class UserModel {
       email: json['email'] as String?,
       displayName: json['display_name'] as String?,
       // Handle both 'profile_picture_url' and 'avatar_url' keys
-      profilePictureUrl: (json['profile_picture_url'] ?? json['avatar_url']) as String?,
-      documents: (json['documents'] as List<dynamic>?)
+      profilePictureUrl:
+          (json['profile_picture_url'] ?? json['avatar_url']) as String?,
+      documents:
+          (json['documents'] as List<dynamic>?)
               ?.map((e) => UserDocument.fromJson(e))
               .toList() ??
           [],

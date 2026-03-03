@@ -8,7 +8,7 @@ import 'package:barz/features/session/presentation/bloc/session_event.dart';
 import 'package:barz/l10n/app_localizations.dart';
 
 /// Onboarding view shown to business users who don't have any bars yet.
-/// 
+///
 /// Provides options to:
 /// - Create a new bar
 /// - Accept a staff invitation
@@ -45,14 +45,17 @@ class BusinessOnboardingView extends StatelessWidget {
                       .fadeIn(duration: 400.ms)
                       .slideX(begin: 0.1, end: 0),
                   const SizedBox(height: 32),
-                  _buildDivider(context)
-                      .animate(delay: 400.ms)
-                      .fadeIn(duration: 400.ms),
+                  _buildDivider(
+                    context,
+                  ).animate(delay: 400.ms).fadeIn(duration: 400.ms),
                   const SizedBox(height: 24),
                   _buildSwitchToClientButton(context)
                       .animate(delay: 500.ms)
                       .fadeIn(duration: 400.ms)
-                      .scale(begin: const Offset(0.95, 0.95), end: const Offset(1, 1)),
+                      .scale(
+                        begin: const Offset(0.95, 0.95),
+                        end: const Offset(1, 1),
+                      ),
                 ],
               ),
             ),
@@ -80,11 +83,7 @@ class BusinessOnboardingView extends StatelessWidget {
               ),
             ],
           ),
-          child: Icon(
-            Icons.store_rounded,
-            size: 48,
-            color: barzGold,
-          ),
+          child: Icon(Icons.store_rounded, size: 48, color: barzGold),
         ),
         const SizedBox(height: 32),
         Text(
@@ -98,9 +97,7 @@ class BusinessOnboardingView extends StatelessWidget {
         const SizedBox(height: 12),
         Text(
           l10n.business_welcome_subtitle,
-          style: barzTextTheme.bodyLarge?.copyWith(
-            color: textSecondary,
-          ),
+          style: barzTextTheme.bodyLarge?.copyWith(color: textSecondary),
           textAlign: TextAlign.center,
         ),
       ],
@@ -118,7 +115,9 @@ class BusinessOnboardingView extends StatelessWidget {
       onTap: () async {
         final result = await context.push<bool>('/create-bar');
         if (result == true && context.mounted) {
-          context.read<SessionBloc>().add(const SessionEvent.refreshBarAccess());
+          context.read<SessionBloc>().add(
+            const SessionEvent.refreshBarAccess(),
+          );
         }
       },
     );
@@ -149,10 +148,7 @@ class BusinessOnboardingView extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
             l10n.business_or_explore_as,
-            style: TextStyle(
-              color: Colors.grey[500],
-              fontSize: 14,
-            ),
+            style: TextStyle(color: Colors.grey[500], fontSize: 14),
           ),
         ),
         Expanded(child: Divider(color: Colors.grey[300])),
@@ -164,7 +160,9 @@ class BusinessOnboardingView extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     return TextButton.icon(
       onPressed: () {
-        context.read<SessionBloc>().add(const SessionEvent.switchToClientMode());
+        context.read<SessionBloc>().add(
+          const SessionEvent.switchToClientMode(),
+        );
       },
       icon: Icon(Icons.person_outline, color: barzDark),
       label: Text(
@@ -183,7 +181,7 @@ class BusinessOnboardingView extends StatelessWidget {
   void _showInvitationDialog(BuildContext context) {
     final controller = TextEditingController();
     final l10n = AppLocalizations.of(context)!;
-    
+
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -202,10 +200,7 @@ class BusinessOnboardingView extends StatelessWidget {
             const SizedBox(height: 12),
             Text(
               l10n.business_code_instructions,
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 12,
-              ),
+              style: TextStyle(color: Colors.grey[600], fontSize: 12),
             ),
           ],
         ),
@@ -261,7 +256,7 @@ class _ActionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final effectiveTextColor = textColor ?? Colors.white;
-    
+
     return Material(
       color: backgroundColor,
       borderRadius: BorderRadius.circular(16),

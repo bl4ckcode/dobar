@@ -13,10 +13,7 @@ import 'package:loading_animation_widget/loading_animation_widget.dart';
 class MenuExtractionResultsPage extends StatelessWidget {
   final int barId;
 
-  const MenuExtractionResultsPage({
-    super.key,
-    required this.barId,
-  });
+  const MenuExtractionResultsPage({super.key, required this.barId});
 
   @override
   Widget build(BuildContext context) {
@@ -70,16 +67,13 @@ class MenuExtractionResultsPage extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          LoadingAnimationWidget.staggeredDotsWave(
-            color: barzGold,
-            size: 60,
-          ),
+          LoadingAnimationWidget.staggeredDotsWave(color: barzGold, size: 60),
           const SizedBox(height: BarzSpacing.lg),
           Text(
             'Saving menu items...',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: textSecondary,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(color: textSecondary),
           ),
         ],
       ),
@@ -110,8 +104,8 @@ class MenuExtractionResultsPage extends StatelessWidget {
     final confidenceColor = confidence >= 0.8
         ? successGreen
         : confidence >= 0.6
-            ? warningOrange
-            : errorRed;
+        ? warningOrange
+        : errorRed;
 
     return Container(
       padding: const EdgeInsets.all(BarzSpacing.md),
@@ -147,16 +141,16 @@ class MenuExtractionResultsPage extends StatelessWidget {
               children: [
                 Text(
                   'AI Confidence: $confidencePercent%',
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   '${state.selectedItemCount}/${state.totalItemCount} items selected',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: textSecondary,
-                  ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: textSecondary),
                 ),
                 const SizedBox(height: 8),
                 LinearProgressIndicator(
@@ -221,12 +215,8 @@ class MenuExtractionResultsPage extends StatelessWidget {
                 ),
               );
             },
-            onEdit: () => _showEditItemDialog(
-              context,
-              item,
-              categoryIndex,
-              itemIndex,
-            ),
+            onEdit: () =>
+                _showEditItemDialog(context, item, categoryIndex, itemIndex),
           );
         }),
         const SizedBox(height: BarzSpacing.md),
@@ -293,17 +283,18 @@ class MenuExtractionResultsPage extends StatelessWidget {
 
   void _showSelectAllDialog(BuildContext context, MenuReaderState state) {
     final allSelected = state.selectedItemCount == state.totalItemCount;
-    
-    for (var catIndex = 0; catIndex < state.editableCategories.length; catIndex++) {
+
+    for (
+      var catIndex = 0;
+      catIndex < state.editableCategories.length;
+      catIndex++
+    ) {
       final category = state.editableCategories[catIndex];
       for (var itemIndex = 0; itemIndex < category.items.length; itemIndex++) {
         final item = category.items[itemIndex];
         if (allSelected ? item.isSelected : !item.isSelected) {
           context.read<MenuReaderBloc>().add(
-            ToggleItemSelection(
-              categoryIndex: catIndex,
-              itemIndex: itemIndex,
-            ),
+            ToggleItemSelection(categoryIndex: catIndex, itemIndex: itemIndex),
           );
         }
       }
@@ -316,7 +307,7 @@ class MenuExtractionResultsPage extends StatelessWidget {
     int categoryIndex,
   ) {
     final controller = TextEditingController(text: currentName);
-    
+
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(

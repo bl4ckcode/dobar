@@ -12,6 +12,7 @@ class OrdersPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
 
     return BlocProvider(
@@ -31,7 +32,7 @@ class OrdersPage extends StatelessWidget {
                     Icon(
                       Icons.error_outline,
                       size: 64,
-                      color: Theme.of(context).colorScheme.error,
+                      color: theme.colorScheme.error,
                     ),
                     const SizedBox(height: 16),
                     Text(state.message),
@@ -64,13 +65,13 @@ class OrdersPage extends StatelessWidget {
                       const SizedBox(height: 16),
                       Text(
                         l10n.orders_empty,
-                        style: Theme.of(context).textTheme.titleMedium,
+                        style: theme.textTheme.titleMedium,
                       ),
                       const SizedBox(height: 8),
                       Text(
                         l10n.orders_empty_subtitle,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],

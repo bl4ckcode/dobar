@@ -11,11 +11,7 @@ class FindBarStep extends StatefulWidget {
   final CreateBarFormData formData;
   final VoidCallback onNext;
 
-  const FindBarStep({
-    super.key,
-    required this.formData,
-    required this.onNext,
-  });
+  const FindBarStep({super.key, required this.formData, required this.onNext});
 
   @override
   State<FindBarStep> createState() => _FindBarStepState();
@@ -42,7 +38,8 @@ class _FindBarStepState extends State<FindBarStep> {
                   const SizedBox(height: BarzSpacing.xl),
                   _buildSearchSection(l10n),
                   const SizedBox(height: BarzSpacing.lg),
-                  if (widget.formData.address.isNotEmpty) _buildSelectedPlace(l10n),
+                  if (widget.formData.address.isNotEmpty)
+                    _buildSelectedPlace(l10n),
                   const SizedBox(height: BarzSpacing.lg),
                   _buildManualEntryToggle(l10n),
                 ],
@@ -104,10 +101,7 @@ class _FindBarStepState extends State<FindBarStep> {
             const SizedBox(width: 8),
             Text(
               l10n.search_bar_name,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
           ],
         ),
@@ -135,12 +129,13 @@ class _FindBarStepState extends State<FindBarStep> {
   List<String> _getSearchCountries(BuildContext context) {
     // Americas focus: Latin America + North America (max 5 for Google API)
     const americasCountries = ['br', 'mx', 'ar', 'co', 'us'];
-    
+
     // Try to get user's country from session (defensive - may not be available)
     try {
       final sessionState = context.read<SessionBloc>().state;
       if (sessionState is SessionReady) {
-        final userCountry = sessionState.session.user.countryCode?.toLowerCase();
+        final userCountry = sessionState.session.user.countryCode
+            ?.toLowerCase();
         if (userCountry != null && userCountry.isNotEmpty) {
           // User's country first, then fill with Americas (max 5)
           final countries = <String>[userCountry];
@@ -155,7 +150,7 @@ class _FindBarStepState extends State<FindBarStep> {
     } catch (_) {
       // SessionBloc not available, use default
     }
-    
+
     return americasCountries;
   }
 
@@ -188,7 +183,10 @@ class _FindBarStepState extends State<FindBarStep> {
             ],
           ),
           const SizedBox(height: 12),
-          _buildInfoTile(Icons.store, widget.formData.name.isEmpty ? '-' : widget.formData.name),
+          _buildInfoTile(
+            Icons.store,
+            widget.formData.name.isEmpty ? '-' : widget.formData.name,
+          ),
           _buildInfoTile(Icons.location_on, widget.formData.address),
 
           _buildInfoTile(Icons.flag, '${config.name} (${config.currency})'),
@@ -225,12 +223,19 @@ class _FindBarStepState extends State<FindBarStep> {
       ),
       child: Row(
         children: [
-          Icon(Icons.edit_rounded, color: barzDark.withValues(alpha: 0.5), size: 20),
+          Icon(
+            Icons.edit_rounded,
+            color: barzDark.withValues(alpha: 0.5),
+            size: 20,
+          ),
           const SizedBox(width: 12),
           Expanded(
             child: Text(
               l10n.cant_find_bar,
-              style: TextStyle(color: barzDark.withValues(alpha: 0.6), fontSize: 14),
+              style: TextStyle(
+                color: barzDark.withValues(alpha: 0.6),
+                fontSize: 14,
+              ),
             ),
           ),
           TextButton(

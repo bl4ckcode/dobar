@@ -27,44 +27,51 @@ class OrderNetworkDataSource {
       return PaginatedOrders.fromJson(response.data);
     } on DioException catch (e) {
       throw ServerException(
-          e.response?.data?['detail'] ?? 'Failed to fetch orders',
-          e.response?.statusCode);
+        e.response?.data?['detail'] ?? 'Failed to fetch orders',
+        e.response?.statusCode,
+      );
     }
   }
 
   Future<OrderModel> getOrder(int orderId) async {
     try {
-      final response = await dio
-          .get('${ApiEndpoints.baseUrl}${ApiEndpoints.order(orderId)}');
+      final response = await dio.get(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.order(orderId)}',
+      );
       return OrderModel.fromJson(response.data);
     } on DioException catch (e) {
       throw ServerException(
-          e.response?.data?['detail'] ?? 'Failed to fetch order',
-          e.response?.statusCode);
+        e.response?.data?['detail'] ?? 'Failed to fetch order',
+        e.response?.statusCode,
+      );
     }
   }
 
   Future<OrderModel> getOrderTimeline(int orderId) async {
     try {
-      final response = await dio
-          .get('${ApiEndpoints.baseUrl}${ApiEndpoints.orderTimeline(orderId)}');
+      final response = await dio.get(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.orderTimeline(orderId)}',
+      );
       return OrderModel.fromJson(response.data);
     } on DioException catch (e) {
       throw ServerException(
-          e.response?.data?['detail'] ?? 'Failed to fetch order timeline',
-          e.response?.statusCode);
+        e.response?.data?['detail'] ?? 'Failed to fetch order timeline',
+        e.response?.statusCode,
+      );
     }
   }
 
   Future<OrderModel> cancelOrder(int orderId) async {
     try {
-      final response = await dio
-          .post('${ApiEndpoints.baseUrl}${ApiEndpoints.cancelOrder(orderId)}');
+      final response = await dio.post(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.cancelOrder(orderId)}',
+      );
       return OrderModel.fromJson(response.data);
     } on DioException catch (e) {
       throw ServerException(
-          e.response?.data?['detail'] ?? 'Failed to cancel order',
-          e.response?.statusCode);
+        e.response?.data?['detail'] ?? 'Failed to cancel order',
+        e.response?.statusCode,
+      );
     }
   }
 
@@ -77,8 +84,9 @@ class OrderNetworkDataSource {
       return SyncResponse.fromJson(response.data);
     } on DioException catch (e) {
       throw ServerException(
-          e.response?.data?['detail'] ?? 'Failed to sync orders',
-          e.response?.statusCode);
+        e.response?.data?['detail'] ?? 'Failed to sync orders',
+        e.response?.statusCode,
+      );
     }
   }
 }

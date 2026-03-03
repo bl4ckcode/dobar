@@ -6,11 +6,7 @@ abstract class Failure extends Equatable {
   final String? message;
   final int? statusCode;
 
-  const Failure({
-    required this.errorCode,
-    this.message,
-    this.statusCode,
-  });
+  const Failure({required this.errorCode, this.message, this.statusCode});
 
   String get displayMessage => message ?? errorCode.defaultMessage;
 
@@ -35,10 +31,7 @@ class ServerFailure extends Failure {
 }
 
 class NetworkFailure extends Failure {
-  const NetworkFailure({
-    required super.errorCode,
-    super.message,
-  });
+  const NetworkFailure({required super.errorCode, super.message});
 
   factory NetworkFailure.timeout() {
     return const NetworkFailure(errorCode: ErrorCode.networkTimeout);
@@ -54,10 +47,7 @@ class NetworkFailure extends Failure {
 }
 
 class AuthFailure extends Failure {
-  const AuthFailure({
-    required super.errorCode,
-    super.message,
-  });
+  const AuthFailure({required super.errorCode, super.message});
 
   factory AuthFailure.unauthorized() {
     return const AuthFailure(errorCode: ErrorCode.unauthorized);
@@ -81,7 +71,10 @@ class PaymentFailure extends Failure {
   });
 
   factory PaymentFailure.declined([String? message]) {
-    return PaymentFailure(errorCode: ErrorCode.paymentDeclined, message: message);
+    return PaymentFailure(
+      errorCode: ErrorCode.paymentDeclined,
+      message: message,
+    );
   }
 
   factory PaymentFailure.insufficientFunds() {
@@ -103,10 +96,8 @@ class PaymentFailure extends Failure {
 class ValidationFailure extends Failure {
   final Map<String, List<String>>? fieldErrors;
 
-  const ValidationFailure({
-    super.message,
-    this.fieldErrors,
-  }) : super(errorCode: ErrorCode.validationError);
+  const ValidationFailure({super.message, this.fieldErrors})
+    : super(errorCode: ErrorCode.validationError);
 
   String? getFieldError(String field) {
     return fieldErrors?[field]?.firstOrNull;
@@ -117,10 +108,7 @@ class ValidationFailure extends Failure {
 }
 
 class LocationFailure extends Failure {
-  const LocationFailure({
-    required super.errorCode,
-    super.message,
-  });
+  const LocationFailure({required super.errorCode, super.message});
 
   factory LocationFailure.permissionDenied() {
     return const LocationFailure(errorCode: ErrorCode.locationPermissionDenied);

@@ -30,8 +30,10 @@ class PromotionsBloc extends Bloc<PromotionsEvent, PromotionsState> {
       activeOnly: event.activeOnly,
     );
     result.fold(
-      (failure) => emit(state.copyWith(isLoading: false, error: failure.errorMessage)),
-      (promotions) => emit(state.copyWith(isLoading: false, promotions: promotions)),
+      (failure) =>
+          emit(state.copyWith(isLoading: false, error: failure.errorMessage)),
+      (promotions) =>
+          emit(state.copyWith(isLoading: false, promotions: promotions)),
     );
   }
 
@@ -42,8 +44,10 @@ class PromotionsBloc extends Bloc<PromotionsEvent, PromotionsState> {
     emit(state.copyWith(isLoading: true, error: null));
     final result = await _usecase.getPromotionsByDiscountType(event.type);
     result.fold(
-      (failure) => emit(state.copyWith(isLoading: false, error: failure.errorMessage)),
-      (promotions) => emit(state.copyWith(isLoading: false, promotions: promotions)),
+      (failure) =>
+          emit(state.copyWith(isLoading: false, error: failure.errorMessage)),
+      (promotions) =>
+          emit(state.copyWith(isLoading: false, promotions: promotions)),
     );
   }
 
@@ -52,10 +56,15 @@ class PromotionsBloc extends Bloc<PromotionsEvent, PromotionsState> {
     Emitter<PromotionsState> emit,
   ) async {
     emit(state.copyWith(isLoading: true, error: null));
-    final result = await _usecase.getPromotionsByBar(event.barId, activeOnly: event.activeOnly);
+    final result = await _usecase.getPromotionsByBar(
+      event.barId,
+      activeOnly: event.activeOnly,
+    );
     result.fold(
-      (failure) => emit(state.copyWith(isLoading: false, error: failure.errorMessage)),
-      (promotions) => emit(state.copyWith(isLoading: false, promotions: promotions)),
+      (failure) =>
+          emit(state.copyWith(isLoading: false, error: failure.errorMessage)),
+      (promotions) =>
+          emit(state.copyWith(isLoading: false, promotions: promotions)),
     );
   }
 
@@ -66,8 +75,10 @@ class PromotionsBloc extends Bloc<PromotionsEvent, PromotionsState> {
     emit(state.copyWith(isLoading: true, error: null));
     final result = await _usecase.getPromotionById(event.id);
     result.fold(
-      (failure) => emit(state.copyWith(isLoading: false, error: failure.errorMessage)),
-      (promotion) => emit(state.copyWith(isLoading: false, selectedPromotion: promotion)),
+      (failure) =>
+          emit(state.copyWith(isLoading: false, error: failure.errorMessage)),
+      (promotion) =>
+          emit(state.copyWith(isLoading: false, selectedPromotion: promotion)),
     );
   }
 
@@ -78,7 +89,9 @@ class PromotionsBloc extends Bloc<PromotionsEvent, PromotionsState> {
     emit(state.copyWith(isLoadingOffers: true, error: null));
     final result = await _usecase.getOffers();
     result.fold(
-      (failure) => emit(state.copyWith(isLoadingOffers: false, error: failure.errorMessage)),
+      (failure) => emit(
+        state.copyWith(isLoadingOffers: false, error: failure.errorMessage),
+      ),
       (offers) => emit(state.copyWith(isLoadingOffers: false, offers: offers)),
     );
   }
@@ -90,7 +103,9 @@ class PromotionsBloc extends Bloc<PromotionsEvent, PromotionsState> {
     emit(state.copyWith(isLoadingOffers: true, error: null));
     final result = await _usecase.getOffersByPartnerId(event.partnerId);
     result.fold(
-      (failure) => emit(state.copyWith(isLoadingOffers: false, error: failure.errorMessage)),
+      (failure) => emit(
+        state.copyWith(isLoadingOffers: false, error: failure.errorMessage),
+      ),
       (offers) => emit(state.copyWith(isLoadingOffers: false, offers: offers)),
     );
   }
@@ -102,8 +117,11 @@ class PromotionsBloc extends Bloc<PromotionsEvent, PromotionsState> {
     emit(state.copyWith(isLoadingOffers: true, error: null));
     final result = await _usecase.getOfferById(event.id);
     result.fold(
-      (failure) => emit(state.copyWith(isLoadingOffers: false, error: failure.errorMessage)),
-      (offer) => emit(state.copyWith(isLoadingOffers: false, selectedOffer: offer)),
+      (failure) => emit(
+        state.copyWith(isLoadingOffers: false, error: failure.errorMessage),
+      ),
+      (offer) =>
+          emit(state.copyWith(isLoadingOffers: false, selectedOffer: offer)),
     );
   }
 
@@ -114,8 +132,11 @@ class PromotionsBloc extends Bloc<PromotionsEvent, PromotionsState> {
     emit(state.copyWith(isLoadingOffers: true, error: null));
     final result = await _usecase.redeemOffer(event.offerId);
     result.fold(
-      (failure) => emit(state.copyWith(isLoadingOffers: false, error: failure.errorMessage)),
-      (offer) => emit(state.copyWith(isLoadingOffers: false, redeemedOffer: offer)),
+      (failure) => emit(
+        state.copyWith(isLoadingOffers: false, error: failure.errorMessage),
+      ),
+      (offer) =>
+          emit(state.copyWith(isLoadingOffers: false, redeemedOffer: offer)),
     );
   }
 

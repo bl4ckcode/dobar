@@ -10,7 +10,10 @@ class BarUsecase {
   BarUsecase({required this.repository});
 
   Future<Either<Failure, List<BarModel>>> getNearbyBars(
-      double lat, double lng, double maxDistance) {
+    double lat,
+    double lng,
+    double maxDistance,
+  ) {
     return repository.getNearbyBars(lat, lng, maxDistance);
   }
 

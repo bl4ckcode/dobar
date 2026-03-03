@@ -4,7 +4,8 @@ import 'package:barz/features/orders/domain/models/order_model.dart';
 class OrderLocalDataSource {
   final HiveStorageService _storage;
 
-  OrderLocalDataSource({required HiveStorageService storage}) : _storage = storage;
+  OrderLocalDataSource({required HiveStorageService storage})
+    : _storage = storage;
 
   Future<void> cacheOrder(OrderModel order) async {
     await _storage.cacheOrder(order.id, order.toJson());
@@ -32,15 +33,15 @@ class OrderLocalDataSource {
     String? status,
   }) {
     var allOrders = getCachedOrders();
-    
+
     if (status != null && status.isNotEmpty) {
       allOrders = allOrders.where((o) => o.status == status).toList();
     }
-    
+
     final total = allOrders.length;
     final startIndex = (page - 1) * pageSize;
     final endIndex = (startIndex + pageSize).clamp(0, total);
-    
+
     final paginatedOrders = startIndex < total
         ? allOrders.sublist(startIndex, endIndex)
         : <OrderModel>[];

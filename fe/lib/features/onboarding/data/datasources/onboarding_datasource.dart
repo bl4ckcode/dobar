@@ -8,7 +8,7 @@ import 'package:dio/dio.dart';
 abstract class OnboardingDatasource {
   /// Complete onboarding with user type and country
   Future<UserModel> completeOnboarding(OnboardingRequest request);
-  
+
   /// Get payment gateway for user's country
   Future<PaymentGateway> getPaymentGateway();
 }

@@ -8,19 +8,15 @@ import 'presentation/bloc/menus_bloc.dart';
 Future<void> initPartnersInjection() async {
   // Register MenusRepository
   getItInjector.registerLazySingleton<AbstractMenusRepository>(
-        () => MenusRepositoryImpl(),
+    () => MenusRepositoryImpl(),
   );
   // Register MenusUseCase
   getItInjector.registerLazySingleton<MenusUseCase>(
-    () => MenusUseCase(
-      repository: getItInjector<AbstractMenusRepository>(),
-    ),
+    () => MenusUseCase(repository: getItInjector<AbstractMenusRepository>()),
   );
 
   // Register MenusBloc
   getItInjector.registerLazySingleton<MenusBloc>(
-    () => MenusBloc(
-      menusUseCase: getItInjector<MenusUseCase>(),
-    ),
+    () => MenusBloc(menusUseCase: getItInjector<MenusUseCase>()),
   );
 }

@@ -87,4 +87,6 @@ class DobarColors extends ThemeExtension<DobarColors> {
 
 extension DobarColorsContext on BuildContext {
   DobarColors get dobarColors => Theme.of(this).extension<DobarColors>()!;
+  bool get isDark => Theme.of(this).brightness == Brightness.dark;
+  ThemeData get theme => Theme.of(this);
 }

@@ -95,36 +95,39 @@ class BarzToolbar extends StatelessWidget implements PreferredSizeWidget {
   }
 
   @override
-  Size get preferredSize => Size.fromHeight(
-    kToolbarHeight + (bottom?.preferredSize.height ?? 0),
-  );
+  Size get preferredSize =>
+      Size.fromHeight(kToolbarHeight + (bottom?.preferredSize.height ?? 0));
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final canPop = Navigator.of(context).canPop();
-    
+
     return AppBar(
-      title: titleWidget ?? (title != null 
-          ? Text(
-              title!,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                color: foregroundColor ?? theme.appBarTheme.foregroundColor,
-              ),
-            )
-          : null),
+      title:
+          titleWidget ??
+          (title != null
+              ? Text(
+                  title!,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: foregroundColor ?? theme.appBarTheme.foregroundColor,
+                  ),
+                )
+              : null),
       centerTitle: centerTitle,
       backgroundColor: backgroundColor ?? barzGoldSoft,
       foregroundColor: foregroundColor ?? textPrimary,
       elevation: elevation,
       scrolledUnderElevation: elevation,
-      leading: leading ?? (showBackButton && canPop
-          ? IconButton(
-              icon: const Icon(Icons.arrow_back),
-              onPressed: onBackPressed ?? () => Navigator.of(context).pop(),
-            )
-          : null),
+      leading:
+          leading ??
+          (showBackButton && canPop
+              ? IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: onBackPressed ?? () => Navigator.of(context).pop(),
+                )
+              : null),
       automaticallyImplyLeading: showBackButton,
       actions: actions,
       bottom: bottom,

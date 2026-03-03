@@ -5,10 +5,10 @@ import '../tokens/spacing.dart';
 import '../tokens/radii.dart';
 
 /// Barz Text Field Component
-/// 
+///
 /// A versatile text input following Material Design 3 with Barz branding.
 /// Features a warm, subtle gold-tinted background for brand consistency.
-/// 
+///
 /// Accessibility:
 /// - Clear labels and hints
 /// - Error states with semantic colors
@@ -43,7 +43,7 @@ class BarzTextField extends StatelessWidget {
   final List<TextInputFormatter>? inputFormatters;
   final TextCapitalization textCapitalization;
   final bool filled;
-  
+
   const BarzTextField({
     super.key,
     this.label,
@@ -74,20 +74,22 @@ class BarzTextField extends StatelessWidget {
     this.textCapitalization = TextCapitalization.none,
     this.filled = true,
   });
-  
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final hasError = errorText != null && errorText!.isNotEmpty;
-    
+
     // Auto-determine text input action
-    final effectiveAction = textInputAction ?? 
+    final effectiveAction =
+        textInputAction ??
         (nextFocusNode != null ? TextInputAction.next : TextInputAction.done);
-    
+
     // Auto-determine keyboard type for multiline
-    final effectiveKeyboardType = keyboardType ?? 
+    final effectiveKeyboardType =
+        keyboardType ??
         ((maxLines ?? 1) > 1 ? TextInputType.multiline : TextInputType.text);
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -103,7 +105,7 @@ class BarzTextField extends StatelessWidget {
           ),
           const SizedBox(height: InputSpacing.labelGap),
         ],
-        
+
         // Text field
         TextField(
           controller: controller,
@@ -133,9 +135,7 @@ class BarzTextField extends StatelessWidget {
           onSubmitted: onSubmitted,
           decoration: InputDecoration(
             hintText: hintText,
-            hintStyle: theme.textTheme.bodyLarge?.copyWith(
-              color: textTertiary,
-            ),
+            hintStyle: theme.textTheme.bodyLarge?.copyWith(color: textTertiary),
             errorText: errorText,
             helperText: helperText,
             helperStyle: theme.textTheme.bodySmall?.copyWith(
@@ -180,7 +180,7 @@ class BarzTextField extends StatelessWidget {
       ],
     );
   }
-  
+
   Color _getFillColor(bool hasError) {
     if (!enabled) {
       return surfaceMuted;
@@ -205,7 +205,7 @@ class BarzPasswordField extends StatefulWidget {
   final VoidCallback? onEditingComplete;
   final ValueChanged<String>? onSubmitted;
   final bool enabled;
-  
+
   const BarzPasswordField({
     super.key,
     this.label,
@@ -219,14 +219,14 @@ class BarzPasswordField extends StatefulWidget {
     this.onSubmitted,
     this.enabled = true,
   });
-  
+
   @override
   State<BarzPasswordField> createState() => _BarzPasswordFieldState();
 }
 
 class _BarzPasswordFieldState extends State<BarzPasswordField> {
   bool _obscureText = true;
-  
+
   @override
   Widget build(BuildContext context) {
     return BarzTextField(

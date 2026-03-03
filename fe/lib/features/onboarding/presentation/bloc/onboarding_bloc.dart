@@ -9,8 +9,8 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
   final OnboardingRepository _repository;
 
   OnboardingBloc({required OnboardingRepository repository})
-      : _repository = repository,
-        super(const OnboardingState()) {
+    : _repository = repository,
+      super(const OnboardingState()) {
     on<SelectUserType>(_onSelectUserType);
     on<SelectCountry>(_onSelectCountry);
     on<DetectCountryFromPhone>(_onDetectCountryFromPhone);
@@ -19,17 +19,11 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
   }
 
   void _onSelectUserType(SelectUserType event, Emitter<OnboardingState> emit) {
-    emit(state.copyWith(
-      selectedUserType: event.userType,
-      error: null,
-    ));
+    emit(state.copyWith(selectedUserType: event.userType, error: null));
   }
 
   void _onSelectCountry(SelectCountry event, Emitter<OnboardingState> emit) {
-    emit(state.copyWith(
-      selectedCountryCode: event.countryCode,
-      error: null,
-    ));
+    emit(state.copyWith(selectedCountryCode: event.countryCode, error: null));
   }
 
   void _onDetectCountryFromPhone(
@@ -37,11 +31,13 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     Emitter<OnboardingState> emit,
   ) {
     final countryCode = CountryHelper.detectCountryFromPhone(event.phoneNumber);
-    emit(state.copyWith(
-      phoneNumber: event.phoneNumber,
-      selectedCountryCode: countryCode,
-      error: null,
-    ));
+    emit(
+      state.copyWith(
+        phoneNumber: event.phoneNumber,
+        selectedCountryCode: countryCode,
+        error: null,
+      ),
+    );
   }
 
   Future<void> _onSubmitOnboarding(
@@ -60,14 +56,10 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     final result = await _repository.completeOnboarding(request);
 
     result.fold(
-      (failure) => emit(state.copyWith(
-        isSubmitting: false,
-        error: failure.errorMessage,
-      )),
-      (user) => emit(state.copyWith(
-        isSubmitting: false,
-        isComplete: true,
-      )),
+      (failure) => emit(
+        state.copyWith(isSubmitting: false, error: failure.errorMessage),
+      ),
+      (user) => emit(state.copyWith(isSubmitting: false, isComplete: true)),
     );
   }
 

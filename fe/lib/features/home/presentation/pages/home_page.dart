@@ -31,19 +31,26 @@ class _HomePageState extends State<HomePage>
     selectedBottonNav = homeBottomNavItems.first;
     selectedSideMenu = sidebarMenus.first;
 
-    _drawerSlideController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 200),
-    )..addListener(
-        () {
+    _drawerSlideController =
+        AnimationController(
+          vsync: this,
+          duration: const Duration(milliseconds: 200),
+        )..addListener(() {
           setState(() {});
-        },
-      );
+        });
 
-    scalAnimation = Tween<double>(begin: 1, end: 0.8).animate(CurvedAnimation(
-        parent: _drawerSlideController, curve: Curves.fastOutSlowIn));
-    animation = Tween<double>(begin: 0, end: 1).animate(CurvedAnimation(
-        parent: _drawerSlideController, curve: Curves.fastOutSlowIn));
+    scalAnimation = Tween<double>(begin: 1, end: 0.8).animate(
+      CurvedAnimation(
+        parent: _drawerSlideController,
+        curve: Curves.fastOutSlowIn,
+      ),
+    );
+    animation = Tween<double>(begin: 0, end: 1).animate(
+      CurvedAnimation(
+        parent: _drawerSlideController,
+        curve: Curves.fastOutSlowIn,
+      ),
+    );
   }
 
   @override
@@ -54,11 +61,9 @@ class _HomePageState extends State<HomePage>
 
   void updateSelectedBtmNav(Menu bottomNavigationModel) {
     if (selectedBottonNav != bottomNavigationModel) {
-      setState(
-        () {
-          selectedBottonNav = bottomNavigationModel;
-        },
-      );
+      setState(() {
+        selectedBottonNav = bottomNavigationModel;
+      });
     }
   }
 
@@ -84,15 +89,14 @@ class _HomePageState extends State<HomePage>
             transform: Matrix4.identity()
               ..setEntry(3, 2, 0.001)
               ..rotateY(
-                  1 * animation.value - 30 * (animation.value) * pi / 180),
+                1 * animation.value - 30 * (animation.value) * pi / 180,
+              ),
             child: Transform.translate(
               offset: Offset(animation.value * 265, 0),
               child: Transform.scale(
                 scale: scalAnimation.value,
                 child: ClipRRect(
-                  borderRadius: const BorderRadius.all(
-                    Radius.circular(24),
-                  ),
+                  borderRadius: const BorderRadius.all(Radius.circular(24)),
                   child: selectedBottonNav.page,
                 ),
               ),
@@ -112,11 +116,9 @@ class _HomePageState extends State<HomePage>
                   _drawerSlideController.reverse();
                 }
 
-                setState(
-                  () {
-                    isSideBarOpen = !isSideBarOpen;
-                  },
-                );
+                setState(() {
+                  isSideBarOpen = !isSideBarOpen;
+                });
               },
             ),
           ),
@@ -125,29 +127,32 @@ class _HomePageState extends State<HomePage>
       bottomNavigationBar: Transform.translate(
         offset: Offset(0, 100 * animation.value),
         child: SafeArea(
-            child: Container(
-          padding:
-              const EdgeInsets.only(left: 12, top: 12, right: 12, bottom: 12),
-          margin: const EdgeInsets.symmetric(horizontal: 24),
-          decoration: BoxDecoration(
-            color: mainColor.withValues(alpha: 0.8),
-            borderRadius: const BorderRadius.all(Radius.circular(24)),
-            boxShadow: [
-              BoxShadow(
-                color: backgroundColor2.withValues(alpha: 0.8),
-                offset: const Offset(0, 20),
-                blurRadius: 20,
-              ),
-            ],
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              ...List.generate(
-                homeBottomNavItems.length,
-                (index) {
+          child: Container(
+            padding: const EdgeInsets.only(
+              left: 12,
+              top: 12,
+              right: 12,
+              bottom: 12,
+            ),
+            margin: const EdgeInsets.symmetric(horizontal: 24),
+            decoration: BoxDecoration(
+              color: mainColor.withValues(alpha: 0.8),
+              borderRadius: const BorderRadius.all(Radius.circular(24)),
+              boxShadow: [
+                BoxShadow(
+                  color: backgroundColor2.withValues(alpha: 0.8),
+                  offset: const Offset(0, 20),
+                  blurRadius: 20,
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                ...List.generate(homeBottomNavItems.length, (index) {
                   NavItemModel navItem = homeBottomNavItems[index].navItem;
-                  bool isSelected = selectedBottonNav == homeBottomNavItems[index];
+                  bool isSelected =
+                      selectedBottonNav == homeBottomNavItems[index];
                   return BtmNavItem(
                     navItem: navItem,
                     isSelected: isSelected,
@@ -155,11 +160,11 @@ class _HomePageState extends State<HomePage>
                       updateSelectedBtmNav(homeBottomNavItems[index]);
                     },
                   );
-                },
-              )
-            ],
+                }),
+              ],
+            ),
           ),
-        )),
+        ),
       ),
     );
   }

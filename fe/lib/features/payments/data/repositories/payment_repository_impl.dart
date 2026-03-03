@@ -23,7 +23,10 @@ class PaymentRepositoryImpl implements PaymentRepository {
   }
 
   @override
-  Future<Either<Failure, PaymentMethod>> addPaymentMethod(PaymentMethod method, String? cardToken) async {
+  Future<Either<Failure, PaymentMethod>> addPaymentMethod(
+    PaymentMethod method,
+    String? cardToken,
+  ) async {
     try {
       final result = await _datasource.addPaymentMethod(method, cardToken);
       return Right(result);
@@ -33,7 +36,9 @@ class PaymentRepositoryImpl implements PaymentRepository {
   }
 
   @override
-  Future<Either<Failure, PaymentMethod>> setDefaultPaymentMethod(int methodId) async {
+  Future<Either<Failure, PaymentMethod>> setDefaultPaymentMethod(
+    int methodId,
+  ) async {
     try {
       final result = await _datasource.setDefaultPaymentMethod(methodId);
       return Right(result);
@@ -53,7 +58,9 @@ class PaymentRepositoryImpl implements PaymentRepository {
   }
 
   @override
-  Future<Either<Failure, Transaction>> processPayment(PaymentRequest request) async {
+  Future<Either<Failure, Transaction>> processPayment(
+    PaymentRequest request,
+  ) async {
     try {
       final result = await _datasource.processPayment(request);
       return Right(result);
@@ -63,7 +70,9 @@ class PaymentRepositoryImpl implements PaymentRepository {
   }
 
   @override
-  Future<Either<Failure, PixPaymentResponse>> initiatePixPayment(PaymentRequest request) async {
+  Future<Either<Failure, PixPaymentResponse>> initiatePixPayment(
+    PaymentRequest request,
+  ) async {
     try {
       final result = await _datasource.initiatePixPayment(request);
       return Right(result);
@@ -73,7 +82,9 @@ class PaymentRepositoryImpl implements PaymentRepository {
   }
 
   @override
-  Future<Either<Failure, Transaction>> checkPaymentStatus(int transactionId) async {
+  Future<Either<Failure, Transaction>> checkPaymentStatus(
+    int transactionId,
+  ) async {
     try {
       final result = await _datasource.checkPaymentStatus(transactionId);
       return Right(result);
@@ -83,9 +94,15 @@ class PaymentRepositoryImpl implements PaymentRepository {
   }
 
   @override
-  Future<Either<Failure, List<Transaction>>> getTransactionHistory({int? limit, int? offset}) async {
+  Future<Either<Failure, List<Transaction>>> getTransactionHistory({
+    int? limit,
+    int? offset,
+  }) async {
     try {
-      final result = await _datasource.getTransactionHistory(limit: limit, offset: offset);
+      final result = await _datasource.getTransactionHistory(
+        limit: limit,
+        offset: offset,
+      );
       return Right(result);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message, e.statusCode));
@@ -93,9 +110,15 @@ class PaymentRepositoryImpl implements PaymentRepository {
   }
 
   @override
-  Future<Either<Failure, Transaction>> refundTransaction(int transactionId, {double? amount}) async {
+  Future<Either<Failure, Transaction>> refundTransaction(
+    int transactionId, {
+    double? amount,
+  }) async {
     try {
-      final result = await _datasource.refundTransaction(transactionId, amount: amount);
+      final result = await _datasource.refundTransaction(
+        transactionId,
+        amount: amount,
+      );
       return Right(result);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message, e.statusCode));
@@ -103,9 +126,17 @@ class PaymentRepositoryImpl implements PaymentRepository {
   }
 
   @override
-  Future<Either<Failure, Transaction>> topUpWallet(double amount, PaymentType paymentType, {int? paymentMethodId}) async {
+  Future<Either<Failure, Transaction>> topUpWallet(
+    double amount,
+    PaymentType paymentType, {
+    int? paymentMethodId,
+  }) async {
     try {
-      final result = await _datasource.topUpWallet(amount, paymentType, paymentMethodId: paymentMethodId);
+      final result = await _datasource.topUpWallet(
+        amount,
+        paymentType,
+        paymentMethodId: paymentMethodId,
+      );
       return Right(result);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message, e.statusCode));

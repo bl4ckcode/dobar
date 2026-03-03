@@ -3,30 +3,24 @@ import 'package:barz/features/checkin/domain/models/checkin_model.dart';
 import 'package:barz/features/bars/domain/models/bar_model.dart';
 
 /// Check-in flow steps
-enum CheckinStep {
-  initial,
-  scanning,
-  nearbyBars,
-  confirmCheckin,
-  checkedIn,
-}
+enum CheckinStep { initial, scanning, nearbyBars, confirmCheckin, checkedIn }
 
 /// Check-in state
 class CheckinState extends Equatable {
   final CheckinStep step;
   final bool isLoading;
   final String? error;
-  
+
   // Current active check-in
   final CheckinModel? activeCheckin;
-  
+
   // Bar being checked into
   final BarModel? selectedBar;
   final String? tableNumber;
-  
+
   // Nearby bars for geo-based check-in
   final List<BarModel> nearbyBars;
-  
+
   // QR scan result
   final QrScanResult? scanResult;
 
@@ -58,7 +52,9 @@ class CheckinState extends Equatable {
       step: step ?? this.step,
       isLoading: isLoading ?? this.isLoading,
       error: clearError ? null : (error ?? this.error),
-      activeCheckin: clearActiveCheckin ? null : (activeCheckin ?? this.activeCheckin),
+      activeCheckin: clearActiveCheckin
+          ? null
+          : (activeCheckin ?? this.activeCheckin),
       selectedBar: selectedBar ?? this.selectedBar,
       tableNumber: tableNumber ?? this.tableNumber,
       nearbyBars: nearbyBars ?? this.nearbyBars,
@@ -74,13 +70,13 @@ class CheckinState extends Equatable {
 
   @override
   List<Object?> get props => [
-        step,
-        isLoading,
-        error,
-        activeCheckin,
-        selectedBar,
-        tableNumber,
-        nearbyBars,
-        scanResult,
-      ];
+    step,
+    isLoading,
+    error,
+    activeCheckin,
+    selectedBar,
+    tableNumber,
+    nearbyBars,
+    scanResult,
+  ];
 }

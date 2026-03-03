@@ -33,7 +33,7 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
 
   Future<void> _initGoogleSignIn() async {
     final signIn = GoogleSignIn.instance;
-    
+
     // Listen to authentication events
     _authSubscription = signIn.authenticationEvents.listen(
       (event) async {
@@ -67,28 +67,32 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
   Future<void> _handleGoogleSignInSuccess(GoogleSignInAccount user) async {
     try {
       final idToken = user.authentication.idToken;
-      final authorization = await user.authorizationClient.authorizationForScopes([
-        'email',
-        'profile',
-      ]);
-      
+      final authorization = await user.authorizationClient
+          .authorizationForScopes(['email', 'profile']);
+
       if (idToken != null) {
         final credential = GoogleAuthProvider.credential(
           accessToken: authorization?.accessToken,
           idToken: idToken,
         );
-        
-        final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+
+        final userCredential = await FirebaseAuth.instance.signInWithCredential(
+          credential,
+        );
         final firebaseIdToken = await userCredential.user?.getIdToken();
-        
+
         if (firebaseIdToken != null) {
           final tokenExpiration = _extractExpFromJwt(idToken);
-          debugPrint("Firebase ID Token: ${firebaseIdToken.substring(0, 50)}...");
-          widget.loginBloc.add(LoginEvent.googleLoginPressed(
-            key: user.email,
-            token: firebaseIdToken,
-            tokenExpiration: tokenExpiration,
-          ));
+          debugPrint(
+            "Firebase ID Token: ${firebaseIdToken.substring(0, 50)}...",
+          );
+          widget.loginBloc.add(
+            LoginEvent.googleLoginPressed(
+              key: user.email,
+              token: firebaseIdToken,
+              tokenExpiration: tokenExpiration,
+            ),
+          );
         } else {
           debugPrint("Error: Could not get Firebase ID token");
         }
@@ -120,20 +124,26 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
     try {
       final signIn = GoogleSignIn.instance;
       debugPrint("[Google Sign-In] Button clicked (mobile)");
-      
+
       if (signIn.supportsAuthenticate()) {
         debugPrint("[Google Sign-In] Calling authenticate()...");
         await signIn.authenticate();
         debugPrint("[Google Sign-In] authenticate() completed");
       } else {
-        debugPrint("[Google Sign-In] authenticate() not supported - this shouldn't happen on mobile");
+        debugPrint(
+          "[Google Sign-In] authenticate() not supported - this shouldn't happen on mobile",
+        );
       }
     } catch (e, stack) {
       debugPrint("[Google Sign-In] Error: $e");
       debugPrint("[Google Sign-In] Stack: $stack");
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Google Sign-In failed: ${e.toString().split(':').last}')),
+          SnackBar(
+            content: Text(
+              'Google Sign-In failed: ${e.toString().split(':').last}',
+            ),
+          ),
         );
       }
     }
@@ -154,26 +164,37 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
         ],
       );
 
-      debugPrint("Apple Identity Token: ${appleCredential.identityToken?.substring(0, 50)}...");
+      debugPrint(
+        "Apple Identity Token: ${appleCredential.identityToken?.substring(0, 50)}...",
+      );
 
       final oauthCredential = OAuthProvider('apple.com').credential(
         idToken: appleCredential.identityToken,
         accessToken: appleCredential.authorizationCode,
       );
 
-      final userCredential = await FirebaseAuth.instance.signInWithCredential(oauthCredential);
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(
+        oauthCredential,
+      );
       final firebaseIdToken = await userCredential.user?.getIdToken();
 
       if (firebaseIdToken != null) {
-        final tokenExpiration = appleCredential.identityToken != null 
-            ? _extractExpFromJwt(appleCredential.identityToken!) 
+        final tokenExpiration = appleCredential.identityToken != null
+            ? _extractExpFromJwt(appleCredential.identityToken!)
             : null;
-        debugPrint("Firebase ID Token from Apple: ${firebaseIdToken.substring(0, 50)}...");
-        widget.loginBloc.add(LoginEvent.appleLoginPressed(
-          key: appleCredential.email ?? userCredential.user?.email ?? 'apple_user',
-          token: firebaseIdToken,
-          tokenExpiration: tokenExpiration,
-        ));
+        debugPrint(
+          "Firebase ID Token from Apple: ${firebaseIdToken.substring(0, 50)}...",
+        );
+        widget.loginBloc.add(
+          LoginEvent.appleLoginPressed(
+            key:
+                appleCredential.email ??
+                userCredential.user?.email ??
+                'apple_user',
+            token: firebaseIdToken,
+            tokenExpiration: tokenExpiration,
+          ),
+        );
       } else {
         debugPrint("Error: Could not get Firebase ID token from Apple sign-in");
       }
@@ -241,11 +262,7 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
             borderRadius: BorderRadius.circular(BarzRadii.md),
           ),
         ),
-        icon: Image.asset(
-          icon,
-          height: 24,
-          width: 24,
-        ),
+        icon: Image.asset(icon, height: 24, width: 24),
         label: Text(
           label,
           style: barzTextTheme.labelLarge?.copyWith(

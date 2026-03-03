@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 /// Complete Registration Page
-/// 
+///
 /// Shown after initial authentication (SMS or social) to collect
 /// additional required user information before accessing the app.
 class CompleteRegistrationPage extends StatefulWidget {
@@ -22,14 +22,15 @@ class CompleteRegistrationPage extends StatefulWidget {
   });
 
   @override
-  State<CompleteRegistrationPage> createState() => _CompleteRegistrationPageState();
+  State<CompleteRegistrationPage> createState() =>
+      _CompleteRegistrationPageState();
 }
 
 class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
-  
+
   bool _termsAccepted = false;
   bool _privacyAccepted = false;
   bool _isLoading = false;
@@ -50,9 +51,9 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
 
   bool get _isFormValid {
     return _nameController.text.trim().isNotEmpty &&
-           _emailController.text.trim().isNotEmpty &&
-           _termsAccepted &&
-           _privacyAccepted;
+        _emailController.text.trim().isNotEmpty &&
+        _termsAccepted &&
+        _privacyAccepted;
   }
 
   Future<void> _completeRegistration() async {
@@ -62,7 +63,7 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
 
     try {
       final userRepository = getItInjector<UserRepository>();
-      
+
       // Update user profile with collected data
       final result = await userRepository.updateProfile(
         displayName: _nameController.text.trim(),
@@ -86,7 +87,7 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
           if (_privacyAccepted) {
             await userRepository.acceptPrivacy();
           }
-          
+
           if (mounted) {
             // Navigate to home
             context.go('/');
@@ -95,9 +96,9 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
       }
     } finally {
       if (mounted) {
@@ -139,7 +140,7 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
                   ),
                 ),
                 const SizedBox(height: BarzSpacing.xxl),
-                
+
                 // Name Field
                 BarzTextField(
                   controller: _nameController,
@@ -150,7 +151,7 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
                   onChanged: (_) => setState(() {}),
                 ),
                 const SizedBox(height: BarzSpacing.lg),
-                
+
                 // Email Field
                 BarzTextField(
                   controller: _emailController,
@@ -162,11 +163,12 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
                   onChanged: (_) => setState(() {}),
                 ),
                 const SizedBox(height: BarzSpacing.xxl),
-                
+
                 // Terms and Privacy
                 _buildCheckbox(
                   value: _termsAccepted,
-                  onChanged: (value) => setState(() => _termsAccepted = value ?? false),
+                  onChanged: (value) =>
+                      setState(() => _termsAccepted = value ?? false),
                   text: 'I agree to the ',
                   linkText: 'Terms of Service',
                   onLinkTap: () {
@@ -176,7 +178,8 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
                 const SizedBox(height: BarzSpacing.md),
                 _buildCheckbox(
                   value: _privacyAccepted,
-                  onChanged: (value) => setState(() => _privacyAccepted = value ?? false),
+                  onChanged: (value) =>
+                      setState(() => _privacyAccepted = value ?? false),
                   text: 'I agree to the ',
                   linkText: 'Privacy Policy',
                   onLinkTap: () {
@@ -184,7 +187,7 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
                   },
                 ),
                 const SizedBox(height: BarzSpacing.xxl),
-                
+
                 // Submit Button
                 BarzButton.primary(
                   onPressed: _isFormValid ? _completeRegistration : null,

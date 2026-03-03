@@ -5,9 +5,10 @@ class IdempotencyKey {
 
   static String generate() {
     final timestamp = DateTime.now().millisecondsSinceEpoch;
-    final randomPart = List.generate(16, (_) => _random.nextInt(256))
-        .map((b) => b.toRadixString(16).padLeft(2, '0'))
-        .join();
+    final randomPart = List.generate(
+      16,
+      (_) => _random.nextInt(256),
+    ).map((b) => b.toRadixString(16).padLeft(2, '0')).join();
     return '$timestamp-$randomPart';
   }
 

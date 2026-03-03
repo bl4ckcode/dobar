@@ -28,8 +28,8 @@ class BarzBlackElevatedButton extends StatelessWidget {
               spreadRadius: 1,
               blurRadius: 5,
               offset: const Offset(0, 3),
-            )
-        ]
+            ),
+        ],
       ),
       child: ElevatedButton(
         onPressed: isEnabled ? onPressed : null,
@@ -40,10 +40,7 @@ class BarzBlackElevatedButton extends StatelessWidget {
             borderRadius: BorderRadius.circular(10),
           ),
           elevation: 0,
-          padding: const EdgeInsets.symmetric(
-            horizontal: 24,
-            vertical: 16,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           textStyle: const TextStyle(fontSize: 16),
         ),
         child: Text(text),

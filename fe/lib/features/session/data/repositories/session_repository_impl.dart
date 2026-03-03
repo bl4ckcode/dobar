@@ -23,7 +23,9 @@ class SessionRepositoryImpl implements SessionRepository {
   }
 
   @override
-  Future<Either<Failure, BarAccess>> acceptInvitation(String invitationCode) async {
+  Future<Either<Failure, BarAccess>> acceptInvitation(
+    String invitationCode,
+  ) async {
     try {
       final result = await _datasource.acceptInvitation(invitationCode);
       return Right(result);

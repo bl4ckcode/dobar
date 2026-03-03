@@ -13,10 +13,13 @@ class HomeUseCase extends UseCase<HomeModel?, HomeParams> {
   @override
   Future<Either<Failure, HomeModel?>> call(HomeParams params) async {
     final result = await repository.getHome(params);
-    return result.fold((l) {
-      return Left(l);
-    }, (r) async {
-      return Right(r);
-    });
+    return result.fold(
+      (l) {
+        return Left(l);
+      },
+      (r) async {
+        return Right(r);
+      },
+    );
   }
 }

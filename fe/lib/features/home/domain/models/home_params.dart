@@ -1,7 +1,5 @@
 class HomeParams {
-  HomeParams({
-    required this.identification,
-  });
+  HomeParams({required this.identification});
 
   late final String identification;
 

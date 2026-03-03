@@ -33,7 +33,10 @@ class _ClientRootShellState extends State<ClientRootShell> {
   bool _dataLoaded = false;
   LocationModel? _lastLocation;
 
-  void _loadDataWithLocation(BuildContext context, LocationState locationState) {
+  void _loadDataWithLocation(
+    BuildContext context,
+    LocationState locationState,
+  ) {
     if (!locationState.hasPermission) return;
 
     final current = locationState.currentLocation;
@@ -42,7 +45,8 @@ class _ClientRootShellState extends State<ClientRootShell> {
     final lat = current.latitude;
     final lng = current.longitude;
 
-    final locationChanged = _lastLocation == null ||
+    final locationChanged =
+        _lastLocation == null ||
         _lastLocation!.latitude != lat ||
         _lastLocation!.longitude != lng;
     final shouldLoad = !_dataLoaded || locationChanged;
@@ -52,16 +56,15 @@ class _ClientRootShellState extends State<ClientRootShell> {
     _dataLoaded = true;
 
     context.read<BarBloc>().add(LoadNearbyBars(lat: lat, lng: lng));
-    context.read<PromotionsBloc>().add(LoadPromotions(
-      latitude: lat,
-      longitude: lng,
-    ));
+    context.read<PromotionsBloc>().add(
+      LoadPromotions(latitude: lat, longitude: lng),
+    );
   }
 
   int _getSelectedIndex(BuildContext context) {
     final location = GoRouterState.of(context).uri.toString();
     final route = AppRouteX.fromLocation(location);
-    
+
     switch (route) {
       case AppRoute.home:
         return 0;
@@ -78,14 +81,11 @@ class _ClientRootShellState extends State<ClientRootShell> {
     return MultiBlocProvider(
       providers: [
         BlocProvider(
-          create: (_) => getItInjector<LocationBloc>()..add(GetCurrentLocation()),
+          create: (_) =>
+              getItInjector<LocationBloc>()..add(GetCurrentLocation()),
         ),
-        BlocProvider(
-          create: (_) => getItInjector<BarBloc>(),
-        ),
-        BlocProvider(
-          create: (_) => getItInjector<PromotionsBloc>(),
-        ),
+        BlocProvider(create: (_) => getItInjector<BarBloc>()),
+        BlocProvider(create: (_) => getItInjector<PromotionsBloc>()),
       ],
       child: BlocListener<LocationBloc, LocationState>(
         listener: (context, state) {
@@ -98,7 +98,8 @@ class _ClientRootShellState extends State<ClientRootShell> {
           floatingActionButton: _CenterDockedFab(
             onPressed: () => context.push(AppRoute.checkin.path),
           ),
-          floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+          floatingActionButtonLocation:
+              FloatingActionButtonLocation.centerDocked,
           bottomNavigationBar: BottomAppBar(
             height: _NavBarMetrics.barHeight,
             color: barzDark,

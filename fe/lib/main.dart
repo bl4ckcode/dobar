@@ -9,7 +9,9 @@ import 'core/utils/injections.dart';
 import 'core/services/app_initializer.dart';
 import 'core/design/design_system.dart';
 import 'core/router/app_router.dart';
+import 'core/theme/theme_cubit.dart';
 import 'l10n/app_localizations.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -61,18 +63,25 @@ class DobarAppState extends State<DobarApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp.router(
-      routerConfig: appRouter,
-      debugShowCheckedModeBanner: false,
-      title: 'Dobar',
-      theme: getBarzLightTheme(),
-      darkTheme: getBarzDarkTheme(),
-      themeMode: ThemeMode.system,
-      localizationsDelegates: [
-        ...AppLocalizations.localizationsDelegates,
-        ...PhoneFieldLocalization.delegates,
-      ],
-      supportedLocales: AppLocalizations.supportedLocales,
+    return BlocProvider(
+      create: (_) => getItInjector<ThemeCubit>(),
+      child: BlocBuilder<ThemeCubit, ThemeMode>(
+        builder: (context, themeMode) {
+          return MaterialApp.router(
+            routerConfig: appRouter,
+            debugShowCheckedModeBanner: false,
+            title: 'Dobar',
+            theme: getBarzLightTheme(),
+            darkTheme: getBarzDarkTheme(),
+            themeMode: themeMode,
+            localizationsDelegates: [
+              ...AppLocalizations.localizationsDelegates,
+              ...PhoneFieldLocalization.delegates,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+          );
+        },
+      ),
     );
   }
 }

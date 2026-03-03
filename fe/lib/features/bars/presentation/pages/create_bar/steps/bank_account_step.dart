@@ -5,7 +5,7 @@ import '../create_bar_page.dart';
 import '../widgets/wizard_footer.dart';
 
 /// Bank account collection step for bar creation wizard.
-/// 
+///
 /// Collects business ID (CNPJ/RFC/CUIT) and bank account details
 /// based on the country selected in the Find Bar step.
 class BankAccountStep extends StatefulWidget {
@@ -38,7 +38,9 @@ class _BankAccountStepState extends State<BankAccountStep> {
   }
 
   void _checkFormValidity() {
-    bool hasBusinessId = !_countryConfig.requiresBusinessId || widget.formData.businessId.isNotEmpty;
+    bool hasBusinessId =
+        !_countryConfig.requiresBusinessId ||
+        widget.formData.businessId.isNotEmpty;
     bool hasBankInfo = _hasBankInfo();
     setState(() {
       _isFormValid = hasBusinessId && hasBankInfo;
@@ -49,9 +51,11 @@ class _BankAccountStepState extends State<BankAccountStep> {
     final bank = widget.formData.bankAccount;
     switch (_countryConfig.code) {
       case CountryCode.br:
-        return _usePixKey 
-            ? bank.pixKey.isNotEmpty 
-            : (bank.bankCode.isNotEmpty && bank.branchCode.isNotEmpty && bank.accountNumber.isNotEmpty);
+        return _usePixKey
+            ? bank.pixKey.isNotEmpty
+            : (bank.bankCode.isNotEmpty &&
+                  bank.branchCode.isNotEmpty &&
+                  bank.accountNumber.isNotEmpty);
       case CountryCode.mx:
         return bank.clabe.length == 18;
       case CountryCode.ar:
@@ -81,7 +85,7 @@ class _BankAccountStepState extends State<BankAccountStep> {
                 children: [
                   _buildInfoBanner(l10n),
                   const SizedBox(height: BarzSpacing.xl),
-                  
+
                   if (_countryConfig.requiresBusinessId) ...[
                     _buildSectionHeader(
                       _countryConfig.businessIdLabel ?? l10n.business_id,
@@ -91,8 +95,11 @@ class _BankAccountStepState extends State<BankAccountStep> {
                     _buildBusinessIdSection(l10n),
                     const SizedBox(height: BarzSpacing.xl),
                   ],
-                  
-                  _buildSectionHeader(l10n.bank_account, Icons.account_balance_rounded),
+
+                  _buildSectionHeader(
+                    l10n.bank_account,
+                    Icons.account_balance_rounded,
+                  ),
                   const SizedBox(height: BarzSpacing.sm),
                   _buildBankAccountSection(l10n),
                 ],
@@ -228,7 +235,7 @@ class _BankAccountStepState extends State<BankAccountStep> {
             style: TextStyle(color: textSecondary, fontSize: 13),
           ),
           const SizedBox(height: 16),
-          
+
           // Country-specific bank fields
           _buildCountrySpecificBankFields(l10n),
         ],
@@ -279,13 +286,15 @@ class _BankAccountStepState extends State<BankAccountStep> {
                   _checkFormValidity();
                 },
                 activeTrackColor: barzGoldLight,
-                thumbColor: WidgetStatePropertyAll(_usePixKey ? barzGold : null),
+                thumbColor: WidgetStatePropertyAll(
+                  _usePixKey ? barzGold : null,
+                ),
               ),
             ],
           ),
         ),
         const SizedBox(height: 16),
-        
+
         if (_usePixKey) ...[
           // PIX Key fields
           _buildPixKeyFields(l10n),
@@ -301,11 +310,14 @@ class _BankAccountStepState extends State<BankAccountStep> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(l10n.pix_key_type, style: const TextStyle(fontWeight: FontWeight.w500)),
+        Text(
+          l10n.pix_key_type,
+          style: const TextStyle(fontWeight: FontWeight.w500),
+        ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          initialValue: widget.formData.bankAccount.pixKeyType.isEmpty 
-              ? 'cnpj' 
+          initialValue: widget.formData.bankAccount.pixKeyType.isEmpty
+              ? 'cnpj'
               : widget.formData.bankAccount.pixKeyType,
           decoration: _inputDecoration(l10n.select_pix_type),
           items: [
@@ -368,7 +380,10 @@ class _BankAccountStepState extends State<BankAccountStep> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(l10n.bank_code, style: const TextStyle(fontWeight: FontWeight.w500)),
+                  Text(
+                    l10n.bank_code,
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
                   const SizedBox(height: 8),
                   TextFormField(
                     initialValue: widget.formData.bankAccount.bankCode,
@@ -389,7 +404,10 @@ class _BankAccountStepState extends State<BankAccountStep> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(l10n.branch_code, style: const TextStyle(fontWeight: FontWeight.w500)),
+                  Text(
+                    l10n.branch_code,
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
                   const SizedBox(height: 8),
                   TextFormField(
                     initialValue: widget.formData.bankAccount.branchCode,
@@ -407,7 +425,10 @@ class _BankAccountStepState extends State<BankAccountStep> {
           ],
         ),
         const SizedBox(height: 16),
-        Text(l10n.account_number, style: const TextStyle(fontWeight: FontWeight.w500)),
+        Text(
+          l10n.account_number,
+          style: const TextStyle(fontWeight: FontWeight.w500),
+        ),
         const SizedBox(height: 8),
         TextFormField(
           initialValue: widget.formData.bankAccount.accountNumber,
@@ -419,16 +440,25 @@ class _BankAccountStepState extends State<BankAccountStep> {
           },
         ),
         const SizedBox(height: 16),
-        Text(l10n.account_type, style: const TextStyle(fontWeight: FontWeight.w500)),
+        Text(
+          l10n.account_type,
+          style: const TextStyle(fontWeight: FontWeight.w500),
+        ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          initialValue: widget.formData.bankAccount.accountType.isEmpty 
-              ? 'checking' 
+          initialValue: widget.formData.bankAccount.accountType.isEmpty
+              ? 'checking'
               : widget.formData.bankAccount.accountType,
           decoration: _inputDecoration(l10n.select_account_type),
           items: [
-            DropdownMenuItem(value: 'checking', child: Text(l10n.account_checking)),
-            DropdownMenuItem(value: 'savings', child: Text(l10n.account_savings)),
+            DropdownMenuItem(
+              value: 'checking',
+              child: Text(l10n.account_checking),
+            ),
+            DropdownMenuItem(
+              value: 'savings',
+              child: Text(l10n.account_savings),
+            ),
           ],
           onChanged: (value) {
             widget.formData.bankAccount.accountType = value ?? 'checking';
@@ -463,7 +493,10 @@ class _BankAccountStepState extends State<BankAccountStep> {
           },
         ),
         const SizedBox(height: 16),
-        Text(l10n.account_holder_name, style: const TextStyle(fontWeight: FontWeight.w500)),
+        Text(
+          l10n.account_holder_name,
+          style: const TextStyle(fontWeight: FontWeight.w500),
+        ),
         const SizedBox(height: 8),
         TextFormField(
           initialValue: widget.formData.bankAccount.accountHolderName,
@@ -503,7 +536,10 @@ class _BankAccountStepState extends State<BankAccountStep> {
           },
         ),
         const SizedBox(height: 16),
-        Text(l10n.account_holder_name, style: const TextStyle(fontWeight: FontWeight.w500)),
+        Text(
+          l10n.account_holder_name,
+          style: const TextStyle(fontWeight: FontWeight.w500),
+        ),
         const SizedBox(height: 8),
         TextFormField(
           initialValue: widget.formData.bankAccount.accountHolderName,
@@ -522,7 +558,10 @@ class _BankAccountStepState extends State<BankAccountStep> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(l10n.routing_number, style: const TextStyle(fontWeight: FontWeight.w500)),
+        Text(
+          l10n.routing_number,
+          style: const TextStyle(fontWeight: FontWeight.w500),
+        ),
         const SizedBox(height: 4),
         Text(
           'ABA Routing Number (9 digits)',
@@ -540,7 +579,10 @@ class _BankAccountStepState extends State<BankAccountStep> {
           },
         ),
         const SizedBox(height: 16),
-        Text(l10n.account_number, style: const TextStyle(fontWeight: FontWeight.w500)),
+        Text(
+          l10n.account_number,
+          style: const TextStyle(fontWeight: FontWeight.w500),
+        ),
         const SizedBox(height: 8),
         TextFormField(
           initialValue: widget.formData.bankAccount.accountNumber,
@@ -552,16 +594,25 @@ class _BankAccountStepState extends State<BankAccountStep> {
           },
         ),
         const SizedBox(height: 16),
-        Text(l10n.account_type, style: const TextStyle(fontWeight: FontWeight.w500)),
+        Text(
+          l10n.account_type,
+          style: const TextStyle(fontWeight: FontWeight.w500),
+        ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
-          initialValue: widget.formData.bankAccount.accountType.isEmpty 
-              ? 'checking' 
+          initialValue: widget.formData.bankAccount.accountType.isEmpty
+              ? 'checking'
               : widget.formData.bankAccount.accountType,
           decoration: _inputDecoration(l10n.select_account_type),
           items: [
-            DropdownMenuItem(value: 'checking', child: Text(l10n.account_checking)),
-            DropdownMenuItem(value: 'savings', child: Text(l10n.account_savings)),
+            DropdownMenuItem(
+              value: 'checking',
+              child: Text(l10n.account_checking),
+            ),
+            DropdownMenuItem(
+              value: 'savings',
+              child: Text(l10n.account_savings),
+            ),
           ],
           onChanged: (value) {
             widget.formData.bankAccount.accountType = value ?? 'checking';
@@ -575,7 +626,10 @@ class _BankAccountStepState extends State<BankAccountStep> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(l10n.account_number, style: const TextStyle(fontWeight: FontWeight.w500)),
+        Text(
+          l10n.account_number,
+          style: const TextStyle(fontWeight: FontWeight.w500),
+        ),
         const SizedBox(height: 8),
         TextFormField(
           initialValue: widget.formData.bankAccount.accountNumber,
@@ -587,7 +641,10 @@ class _BankAccountStepState extends State<BankAccountStep> {
           },
         ),
         const SizedBox(height: 16),
-        Text(l10n.account_holder_name, style: const TextStyle(fontWeight: FontWeight.w500)),
+        Text(
+          l10n.account_holder_name,
+          style: const TextStyle(fontWeight: FontWeight.w500),
+        ),
         const SizedBox(height: 8),
         TextFormField(
           initialValue: widget.formData.bankAccount.accountHolderName,
@@ -626,7 +683,8 @@ class _BankAccountStepState extends State<BankAccountStep> {
 
   void _validateAndProceed() {
     // Basic validation - at least business ID if required
-    if (_countryConfig.requiresBusinessId && widget.formData.businessId.isEmpty) {
+    if (_countryConfig.requiresBusinessId &&
+        widget.formData.businessId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('${_countryConfig.businessIdLabel} is required'),
@@ -642,9 +700,11 @@ class _BankAccountStepState extends State<BankAccountStep> {
 
     switch (_countryConfig.code) {
       case CountryCode.br:
-        hasBankInfo = _usePixKey 
-            ? bank.pixKey.isNotEmpty 
-            : (bank.bankCode.isNotEmpty && bank.branchCode.isNotEmpty && bank.accountNumber.isNotEmpty);
+        hasBankInfo = _usePixKey
+            ? bank.pixKey.isNotEmpty
+            : (bank.bankCode.isNotEmpty &&
+                  bank.branchCode.isNotEmpty &&
+                  bank.accountNumber.isNotEmpty);
         break;
       case CountryCode.mx:
         hasBankInfo = bank.clabe.length == 18;
@@ -653,7 +713,8 @@ class _BankAccountStepState extends State<BankAccountStep> {
         hasBankInfo = bank.cbu.length == 22;
         break;
       case CountryCode.us:
-        hasBankInfo = bank.routingNumber.length == 9 && bank.accountNumber.isNotEmpty;
+        hasBankInfo =
+            bank.routingNumber.length == 9 && bank.accountNumber.isNotEmpty;
         break;
       default:
         hasBankInfo = bank.accountNumber.isNotEmpty;

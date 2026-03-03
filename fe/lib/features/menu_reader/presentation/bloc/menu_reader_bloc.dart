@@ -31,16 +31,20 @@ class MenuReaderBloc extends Bloc<MenuReaderEvent, MenuReaderState> {
     );
 
     result.fold(
-      (failure) => emit(state.copyWith(
-        status: MenuReaderStatus.error,
-        errorMessage: failure.errorMessage,
-      )),
-      (extraction) => emit(state.copyWith(
-        status: MenuReaderStatus.extracted,
-        extraction: extraction,
-        editableCategories: extraction.categories,
-        confidence: extraction.confidence,
-      )),
+      (failure) => emit(
+        state.copyWith(
+          status: MenuReaderStatus.error,
+          errorMessage: failure.errorMessage,
+        ),
+      ),
+      (extraction) => emit(
+        state.copyWith(
+          status: MenuReaderStatus.extracted,
+          extraction: extraction,
+          editableCategories: extraction.categories,
+          confidence: extraction.confidence,
+        ),
+      ),
     );
   }
 
@@ -57,57 +61,59 @@ class MenuReaderBloc extends Bloc<MenuReaderEvent, MenuReaderState> {
     );
 
     result.fold(
-      (failure) => emit(state.copyWith(
-        status: MenuReaderStatus.error,
-        errorMessage: failure.errorMessage,
-      )),
-      (extraction) => emit(state.copyWith(
-        status: MenuReaderStatus.extracted,
-        extraction: extraction,
-        editableCategories: extraction.categories,
-        confidence: extraction.confidence,
-      )),
+      (failure) => emit(
+        state.copyWith(
+          status: MenuReaderStatus.error,
+          errorMessage: failure.errorMessage,
+        ),
+      ),
+      (extraction) => emit(
+        state.copyWith(
+          status: MenuReaderStatus.extracted,
+          extraction: extraction,
+          editableCategories: extraction.categories,
+          confidence: extraction.confidence,
+        ),
+      ),
     );
   }
 
-  void _onToggleItem(
-    ToggleItemSelection event,
-    Emitter<MenuReaderState> emit,
-  ) {
+  void _onToggleItem(ToggleItemSelection event, Emitter<MenuReaderState> emit) {
     final categories = List<ExtractedCategory>.from(state.editableCategories);
     final category = categories[event.categoryIndex];
     final items = List<ExtractedItem>.from(category.items);
     final item = items[event.itemIndex];
-    
+
     items[event.itemIndex] = item.copyWith(isSelected: !item.isSelected);
     categories[event.categoryIndex] = category.copyWith(items: items);
-    
-    emit(state.copyWith(
-      status: MenuReaderStatus.editing,
-      editableCategories: categories,
-    ));
+
+    emit(
+      state.copyWith(
+        status: MenuReaderStatus.editing,
+        editableCategories: categories,
+      ),
+    );
   }
 
-  void _onUpdateItem(
-    UpdateItemDetails event,
-    Emitter<MenuReaderState> emit,
-  ) {
+  void _onUpdateItem(UpdateItemDetails event, Emitter<MenuReaderState> emit) {
     final categories = List<ExtractedCategory>.from(state.editableCategories);
     final category = categories[event.categoryIndex];
     final items = List<ExtractedItem>.from(category.items);
     final item = items[event.itemIndex];
-    
+
     items[event.itemIndex] = item.copyWith(
       name: event.name ?? item.name,
       price: event.price ?? item.price,
       description: event.description ?? item.description,
     );
     categories[event.categoryIndex] = category.copyWith(items: items);
-    
-    emit(state.copyWith(
-      status: MenuReaderStatus.editing,
-      editableCategories: categories,
-    ));
+
+    emit(
+      state.copyWith(
+        status: MenuReaderStatus.editing,
+        editableCategories: categories,
+      ),
+    );
   }
 
   void _onUpdateCategory(
@@ -118,11 +124,13 @@ class MenuReaderBloc extends Bloc<MenuReaderEvent, MenuReaderState> {
     categories[event.categoryIndex] = categories[event.categoryIndex].copyWith(
       name: event.name,
     );
-    
-    emit(state.copyWith(
-      status: MenuReaderStatus.editing,
-      editableCategories: categories,
-    ));
+
+    emit(
+      state.copyWith(
+        status: MenuReaderStatus.editing,
+        editableCategories: categories,
+      ),
+    );
   }
 
   Future<void> _onSaveItems(
@@ -137,18 +145,17 @@ class MenuReaderBloc extends Bloc<MenuReaderEvent, MenuReaderState> {
     );
 
     result.fold(
-      (failure) => emit(state.copyWith(
-        status: MenuReaderStatus.error,
-        errorMessage: failure.errorMessage,
-      )),
+      (failure) => emit(
+        state.copyWith(
+          status: MenuReaderStatus.error,
+          errorMessage: failure.errorMessage,
+        ),
+      ),
       (_) => emit(state.copyWith(status: MenuReaderStatus.saved)),
     );
   }
 
-  void _onReset(
-    ResetMenuReader event,
-    Emitter<MenuReaderState> emit,
-  ) {
+  void _onReset(ResetMenuReader event, Emitter<MenuReaderState> emit) {
     emit(const MenuReaderState());
   }
 }

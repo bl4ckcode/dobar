@@ -12,6 +12,7 @@ class OrderDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return BlocProvider(
       create: (_) =>
           getItInjector<OrderBloc>()..add(LoadOrderTimeline(orderId: orderId)),
@@ -32,36 +33,43 @@ class OrderDetailPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Status: ${order.status}',
-                        style: Theme.of(context).textTheme.titleLarge),
+                    Text(
+                      'Status: ${order.status}',
+                      style: theme.textTheme.titleLarge,
+                    ),
                     const SizedBox(height: 8),
                     Text('Type: ${order.orderType}'),
                     Text('Payment: ${order.paymentMethod}'),
                     const SizedBox(height: 16),
-                    Text('Items:',
-                        style: Theme.of(context).textTheme.titleMedium),
-                    ...order.items.map((item) => ListTile(
-                          title: Text(item.menuItemName),
-                          subtitle: Text('Qty: ${item.quantity}'),
-                          trailing:
-                              Text('\$${item.totalPrice.toStringAsFixed(2)}'),
-                        )),
+                    Text('Items:', style: theme.textTheme.titleMedium),
+                    ...order.items.map(
+                      (item) => ListTile(
+                        title: Text(item.menuItemName),
+                        subtitle: Text('Qty: ${item.quantity}'),
+                        trailing: Text(
+                          '\$${item.totalPrice.toStringAsFixed(2)}',
+                        ),
+                      ),
+                    ),
                     const Divider(),
                     Text('Subtotal: \$${order.subtotal.toStringAsFixed(2)}'),
                     Text('Tax: \$${order.tax.toStringAsFixed(2)}'),
                     Text('Tip: \$${order.tip.toStringAsFixed(2)}'),
-                    Text('Total: \$${order.totalPrice.toStringAsFixed(2)}',
-                        style: Theme.of(context).textTheme.titleLarge),
+                    Text(
+                      'Total: \$${order.totalPrice.toStringAsFixed(2)}',
+                      style: theme.textTheme.titleLarge,
+                    ),
                     if (order.status == 'pending') ...[
                       const SizedBox(height: 16),
                       ElevatedButton(
                         onPressed: () {
-                          context
-                              .read<OrderBloc>()
-                              .add(CancelOrder(orderId: orderId));
+                          context.read<OrderBloc>().add(
+                            CancelOrder(orderId: orderId),
+                          );
                         },
                         style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red),
+                          backgroundColor: Colors.red,
+                        ),
                         child: const Text('Cancel Order'),
                       ),
                     ],

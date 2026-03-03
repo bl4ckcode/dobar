@@ -2,14 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 /// Barz Typography System
-/// 
+///
 /// Based on Material Design 3 type scale with Inter font family.
 /// Inter is chosen for:
 /// - Excellent legibility at small sizes
 /// - Wide language support
 /// - Open source and free
 /// - Optimized for screens
-/// 
+///
 /// Scale follows a 1.25 ratio (major third) for harmonious sizing.
 
 // =============================================================================
@@ -47,7 +47,7 @@ TextTheme get barzTextTheme => TextTheme(
     letterSpacing: 0,
     height: 1.22,
   ),
-  
+
   // Headline styles - Page titles, section headers
   headlineLarge: GoogleFonts.inter(
     fontSize: 32,
@@ -67,7 +67,7 @@ TextTheme get barzTextTheme => TextTheme(
     letterSpacing: 0,
     height: 1.33,
   ),
-  
+
   // Title styles - Card titles, list items
   titleLarge: GoogleFonts.inter(
     fontSize: 22,
@@ -87,7 +87,7 @@ TextTheme get barzTextTheme => TextTheme(
     letterSpacing: 0.1,
     height: 1.43,
   ),
-  
+
   // Body styles - Main content
   bodyLarge: GoogleFonts.inter(
     fontSize: 16,
@@ -107,7 +107,7 @@ TextTheme get barzTextTheme => TextTheme(
     letterSpacing: 0.4,
     height: 1.33,
   ),
-  
+
   // Label styles - Buttons, form labels, captions
   labelLarge: GoogleFonts.inter(
     fontSize: 14,

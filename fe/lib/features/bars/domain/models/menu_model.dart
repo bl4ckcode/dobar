@@ -76,7 +76,8 @@ class MenuModel {
       name: json['name'],
       description: json['description'],
       isActive: json['is_active'] ?? true,
-      items: (json['items'] as List<dynamic>?)
+      items:
+          (json['items'] as List<dynamic>?)
               ?.map((e) => MenuItemModel.fromJson(e))
               .toList() ??
           [],

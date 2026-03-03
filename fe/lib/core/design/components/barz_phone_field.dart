@@ -27,7 +27,13 @@ class BarzPhoneField extends StatefulWidget {
     this.initialCountryCode = 'BR',
     this.initialValue,
     this.focusNode,
-    this.favoriteCountries = const [IsoCode.BR, IsoCode.PT, IsoCode.US, IsoCode.MX, IsoCode.AR],
+    this.favoriteCountries = const [
+      IsoCode.BR,
+      IsoCode.PT,
+      IsoCode.US,
+      IsoCode.MX,
+      IsoCode.AR,
+    ],
     this.isRequired = false,
     this.showFlag = true,
     this.showDialCode = true,
@@ -43,9 +49,7 @@ class _BarzPhoneFieldState extends State<BarzPhoneField> {
   @override
   void initState() {
     super.initState();
-    _controller = PhoneController(
-      initialValue: _parseInitialValue(),
-    );
+    _controller = PhoneController(initialValue: _parseInitialValue());
     _controller.addListener(_onPhoneChanged);
   }
 
@@ -54,10 +58,16 @@ class _BarzPhoneFieldState extends State<BarzPhoneField> {
       try {
         return PhoneNumber.parse(widget.initialValue!);
       } catch (_) {
-        return PhoneNumber(isoCode: _getIsoCode(widget.initialCountryCode), nsn: '');
+        return PhoneNumber(
+          isoCode: _getIsoCode(widget.initialCountryCode),
+          nsn: '',
+        );
       }
     }
-    return PhoneNumber(isoCode: _getIsoCode(widget.initialCountryCode), nsn: '');
+    return PhoneNumber(
+      isoCode: _getIsoCode(widget.initialCountryCode),
+      nsn: '',
+    );
   }
 
   IsoCode _getIsoCode(String code) {
@@ -137,9 +147,7 @@ class _BarzPhoneFieldState extends State<BarzPhoneField> {
             filled: true,
             fillColor: widget.enabled ? barzGoldMuted : surfaceMuted,
             hintText: widget.hintText,
-            hintStyle: theme.textTheme.bodyLarge?.copyWith(
-              color: textTertiary,
-            ),
+            hintStyle: theme.textTheme.bodyLarge?.copyWith(color: textTertiary),
             errorText: widget.errorText,
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,

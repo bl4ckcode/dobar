@@ -27,7 +27,8 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     emit(state.copyWith(isLoading: true, error: null));
     final result = await _usecase.getCurrentUser();
     result.fold(
-      (failure) => emit(state.copyWith(isLoading: false, error: failure.errorMessage)),
+      (failure) =>
+          emit(state.copyWith(isLoading: false, error: failure.errorMessage)),
       (user) => emit(state.copyWith(isLoading: false, user: user)),
     );
   }
@@ -44,7 +45,8 @@ class UserBloc extends Bloc<UserEvent, UserState> {
       profilePictureUrl: event.profilePictureUrl,
     );
     result.fold(
-      (failure) => emit(state.copyWith(isUpdating: false, error: failure.errorMessage)),
+      (failure) =>
+          emit(state.copyWith(isUpdating: false, error: failure.errorMessage)),
       (user) => emit(state.copyWith(isUpdating: false, user: user)),
     );
   }
@@ -56,7 +58,8 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     emit(state.copyWith(isUpdating: true, error: null));
     final result = await _usecase.updatePreferences(event.preferences);
     result.fold(
-      (failure) => emit(state.copyWith(isUpdating: false, error: failure.errorMessage)),
+      (failure) =>
+          emit(state.copyWith(isUpdating: false, error: failure.errorMessage)),
       (user) => emit(state.copyWith(isUpdating: false, user: user)),
     );
   }
@@ -68,7 +71,8 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     emit(state.copyWith(isUpdating: true, error: null));
     final result = await _usecase.addDocument(event.document);
     result.fold(
-      (failure) => emit(state.copyWith(isUpdating: false, error: failure.errorMessage)),
+      (failure) =>
+          emit(state.copyWith(isUpdating: false, error: failure.errorMessage)),
       (user) => emit(state.copyWith(isUpdating: false, user: user)),
     );
   }
@@ -80,7 +84,8 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     emit(state.copyWith(isUpdating: true, error: null));
     final result = await _usecase.removeDocument(event.documentId);
     result.fold(
-      (failure) => emit(state.copyWith(isUpdating: false, error: failure.errorMessage)),
+      (failure) =>
+          emit(state.copyWith(isUpdating: false, error: failure.errorMessage)),
       (user) => emit(state.copyWith(isUpdating: false, user: user)),
     );
   }
@@ -92,7 +97,8 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     emit(state.copyWith(isUpdating: true, error: null));
     final result = await _usecase.acceptTerms();
     result.fold(
-      (failure) => emit(state.copyWith(isUpdating: false, error: failure.errorMessage)),
+      (failure) =>
+          emit(state.copyWith(isUpdating: false, error: failure.errorMessage)),
       (user) => emit(state.copyWith(isUpdating: false, user: user)),
     );
   }
@@ -104,7 +110,8 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     emit(state.copyWith(isUpdating: true, error: null));
     final result = await _usecase.acceptPrivacy();
     result.fold(
-      (failure) => emit(state.copyWith(isUpdating: false, error: failure.errorMessage)),
+      (failure) =>
+          emit(state.copyWith(isUpdating: false, error: failure.errorMessage)),
       (user) => emit(state.copyWith(isUpdating: false, user: user)),
     );
   }
@@ -116,7 +123,8 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     emit(state.copyWith(isUpdating: true, error: null));
     final result = await _usecase.deleteAccount();
     result.fold(
-      (failure) => emit(state.copyWith(isUpdating: false, error: failure.errorMessage)),
+      (failure) =>
+          emit(state.copyWith(isUpdating: false, error: failure.errorMessage)),
       (_) => emit(const UserState()),
     );
   }
@@ -143,10 +151,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     );
   }
 
-  void _onClearError(
-    ClearUserError event,
-    Emitter<UserState> emit,
-  ) {
+  void _onClearError(ClearUserError event, Emitter<UserState> emit) {
     emit(state.copyWith(error: null));
   }
 }

@@ -43,7 +43,8 @@ class UserRepositoryImpl implements UserRepository {
       if (displayName != null) data['display_name'] = displayName;
       if (email != null) data['email'] = email;
       if (phoneNumber != null) data['phone_number'] = phoneNumber;
-      if (profilePictureUrl != null) data['profile_picture_url'] = profilePictureUrl;
+      if (profilePictureUrl != null)
+        data['profile_picture_url'] = profilePictureUrl;
       final result = await _datasource.updateProfile(data);
       return Right(result);
     } on ServerException catch (e) {
@@ -52,7 +53,9 @@ class UserRepositoryImpl implements UserRepository {
   }
 
   @override
-  Future<Either<Failure, UserModel>> updatePreferences(UserPreferences preferences) async {
+  Future<Either<Failure, UserModel>> updatePreferences(
+    UserPreferences preferences,
+  ) async {
     try {
       final result = await _datasource.updatePreferences(preferences);
       return Right(result);
@@ -122,7 +125,8 @@ class UserRepositoryImpl implements UserRepository {
   }
 
   @override
-  Future<Either<Failure, List<CashbackTransaction>>> getCashbackHistory() async {
+  Future<Either<Failure, List<CashbackTransaction>>>
+  getCashbackHistory() async {
     try {
       final result = await _datasource.getCashbackHistory();
       return Right(result);

@@ -12,7 +12,9 @@ abstract class UserRepository {
     String? phoneNumber,
     String? profilePictureUrl,
   });
-  Future<Either<Failure, UserModel>> updatePreferences(UserPreferences preferences);
+  Future<Either<Failure, UserModel>> updatePreferences(
+    UserPreferences preferences,
+  );
   Future<Either<Failure, UserModel>> addDocument(UserDocument document);
   Future<Either<Failure, UserModel>> removeDocument(int documentId);
   Future<Either<Failure, UserModel>> acceptTerms();

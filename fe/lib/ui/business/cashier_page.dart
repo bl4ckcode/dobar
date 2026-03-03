@@ -101,12 +101,15 @@ class _CashierPageState extends State<CashierPage>
 
   @override
   Widget build(BuildContext context) {
-    bool isDark = Theme.of(context).brightness == Brightness.dark;
-    Color bgColor = isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF5F5F7);
-    Color cardColor = isDark ? const Color(0xFF2C2C2E) : Colors.white;
-    Color textColor = isDark ? Colors.white : Colors.black87;
-    Color mutedColor = isDark ? Colors.white54 : Colors.black54;
-    Color borderColor = isDark ? Colors.white12 : Colors.black12;
+    final theme = Theme.of(context);
+    final dobar = context.dobarColors;
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
+    final bgColor = dobar.background;
+    final cardColor = dobar.surface;
+    final textColor = dobar.labelPrimary;
+    final mutedColor = dobar.labelSecondary;
+    final borderColor = cs.outline;
 
     return _liveOrdersBloc == null
         ? Scaffold(
@@ -385,7 +388,7 @@ class _CashierPageState extends State<CashierPage>
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF141416) : Colors.white,
+        color: cardColor,
         border: Border(bottom: BorderSide(color: borderColor)),
       ),
       child: Center(
@@ -397,7 +400,9 @@ class _CashierPageState extends State<CashierPage>
             child: Container(
               padding: const EdgeInsets.all(4),
               decoration: BoxDecoration(
-                color: isDark ? const Color(0xFF1F1F22) : Colors.grey[200],
+                color: isDark
+                    ? const Color(0xFF1F1F22)
+                    : const Color(0xFFEEEEEE),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Row(
@@ -430,6 +435,7 @@ class _CashierPageState extends State<CashierPage>
 
   Widget _buildTabItem(String label, String? statusFilter, int count) {
     final isSelected = _activeFilter == statusFilter;
+    final dobar = context.dobarColors;
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return GestureDetector(
@@ -438,9 +444,7 @@ class _CashierPageState extends State<CashierPage>
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected
-              ? (isDark ? barzGold : barzDark)
-              : Colors.transparent,
+          color: isSelected ? dobar.buttonPrimary : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           boxShadow: isSelected
               ? [
@@ -460,8 +464,8 @@ class _CashierPageState extends State<CashierPage>
                 fontSize: 14,
                 fontWeight: FontWeight.w600,
                 color: isSelected
-                    ? (isDark ? Colors.black : Colors.white)
-                    : (isDark ? Colors.grey[400] : Colors.grey[600]),
+                    ? dobar.buttonOnPrimary
+                    : dobar.labelSecondary,
               ),
             ),
             if (count > 0) ...[
@@ -470,7 +474,7 @@ class _CashierPageState extends State<CashierPage>
                 padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? (isDark ? Colors.black : Colors.white24)
+                      ? Colors.black.withValues(alpha: 0.15)
                       : (isDark ? Colors.grey[800] : Colors.grey[300]),
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -480,8 +484,8 @@ class _CashierPageState extends State<CashierPage>
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
                     color: isSelected
-                        ? (isDark ? Colors.white : Colors.white)
-                        : (isDark ? Colors.white : Colors.black87),
+                        ? dobar.buttonOnPrimary
+                        : dobar.labelPrimary,
                   ),
                 ),
               ),
@@ -565,12 +569,16 @@ class _OrderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final dobar = context.dobarColors;
+    final cs = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
     final now = DateTime.now();
     final minsWait = now.difference(order.createdAt).inMinutes;
     final isUrgent = order.status != statusCompleted && minsWait >= 15;
 
-    final cardColor = isDark ? const Color(0xFF18181B) : Colors.white;
-    Color borderColor = isDark ? const Color(0xFF27272A) : Colors.grey[200]!;
+    final cardColor = dobar.surface;
+    Color borderColor = cs.outline;
     if (isUrgent) {
       borderColor = Colors.red.withValues(alpha: 0.6);
     }
@@ -666,7 +674,7 @@ class _OrderCard extends StatelessWidget {
                         fontSize: 13,
                         fontWeight: FontWeight.bold,
                         fontFamily: 'JetBrains Mono',
-                        color: isDark ? Colors.white : Colors.black,
+                        color: dobar.labelPrimary,
                       ),
                     ),
                   ],
@@ -697,7 +705,7 @@ class _OrderCard extends StatelessWidget {
                       Icon(
                         Icons.person_outline,
                         size: 14,
-                        color: isDark ? Colors.grey[400] : Colors.grey[600],
+                        color: dobar.labelSecondary,
                       ),
                       const SizedBox(width: 6),
                       Text(
@@ -705,7 +713,7 @@ class _OrderCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: isDark ? Colors.white : Colors.black,
+                          color: dobar.labelPrimary,
                         ),
                       ),
                     ],
@@ -725,17 +733,13 @@ class _OrderCard extends StatelessWidget {
                                       text: '${item.quantity}× ',
                                       style: TextStyle(
                                         fontWeight: FontWeight.bold,
-                                        color: isDark
-                                            ? Colors.white
-                                            : Colors.black,
+                                        color: dobar.labelPrimary,
                                       ),
                                     ),
                                     TextSpan(
                                       text: item.name,
                                       style: TextStyle(
-                                        color: isDark
-                                            ? Colors.grey[400]
-                                            : Colors.grey[600],
+                                        color: dobar.labelSecondary,
                                       ),
                                     ),
                                   ],
@@ -756,12 +760,8 @@ class _OrderCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: isDark ? const Color(0xFF141416) : Colors.grey[50],
-              border: Border(
-                top: BorderSide(
-                  color: isDark ? const Color(0xFF27272A) : Colors.grey[200]!,
-                ),
-              ),
+              color: isDark ? const Color(0xFF141416) : surfaceMuted,
+              border: Border(top: BorderSide(color: cs.outline)),
               borderRadius: const BorderRadius.only(
                 bottomLeft: Radius.circular(12),
                 bottomRight: Radius.circular(12),

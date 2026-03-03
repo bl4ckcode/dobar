@@ -5,11 +5,7 @@ enum ConflictType {
   concurrentUpdate,
 }
 
-enum Resolution {
-  useServer,
-  useClient,
-  merge,
-}
+enum Resolution { useServer, useClient, merge }
 
 class SyncOperation {
   final String clientId;
@@ -71,17 +67,16 @@ class SyncResponse {
   final List<int> syncedOrderIds;
   final List<SyncConflict> conflicts;
 
-  SyncResponse({
-    required this.syncedOrderIds,
-    required this.conflicts,
-  });
+  SyncResponse({required this.syncedOrderIds, required this.conflicts});
 
   factory SyncResponse.fromJson(Map<String, dynamic> json) {
     return SyncResponse(
       syncedOrderIds: List<int>.from(json['synced_order_ids'] ?? []),
-      conflicts: (json['conflicts'] as List?)
-          ?.map((c) => SyncConflict.fromJson(c))
-          .toList() ?? [],
+      conflicts:
+          (json['conflicts'] as List?)
+              ?.map((c) => SyncConflict.fromJson(c))
+              .toList() ??
+          [],
     );
   }
 
@@ -90,5 +85,6 @@ class SyncResponse {
 
 String _snakeToCamel(String snake) {
   final parts = snake.split('_');
-  return parts.first + parts.skip(1).map((p) => p[0].toUpperCase() + p.substring(1)).join();
+  return parts.first +
+      parts.skip(1).map((p) => p[0].toUpperCase() + p.substring(1)).join();
 }

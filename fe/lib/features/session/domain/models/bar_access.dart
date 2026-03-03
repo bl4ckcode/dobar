@@ -1,7 +1,7 @@
 import 'package:barz/core/rbac/rbac.dart';
 
 /// Represents a user's access to a specific bar.
-/// 
+///
 /// This model is returned from the GET /me/bars endpoint and contains:
 /// - The bar's basic info (id, name)
 /// - The user's role at that bar
@@ -55,7 +55,8 @@ class BarAccess {
 
   factory BarAccess.fromJson(Map<String, dynamic> json) {
     final roleStr = json['role'] as String? ?? 'staff';
-    final permissionsList = (json['permissions'] as List<dynamic>?)
+    final permissionsList =
+        (json['permissions'] as List<dynamic>?)
             ?.map((e) => e.toString())
             .toList() ??
         [];
@@ -95,5 +96,6 @@ class BarAccess {
   int get hashCode => barId.hashCode ^ role.hashCode;
 
   @override
-  String toString() => 'BarAccess(barId: $barId, barName: $barName, role: ${role.name})';
+  String toString() =>
+      'BarAccess(barId: $barId, barName: $barName, role: ${role.name})';
 }

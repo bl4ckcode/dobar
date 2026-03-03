@@ -10,17 +10,14 @@ class BarsPage extends StatelessWidget {
   final double latitude;
   final double longitude;
 
-  const BarsPage({
-    super.key,
-    required this.latitude,
-    required this.longitude,
-  });
+  const BarsPage({super.key, required this.latitude, required this.longitude});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) => getItInjector<BarBloc>()
-        ..add(LoadNearbyBars(lat: latitude, lng: longitude)),
+      create: (_) =>
+          getItInjector<BarBloc>()
+            ..add(LoadNearbyBars(lat: latitude, lng: longitude)),
       child: Scaffold(
         appBar: AppBar(title: const Text('Nearby Bars')),
         body: BlocBuilder<BarBloc, BarState>(
@@ -50,7 +47,8 @@ class BarsPage extends StatelessWidget {
                     subtitle: Text(bar.address),
                     trailing: bar.approximateLocation != null
                         ? Text(
-                            '${(bar.approximateLocation! / 1000).toStringAsFixed(1)} km')
+                            '${(bar.approximateLocation! / 1000).toStringAsFixed(1)} km',
+                          )
                         : null,
                     onTap: () {
                       Navigator.pushNamed(

@@ -4,7 +4,7 @@ import 'package:barz/core/utils/constant/colors.dart';
 import 'package:barz/ui/shell/responsive_shell.dart';
 
 /// Enhanced Login Screen
-/// 
+///
 /// This is the entry point of the app - users must authenticate before
 /// accessing the main app. Follows UI/UX best practices:
 /// - Clear visual hierarchy
@@ -27,11 +27,11 @@ class LoginWireframe extends StatelessWidget {
 
     return Scaffold(
       body: Container(
-        decoration: const BoxDecoration(
-          gradient: darkBackgroundGradient,
-        ),
+        decoration: const BoxDecoration(gradient: darkBackgroundGradient),
         child: SafeArea(
-          child: isWide ? _buildWideLayout(context) : _buildMobileLayout(context),
+          child: isWide
+              ? _buildWideLayout(context)
+              : _buildMobileLayout(context),
         ),
       ),
     );
@@ -116,30 +116,24 @@ class LoginWireframe extends StatelessWidget {
               ),
             ],
           ),
-          child: const Icon(
-            Icons.local_bar,
-            color: barzBlack,
-            size: 40,
-          ),
-        )
-            .animate()
-            .scale(
-              begin: const Offset(0.8, 0.8),
-              end: const Offset(1, 1),
-              duration: 600.ms,
-              curve: Curves.easeOutBack,
-            ),
+          child: const Icon(Icons.local_bar, color: barzBlack, size: 40),
+        ).animate().scale(
+          begin: const Offset(0.8, 0.8),
+          end: const Offset(1, 1),
+          duration: 600.ms,
+          curve: Curves.easeOutBack,
+        ),
         const SizedBox(height: 24),
         // Brand name
         Text(
-          'dobar',
-          style: TextStyle(
-            color: barzYellow,
-            fontSize: 42,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 2,
-          ),
-        )
+              'dobar',
+              style: TextStyle(
+                color: barzYellow,
+                fontSize: 42,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 2,
+              ),
+            )
             .animate(delay: 200.ms)
             .fadeIn(duration: 500.ms)
             .slideY(begin: 0.2, end: 0),
@@ -183,9 +177,9 @@ class LoginWireframe extends StatelessWidget {
           textColor: Colors.black,
           onPressed: () => _navigateToHome(context),
         ).animate(delay: 500.ms).fadeIn().slideY(begin: 0.2, end: 0),
-        
+
         const SizedBox(height: 12),
-        
+
         // Google Sign In
         _LoginButton(
           icon: Icons.g_mobiledata,
@@ -194,9 +188,9 @@ class LoginWireframe extends StatelessWidget {
           textColor: Colors.black,
           onPressed: () => _navigateToHome(context),
         ).animate(delay: 600.ms).fadeIn().slideY(begin: 0.2, end: 0),
-        
+
         const SizedBox(height: 12),
-        
+
         // Phone Sign In
         _LoginButton(
           icon: Icons.phone_android,
@@ -239,12 +233,7 @@ class LoginWireframe extends StatelessWidget {
             ),
           ),
         ),
-        Text(
-          '|',
-          style: TextStyle(
-            color: textOnDark.withValues(alpha: 0.3),
-          ),
-        ),
+        Text('|', style: TextStyle(color: textOnDark.withValues(alpha: 0.3))),
         TextButton(
           onPressed: () {},
           child: Text(
@@ -297,10 +286,7 @@ class _LoginButton extends StatelessWidget {
             const SizedBox(width: 12),
             Text(
               text,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-              ),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
             ),
           ],
         ),

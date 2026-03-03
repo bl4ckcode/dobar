@@ -49,7 +49,7 @@ class OrderRepositoryImpl extends AbstractOrderRepository {
         pageSize: pageSize,
         status: status,
       );
-      
+
       if (page == 1) {
         await localDataSource.cacheOrders(result.orders);
       } else {
@@ -57,11 +57,15 @@ class OrderRepositoryImpl extends AbstractOrderRepository {
           await localDataSource.cacheOrder(order);
         }
       }
-      
-      debugPrint('[OrderRepo] Fetched and cached ${result.orders.length} orders');
+
+      debugPrint(
+        '[OrderRepo] Fetched and cached ${result.orders.length} orders',
+      );
       return Right(result);
     } on ServerException catch (e) {
-      debugPrint('[OrderRepo] Network error - falling back to cache: ${e.message}');
+      debugPrint(
+        '[OrderRepo] Network error - falling back to cache: ${e.message}',
+      );
       if (cachedOrders.orders.isNotEmpty || page > 1) {
         return Right(cachedOrders);
       }
@@ -114,12 +118,12 @@ class OrderRepositoryImpl extends AbstractOrderRepository {
     if (!connectivityService.isOnline) {
       debugPrint('[OrderRepo] Offline - queueing cancel order $orderId');
       await localDataSource.updateOrderStatus(orderId, 'pending_cancel');
-      
+
       await syncService.enqueueTask(
         type: SyncTaskType.cancelOrder,
         payload: {'order_id': orderId},
       );
-      
+
       final cachedOrder = localDataSource.getOrder(orderId);
       if (cachedOrder != null) {
         return Right(cachedOrder);
@@ -138,7 +142,9 @@ class OrderRepositoryImpl extends AbstractOrderRepository {
 
   void updateOrderFromWebSocket(int orderId, String newStatus) {
     localDataSource.updateOrderStatus(orderId, newStatus);
-    debugPrint('[OrderRepo] Updated order $orderId status to $newStatus via WebSocket');
+    debugPrint(
+      '[OrderRepo] Updated order $orderId status to $newStatus via WebSocket',
+    );
   }
 
   bool hasUnsyncedChanges() {
@@ -149,4 +155,3 @@ class OrderRepositoryImpl extends AbstractOrderRepository {
     return syncService.getPendingTaskCount();
   }
 }
-

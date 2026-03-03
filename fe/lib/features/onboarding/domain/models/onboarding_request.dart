@@ -9,7 +9,7 @@ abstract class OnboardingRequest with _$OnboardingRequest {
   const factory OnboardingRequest({
     /// User type: "client" or "business"
     @JsonKey(name: 'user_type') required String userType,
-    
+
     /// ISO 3166-1 alpha-2 country code (BR, AR, US, MX, CL, CO, PE)
     @JsonKey(name: 'country_code') required String countryCode,
   }) = _OnboardingRequest;

@@ -1,5 +1,5 @@
 /// Defines all possible permissions in the Barz app.
-/// 
+///
 /// Permissions follow a resource:action format.
 /// These are used to control access to specific features based on user role.
 enum Permission {
@@ -7,41 +7,38 @@ enum Permission {
   barView('bar:view'),
   barEdit('bar:edit'),
   barDelete('bar:delete'),
-  
+
   // Menu permissions
   menuView('menu:view'),
   menuEdit('menu:edit'),
-  
+
   // Order permissions
   orderView('order:view'),
   orderProcess('order:process'),
   orderCancel('order:cancel'),
-  
+
   // Staff permissions
   staffView('staff:view'),
   staffManage('staff:manage'),
-  
+
   // Billing/Financial permissions
   billingView('billing:view'),
   billingManage('billing:manage'),
-  
+
   // Ads/Promotions permissions
   adsView('ads:view'),
   adsManage('ads:manage'),
-  
+
   // Analytics permissions
   analyticsView('analytics:view'),
-  analyticsExport('analytics:export'),
-  ;
+  analyticsExport('analytics:export');
 
   final String value;
   const Permission(this.value);
 
   static Permission? fromString(String value) {
     try {
-      return Permission.values.firstWhere(
-        (p) => p.value == value,
-      );
+      return Permission.values.firstWhere((p) => p.value == value);
     } catch (_) {
       return null;
     }
@@ -83,11 +80,7 @@ extension BarRolePermissions on Permission {
           Permission.orderProcess,
         };
       case 'staff':
-        return {
-          Permission.barView,
-          Permission.menuView,
-          Permission.orderView,
-        };
+        return {Permission.barView, Permission.menuView, Permission.orderView};
       default:
         return {};
     }

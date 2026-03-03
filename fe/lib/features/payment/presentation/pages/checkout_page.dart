@@ -71,12 +71,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     if (widget.arguments == null) {
       return const Scaffold(body: Center(child: Text("No items in checkout")));
     }
 
     final args = widget.arguments!;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = theme.brightness == Brightness.dark;
 
     // Map CartItems to OrderItems (Payment UI Model)
     final orderItems = args.items

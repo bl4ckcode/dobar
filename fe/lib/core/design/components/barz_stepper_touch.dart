@@ -86,7 +86,11 @@ class _BarzStepperTouchState extends State<BarzStepperTouch> {
         : _buildVertical(buttonsColor, counterColor, dragButtonColor);
   }
 
-  Widget _buildHorizontal(Color buttonsColor, Color counterColor, Color dragButtonColor) {
+  Widget _buildHorizontal(
+    Color buttonsColor,
+    Color counterColor,
+    Color dragButtonColor,
+  ) {
     return Container(
       height: 56,
       decoration: BoxDecoration(
@@ -132,7 +136,11 @@ class _BarzStepperTouchState extends State<BarzStepperTouch> {
     );
   }
 
-  Widget _buildVertical(Color buttonsColor, Color counterColor, Color dragButtonColor) {
+  Widget _buildVertical(
+    Color buttonsColor,
+    Color counterColor,
+    Color dragButtonColor,
+  ) {
     return Container(
       width: 56,
       decoration: BoxDecoration(

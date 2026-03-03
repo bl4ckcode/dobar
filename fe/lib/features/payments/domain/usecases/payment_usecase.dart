@@ -14,7 +14,10 @@ class PaymentUsecase {
     return _repository.getPaymentMethods();
   }
 
-  Future<Either<Failure, PaymentMethod>> addPaymentMethod(PaymentMethod method, {String? cardToken}) {
+  Future<Either<Failure, PaymentMethod>> addPaymentMethod(
+    PaymentMethod method, {
+    String? cardToken,
+  }) {
     return _repository.addPaymentMethod(method, cardToken);
   }
 
@@ -30,7 +33,9 @@ class PaymentUsecase {
     return _repository.processPayment(request);
   }
 
-  Future<Either<Failure, PixPaymentResponse>> initiatePixPayment(PaymentRequest request) {
+  Future<Either<Failure, PixPaymentResponse>> initiatePixPayment(
+    PaymentRequest request,
+  ) {
     return _repository.initiatePixPayment(request);
   }
 
@@ -38,15 +43,29 @@ class PaymentUsecase {
     return _repository.checkPaymentStatus(transactionId);
   }
 
-  Future<Either<Failure, List<Transaction>>> getTransactionHistory({int? limit, int? offset}) {
+  Future<Either<Failure, List<Transaction>>> getTransactionHistory({
+    int? limit,
+    int? offset,
+  }) {
     return _repository.getTransactionHistory(limit: limit, offset: offset);
   }
 
-  Future<Either<Failure, Transaction>> refundTransaction(int transactionId, {double? amount}) {
+  Future<Either<Failure, Transaction>> refundTransaction(
+    int transactionId, {
+    double? amount,
+  }) {
     return _repository.refundTransaction(transactionId, amount: amount);
   }
 
-  Future<Either<Failure, Transaction>> topUpWallet(double amount, PaymentType paymentType, {int? paymentMethodId}) {
-    return _repository.topUpWallet(amount, paymentType, paymentMethodId: paymentMethodId);
+  Future<Either<Failure, Transaction>> topUpWallet(
+    double amount,
+    PaymentType paymentType, {
+    int? paymentMethodId,
+  }) {
+    return _repository.topUpWallet(
+      amount,
+      paymentType,
+      paymentMethodId: paymentMethodId,
+    );
   }
 }

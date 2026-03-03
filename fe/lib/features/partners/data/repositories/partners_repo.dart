@@ -20,7 +20,8 @@ class PartnersRepositoryImpl extends AbstractPartnersRepository {
 
   @override
   Future<Either<Failure, List<PartnersBaseModel>>> getPartners(
-      PartnersParams params) async {
+    PartnersParams params,
+  ) async {
     try {
       final result = await networkDataSource.getPartners(params);
       // Assuming result.data is of type List<PartnersBaseModel>

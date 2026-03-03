@@ -74,8 +74,10 @@ class _MenuManagementContentState extends State<_MenuManagementContent> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF0A0A0A) : const Color(0xFFF9F9F9);
+    final theme = Theme.of(context);
+    final dobar = context.dobarColors;
+    final isDark = theme.brightness == Brightness.dark;
+    final bgColor = dobar.background;
 
     return BlocConsumer<BusinessMenuBloc, BusinessMenuState>(
       listener: (context, state) {
@@ -122,8 +124,9 @@ class _MenuManagementContentState extends State<_MenuManagementContent> {
     bool isDark,
   ) {
     final headerBg = Colors.transparent;
-    final textColor = isDark ? textOnDark : textPrimary;
-    final mutedTextColor = isDark ? textTertiary : textSecondary;
+    final dobar = context.dobarColors;
+    final textColor = dobar.labelPrimary;
+    final mutedTextColor = dobar.labelSecondary;
 
     int totalCategories = 0;
     for (final menu in state.menus) {
@@ -186,7 +189,9 @@ class _MenuManagementContentState extends State<_MenuManagementContent> {
                 label: const Text('Refresh'),
                 style: OutlinedButton.styleFrom(
                   foregroundColor: textColor,
-                  side: BorderSide(color: isDark ? barzDarkMuted : surfaceDim),
+                  side: BorderSide(
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
                   padding: const EdgeInsets.symmetric(
                     horizontal: BarzSpacing.md,
                     vertical: BarzSpacing.md,
@@ -235,7 +240,7 @@ class _MenuManagementContentState extends State<_MenuManagementContent> {
         return const Center(child: CircularProgressIndicator(color: barzGold));
 
       case BusinessMenuStatus.error:
-        final textColor = isDark ? textOnDark : textPrimary;
+        final textColor = context.dobarColors.labelPrimary;
         return Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -266,9 +271,10 @@ class _MenuManagementContentState extends State<_MenuManagementContent> {
   }
 
   Widget _buildEmptyState(BuildContext context, bool isDark) {
-    final textColor = isDark ? textOnDark : textPrimary;
-    final mutedTextColor = isDark ? textTertiary : textSecondary;
-    final iconBg = isDark ? const Color(0xFF1E1E1E) : Colors.white;
+    final dobar = context.dobarColors;
+    final textColor = dobar.labelPrimary;
+    final mutedTextColor = dobar.labelSecondary;
+    final iconBg = dobar.surface;
 
     return Center(
       child: Column(
@@ -609,9 +615,10 @@ class _CategorySection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final headerBg = isDark ? const Color(0xFF1F1F1F) : Colors.grey[200];
-    final textColor = isDark ? textOnDark : textPrimary;
-    final pillBg = isDark ? const Color(0xFF242424) : Colors.grey[300];
+    final dobar = context.dobarColors;
+    final headerBg = dobar.surfaceElevated;
+    final textColor = dobar.labelPrimary;
+    final pillBg = dobar.surfaceElevated;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -732,9 +739,10 @@ class _MenuItemTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final cardBg = isDark ? const Color(0xFF121212) : Colors.white;
-    final textColor = isDark ? textOnDark : textPrimary;
-    final mutedColor = isDark ? textTertiary : textSecondary;
+    final dobar = context.dobarColors;
+    final cardBg = dobar.surface;
+    final textColor = dobar.labelPrimary;
+    final mutedColor = dobar.labelSecondary;
     final hoverColor = isDark ? Colors.white12 : Colors.black12;
 
     return Material(
@@ -804,7 +812,7 @@ class _MenuItemTile extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w700,
-                  color: isDark ? barzGold : barzDark,
+                  color: dobar.labelSelected,
                 ),
               ),
               const SizedBox(width: 16),
@@ -821,7 +829,7 @@ class _MenuItemTile extends StatelessWidget {
                 child: PopupMenuButton<String>(
                   icon: Icon(Icons.more_vert, size: 20, color: mutedColor),
                   padding: EdgeInsets.zero,
-                  color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+                  color: dobar.surface,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(BarzRadii.sm),
                   ),
@@ -914,9 +922,11 @@ class _EditItemSheetState extends State<_EditItemSheet> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final bgSurface = isDark ? const Color(0xFF1E1E1E) : Colors.white;
-    final textColor = isDark ? textOnDark : textPrimary;
+    final theme = Theme.of(context);
+    final dobar = context.dobarColors;
+    final isDark = theme.brightness == Brightness.dark;
+    final bgSurface = dobar.surface;
+    final textColor = dobar.labelPrimary;
     final dividerColor = isDark ? barzDarkMuted : Colors.grey[300];
 
     return Container(
@@ -1055,10 +1065,11 @@ class _EditItemSheetState extends State<_EditItemSheet> {
     TextInputType? keyboardType,
     String? Function(String?)? validator,
   }) {
-    final fillColor = isDark ? const Color(0xFF262626) : Colors.grey[50];
-    final borderColor = isDark ? const Color(0xFF333333) : Colors.grey[200];
-    final textColor = isDark ? textOnDark : textPrimary;
-    final hintColor = isDark ? textTertiary : textSecondary;
+    final dobar = context.dobarColors;
+    final fillColor = dobar.surfaceElevated;
+    final borderColor = Theme.of(context).colorScheme.outline;
+    final textColor = dobar.labelPrimary;
+    final hintColor = dobar.labelSecondary;
 
     return TextFormField(
       controller: controller,
@@ -1074,7 +1085,7 @@ class _EditItemSheetState extends State<_EditItemSheet> {
         fillColor: fillColor,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(BarzRadii.sm),
-          borderSide: BorderSide(color: borderColor!),
+          borderSide: BorderSide(color: borderColor),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(BarzRadii.sm),

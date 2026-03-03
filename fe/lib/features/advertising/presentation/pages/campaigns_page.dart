@@ -11,7 +11,7 @@ import '../bloc/advertising_state.dart';
 import '../../domain/models/ad_campaign.dart';
 
 /// Campaign management page for bar owners.
-/// 
+///
 /// Shows list of campaigns with performance metrics and quick actions.
 class CampaignsPage extends StatelessWidget {
   const CampaignsPage({super.key});
@@ -41,7 +41,8 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
 
   void _loadCampaigns() {
     final sessionState = context.read<SessionBloc>().state;
-    if (sessionState is SessionReady && sessionState.session.activeBar != null) {
+    if (sessionState is SessionReady &&
+        sessionState.session.activeBar != null) {
       context.read<AdvertisingBloc>().add(
         LoadCampaigns(barId: sessionState.session.activeBar!.barId),
       );
@@ -68,7 +69,9 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
         child: BlocBuilder<AdvertisingBloc, AdvertisingState>(
           builder: (context, state) {
             if (state.isLoadingCampaigns) {
-              return const Center(child: CircularProgressIndicator(color: barzGold));
+              return const Center(
+                child: CircularProgressIndicator(color: barzGold),
+              );
             }
             if (state.error != null) {
               return _buildErrorState(state.error!);
@@ -84,8 +87,10 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
                 itemBuilder: (context, index) {
                   return _CampaignCard(
                     campaign: state.campaigns[index],
-                    onTap: () => _showCampaignDetails(context, state.campaigns[index]),
-                    onPause: () => _toggleCampaignStatus(state.campaigns[index]),
+                    onTap: () =>
+                        _showCampaignDetails(context, state.campaigns[index]),
+                    onPause: () =>
+                        _toggleCampaignStatus(state.campaigns[index]),
                   );
                 },
               ),
@@ -136,7 +141,11 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.campaign_outlined, size: 80, color: barzGold.withValues(alpha: 0.6)),
+            Icon(
+              Icons.campaign_outlined,
+              size: 80,
+              color: barzGold.withValues(alpha: 0.6),
+            ),
             const SizedBox(height: 24),
             const Text(
               'Nenhuma campanha ativa',
@@ -158,7 +167,10 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: barzDark,
                 foregroundColor: barzGold,
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 12,
+                ),
               ),
               icon: const Icon(Icons.add),
               label: const Text('Criar Campanha'),
@@ -171,7 +183,8 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
 
   void _showCreateCampaignDialog(BuildContext context) {
     final sessionState = context.read<SessionBloc>().state;
-    if (sessionState is! SessionReady || sessionState.session.activeBar == null) {
+    if (sessionState is! SessionReady ||
+        sessionState.session.activeBar == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Selecione um bar primeiro')),
       );
@@ -207,19 +220,17 @@ class _CampaignCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onPause;
 
-  const _CampaignCard({
-    required this.campaign,
-    this.onTap,
-    this.onPause,
-  });
+  const _CampaignCard({required this.campaign, this.onTap, this.onPause});
 
   @override
   Widget build(BuildContext context) {
     final isActive = campaign.status == CampaignStatus.active;
-    
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(BarzRadii.md)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(BarzRadii.md),
+      ),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(BarzRadii.md),
@@ -258,7 +269,10 @@ class _CampaignCard extends StatelessWidget {
                 children: [
                   _buildMetric('Impressões', campaign.impressions.toString()),
                   _buildMetric('Cliques', campaign.clicks.toString()),
-                  _buildMetric('CTR', '${((campaign.clicks / (campaign.impressions == 0 ? 1 : campaign.impressions)) * 100).toStringAsFixed(1)}%'),
+                  _buildMetric(
+                    'CTR',
+                    '${((campaign.clicks / (campaign.impressions == 0 ? 1 : campaign.impressions)) * 100).toStringAsFixed(1)}%',
+                  ),
                 ],
               ),
               const SizedBox(height: 16),
@@ -297,8 +311,9 @@ class _CampaignCard extends StatelessWidget {
       CampaignType.promoBoost: ('Promoção', Icons.local_offer),
       CampaignType.banner: ('Banner', Icons.view_carousel),
     };
-    final (label, icon) = typeLabels[campaign.campaignType] ?? ('Outro', Icons.campaign);
-    
+    final (label, icon) =
+        typeLabels[campaign.campaignType] ?? ('Outro', Icons.campaign);
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
@@ -312,7 +327,11 @@ class _CampaignCard extends StatelessWidget {
           const SizedBox(width: 4),
           Text(
             label,
-            style: const TextStyle(fontSize: 11, color: barzDark, fontWeight: FontWeight.w500),
+            style: const TextStyle(
+              fontSize: 11,
+              color: barzDark,
+              fontWeight: FontWeight.w500,
+            ),
           ),
         ],
       ),
@@ -362,26 +381,26 @@ class _CampaignCard extends StatelessWidget {
             color: textPrimary,
           ),
         ),
-        Text(
-          label,
-          style: TextStyle(fontSize: 12, color: textSecondary),
-        ),
+        Text(label, style: TextStyle(fontSize: 12, color: textSecondary)),
       ],
     );
   }
 
   Widget _buildBudgetProgress() {
-    final progress = campaign.budgetAmount > 0 
+    final progress = campaign.budgetAmount > 0
         ? (campaign.budgetSpent / campaign.budgetAmount).clamp(0.0, 1.0)
         : 0.0;
-    
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('Orçamento', style: TextStyle(fontSize: 12, color: textSecondary)),
+            Text(
+              'Orçamento',
+              style: TextStyle(fontSize: 12, color: textSecondary),
+            ),
             Text(
               'R\$ ${campaign.budgetSpent.toStringAsFixed(0)} / R\$ ${campaign.budgetAmount.toStringAsFixed(0)}',
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
@@ -476,7 +495,10 @@ class _CreateCampaignSheetState extends State<_CreateCampaignSheet> {
             maxLength: 60,
           ),
           const SizedBox(height: 16),
-          const Text('Tipo de campanha', style: TextStyle(fontWeight: FontWeight.w600)),
+          const Text(
+            'Tipo de campanha',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
           const SizedBox(height: 8),
           Wrap(
             spacing: 8,
@@ -487,7 +509,10 @@ class _CreateCampaignSheetState extends State<_CreateCampaignSheet> {
             ],
           ),
           const SizedBox(height: 16),
-          Text('Orçamento: R\$ ${_budget.toInt()}', style: const TextStyle(fontWeight: FontWeight.w600)),
+          Text(
+            'Orçamento: R\$ ${_budget.toInt()}',
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
           Slider(
             value: _budget,
             min: 100,
@@ -510,7 +535,10 @@ class _CreateCampaignSheetState extends State<_CreateCampaignSheet> {
                   ? const SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2, color: barzGold),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: barzGold,
+                      ),
                     )
                   : const Text('Criar Campanha'),
             ),
@@ -525,11 +553,7 @@ class _CreateCampaignSheetState extends State<_CreateCampaignSheet> {
     return ChoiceChip(
       label: Row(
         mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16),
-          const SizedBox(width: 4),
-          Text(label),
-        ],
+        children: [Icon(icon, size: 16), const SizedBox(width: 4), Text(label)],
       ),
       selected: isSelected,
       selectedColor: barzGold,

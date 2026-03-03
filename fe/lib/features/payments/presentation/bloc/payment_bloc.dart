@@ -29,8 +29,10 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     emit(state.copyWith(isLoading: true, error: null));
     final result = await _usecase.getPaymentMethods();
     result.fold(
-      (failure) => emit(state.copyWith(isLoading: false, error: failure.errorMessage)),
-      (methods) => emit(state.copyWith(isLoading: false, paymentMethods: methods)),
+      (failure) =>
+          emit(state.copyWith(isLoading: false, error: failure.errorMessage)),
+      (methods) =>
+          emit(state.copyWith(isLoading: false, paymentMethods: methods)),
     );
   }
 
@@ -39,9 +41,14 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     Emitter<PaymentState> emit,
   ) async {
     emit(state.copyWith(isProcessing: true, error: null));
-    final result = await _usecase.addPaymentMethod(event.method, cardToken: event.cardToken);
+    final result = await _usecase.addPaymentMethod(
+      event.method,
+      cardToken: event.cardToken,
+    );
     result.fold(
-      (failure) => emit(state.copyWith(isProcessing: false, error: failure.errorMessage)),
+      (failure) => emit(
+        state.copyWith(isProcessing: false, error: failure.errorMessage),
+      ),
       (method) {
         final methods = [...state.paymentMethods, method];
         emit(state.copyWith(isProcessing: false, paymentMethods: methods));
@@ -56,7 +63,9 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     emit(state.copyWith(isProcessing: true, error: null));
     final result = await _usecase.setDefaultPaymentMethod(event.methodId);
     result.fold(
-      (failure) => emit(state.copyWith(isProcessing: false, error: failure.errorMessage)),
+      (failure) => emit(
+        state.copyWith(isProcessing: false, error: failure.errorMessage),
+      ),
       (method) {
         final methods = state.paymentMethods.map((m) {
           if (m.id == method.id) return method;
@@ -89,9 +98,13 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     emit(state.copyWith(isProcessing: true, error: null));
     final result = await _usecase.removePaymentMethod(event.methodId);
     result.fold(
-      (failure) => emit(state.copyWith(isProcessing: false, error: failure.errorMessage)),
+      (failure) => emit(
+        state.copyWith(isProcessing: false, error: failure.errorMessage),
+      ),
       (_) {
-        final methods = state.paymentMethods.where((m) => m.id != event.methodId).toList();
+        final methods = state.paymentMethods
+            .where((m) => m.id != event.methodId)
+            .toList();
         emit(state.copyWith(isProcessing: false, paymentMethods: methods));
       },
     );
@@ -104,8 +117,12 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     emit(state.copyWith(isProcessing: true, error: null));
     final result = await _usecase.processPayment(event.request);
     result.fold(
-      (failure) => emit(state.copyWith(isProcessing: false, error: failure.errorMessage)),
-      (transaction) => emit(state.copyWith(isProcessing: false, currentTransaction: transaction)),
+      (failure) => emit(
+        state.copyWith(isProcessing: false, error: failure.errorMessage),
+      ),
+      (transaction) => emit(
+        state.copyWith(isProcessing: false, currentTransaction: transaction),
+      ),
     );
   }
 
@@ -116,7 +133,9 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     emit(state.copyWith(isProcessing: true, error: null));
     final result = await _usecase.initiatePixPayment(event.request);
     result.fold(
-      (failure) => emit(state.copyWith(isProcessing: false, error: failure.errorMessage)),
+      (failure) => emit(
+        state.copyWith(isProcessing: false, error: failure.errorMessage),
+      ),
       (pix) => emit(state.copyWith(isProcessing: false, pixPayment: pix)),
     );
   }
@@ -137,10 +156,15 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     Emitter<PaymentState> emit,
   ) async {
     emit(state.copyWith(isLoading: true, error: null));
-    final result = await _usecase.getTransactionHistory(limit: event.limit, offset: event.offset);
+    final result = await _usecase.getTransactionHistory(
+      limit: event.limit,
+      offset: event.offset,
+    );
     result.fold(
-      (failure) => emit(state.copyWith(isLoading: false, error: failure.errorMessage)),
-      (transactions) => emit(state.copyWith(isLoading: false, transactions: transactions)),
+      (failure) =>
+          emit(state.copyWith(isLoading: false, error: failure.errorMessage)),
+      (transactions) =>
+          emit(state.copyWith(isLoading: false, transactions: transactions)),
     );
   }
 
@@ -149,10 +173,17 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     Emitter<PaymentState> emit,
   ) async {
     emit(state.copyWith(isProcessing: true, error: null));
-    final result = await _usecase.refundTransaction(event.transactionId, amount: event.amount);
+    final result = await _usecase.refundTransaction(
+      event.transactionId,
+      amount: event.amount,
+    );
     result.fold(
-      (failure) => emit(state.copyWith(isProcessing: false, error: failure.errorMessage)),
-      (transaction) => emit(state.copyWith(isProcessing: false, currentTransaction: transaction)),
+      (failure) => emit(
+        state.copyWith(isProcessing: false, error: failure.errorMessage),
+      ),
+      (transaction) => emit(
+        state.copyWith(isProcessing: false, currentTransaction: transaction),
+      ),
     );
   }
 
@@ -161,24 +192,26 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     Emitter<PaymentState> emit,
   ) async {
     emit(state.copyWith(isProcessing: true, error: null));
-    final result = await _usecase.topUpWallet(event.amount, event.paymentType, paymentMethodId: event.paymentMethodId);
+    final result = await _usecase.topUpWallet(
+      event.amount,
+      event.paymentType,
+      paymentMethodId: event.paymentMethodId,
+    );
     result.fold(
-      (failure) => emit(state.copyWith(isProcessing: false, error: failure.errorMessage)),
-      (transaction) => emit(state.copyWith(isProcessing: false, currentTransaction: transaction)),
+      (failure) => emit(
+        state.copyWith(isProcessing: false, error: failure.errorMessage),
+      ),
+      (transaction) => emit(
+        state.copyWith(isProcessing: false, currentTransaction: transaction),
+      ),
     );
   }
 
-  void _onClearPixPayment(
-    ClearPixPayment event,
-    Emitter<PaymentState> emit,
-  ) {
+  void _onClearPixPayment(ClearPixPayment event, Emitter<PaymentState> emit) {
     emit(state.copyWith(pixPayment: null));
   }
 
-  void _onClearError(
-    ClearPaymentError event,
-    Emitter<PaymentState> emit,
-  ) {
+  void _onClearError(ClearPaymentError event, Emitter<PaymentState> emit) {
     emit(state.copyWith(error: null));
   }
 }

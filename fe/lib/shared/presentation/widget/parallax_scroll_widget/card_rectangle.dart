@@ -5,10 +5,7 @@ import '../../../domain/models/parallax_recipe_ui_model.dart';
 import 'card_content.dart';
 
 class RectangleCard extends StatelessWidget {
-  const RectangleCard({
-    super.key,
-    required this.bar,
-  });
+  const RectangleCard({super.key, required this.bar});
 
   final ParallaxRecipeUiModel bar;
 
@@ -26,13 +23,8 @@ class RectangleCard extends StatelessWidget {
           fit: BoxFit.fill,
           borderRadius: BorderRadius.circular(20),
         ),
-        const SizedBox(
-          height: 4,
-        ),
-        SizedBox(
-          width: 150,
-          child: CardContent(parallaxRecipeUiModel: bar),
-        )
+        const SizedBox(height: 4),
+        SizedBox(width: 150, child: CardContent(parallaxRecipeUiModel: bar)),
       ],
     );
   }

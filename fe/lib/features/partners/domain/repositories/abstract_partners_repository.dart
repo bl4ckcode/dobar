@@ -10,7 +10,5 @@ abstract class AbstractPartnersRepository {
     PartnersParams params,
   );
 
-  Future<Either<Failure, List<PartnerMenu>>> getPartnerMenus(
-    int barId,
-  );
+  Future<Either<Failure, List<PartnerMenu>>> getPartnerMenus(int barId);
 }

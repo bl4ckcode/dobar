@@ -12,11 +12,7 @@ class LoadMyOrders extends OrderEvent {
   final int pageSize;
   final String? status;
 
-  const LoadMyOrders({
-    this.page = 1,
-    this.pageSize = 10,
-    this.status,
-  });
+  const LoadMyOrders({this.page = 1, this.pageSize = 10, this.status});
 
   @override
   List<Object?> get props => [page, pageSize, status];

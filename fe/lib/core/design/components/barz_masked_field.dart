@@ -3,13 +3,7 @@ import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import '../tokens/colors.dart';
 import '../tokens/radii.dart';
 
-enum BarzMaskType {
-  cnpj,
-  cpf,
-  phone,
-  cep,
-  custom,
-}
+enum BarzMaskType { cnpj, cpf, phone, cep, custom }
 
 class BarzMaskedField extends StatefulWidget {
   final String? label;
@@ -134,10 +128,10 @@ class _BarzMaskedFieldState extends State<BarzMaskedField> {
           decoration: InputDecoration(
             filled: true,
             fillColor: _getFillColor(hasError),
-            hintText: widget.hintText.isEmpty ? _getMask().replaceAll('#', '_') : widget.hintText,
-            hintStyle: theme.textTheme.bodyLarge?.copyWith(
-              color: textTertiary,
-            ),
+            hintText: widget.hintText.isEmpty
+                ? _getMask().replaceAll('#', '_')
+                : widget.hintText,
+            hintStyle: theme.textTheme.bodyLarge?.copyWith(color: textTertiary),
             prefixIcon: widget.prefixIcon,
             suffixIcon: widget.suffixIcon,
             errorText: widget.errorText,

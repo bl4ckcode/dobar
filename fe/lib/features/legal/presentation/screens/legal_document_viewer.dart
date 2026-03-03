@@ -75,15 +75,16 @@ class _LegalDocumentViewerState extends State<LegalDocumentViewer> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     final colors = context.dobarColors;
 
     return Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.light
+      backgroundColor: theme.brightness == Brightness.light
           ? Colors.white
           : colors.background,
       appBar: AppBar(
         title: Text(widget.documentType.displayName),
-        backgroundColor: Theme.of(context).brightness == Brightness.light
+        backgroundColor: theme.brightness == Brightness.light
             ? Colors.white
             : colors.surface,
         foregroundColor: colors.labelPrimary,

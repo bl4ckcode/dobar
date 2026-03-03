@@ -6,8 +6,10 @@ import 'package:dartz/dartz.dart';
 
 abstract class OnboardingRepository {
   /// Complete onboarding with user type and country
-  Future<Either<Failure, UserModel>> completeOnboarding(OnboardingRequest request);
-  
+  Future<Either<Failure, UserModel>> completeOnboarding(
+    OnboardingRequest request,
+  );
+
   /// Get payment gateway for user's country
   Future<Either<Failure, PaymentGateway>> getPaymentGateway();
 }

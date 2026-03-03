@@ -35,47 +35,44 @@ class _ContainerBottomNavBarAnimatedState
                 color: Colors.black38,
                 blurStyle: BlurStyle.outer,
                 blurRadius: 0.1,
-              )
+              ),
             ],
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: List.generate(
-              widget.pageItems.length,
-              (index) {
-                final navItem = widget.pageItems[index].navItem;
-                final isSelected = selctedNavIndex == index;
-                return GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      selctedNavIndex = index;
-                    });
-                  },
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      HighlightAnimatedBar(isActive: isSelected),
-                      SizedBox(
-                        height: 32.h,
-                        width: 32.w,
-                        child: Icon(
-                          isSelected ? navItem.displayIcon : navItem.icon,
-                          size: 28.sp,
-                          color: isSelected ? Colors.black : Colors.black54,
-                        ),
+            children: List.generate(widget.pageItems.length, (index) {
+              final navItem = widget.pageItems[index].navItem;
+              final isSelected = selctedNavIndex == index;
+              return GestureDetector(
+                onTap: () {
+                  setState(() {
+                    selctedNavIndex = index;
+                  });
+                },
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    HighlightAnimatedBar(isActive: isSelected),
+                    SizedBox(
+                      height: 32.h,
+                      width: 32.w,
+                      child: Icon(
+                        isSelected ? navItem.displayIcon : navItem.icon,
+                        size: 28.sp,
+                        color: isSelected ? Colors.black : Colors.black54,
                       ),
-                      Text(
-                        navItem.title,
-                        style: TextStyle(
-                          fontSize: 11.sp,
-                          color: isSelected ? Colors.black : Colors.black54,
-                        ),
+                    ),
+                    Text(
+                      navItem.title,
+                      style: TextStyle(
+                        fontSize: 11.sp,
+                        color: isSelected ? Colors.black : Colors.black54,
                       ),
-                    ],
-                  ),
-                );
-              },
-            ),
+                    ),
+                  ],
+                ),
+              );
+            }),
           ),
         ),
       ),
