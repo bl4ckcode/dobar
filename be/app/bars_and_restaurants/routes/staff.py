@@ -58,6 +58,9 @@ class StaffInvitationResponse(BaseModel):
     invitation_code: str
     expires_at: datetime
 
+class StaffRoleUpdateRequest(BaseModel):
+    role: str
+
 class MyBarsResponse(BaseModel):
     bar_id: int
     bar_name: str
@@ -152,6 +155,47 @@ async def invite_staff(
         role=role.value, status=status_val, invitation_code=invitation_code,
         expires_at=expires_at
     )
+
+
+@staff_router.put("/{staff_id}/role")
+async def update_staff_role(
+    bar_id: int,
+    staff_id: int,
+    request: StaffRoleUpdateRequest,
+    auth: BarAuthContext = Depends(require_bar_permission(Permission.STAFF_MANAGE))
+):
+    """Change a staff member's role."""
+    try:
+        new_role = BarRole(request.role)
+    except ValueError:
+        raise HTTPException(status_code=400, detail=f"Invalid role: {request.role}")
+        
+    staff = await database.fetch_one(
+        BarStaff.__table__.select().where(
+            (BarStaff.id == staff_id) & (BarStaff.bar_id == bar_id) & (BarStaff.is_active == True)
+        )
+    )
+    if not staff:
+        raise APIError.not_found("Staff member")
+        
+    # Security checks
+    if staff["role"] == BarRole.OWNER.value and not auth.is_owner():
+        raise HTTPException(status_code=403, detail="Only owner can change another owner's role")
+        
+    if new_role == BarRole.OWNER and not auth.is_owner():
+        raise HTTPException(status_code=403, detail="Only owner can promote someone to owner")
+        
+    await database.execute(
+        BarStaff.__table__.update()
+        .where(BarStaff.id == staff_id)
+        .values(role=new_role.value, updated_at=datetime.now(timezone.utc))
+    )
+    
+    return {
+        "message": "Role updated successfully",
+        "staff_id": str(staff_id),
+        "new_role": new_role.value
+    }
 
 
 @staff_router.delete("/{staff_id}")
