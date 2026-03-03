@@ -1,6 +1,7 @@
 import 'package:barz/core/api/api_endpoints.dart';
 import 'package:barz/core/network/dio_network.dart';
 import 'package:barz/core/services/websocket/websocket_service.dart';
+import 'package:barz/core/services/token_storage_service.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/core/services/offline/offline.dart';
 import 'package:barz/features/orders/data/data_sources/live_orders_remote_data_source.dart';
@@ -51,7 +52,6 @@ Future<void> initOrdersInjection() async {
     () => OrderBloc(orderUsecase: getItInjector<OrderUsecase>()),
   );
 
-  // Live Orders Injection
   getItInjector.registerLazySingleton<LiveOrdersRemoteDataSource>(
     () => LiveOrdersRemoteDataSourceImpl(dio: DioNetwork.appAPI),
   );
@@ -71,27 +71,24 @@ Future<void> initOrdersInjection() async {
     () => UpdateLiveOrderStatusUseCase(getItInjector<LiveOrdersRepository>()),
   );
 
-  getItInjector.registerFactory<LiveOrdersBloc>(() {
-    // Dynamic WebSocketService instantiation based on active bar and user token
+  getItInjector.registerFactoryAsync<LiveOrdersBloc>(() async {
     final sessionBloc = getItInjector<SessionBloc>();
     final sessionState = sessionBloc.state;
 
-    String wsUrl = ApiEndpoints.baseUrl;
-    String wsPath = '/ws/bar/0/orders'; // Default fallback
-    String? token;
+    final wsBaseUrl = ApiEndpoints.baseUrl
+        .replaceFirst('https://', 'wss://')
+        .replaceFirst('http://', 'ws://');
 
-    if (sessionState is SessionReady) {
-      if (sessionState.session.activeBar != null) {
-        wsPath = '/ws/bar/${sessionState.session.activeBar!.barId}/orders';
-      }
-      token = sessionState
-          .session
-          .user
-          .firebaseUid; // The backend uses firebaseUid for token as seen in other websockets or auth interceptors? Or wait, let's just pass null if we don't know the exact token and let the interceptor/backend handle it. Assuming it uses standard Bearer tokens, the WebSocket channel might not support headers directly on web, so url query param is used. I'll just use firebaseUid as a placeholder if no dedicated token property exists.
+    String wsPath = '/ws/bar/0/orders';
+    if (sessionState is SessionReady &&
+        sessionState.session.activeBar != null) {
+      wsPath = '/ws/bar/${sessionState.session.activeBar!.barId}/orders';
     }
 
+    final token = await getItInjector<TokenStorageService>().getAccessToken();
+
     final wsService = WebSocketService(
-      baseUrl: wsUrl.replaceFirst('http', 'ws'), // ensure wss:// or ws://
+      baseUrl: wsBaseUrl,
       path: wsPath,
       token: token,
     );

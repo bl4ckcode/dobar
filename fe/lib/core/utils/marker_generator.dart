@@ -70,7 +70,7 @@ class MarkerGenerator {
     );
 
     // Helper to paint image fitting the rect
-    _paintImage(canvas, destRect, image!, paint, BoxFit.cover);
+    _paintImage(canvas, destRect, image, paint, BoxFit.cover);
 
     // Convert to BitmapDescriptor
     final img = await pictureRecorder.endRecording().toImage(

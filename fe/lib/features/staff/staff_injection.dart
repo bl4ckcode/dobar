@@ -1,37 +1,41 @@
-import 'package:get_it/get_it.dart';
+import 'package:barz/core/network/dio_network.dart';
+import 'package:barz/core/utils/injections.dart';
 import 'data/datasources/staff_remote_data_source.dart';
 import 'data/repositories/staff_repository_impl.dart';
 import 'domain/repositories/staff_repository.dart';
 import 'domain/usecases/staff_usecases.dart';
 import 'presentation/bloc/staff_bloc.dart';
-import 'package:dio/dio.dart';
-
-final sl = GetIt.instance;
 
 void initStaff() {
-  // Remote Data Source
-  sl.registerLazySingleton<StaffRemoteDataSource>(
-    () => StaffRemoteDataSourceImpl(dio: sl<Dio>()),
+  getItInjector.registerLazySingleton<StaffRemoteDataSource>(
+    () => StaffRemoteDataSourceImpl(dio: DioNetwork.appAPI),
   );
 
-  // Repository
-  sl.registerLazySingleton<StaffRepository>(
-    () => StaffRepositoryImpl(remoteDataSource: sl()),
+  getItInjector.registerLazySingleton<StaffRepository>(
+    () => StaffRepositoryImpl(
+      remoteDataSource: getItInjector<StaffRemoteDataSource>(),
+    ),
   );
 
-  // UseCases
-  sl.registerLazySingleton(() => GetStaffMembersUseCase(sl()));
-  sl.registerLazySingleton(() => InviteStaffUseCase(sl()));
-  sl.registerLazySingleton(() => UpdateStaffRoleUseCase(sl()));
-  sl.registerLazySingleton(() => RemoveStaffUseCase(sl()));
+  getItInjector.registerLazySingleton(
+    () => GetStaffMembersUseCase(getItInjector<StaffRepository>()),
+  );
+  getItInjector.registerLazySingleton(
+    () => InviteStaffUseCase(getItInjector<StaffRepository>()),
+  );
+  getItInjector.registerLazySingleton(
+    () => UpdateStaffRoleUseCase(getItInjector<StaffRepository>()),
+  );
+  getItInjector.registerLazySingleton(
+    () => RemoveStaffUseCase(getItInjector<StaffRepository>()),
+  );
 
-  // BLoC
-  sl.registerFactory(
+  getItInjector.registerFactory(
     () => StaffBloc(
-      getStaffMembers: sl(),
-      inviteStaffMember: sl(),
-      updateStaffRole: sl(),
-      removeStaffMember: sl(),
+      getStaffMembers: getItInjector<GetStaffMembersUseCase>(),
+      inviteStaffMember: getItInjector<InviteStaffUseCase>(),
+      updateStaffRole: getItInjector<UpdateStaffRoleUseCase>(),
+      removeStaffMember: getItInjector<RemoveStaffUseCase>(),
     ),
   );
 }

@@ -29,7 +29,7 @@ class _CashierPageState extends State<CashierPage>
   String? _activeFilter; // null means 'All'
   bool _soundOn = true;
   Timer? _uiRefreshTimer;
-  late LiveOrdersBloc _liveOrdersBloc;
+  LiveOrdersBloc? _liveOrdersBloc;
   int? _activeBarId;
 
   final Set<String> _urgentAlertedIds = {};
@@ -40,22 +40,35 @@ class _CashierPageState extends State<CashierPage>
   @override
   void initState() {
     super.initState();
-    // Get the injected bloc
-    _liveOrdersBloc = GetIt.I<LiveOrdersBloc>();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat(reverse: true);
+    _pulseAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
 
-    // Initial load happens below in BlocBuilder when we get the activeBar
-
-    // Refresh UI every 10s to update wait times and check urgency for UI effects.
     _uiRefreshTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
       if (mounted) setState(() {});
     });
+
+    _initLiveOrdersBloc();
+  }
+
+  Future<void> _initLiveOrdersBloc() async {
+    final bloc = await GetIt.I.getAsync<LiveOrdersBloc>();
+    if (!mounted) {
+      bloc.close();
+      return;
+    }
+    setState(() => _liveOrdersBloc = bloc);
   }
 
   @override
   void dispose() {
     _uiRefreshTimer?.cancel();
     _pulseController.dispose();
-    _liveOrdersBloc.close();
+    _liveOrdersBloc?.close();
     super.dispose();
   }
 
@@ -80,10 +93,10 @@ class _CashierPageState extends State<CashierPage>
   }
 
   void _handleAction(int barId, String orderId, String newStatus) {
-    _liveOrdersBloc.add(
+    _liveOrdersBloc?.add(
       LiveOrdersEvent.updateOrderStatus(barId, orderId, newStatus),
     );
-    _playSound(SystemSoundType.click); // Action sound
+    _playSound(SystemSoundType.click);
   }
 
   @override
@@ -95,145 +108,163 @@ class _CashierPageState extends State<CashierPage>
     Color mutedColor = isDark ? Colors.white54 : Colors.black54;
     Color borderColor = isDark ? Colors.white12 : Colors.black12;
 
-    return Scaffold(
-      backgroundColor: bgColor,
-      appBar: AppBar(
-        title: const Text(
-          'Caixa',
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
-        backgroundColor: cardColor,
-        foregroundColor: textColor,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: Icon(
-              _soundOn ? Icons.volume_up : Icons.volume_off,
-              color: _soundOn ? barzGold : mutedColor,
-            ),
-            onPressed: () {
-              setState(() {
-                _soundOn = !_soundOn;
-              });
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () {
-              if (_activeBarId != null) {
-                _liveOrdersBloc.add(LiveOrdersEvent.loadOrders(_activeBarId!));
-              }
-            },
-          ),
-        ],
-      ),
-      body: BlocBuilder<SessionBloc, SessionState>(
-        builder: (context, sessionState) {
-          final activeBar = sessionState.maybeMap(
-            ready: (s) => s.session.activeBar,
-            orElse: () => null,
-          );
-          if (activeBar == null) {
-            return Center(
-              child: Text(
-                'Selecione um bar para gerenciar o caixa',
-                style: TextStyle(color: mutedColor),
+    return _liveOrdersBloc == null
+        ? Scaffold(
+            backgroundColor: bgColor,
+            body: const Center(child: CircularProgressIndicator()),
+          )
+        : BlocProvider<LiveOrdersBloc>.value(
+            value: _liveOrdersBloc!,
+            child: Scaffold(
+              backgroundColor: bgColor,
+              appBar: AppBar(
+                title: const Text(
+                  'Caixa',
+                  style: TextStyle(fontWeight: FontWeight.w600),
+                ),
+                backgroundColor: cardColor,
+                foregroundColor: textColor,
+                elevation: 0,
+                actions: [
+                  IconButton(
+                    icon: Icon(
+                      _soundOn ? Icons.volume_up : Icons.volume_off,
+                      color: _soundOn ? barzGold : mutedColor,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _soundOn = !_soundOn;
+                      });
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.refresh),
+                    onPressed: () {
+                      if (_activeBarId != null) {
+                        _liveOrdersBloc?.add(
+                          LiveOrdersEvent.loadOrders(_activeBarId!),
+                        );
+                      }
+                    },
+                  ),
+                ],
               ),
-            );
-          }
-
-          if (_activeBarId != activeBar.barId) {
-            _activeBarId = activeBar.barId;
-            // Kickoff load orders
-            _liveOrdersBloc.add(LiveOrdersEvent.loadOrders(_activeBarId!));
-          }
-
-          return BlocConsumer<LiveOrdersBloc, LiveOrdersState>(
-            listener: (context, state) {
-              state.maybeMap(
-                loaded: (s) => _checkUrgentAlerts(s.orders),
-                error: (s) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(s.message),
-                      backgroundColor: Colors.red,
-                    ),
+              body: BlocBuilder<SessionBloc, SessionState>(
+                builder: (context, sessionState) {
+                  final activeBar = sessionState.maybeMap(
+                    ready: (s) => s.session.activeBar,
+                    orElse: () => null,
                   );
-                },
-                orElse: () {},
-              );
-            },
-            builder: (context, state) {
-              int totalOrders = 0;
-              List<LiveOrderModel> currentOrders = [];
+                  if (activeBar == null) {
+                    return Center(
+                      child: Text(
+                        'Selecione um bar para gerenciar o caixa',
+                        style: TextStyle(color: mutedColor),
+                      ),
+                    );
+                  }
 
-              state.maybeMap(
-                loaded: (s) {
-                  totalOrders = s.orders.length;
-                  currentOrders = s.orders;
-                },
-                orElse: () {},
-              );
+                  if (_activeBarId != activeBar.barId) {
+                    _activeBarId = activeBar.barId;
+                    _liveOrdersBloc!.add(
+                      LiveOrdersEvent.loadOrders(_activeBarId!),
+                    );
+                  }
 
-              final filteredOrders = _activeFilter == null
-                  ? currentOrders
-                  : currentOrders
-                        .where((o) => o.status == _activeFilter)
-                        .toList();
+                  return BlocConsumer<LiveOrdersBloc, LiveOrdersState>(
+                    listener: (context, state) {
+                      state.maybeMap(
+                        loaded: (s) => _checkUrgentAlerts(s.orders),
+                        error: (s) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(s.message),
+                              backgroundColor: Colors.red,
+                            ),
+                          );
+                        },
+                        orElse: () {},
+                      );
+                    },
+                    builder: (context, state) {
+                      int totalOrders = 0;
+                      List<LiveOrderModel> currentOrders = [];
 
-              return Scaffold(
-                backgroundColor: bgColor,
-                body: Column(
-                  children: [
-                    _buildHeader(
-                      isDark,
-                      cardColor,
-                      borderColor,
-                      textColor,
-                      mutedColor,
-                      totalOrders,
-                    ),
-                    _buildTabs(isDark, cardColor, borderColor, currentOrders),
-                    Expanded(
-                      child: Center(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(maxWidth: 1200),
-                          child: Builder(
-                            builder: (context) {
-                              return state.maybeMap(
-                                loading: (_) => Center(
-                                  child: CircularProgressIndicator(
-                                    color: barzGold,
+                      state.maybeMap(
+                        loaded: (s) {
+                          totalOrders = s.orders.length;
+                          currentOrders = s.orders;
+                        },
+                        orElse: () {},
+                      );
+
+                      final filteredOrders = _activeFilter == null
+                          ? currentOrders
+                          : currentOrders
+                                .where((o) => o.status == _activeFilter)
+                                .toList();
+
+                      return Scaffold(
+                        backgroundColor: bgColor,
+                        body: Column(
+                          children: [
+                            _buildHeader(
+                              isDark,
+                              cardColor,
+                              borderColor,
+                              textColor,
+                              mutedColor,
+                              totalOrders,
+                            ),
+                            _buildTabs(
+                              isDark,
+                              cardColor,
+                              borderColor,
+                              currentOrders,
+                            ),
+                            Expanded(
+                              child: Center(
+                                child: ConstrainedBox(
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 1200,
+                                  ),
+                                  child: Builder(
+                                    builder: (context) {
+                                      return state.maybeMap(
+                                        loading: (_) => Center(
+                                          child: CircularProgressIndicator(
+                                            color: barzGold,
+                                          ),
+                                        ),
+                                        orElse: () {
+                                          if (filteredOrders.isEmpty) {
+                                            return _buildEmptyState(mutedColor);
+                                          }
+                                          return _buildOrderGrid(
+                                            filteredOrders,
+                                            isDark,
+                                            cardColor,
+                                            borderColor,
+                                            textColor,
+                                            mutedColor,
+                                            activeBar.barId,
+                                          );
+                                        },
+                                      );
+                                    },
                                   ),
                                 ),
-                                orElse: () {
-                                  if (filteredOrders.isEmpty) {
-                                    return _buildEmptyState(mutedColor);
-                                  }
-                                  return _buildOrderGrid(
-                                    filteredOrders,
-                                    isDark,
-                                    cardColor,
-                                    borderColor,
-                                    textColor,
-                                    mutedColor,
-                                    activeBar.barId,
-                                  );
-                                },
-                              );
-                            },
-                          ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
           );
-        },
-      ),
-    );
   }
 
   Widget _buildHeader(
