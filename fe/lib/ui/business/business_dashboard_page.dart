@@ -829,6 +829,7 @@ class _PromoteCampaignCard extends StatelessWidget {
                       horizontal: 20,
                       vertical: 12,
                     ),
+                    textStyle: const TextStyle(inherit: false),
                   ),
                   icon: const Icon(Icons.add, size: 18),
                   label: const Text('Create Campaign'),

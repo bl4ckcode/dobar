@@ -9,7 +9,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
   UserBloc(this._usecase) : super(const UserState()) {
     on<LoadCurrentUser>(_onLoadCurrentUser);
     on<UpdateProfile>(_onUpdateProfile);
-    on<UpdatePreferences>(_onUpdatePreferences);
+
     on<AddDocument>(_onAddDocument);
     on<RemoveDocument>(_onRemoveDocument);
     on<AcceptTerms>(_onAcceptTerms);
@@ -44,19 +44,6 @@ class UserBloc extends Bloc<UserEvent, UserState> {
       phoneNumber: event.phoneNumber,
       profilePictureUrl: event.profilePictureUrl,
     );
-    result.fold(
-      (failure) =>
-          emit(state.copyWith(isUpdating: false, error: failure.errorMessage)),
-      (user) => emit(state.copyWith(isUpdating: false, user: user)),
-    );
-  }
-
-  Future<void> _onUpdatePreferences(
-    UpdatePreferences event,
-    Emitter<UserState> emit,
-  ) async {
-    emit(state.copyWith(isUpdating: true, error: null));
-    final result = await _usecase.updatePreferences(event.preferences);
     result.fold(
       (failure) =>
           emit(state.copyWith(isUpdating: false, error: failure.errorMessage)),

@@ -1,4 +1,7 @@
+import 'package:barz/core/services/biometry_service.dart';
+import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/core/utils/constant/colors.dart';
+import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/home/presentation/widgets/menu/btm_nav_item.dart';
 import 'package:barz/features/home/presentation/widgets/menu/menu_btn.dart';
 import 'package:barz/shared/domain/models/bottom_nav_bar/menu_model.dart';
@@ -17,6 +20,7 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage>
     with SingleTickerProviderStateMixin {
+  static bool _hasPromptedBiometrics = false;
   late AnimationController _drawerSlideController;
   late Animation<double> animation;
   late Animation<double> scalAnimation;
@@ -30,6 +34,8 @@ class _HomePageState extends State<HomePage>
     super.initState();
     selectedBottonNav = homeBottomNavItems.first;
     selectedSideMenu = sidebarMenus.first;
+
+    _verifyBiometricsOnStartup();
 
     _drawerSlideController =
         AnimationController(
@@ -57,6 +63,23 @@ class _HomePageState extends State<HomePage>
   void dispose() {
     _drawerSlideController.dispose();
     super.dispose();
+  }
+
+  Future<void> _verifyBiometricsOnStartup() async {
+    if (_hasPromptedBiometrics) return;
+    final biometryService = getItInjector<BiometryService>();
+    if (!biometryService.isEnabled) return;
+
+    _hasPromptedBiometrics = true;
+    final available = await biometryService.isAvailable;
+    if (!available) return;
+
+    final authenticated = await biometryService.authenticate(
+      'Authenticate to continue',
+    );
+    if (!authenticated && mounted) {
+      AppRoute.login.go(context);
+    }
   }
 
   void updateSelectedBtmNav(Menu bottomNavigationModel) {

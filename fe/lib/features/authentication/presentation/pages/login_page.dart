@@ -1,5 +1,6 @@
 import 'package:barz/core/design/components/glow_button.dart';
 import 'package:barz/core/design/design_system.dart';
+import 'package:barz/core/services/biometry_service.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/authentication/presentation/widgets/login_buttons_widget.dart';
 import 'package:barz/features/authentication/presentation/widgets/login_fields_widget.dart';
@@ -28,6 +29,7 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   late LoginBloc _loginBloc;
   String? _phoneNumber;
+  final BiometryService _biometryService = getItInjector<BiometryService>();
 
   @override
   void initState() {
@@ -48,6 +50,50 @@ class _LoginPageState extends State<LoginPage> {
   void _handleLogin() {
     if (_phoneNumber != null) {
       _loginBloc.add(LoginEvent.loginButtonPressed(phoneNumber: _phoneNumber!));
+    }
+  }
+
+  Future<void> _promptBiometryThenNavigate(BuildContext context) async {
+    final available = await _biometryService.isAvailable;
+    if (available &&
+        !_biometryService.isEnabled &&
+        !_biometryService.isDeclined) {
+      if (!context.mounted) return;
+      final wantBiometry = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => AlertDialog(
+          title: const Text('Enable Biometric Login'),
+          content: const Text(
+            'Would you like to use Face ID or fingerprint for faster login next time?',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(false),
+              child: const Text('Not now'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(true),
+              child: const Text('Enable'),
+            ),
+          ],
+        ),
+      );
+
+      if (wantBiometry == true) {
+        final authenticated = await _biometryService.authenticate(
+          'Confirm your identity to enable biometric login',
+        );
+        if (authenticated) {
+          await _biometryService.enable();
+        }
+      } else {
+        await _biometryService.decline();
+      }
+    }
+
+    if (context.mounted) {
+      AppRoute.home.go(context);
     }
   }
 
@@ -74,7 +120,7 @@ class _LoginPageState extends State<LoginPage> {
               }
 
               if (state.isProfileComplete) {
-                AppRoute.home.go(context);
+                _promptBiometryThenNavigate(context);
               } else {
                 AppRoute.goCompleteRegistration(
                   context,

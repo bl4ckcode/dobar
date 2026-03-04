@@ -26,11 +26,12 @@ class CashierPage extends StatefulWidget {
 
 class _CashierPageState extends State<CashierPage>
     with SingleTickerProviderStateMixin {
-  String? _activeFilter; // null means 'All'
+  String? _activeFilter;
   bool _soundOn = true;
   Timer? _uiRefreshTimer;
   LiveOrdersBloc? _liveOrdersBloc;
   int? _activeBarId;
+  int _totalOrders = 0;
 
   final Set<String> _urgentAlertedIds = {};
 
@@ -132,13 +133,55 @@ class _CashierPageState extends State<CashierPage>
                   IconButton(
                     icon: Icon(
                       _soundOn ? Icons.volume_up : Icons.volume_off,
+                      size: 20,
                       color: _soundOn ? barzGold : mutedColor,
                     ),
-                    onPressed: () {
-                      setState(() {
-                        _soundOn = !_soundOn;
-                      });
-                    },
+                    tooltip: _soundOn ? 'Mute sounds' : 'Enable sounds',
+                    onPressed: () => setState(() => _soundOn = !_soundOn),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 4),
+                    child: Text(
+                      '$_totalOrders orders',
+                      style: TextStyle(
+                        fontFamily: 'JetBrains Mono',
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: mutedColor,
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        AnimatedBuilder(
+                          animation: _pulseAnimation,
+                          builder: (context, child) => Opacity(
+                            opacity: _pulseAnimation.value,
+                            child: child,
+                          ),
+                          child: Container(
+                            width: 8,
+                            height: 8,
+                            decoration: const BoxDecoration(
+                              color: Colors.green,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'LIVE',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: mutedColor,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                   IconButton(
                     icon: const Icon(Icons.refresh),
@@ -190,16 +233,22 @@ class _CashierPageState extends State<CashierPage>
                       );
                     },
                     builder: (context, state) {
-                      int totalOrders = 0;
                       List<LiveOrderModel> currentOrders = [];
 
                       state.maybeMap(
                         loaded: (s) {
-                          totalOrders = s.orders.length;
                           currentOrders = s.orders;
                         },
                         orElse: () {},
                       );
+
+                      if (_totalOrders != currentOrders.length) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted) {
+                            setState(() => _totalOrders = currentOrders.length);
+                          }
+                        });
+                      }
 
                       final filteredOrders = _activeFilter == null
                           ? currentOrders
@@ -207,60 +256,49 @@ class _CashierPageState extends State<CashierPage>
                                 .where((o) => o.status == _activeFilter)
                                 .toList();
 
-                      return Scaffold(
-                        backgroundColor: bgColor,
-                        body: Column(
-                          children: [
-                            _buildHeader(
-                              isDark,
-                              cardColor,
-                              borderColor,
-                              textColor,
-                              mutedColor,
-                              totalOrders,
-                            ),
-                            _buildTabs(
-                              isDark,
-                              cardColor,
-                              borderColor,
-                              currentOrders,
-                            ),
-                            Expanded(
-                              child: Center(
-                                child: ConstrainedBox(
-                                  constraints: const BoxConstraints(
-                                    maxWidth: 1200,
-                                  ),
-                                  child: Builder(
-                                    builder: (context) {
-                                      return state.maybeMap(
-                                        loading: (_) => Center(
-                                          child: CircularProgressIndicator(
-                                            color: barzGold,
-                                          ),
+                      return Column(
+                        children: [
+                          _buildTabs(
+                            isDark,
+                            cardColor,
+                            borderColor,
+                            currentOrders,
+                          ),
+                          Expanded(
+                            child: Center(
+                              child: ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxWidth: 1200,
+                                ),
+                                child: Builder(
+                                  builder: (context) {
+                                    return state.maybeMap(
+                                      loading: (_) => Center(
+                                        child: CircularProgressIndicator(
+                                          color: barzGold,
                                         ),
-                                        orElse: () {
-                                          if (filteredOrders.isEmpty) {
-                                            return _buildEmptyState(mutedColor);
-                                          }
-                                          return _buildOrderGrid(
-                                            filteredOrders,
-                                            isDark,
-                                            cardColor,
-                                            borderColor,
-                                            textColor,
-                                            mutedColor,
-                                            activeBar.barId,
-                                          );
-                                        },
-                                      );
-                                    },
-                                  ),
+                                      ),
+                                      orElse: () {
+                                        if (filteredOrders.isEmpty) {
+                                          return _buildEmptyState(mutedColor);
+                                        }
+                                        return _buildOrderGrid(
+                                          filteredOrders,
+                                          isDark,
+                                          cardColor,
+                                          borderColor,
+                                          textColor,
+                                          mutedColor,
+                                          activeBar.barId,
+                                        );
+                                      },
+                                    );
+                                  },
                                 ),
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       );
                     },
                   );
@@ -268,103 +306,6 @@ class _CashierPageState extends State<CashierPage>
               ),
             ),
           );
-  }
-
-  Widget _buildHeader(
-    bool isDark,
-    Color cardColor,
-    Color borderColor,
-    Color textColor,
-    Color mutedColor,
-    int totalCount,
-  ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: cardColor,
-        border: Border(bottom: BorderSide(color: borderColor)),
-      ),
-      child: SafeArea(
-        bottom: false,
-        child: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 1200),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.terminal, color: barzGold, size: 22),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Cashier Terminal',
-                      style: TextStyle(
-                        color: textColor,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    IconButton(
-                      icon: Icon(
-                        _soundOn ? Icons.volume_up : Icons.volume_off,
-                        size: 20,
-                        color: mutedColor,
-                      ),
-                      onPressed: () {
-                        setState(() => _soundOn = !_soundOn);
-                      },
-                      tooltip: _soundOn ? 'Mute sounds' : 'Enable sounds',
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '$totalCount orders',
-                      style: const TextStyle(
-                        fontFamily: 'JetBrains Mono',
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: Colors.grey,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    AnimatedBuilder(
-                      animation: _pulseAnimation,
-                      builder: (context, child) {
-                        return Opacity(
-                          opacity: _pulseAnimation.value,
-                          child: child,
-                        );
-                      },
-                      child: Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: Colors.green,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    const Text(
-                      'LIVE',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
   }
 
   Widget _buildTabs(

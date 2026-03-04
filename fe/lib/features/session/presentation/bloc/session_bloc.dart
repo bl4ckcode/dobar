@@ -89,7 +89,13 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
 
     result.fold(
       (failure) {
-        // TODO: Handle invitation failure (show error toast)
+        emit(
+          SessionState.ready(
+            session: currentState.session,
+            forceClientMode: currentState.forceClientMode,
+            error: failure.errorMessage,
+          ),
+        );
       },
       (newBarAccess) {
         final updatedBars = [...currentState.session.barAccess, newBarAccess];

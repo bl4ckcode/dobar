@@ -20,6 +20,9 @@ sealed class SessionState with _$SessionState {
 
     /// Allows user to temporarily view client mode even if they have bar access
     @Default(false) bool forceClientMode,
+
+    /// transient error message for ui surfacing
+    String? error,
   }) = SessionReady;
 
   /// Session initialization failed

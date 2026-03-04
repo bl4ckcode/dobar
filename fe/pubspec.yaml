@@ -116,6 +116,8 @@ dependencies:
   palette_generator: ^0.3.3+4
   flutter_markdown: ^0.7.7+1
   rxdart: ^0.28.0
+  local_auth: ^3.0.1
+  url_launcher: ^6.3.2
 
 dev_dependencies:
   flutter_test:

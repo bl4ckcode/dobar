@@ -1,15 +1,22 @@
 import 'package:barz/core/api/api_endpoints.dart';
 import 'package:barz/core/network/exceptions.dart';
 import 'package:barz/features/user/domain/models/user_model.dart';
+import 'package:barz/features/user/domain/models/notification_preferences.dart';
+import 'package:barz/features/user/domain/models/privacy_settings.dart';
 import 'package:barz/features/user/domain/models/user_document.dart';
-import 'package:barz/features/user/domain/repositories/abstract_user_repository.dart';
+import 'package:barz/features/user/domain/models/cashback_transaction.dart';
 import 'package:dio/dio.dart';
 
 abstract class UserDatasource {
   Future<UserModel> getCurrentUser();
   Future<UserModel> getUserById(int id);
   Future<UserModel> updateProfile(Map<String, dynamic> data);
-  Future<UserModel> updatePreferences(UserPreferences preferences);
+  Future<NotificationPreferences> getNotificationPreferences();
+  Future<NotificationPreferences> updateNotificationPreferences(
+    NotificationPreferences preferences,
+  );
+  Future<PrivacySettings> getPrivacySettings();
+  Future<PrivacySettings> updatePrivacySettings(PrivacySettings settings);
   Future<UserModel> addDocument(UserDocument document);
   Future<UserModel> removeDocument(int documentId);
   Future<UserModel> acceptTerms();
@@ -71,16 +78,67 @@ class UserNetworkDatasource implements UserDatasource {
   }
 
   @override
-  Future<UserModel> updatePreferences(UserPreferences preferences) async {
+  Future<NotificationPreferences> getNotificationPreferences() async {
     try {
-      final response = await dio.put(
-        '${ApiEndpoints.baseUrl}${ApiEndpoints.userPreferences}',
-        data: preferences.toJson(),
+      final response = await dio.get(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.notificationPreferences}',
       );
-      return UserModel.fromJson(response.data);
+      return NotificationPreferences.fromJson(response.data);
     } on DioException catch (e) {
       throw ServerException(
-        e.response?.data?['detail'] ?? 'Failed to update preferences',
+        e.response?.data?['detail'] ?? 'Failed to get notification preferences',
+        e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<NotificationPreferences> updateNotificationPreferences(
+    NotificationPreferences preferences,
+  ) async {
+    try {
+      final response = await dio.put(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.notificationPreferences}',
+        data: preferences.toJson(),
+      );
+      return NotificationPreferences.fromJson(response.data);
+    } on DioException catch (e) {
+      throw ServerException(
+        e.response?.data?['detail'] ??
+            'Failed to update notification preferences',
+        e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<PrivacySettings> getPrivacySettings() async {
+    try {
+      final response = await dio.get(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.privacySettings}',
+      );
+      return PrivacySettings.fromJson(response.data);
+    } on DioException catch (e) {
+      throw ServerException(
+        e.response?.data?['detail'] ?? 'Failed to get privacy settings',
+        e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<PrivacySettings> updatePrivacySettings(
+    PrivacySettings settings,
+  ) async {
+    try {
+      final response = await dio.put(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.privacySettings}',
+        data: settings.toJson(),
+      );
+      return PrivacySettings.fromJson(response.data);
+    } on DioException catch (e) {
+      throw ServerException(
+        e.response?.data?['detail'] ?? 'Failed to update privacy settings',
         e.response?.statusCode,
       );
     }

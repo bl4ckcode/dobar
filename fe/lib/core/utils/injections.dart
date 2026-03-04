@@ -1,5 +1,6 @@
 import 'package:barz/core/network/dio_network.dart';
 import 'package:barz/core/router/app_router.dart';
+import 'package:barz/core/services/biometry_service.dart';
 import 'package:barz/core/services/email_prompt_service.dart';
 import 'package:barz/core/services/image_refresh_service.dart';
 import 'package:barz/core/services/notifications/notification_service.dart';
@@ -70,6 +71,10 @@ Future<void> initSharedPrefsInjections() async {
 
   getItInjector.registerLazySingleton<ThemeCubit>(
     () => ThemeCubit(AppSharedPrefs(getItInjector<SharedPreferences>())),
+  );
+
+  getItInjector.registerLazySingleton<BiometryService>(
+    () => BiometryService(getItInjector<SharedPreferences>()),
   );
 }
 

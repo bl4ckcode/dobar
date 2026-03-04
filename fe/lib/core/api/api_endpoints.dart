@@ -74,7 +74,8 @@ class ApiEndpoints {
   // Legacy user endpoints (for backwards compatibility)
   static const String users = '/users';
   static const String userProfile = '/me/profile';
-  static const String userPreferences = '/users/me/preferences';
+  static const String notificationPreferences = '/me/notification-preferences';
+  static const String privacySettings = '/me/privacy-settings';
   static const String userDocuments = '/users/me/documents';
   static const String userAcceptTerms = '/me/accept-terms';
   static const String userAcceptPrivacy = '/me/accept-privacy';

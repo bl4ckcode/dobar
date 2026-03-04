@@ -1,6 +1,6 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:barz/features/user/domain/models/user_model.dart';
-import 'package:barz/features/user/domain/repositories/abstract_user_repository.dart';
+import 'package:barz/features/user/domain/models/cashback_transaction.dart';
 
 part 'user_state.freezed.dart';
 

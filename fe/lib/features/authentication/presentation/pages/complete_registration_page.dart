@@ -3,6 +3,7 @@ import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/user/domain/repositories/abstract_user_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:barz/core/router/app_routes.dart';
 
 /// Complete Registration Page
 ///
@@ -172,7 +173,7 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
                   text: 'I agree to the ',
                   linkText: 'Terms of Service',
                   onLinkTap: () {
-                    // TODO: Open Terms of Service
+                    AppRoute.termsOfService.push(context);
                   },
                 ),
                 const SizedBox(height: BarzSpacing.md),
@@ -183,7 +184,7 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
                   text: 'I agree to the ',
                   linkText: 'Privacy Policy',
                   onLinkTap: () {
-                    // TODO: Open Privacy Policy
+                    AppRoute.privacyPolicy.push(context);
                   },
                 ),
                 const SizedBox(height: BarzSpacing.xxl),

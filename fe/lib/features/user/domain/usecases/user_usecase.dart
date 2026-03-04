@@ -2,7 +2,10 @@ import 'package:dartz/dartz.dart';
 import 'package:barz/core/network/error/failures.dart';
 import 'package:barz/features/user/domain/models/user_model.dart';
 import 'package:barz/features/user/domain/models/user_document.dart';
+import 'package:barz/features/user/domain/models/cashback_transaction.dart';
 import 'package:barz/features/user/domain/repositories/abstract_user_repository.dart';
+import 'package:barz/features/user/domain/models/notification_preferences.dart';
+import 'package:barz/features/user/domain/models/privacy_settings.dart';
 
 class UserUsecase {
   final UserRepository _repository;
@@ -31,10 +34,24 @@ class UserUsecase {
     );
   }
 
-  Future<Either<Failure, UserModel>> updatePreferences(
-    UserPreferences preferences,
+  Future<Either<Failure, NotificationPreferences>>
+  getNotificationPreferences() {
+    return _repository.getNotificationPreferences();
+  }
+
+  Future<Either<Failure, NotificationPreferences>>
+  updateNotificationPreferences(NotificationPreferences preferences) {
+    return _repository.updateNotificationPreferences(preferences);
+  }
+
+  Future<Either<Failure, PrivacySettings>> getPrivacySettings() {
+    return _repository.getPrivacySettings();
+  }
+
+  Future<Either<Failure, PrivacySettings>> updatePrivacySettings(
+    PrivacySettings settings,
   ) {
-    return _repository.updatePreferences(preferences);
+    return _repository.updatePrivacySettings(settings);
   }
 
   Future<Either<Failure, UserModel>> addDocument(UserDocument document) {

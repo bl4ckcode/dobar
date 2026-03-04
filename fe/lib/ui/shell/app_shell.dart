@@ -33,7 +33,7 @@ class _AppShellState extends State<AppShell> {
       child: BlocConsumer<SessionBloc, SessionState>(
         listener: (context, state) {
           state.whenOrNull(
-            ready: (session, forceClientMode) {
+            ready: (session, forceClientMode, error) {
               if (!forceClientMode &&
                   (session.isBusiness || session.barAccess.isNotEmpty)) {
                 context.go(AppRoute.businessDashboard.path);
@@ -45,7 +45,7 @@ class _AppShellState extends State<AppShell> {
           return state.when(
             initial: () => const _LoadingView(),
             loading: () => const _LoadingView(),
-            ready: (session, forceClientMode) {
+            ready: (session, forceClientMode, error) {
               if (!_redirectedToOnboarding &&
                   !session.user.hasCompletedOnboarding) {
                 _redirectedToOnboarding = true;

@@ -5,6 +5,9 @@ import 'package:barz/features/user/data/data_sources/user_network_datasource.dar
 import 'package:barz/features/user/domain/models/user_model.dart';
 import 'package:barz/features/user/domain/models/user_document.dart';
 import 'package:barz/features/user/domain/repositories/abstract_user_repository.dart';
+import 'package:barz/features/user/domain/models/notification_preferences.dart';
+import 'package:barz/features/user/domain/models/privacy_settings.dart';
+import 'package:barz/features/user/domain/models/cashback_transaction.dart';
 
 class UserRepositoryImpl implements UserRepository {
   final UserDatasource _datasource;
@@ -43,8 +46,9 @@ class UserRepositoryImpl implements UserRepository {
       if (displayName != null) data['display_name'] = displayName;
       if (email != null) data['email'] = email;
       if (phoneNumber != null) data['phone_number'] = phoneNumber;
-      if (profilePictureUrl != null)
+      if (profilePictureUrl != null) {
         data['profile_picture_url'] = profilePictureUrl;
+      }
       final result = await _datasource.updateProfile(data);
       return Right(result);
     } on ServerException catch (e) {
@@ -53,11 +57,45 @@ class UserRepositoryImpl implements UserRepository {
   }
 
   @override
-  Future<Either<Failure, UserModel>> updatePreferences(
-    UserPreferences preferences,
+  Future<Either<Failure, NotificationPreferences>>
+  getNotificationPreferences() async {
+    try {
+      final result = await _datasource.getNotificationPreferences();
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message, e.statusCode));
+    }
+  }
+
+  @override
+  Future<Either<Failure, NotificationPreferences>>
+  updateNotificationPreferences(NotificationPreferences preferences) async {
+    try {
+      final result = await _datasource.updateNotificationPreferences(
+        preferences,
+      );
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message, e.statusCode));
+    }
+  }
+
+  @override
+  Future<Either<Failure, PrivacySettings>> getPrivacySettings() async {
+    try {
+      final result = await _datasource.getPrivacySettings();
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message, e.statusCode));
+    }
+  }
+
+  @override
+  Future<Either<Failure, PrivacySettings>> updatePrivacySettings(
+    PrivacySettings settings,
   ) async {
     try {
-      final result = await _datasource.updatePreferences(preferences);
+      final result = await _datasource.updatePrivacySettings(settings);
       return Right(result);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message, e.statusCode));

@@ -9,7 +9,6 @@ class UserModel {
   final String? displayName;
   final String? profilePictureUrl;
   final List<UserDocument> documents;
-  final UserPreferences preferences;
   final double walletBalance;
   final double totalCashback;
   final bool termsAccepted;
@@ -34,7 +33,6 @@ class UserModel {
     this.displayName,
     this.profilePictureUrl,
     this.documents = const [],
-    UserPreferences? preferences,
     this.walletBalance = 0.0,
     this.totalCashback = 0.0,
     this.termsAccepted = false,
@@ -47,7 +45,7 @@ class UserModel {
     this.updatedAt,
     this.userType = UserType.client,
     this.countryCode,
-  }) : preferences = preferences ?? UserPreferences();
+  });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
@@ -64,9 +62,6 @@ class UserModel {
               ?.map((e) => UserDocument.fromJson(e))
               .toList() ??
           [],
-      preferences: json['preferences'] != null
-          ? UserPreferences.fromJson(json['preferences'])
-          : UserPreferences(),
       walletBalance: (json['wallet_balance'] as num?)?.toDouble() ?? 0.0,
       totalCashback: (json['total_cashback'] as num?)?.toDouble() ?? 0.0,
       termsAccepted: json['terms_accepted'] ?? false,
@@ -99,7 +94,6 @@ class UserModel {
       'display_name': displayName,
       'profile_picture_url': profilePictureUrl,
       'documents': documents.map((e) => e.toJson()).toList(),
-      'preferences': preferences.toJson(),
       'wallet_balance': walletBalance,
       'total_cashback': totalCashback,
       'terms_accepted': termsAccepted,
@@ -111,46 +105,6 @@ class UserModel {
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
       'user_type': userType.name,
-    };
-  }
-}
-
-class UserPreferences {
-  final bool pushNotifications;
-  final bool emailNotifications;
-  final bool smsNotifications;
-  final bool locationSharing;
-  final String preferredLanguage;
-  final String preferredCurrency;
-
-  UserPreferences({
-    this.pushNotifications = true,
-    this.emailNotifications = true,
-    this.smsNotifications = false,
-    this.locationSharing = true,
-    this.preferredLanguage = 'pt-BR',
-    this.preferredCurrency = 'BRL',
-  });
-
-  factory UserPreferences.fromJson(Map<String, dynamic> json) {
-    return UserPreferences(
-      pushNotifications: json['push_notifications'] ?? true,
-      emailNotifications: json['email_notifications'] ?? true,
-      smsNotifications: json['sms_notifications'] ?? false,
-      locationSharing: json['location_sharing'] ?? true,
-      preferredLanguage: json['preferred_language'] ?? 'pt-BR',
-      preferredCurrency: json['preferred_currency'] ?? 'BRL',
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'push_notifications': pushNotifications,
-      'email_notifications': emailNotifications,
-      'sms_notifications': smsNotifications,
-      'location_sharing': locationSharing,
-      'preferred_language': preferredLanguage,
-      'preferred_currency': preferredCurrency,
     };
   }
 }

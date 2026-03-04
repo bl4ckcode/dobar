@@ -1,5 +1,9 @@
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/features/authentication/presentation/pages/mfa_setup_page.dart';
+import 'package:barz/features/home/presentation/pages/profile/app_settings_page.dart';
+import 'package:barz/features/home/presentation/pages/profile/help_center_page.dart';
+import 'package:barz/features/home/presentation/pages/profile/notification_settings_page.dart';
+import 'package:barz/features/home/presentation/pages/profile/privacy_settings_page.dart';
 import 'package:barz/features/user/domain/repositories/abstract_user_repository.dart';
 import 'package:barz/core/network/dio_network.dart';
 import 'package:barz/core/utils/injections.dart';
@@ -188,16 +192,46 @@ class _ProfileHomePageState extends State<ProfileHomePage> {
                   const SizedBox(height: 12),
                   _buildMenuItem(
                     icon: Icons.settings_outlined,
-                    title: 'Settings',
-                    subtitle: 'Preferences & notifications',
-                    onTap: () {},
+                    title: 'App Settings',
+                    subtitle: 'Theme, language & biometrics',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const AppSettingsPage(),
+                      ),
+                    ),
                   ).animate().fadeIn(delay: 250.ms).slideX(begin: -0.1, end: 0),
+                  _buildMenuItem(
+                    icon: Icons.notifications_outlined,
+                    title: 'Notifications',
+                    subtitle: 'Push, email & SMS preferences',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const NotificationSettingsPage(),
+                      ),
+                    ),
+                  ).animate().fadeIn(delay: 270.ms).slideX(begin: -0.1, end: 0),
+                  _buildMenuItem(
+                    icon: Icons.lock_outline,
+                    title: 'Privacy',
+                    subtitle: 'Location & data settings',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const PrivacySettingsPage(),
+                      ),
+                    ),
+                  ).animate().fadeIn(delay: 290.ms).slideX(begin: -0.1, end: 0),
                   _buildMenuItem(
                     icon: Icons.help_outline,
                     title: 'Help & Support',
-                    subtitle: 'Get assistance',
-                    onTap: () {},
-                  ).animate().fadeIn(delay: 250.ms).slideX(begin: -0.1, end: 0),
+                    subtitle: 'FAQ, contact & bug reports',
+                    onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const HelpCenterPage()),
+                    ),
+                  ).animate().fadeIn(delay: 310.ms).slideX(begin: -0.1, end: 0),
                   const SizedBox(height: 24),
                   _buildMenuItem(
                     icon: Icons.logout,

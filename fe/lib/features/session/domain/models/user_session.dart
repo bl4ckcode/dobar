@@ -85,13 +85,11 @@ class UserSession {
     );
   }
 
-  /// Create an empty session (for logged out state)
   static UserSession empty() {
     return UserSession(
       user: UserModel(
         id: 0,
         firebaseUid: '',
-        preferences: UserPreferences(),
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       ),

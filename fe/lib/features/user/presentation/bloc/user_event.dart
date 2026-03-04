@@ -1,5 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
-import 'package:barz/features/user/domain/models/user_model.dart';
+
 import 'package:barz/features/user/domain/models/user_document.dart';
 
 part 'user_event.freezed.dart';
@@ -13,8 +13,7 @@ sealed class UserEvent with _$UserEvent {
     String? phoneNumber,
     String? profilePictureUrl,
   }) = UpdateProfile;
-  const factory UserEvent.updatePreferences(UserPreferences preferences) =
-      UpdatePreferences;
+
   const factory UserEvent.addDocument(UserDocument document) = AddDocument;
   const factory UserEvent.removeDocument(int documentId) = RemoveDocument;
   const factory UserEvent.acceptTerms() = AcceptTerms;
