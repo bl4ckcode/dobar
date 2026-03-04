@@ -273,20 +273,14 @@ class _BusinessDashboardHeader extends StatelessWidget {
               const SizedBox(width: 12),
               // Switch to client
               TextButton.icon(
-                icon: Icon(
-                  Icons.person_outline,
-                  size: 20,
-                  color: mutedTextColor,
-                ),
-                label: Text(
-                  'Switch to Client Mode',
-                  style: theme.textTheme.labelLarge?.copyWith(
-                    color: mutedTextColor,
+                icon: const Icon(Icons.person_outline, size: 20),
+                label: const Text('Switch to Client Mode'),
+                style: TextButton.styleFrom(
+                  foregroundColor: mutedTextColor,
+                  textStyle: const TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w500,
                   ),
-                ),
-                style: TextButton.styleFrom(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
                     vertical: 8,
@@ -892,13 +886,11 @@ class _BarsOverviewSection extends StatelessWidget {
             ),
             TextButton.icon(
               onPressed: () => _navigateToCreateBar(context),
-              icon: Icon(Icons.add, size: 18, color: barzGold),
-              label: Text(
-                'Add Bar',
-                style: theme.textTheme.labelLarge?.copyWith(
-                  color: barzGold,
-                  fontWeight: FontWeight.w600,
-                ),
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Add Bar'),
+              style: TextButton.styleFrom(
+                foregroundColor: barzGold,
+                textStyle: const TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
           ],

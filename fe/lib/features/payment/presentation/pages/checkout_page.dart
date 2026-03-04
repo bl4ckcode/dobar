@@ -11,11 +11,11 @@ import 'package:go_router/go_router.dart';
 import 'package:barz/core/router/app_routes.dart';
 
 import '../../domain/models/payment_models.dart';
-import '../widgets/brazil_payment_options.dart';
 import '../widgets/checkout_order_summary.dart';
-import '../widgets/digital_wallets_section.dart';
 import '../widgets/pay_button.dart';
-import '../widgets/saved_cards_section.dart';
+import '../widgets/payment_methods_card.dart';
+import '../widgets/payment_options_grid.dart';
+import 'package:barz/core/theme/theme_cubit.dart';
 import '../widgets/security_indicators.dart';
 
 class CheckoutArguments {
@@ -53,21 +53,39 @@ class _CheckoutPageState extends State<CheckoutPage> {
   String? _selectedCardId = 'card-1';
   bool _isProcessing = false;
 
-  // Mock saved cards for now
-  final List<SavedCard> _savedCards = const [
-    SavedCard(
+  final List<SavedCard> _savedCards = [
+    const SavedCard(
       id: 'card-1',
       brand: CardBrand.mastercard,
       last4: '4242',
       expiry: '12/26',
     ),
-    SavedCard(
+    const SavedCard(
       id: 'card-2',
       brand: CardBrand.visa,
       last4: '8888',
       expiry: '03/25',
     ),
   ];
+
+  void _onAddCardComplete(Map<String, String> cardData) {
+    CardBrand brand = CardBrand.visa;
+    if (cardData['brand'] == 'MC') brand = CardBrand.mastercard;
+    if (cardData['brand'] == 'ELO') brand = CardBrand.elo;
+
+    setState(() {
+      final newCardId = 'card-${_savedCards.length + 1}';
+      _savedCards.add(
+        SavedCard(
+          id: newCardId,
+          brand: brand,
+          last4: cardData['last4'] ?? '',
+          expiry: cardData['expiry'] ?? '',
+        ),
+      );
+      _selectedCardId = newCardId;
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -131,25 +149,29 @@ class _CheckoutPageState extends State<CheckoutPage> {
                         total: args.total,
                       ),
                       const SizedBox(height: 24),
-                      SavedCardsSection(
-                        cards: _savedCards,
+                      PaymentMethodsCard(
+                        savedCards: _savedCards,
                         selectedCardId: _selectedCardId,
                         onSelectCard: (id) =>
                             setState(() => _selectedCardId = id),
-                        onAddCard: () {
-                          // Mock
-                        },
-                      ),
-                      const SizedBox(height: 24),
-                      BrazilPaymentOptions(
-                        onSelectPix: () {},
-                        onSelectNubank: () {},
-                        total: args.total,
-                      ),
-                      const SizedBox(height: 16),
-                      DigitalWalletsSection(
+                        onAddCardComplete: _onAddCardComplete,
+                        paymentOptions: [
+                          PaymentOptionItem(
+                            label: 'Pix',
+                            icon: Icons.qr_code,
+                            iconColor: const Color(0xFF32BCAD),
+                            onTap: () {},
+                          ),
+                          PaymentOptionItem(
+                            label: 'Nubank Pay',
+                            icon: Icons.account_balance_wallet,
+                            iconColor: const Color(0xFF8A05BE),
+                            onTap: () {},
+                          ),
+                        ],
                         onApplePay: () {},
                         onGooglePay: () {},
+                        isDark: isDark,
                       ),
                       const SecurityIndicators(),
                     ],
@@ -245,6 +267,31 @@ class _CheckoutPageState extends State<CheckoutPage> {
                   ),
                 ),
               ],
+            ),
+          ),
+          GestureDetector(
+            onTap: () => context.read<ThemeCubit>().toggleTheme(),
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: isDark ? barzDarkLight : surfaceWhite,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: isDark
+                    ? []
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+              ),
+              child: Icon(
+                isDark ? Icons.wb_sunny_rounded : Icons.nightlight_round,
+                color: isDark ? barzGold : barzDark,
+                size: 22,
+              ),
             ),
           ),
         ],
