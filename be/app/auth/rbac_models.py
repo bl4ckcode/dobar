@@ -162,6 +162,13 @@ class UserProfile(Base):
     
     fcm_token = Column(String(500), nullable=True)
     fcm_token_updated_at = Column(DateTime, nullable=True)
+
+    push_notifications_enabled = Column(Boolean, default=True)
+    order_updates_enabled = Column(Boolean, default=True)
+    promotions_enabled = Column(Boolean, default=True)
+
+    data_sharing_enabled = Column(Boolean, default=False)
+    location_enabled = Column(Boolean, default=False)
     
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

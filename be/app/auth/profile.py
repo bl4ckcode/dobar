@@ -128,6 +128,7 @@ def is_country_enabled(country_code: str) -> bool:
 class ProfileResponse(BaseModel):
     display_name: Optional[str] = None
     email: Optional[str] = None
+    phone_number: Optional[str] = None
     avatar_url: Optional[str] = None
     terms_accepted: bool = False
     privacy_accepted: bool = False
@@ -138,6 +139,19 @@ class ProfileResponse(BaseModel):
 class ProfileUpdate(BaseModel):
     display_name: Optional[str] = None
     email: Optional[EmailStr] = None
+    phone_number: Optional[str] = None
+    avatar_url: Optional[str] = None
+
+
+class NotificationPreferences(BaseModel):
+    push_notifications_enabled: bool = True
+    order_updates_enabled: bool = True
+    promotions_enabled: bool = True
+
+
+class PrivacySettings(BaseModel):
+    data_sharing_enabled: bool = False
+    location_enabled: bool = False
 
 
 class OnboardingUpdate(BaseModel):
@@ -178,6 +192,7 @@ async def get_profile(current_user: AuthUser = Depends(get_current_user)):
     return ProfileResponse(
         display_name=profile.get("display_name"),
         email=user["email"] if user else None,
+        phone_number=user["phone_number"] if user else None,
         avatar_url=profile.get("avatar_url"),
         terms_accepted=profile.get("terms_accepted", False) or False,
         privacy_accepted=profile.get("privacy_accepted", False) or False,
@@ -192,30 +207,47 @@ async def update_profile(
     current_user: AuthUser = Depends(get_current_user)
 ):
     profile = await get_or_create_profile(current_user.id)
+    from .auth_models import User
+    
+    profile_updates = {}
     
     if data.display_name is not None:
-        update_query = (
+        profile_updates["display_name"] = data.display_name
+    
+    if data.avatar_url is not None:
+        profile_updates["avatar_url"] = data.avatar_url
+    
+    if profile_updates:
+        profile_updates["updated_at"] = datetime.utcnow()
+        await database.execute(
             UserProfile.__table__.update()
             .where(UserProfile.user_id == current_user.id)
-            .values(display_name=data.display_name, updated_at=datetime.utcnow())
+            .values(**profile_updates)
         )
-        await database.execute(update_query)
     
     if data.email is not None:
-        from .auth_models import User
         email_check = User.__table__.select().where(
             (User.email == data.email) & (User.id != current_user.id)
         )
-        existing = await database.fetch_one(email_check)
-        if existing:
+        if await database.fetch_one(email_check):
             raise APIError.conflict("Email already in use")
-        
-        user_update = (
+        await database.execute(
             User.__table__.update()
             .where(User.id == current_user.id)
             .values(email=data.email)
         )
-        await database.execute(user_update)
+    
+    if data.phone_number is not None:
+        phone_check = User.__table__.select().where(
+            (User.phone_number == data.phone_number) & (User.id != current_user.id)
+        )
+        if await database.fetch_one(phone_check):
+            raise APIError.conflict("Phone number already in use")
+        await database.execute(
+            User.__table__.update()
+            .where(User.id == current_user.id)
+            .values(phone_number=data.phone_number)
+        )
     
     return await get_profile(current_user)
 
@@ -328,6 +360,62 @@ async def get_available_countries():
         "countries": countries_info,
         "total": len(ENABLED_COUNTRIES),
     }
+
+
+@profile_router.get("/notification-preferences", response_model=NotificationPreferences)
+async def get_notification_preferences(current_user: AuthUser = Depends(get_current_user)):
+    profile = await get_or_create_profile(current_user.id)
+    return NotificationPreferences(
+        push_notifications_enabled=profile.get("push_notifications_enabled", True) if profile.get("push_notifications_enabled") is not None else True,
+        order_updates_enabled=profile.get("order_updates_enabled", True) if profile.get("order_updates_enabled") is not None else True,
+        promotions_enabled=profile.get("promotions_enabled", True) if profile.get("promotions_enabled") is not None else True,
+    )
+
+
+@profile_router.put("/notification-preferences", response_model=NotificationPreferences)
+async def update_notification_preferences(
+    data: NotificationPreferences,
+    current_user: AuthUser = Depends(get_current_user)
+):
+    await get_or_create_profile(current_user.id)
+    await database.execute(
+        UserProfile.__table__.update()
+        .where(UserProfile.user_id == current_user.id)
+        .values(
+            push_notifications_enabled=data.push_notifications_enabled,
+            order_updates_enabled=data.order_updates_enabled,
+            promotions_enabled=data.promotions_enabled,
+            updated_at=datetime.utcnow()
+        )
+    )
+    return data
+
+
+@profile_router.get("/privacy-settings", response_model=PrivacySettings)
+async def get_privacy_settings(current_user: AuthUser = Depends(get_current_user)):
+    profile = await get_or_create_profile(current_user.id)
+    return PrivacySettings(
+        data_sharing_enabled=profile.get("data_sharing_enabled", False) or False,
+        location_enabled=profile.get("location_enabled", False) or False,
+    )
+
+
+@profile_router.put("/privacy-settings", response_model=PrivacySettings)
+async def update_privacy_settings(
+    data: PrivacySettings,
+    current_user: AuthUser = Depends(get_current_user)
+):
+    await get_or_create_profile(current_user.id)
+    await database.execute(
+        UserProfile.__table__.update()
+        .where(UserProfile.user_id == current_user.id)
+        .values(
+            data_sharing_enabled=data.data_sharing_enabled,
+            location_enabled=data.location_enabled,
+            updated_at=datetime.utcnow()
+        )
+    )
+    return data
 
 
 @profile_router.delete("/data")

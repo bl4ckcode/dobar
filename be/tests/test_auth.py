@@ -549,3 +549,173 @@ class TestProfileEndpoints:
         assert data["gateway"] == "stone"
         assert data["country_code"] == "BR"
         assert "pix" in data["payment_methods"]
+
+
+@pytest.mark.auth
+class TestProfileSettingsEndpoints:
+
+    @pytest.mark.asyncio
+    async def test_update_profile_phone_and_avatar(self, client: AsyncClient, mock_firebase_token):
+        with patch("app.auth.routes.firebase_auth.verify_id_token") as mock_verify:
+            mock_verify.return_value = mock_firebase_token
+            login_response = await client.post(
+                "/auth/phone-login",
+                headers={"Authorization": "Bearer mock_token"}
+            )
+
+        token = login_response.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+
+        response = await client.put(
+            "/me/profile",
+            headers=headers,
+            json={
+                "phone_number": "+5531999990000",
+                "avatar_url": "https://example.com/avatar.jpg"
+            }
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["phone_number"] == "+5531999990000"
+        assert data["avatar_url"] == "https://example.com/avatar.jpg"
+
+    @pytest.mark.asyncio
+    async def test_update_profile_phone_conflict(self, client: AsyncClient, mock_firebase_token):
+        with patch("app.auth.routes.firebase_auth.verify_id_token") as mock_verify:
+            mock_verify.return_value = mock_firebase_token
+            login1 = await client.post(
+                "/auth/phone-login",
+                headers={"Authorization": "Bearer mock_token"}
+            )
+
+        token1 = login1.json()["access_token"]
+        headers1 = {"Authorization": f"Bearer {token1}"}
+
+        await client.put(
+            "/me/profile",
+            headers=headers1,
+            json={"phone_number": "+5531888880000"}
+        )
+
+        with patch("app.auth.routes.firebase_auth.verify_id_token") as mock_verify:
+            mock_verify.return_value = {
+                "uid": "second_user_uid",
+                "phone_number": "+9999999999",
+                "email": "second@example.com"
+            }
+            login2 = await client.post(
+                "/auth/phone-login",
+                headers={"Authorization": "Bearer mock_token"}
+            )
+
+        token2 = login2.json()["access_token"]
+        headers2 = {"Authorization": f"Bearer {token2}"}
+
+        response = await client.put(
+            "/me/profile",
+            headers=headers2,
+            json={"phone_number": "+5531888880000"}
+        )
+
+        assert response.status_code == 409
+
+    @pytest.mark.asyncio
+    async def test_get_notification_preferences_defaults(self, client: AsyncClient, mock_firebase_token):
+        with patch("app.auth.routes.firebase_auth.verify_id_token") as mock_verify:
+            mock_verify.return_value = mock_firebase_token
+            login_response = await client.post(
+                "/auth/phone-login",
+                headers={"Authorization": "Bearer mock_token"}
+            )
+
+        token = login_response.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+
+        response = await client.get("/me/notification-preferences", headers=headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["push_notifications_enabled"] is True
+        assert data["order_updates_enabled"] is True
+        assert data["promotions_enabled"] is True
+
+    @pytest.mark.asyncio
+    async def test_update_notification_preferences(self, client: AsyncClient, mock_firebase_token):
+        with patch("app.auth.routes.firebase_auth.verify_id_token") as mock_verify:
+            mock_verify.return_value = mock_firebase_token
+            login_response = await client.post(
+                "/auth/phone-login",
+                headers={"Authorization": "Bearer mock_token"}
+            )
+
+        token = login_response.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+
+        response = await client.put(
+            "/me/notification-preferences",
+            headers=headers,
+            json={
+                "push_notifications_enabled": True,
+                "order_updates_enabled": False,
+                "promotions_enabled": False
+            }
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["push_notifications_enabled"] is True
+        assert data["order_updates_enabled"] is False
+        assert data["promotions_enabled"] is False
+
+        get_response = await client.get("/me/notification-preferences", headers=headers)
+        assert get_response.json()["order_updates_enabled"] is False
+
+    @pytest.mark.asyncio
+    async def test_get_privacy_settings_defaults(self, client: AsyncClient, mock_firebase_token):
+        with patch("app.auth.routes.firebase_auth.verify_id_token") as mock_verify:
+            mock_verify.return_value = mock_firebase_token
+            login_response = await client.post(
+                "/auth/phone-login",
+                headers={"Authorization": "Bearer mock_token"}
+            )
+
+        token = login_response.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+
+        response = await client.get("/me/privacy-settings", headers=headers)
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["data_sharing_enabled"] is False
+        assert data["location_enabled"] is False
+
+    @pytest.mark.asyncio
+    async def test_update_privacy_settings(self, client: AsyncClient, mock_firebase_token):
+        with patch("app.auth.routes.firebase_auth.verify_id_token") as mock_verify:
+            mock_verify.return_value = mock_firebase_token
+            login_response = await client.post(
+                "/auth/phone-login",
+                headers={"Authorization": "Bearer mock_token"}
+            )
+
+        token = login_response.json()["access_token"]
+        headers = {"Authorization": f"Bearer {token}"}
+
+        response = await client.put(
+            "/me/privacy-settings",
+            headers=headers,
+            json={
+                "data_sharing_enabled": True,
+                "location_enabled": True
+            }
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert data["data_sharing_enabled"] is True
+        assert data["location_enabled"] is True
+
+        get_response = await client.get("/me/privacy-settings", headers=headers)
+        assert get_response.json()["data_sharing_enabled"] is True
+
