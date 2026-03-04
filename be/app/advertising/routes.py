@@ -208,24 +208,38 @@ async def get_campaign(
     return _campaign_to_response(campaign)
 
 
-@advertising_router.put("/campaigns/{campaign_id}/pause")
+@advertising_router.post("/campaigns/{campaign_id}/pause")
 async def pause_campaign(
     campaign_id: int,
-    bar_id: int = Query(..., description="Bar ID"),
+    bar_id: Optional[int] = Query(None, description="Bar ID"),
     current_user = Depends(get_current_user)
 ):
     """Pause an active campaign."""
+    if not bar_id:
+        query = select(AdvertisingCampaign.bar_id).where(AdvertisingCampaign.id == campaign_id)
+        result = await database.fetch_one(query)
+        if not result:
+            raise APIError.not_found("Campaign not found")
+        bar_id = result.bar_id
+        
     await CampaignService.pause_campaign(campaign_id, bar_id)
     return {"message": "Campaign paused successfully"}
 
 
-@advertising_router.put("/campaigns/{campaign_id}/resume")
+@advertising_router.post("/campaigns/{campaign_id}/resume")
 async def resume_campaign(
     campaign_id: int,
-    bar_id: int = Query(..., description="Bar ID"),
+    bar_id: Optional[int] = Query(None, description="Bar ID"),
     current_user = Depends(get_current_user)
 ):
     """Resume a paused campaign."""
+    if not bar_id:
+        query = select(AdvertisingCampaign.bar_id).where(AdvertisingCampaign.id == campaign_id)
+        result = await database.fetch_one(query)
+        if not result:
+            raise APIError.not_found("Campaign not found")
+        bar_id = result.bar_id
+        
     await CampaignService.resume_campaign(campaign_id, bar_id)
     return {"message": "Campaign resumed successfully"}
 
@@ -233,10 +247,17 @@ async def resume_campaign(
 @advertising_router.delete("/campaigns/{campaign_id}")
 async def cancel_campaign(
     campaign_id: int,
-    bar_id: int = Query(..., description="Bar ID"),
+    bar_id: Optional[int] = Query(None, description="Bar ID"),
     current_user = Depends(get_current_user)
 ):
     """Cancel campaign and refund unused budget/credits."""
+    if not bar_id:
+        query = select(AdvertisingCampaign.bar_id).where(AdvertisingCampaign.id == campaign_id)
+        result = await database.fetch_one(query)
+        if not result:
+            raise APIError.not_found("Campaign not found")
+        bar_id = result.bar_id
+        
     refund = await CampaignService.cancel_campaign(campaign_id, bar_id)
     return {"message": "Campaign cancelled", "refunded_amount": refund.get("amount", 0)}
 
@@ -313,6 +334,34 @@ async def get_analytics_dashboard(
 ):
     """Get aggregated analytics for all campaigns."""
     return await CampaignService.get_dashboard_analytics(bar_id, start_date, end_date)
+
+
+from datetime import timedelta
+
+@advertising_router.get("/analytics/{campaign_id}", response_model=CampaignAnalytics)
+async def get_single_campaign_analytics(
+    campaign_id: int,
+    bar_id: Optional[int] = Query(None, description="Bar ID"),
+    start_date: Optional[date] = Query(None, description="Start date (YYYY-MM-DD)"),
+    end_date: Optional[date] = Query(None, description="End date (YYYY-MM-DD)"),
+    current_user = Depends(get_current_user)
+):
+    """Get analytics for a specific campaign."""
+    if not bar_id:
+        query = select(AdvertisingCampaign.bar_id).where(AdvertisingCampaign.id == campaign_id)
+        result = await database.fetch_one(query)
+        if not result:
+            raise APIError.not_found("Campaign not found")
+        bar_id = result.bar_id
+        
+    s_date = start_date or (datetime.now(timezone.utc) - timedelta(days=30)).date()
+    e_date = end_date or datetime.now(timezone.utc).date()
+    
+    analytics = await CampaignService.get_campaign_analytics(campaign_id, bar_id, s_date, e_date)
+    if not analytics:
+        raise APIError.not_found("Analytics for campaign not found")
+        
+    return analytics
 
 
 @advertising_router.get("/invoices", response_model=InvoiceListResponse)
