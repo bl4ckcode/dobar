@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
@@ -9,6 +8,10 @@ import '../bloc/advertising_bloc.dart';
 import '../bloc/advertising_event.dart';
 import '../bloc/advertising_state.dart';
 import '../../domain/models/ad_campaign.dart';
+
+import '../widgets/vip_upsell_banner.dart';
+import '../widgets/campaign_card.dart';
+import '../widgets/campaign_analytics_sheet.dart';
 
 /// Campaign management page for bar owners.
 ///
@@ -51,64 +54,163 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
 
   @override
   Widget build(BuildContext context) {
+    final dobar = context.dobarColors;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Campanhas'),
-        backgroundColor: barzDark,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            tooltip: 'Nova Campanha',
-            onPressed: () => _showCreateCampaignDialog(context),
-          ),
-        ],
-      ),
-      body: Container(
-        color: barzGoldSoft,
+      backgroundColor: dobar.background,
+      body: SafeArea(
         child: BlocBuilder<AdvertisingBloc, AdvertisingState>(
           builder: (context, state) {
-            if (state.isLoadingCampaigns) {
+            if (state.isLoadingCampaigns && state.campaigns.isEmpty) {
               return const Center(
                 child: CircularProgressIndicator(color: barzGold),
               );
             }
-            if (state.error != null) {
+            if (state.error != null && state.campaigns.isEmpty) {
               return _buildErrorState(state.error!);
             }
-            if (state.campaigns.isEmpty) {
-              return _buildEmptyState();
-            }
+
             return RefreshIndicator(
               onRefresh: () async => _loadCampaigns(),
-              child: ListView.builder(
-                padding: const EdgeInsets.all(16),
-                itemCount: state.campaigns.length,
-                itemBuilder: (context, index) {
-                  return _CampaignCard(
-                    campaign: state.campaigns[index],
-                    onTap: () =>
-                        _showCampaignDetails(context, state.campaigns[index]),
-                    onPause: () =>
-                        _toggleCampaignStatus(state.campaigns[index]),
-                  );
-                },
+              color: barzGold,
+              backgroundColor: dobar.surface,
+              child: CustomScrollView(
+                slivers: [
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 24,
+                    ),
+                    sliver: SliverToBoxAdapter(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Header Title
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: barzGold.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(
+                                    BarzRadii.md,
+                                  ),
+                                  border: Border.all(
+                                    color: barzGold.withValues(alpha: 0.2),
+                                  ),
+                                ),
+                                child: const Icon(
+                                  Icons.campaign,
+                                  color: barzGold,
+                                  size: 24,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Campaigns',
+                                    style: TextStyle(
+                                      fontSize: 28,
+                                      fontWeight: FontWeight.bold,
+                                      color: dobar.labelPrimary,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Manage and monitor your marketing campaigns',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: dobar.labelSecondary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+
+                          const SizedBox(height: 32),
+
+                          // VIP Banner
+                          VipUpsellBanner(
+                            onUpgrade: () {
+                              // TODO: Handle VIP Upgrade logic
+                            },
+                          ),
+
+                          const SizedBox(height: 32),
+
+                          // Active Campaigns Header
+                          Row(
+                            children: [
+                              Text(
+                                'Active Campaigns',
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w600,
+                                  color: dobar.labelPrimary,
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                '(${state.campaigns.length})',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: dobar.labelSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Campaign List
+                  if (state.campaigns.isEmpty)
+                    SliverFillRemaining(
+                      hasScrollBody: false,
+                      child: _buildEmptyState(),
+                    )
+                  else
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate((context, index) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: CampaignCard(
+                              campaign: state.campaigns[index],
+                              onAnalytics: () => _showCampaignDetails(
+                                context,
+                                state.campaigns[index],
+                              ),
+                            ),
+                          );
+                        }, childCount: state.campaigns.length),
+                      ),
+                    ),
+
+                  // Bottom padding safe area for FAB
+                  const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                ],
               ),
             );
           },
         ),
       ),
-      floatingActionButton: FloatingActionButton.extended(
+      floatingActionButton: FloatingActionButton(
         onPressed: () => _showCreateCampaignDialog(context),
         backgroundColor: barzGold,
         foregroundColor: barzDark,
-        icon: const Icon(Icons.add),
-        label: const Text('Nova Campanha'),
+        elevation: 8,
+        child: const Icon(Icons.add, size: 28),
       ),
     );
   }
 
   Widget _buildErrorState(String error) {
+    final dobar = context.dobarColors;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -120,7 +222,7 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
             Text(
               error,
               textAlign: TextAlign.center,
-              style: TextStyle(color: textSecondary),
+              style: TextStyle(color: dobar.labelSecondary),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
@@ -135,6 +237,7 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
   }
 
   Widget _buildEmptyState() {
+    final dobar = context.dobarColors;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -147,19 +250,19 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
               color: barzGold.withValues(alpha: 0.6),
             ),
             const SizedBox(height: 24),
-            const Text(
+            Text(
               'Nenhuma campanha ativa',
               style: TextStyle(
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
-                color: textPrimary,
+                color: dobar.labelPrimary,
               ),
             ),
             const SizedBox(height: 8),
             Text(
               'Crie sua primeira campanha para\nimpulsionar seu bar!',
               textAlign: TextAlign.center,
-              style: TextStyle(color: textSecondary),
+              style: TextStyle(color: dobar.labelSecondary),
             ),
             const SizedBox(height: 32),
             ElevatedButton.icon(
@@ -194,6 +297,7 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: context.dobarColors.background,
       builder: (ctx) => _CreateCampaignSheet(
         barId: sessionState.session.activeBar!.barId,
         bloc: context.read<AdvertisingBloc>(),
@@ -202,225 +306,8 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
   }
 
   void _showCampaignDetails(BuildContext context, AdCampaign campaign) {
-    context.push('/business/campaign/${campaign.id}/analytics');
-  }
-
-  void _toggleCampaignStatus(AdCampaign campaign) {
-    final bloc = context.read<AdvertisingBloc>();
-    if (campaign.status == CampaignStatus.active) {
-      bloc.add(PauseCampaign(campaignId: campaign.id));
-    } else if (campaign.status == CampaignStatus.paused) {
-      bloc.add(ResumeCampaign(campaignId: campaign.id));
-    }
-  }
-}
-
-class _CampaignCard extends StatelessWidget {
-  final AdCampaign campaign;
-  final VoidCallback? onTap;
-  final VoidCallback? onPause;
-
-  const _CampaignCard({required this.campaign, this.onTap, this.onPause});
-
-  @override
-  Widget build(BuildContext context) {
-    final isActive = campaign.status == CampaignStatus.active;
-
-    return Card(
-      margin: const EdgeInsets.only(bottom: 16),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(BarzRadii.md),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(BarzRadii.md),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header row
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          campaign.name,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: textPrimary,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        _buildTypeBadge(),
-                      ],
-                    ),
-                  ),
-                  _buildStatusChip(isActive),
-                ],
-              ),
-              const SizedBox(height: 16),
-              // Metrics row
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildMetric('Impressões', campaign.impressions.toString()),
-                  _buildMetric('Cliques', campaign.clicks.toString()),
-                  _buildMetric(
-                    'CTR',
-                    '${((campaign.clicks / (campaign.impressions == 0 ? 1 : campaign.impressions)) * 100).toStringAsFixed(1)}%',
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              // Budget progress
-              _buildBudgetProgress(),
-              const SizedBox(height: 12),
-              // Actions
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  TextButton.icon(
-                    onPressed: onPause,
-                    icon: Icon(isActive ? Icons.pause : Icons.play_arrow),
-                    label: Text(isActive ? 'Pausar' : 'Retomar'),
-                  ),
-                  const SizedBox(width: 8),
-                  TextButton.icon(
-                    onPressed: onTap,
-                    icon: const Icon(Icons.analytics),
-                    label: const Text('Analytics'),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTypeBadge() {
-    final typeLabels = {
-      CampaignType.featured: ('Destaque', Icons.star),
-      CampaignType.search: ('Busca', Icons.search),
-      CampaignType.map: ('Mapa', Icons.map),
-      CampaignType.promoBoost: ('Promoção', Icons.local_offer),
-      CampaignType.banner: ('Banner', Icons.view_carousel),
-    };
-    final (label, icon) =
-        typeLabels[campaign.campaignType] ?? ('Outro', Icons.campaign);
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: barzGoldLight,
-        borderRadius: BorderRadius.circular(BarzRadii.sm),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: barzDark),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              fontSize: 11,
-              color: barzDark,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildStatusChip(bool isActive) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-      decoration: BoxDecoration(
-        color: isActive ? successGreen.withValues(alpha: 0.15) : surfaceMuted,
-        borderRadius: BorderRadius.circular(BarzRadii.full),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 8,
-            height: 8,
-            decoration: BoxDecoration(
-              color: isActive ? successGreen : textTertiary,
-              shape: BoxShape.circle,
-            ),
-          ),
-          const SizedBox(width: 6),
-          Text(
-            isActive ? 'Ativa' : campaign.status.name.toUpperCase(),
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: isActive ? successGreen : textSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMetric(String label, String value) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: textPrimary,
-          ),
-        ),
-        Text(label, style: TextStyle(fontSize: 12, color: textSecondary)),
-      ],
-    );
-  }
-
-  Widget _buildBudgetProgress() {
-    final progress = campaign.budgetAmount > 0
-        ? (campaign.budgetSpent / campaign.budgetAmount).clamp(0.0, 1.0)
-        : 0.0;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Orçamento',
-              style: TextStyle(fontSize: 12, color: textSecondary),
-            ),
-            Text(
-              'R\$ ${campaign.budgetSpent.toStringAsFixed(0)} / R\$ ${campaign.budgetAmount.toStringAsFixed(0)}',
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
-            ),
-          ],
-        ),
-        const SizedBox(height: 6),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(4),
-          child: LinearProgressIndicator(
-            value: progress,
-            backgroundColor: surfaceMuted,
-            valueColor: AlwaysStoppedAnimation(
-              progress > 0.9 ? warningOrange : barzGold,
-            ),
-            minHeight: 6,
-          ),
-        ),
-      ],
-    );
+    // Inject the AdvertisingBloc for the sheet since it's a new route tree
+    CampaignAnalyticsSheet.show(context, campaign);
   }
 }
 

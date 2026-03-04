@@ -7,6 +7,8 @@ import '../bloc/advertising_bloc.dart';
 import '../bloc/advertising_event.dart';
 import '../bloc/advertising_state.dart';
 import '../../domain/models/campaign_analytics.dart';
+import 'package:collection/collection.dart';
+import '../../domain/models/ad_campaign.dart';
 
 class CampaignAnalyticsPage extends StatelessWidget {
   final int campaignId;
@@ -54,7 +56,7 @@ class _CampaignAnalyticsContent extends StatelessWidget {
             if (state.analytics == null) {
               return _buildEmptyState(l10n);
             }
-            return _buildContent(context, state.analytics!, l10n);
+            return _buildContent(context, state, l10n);
           },
         ),
       ),
@@ -104,9 +106,14 @@ class _CampaignAnalyticsContent extends StatelessWidget {
 
   Widget _buildContent(
     BuildContext context,
-    CampaignAnalytics analytics,
+    AdvertisingState state,
     AppLocalizations l10n,
   ) {
+    final analytics = state.analytics!;
+    final campaign = state.campaigns.firstWhereOrNull(
+      (c) => c.id == campaignId,
+    );
+
     return RefreshIndicator(
       onRefresh: () async {
         context.read<AdvertisingBloc>().add(
@@ -119,20 +126,24 @@ class _CampaignAnalyticsContent extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildHeader(analytics),
+            _buildHeader(analytics, campaign),
             const SizedBox(height: 24),
-            _buildMetricsGrid(analytics.metrics, l10n),
+            _buildMetricsGrid(analytics, l10n),
             const SizedBox(height: 24),
-            _buildBudgetCard(analytics.budget, l10n),
+            _buildBudgetCard(analytics, campaign, l10n),
             const SizedBox(height: 24),
-            _buildDailyChart(analytics.dailyBreakdown, l10n),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildHeader(CampaignAnalytics analytics) {
+  Widget _buildHeader(CampaignAnalytics analytics, AdCampaign? campaign) {
+    final status = campaign?.status.name ?? 'active';
+    final typeName = campaign != null
+        ? campaign.campaignType.name.toUpperCase()
+        : 'UNKNOWN';
+
     return Card(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(BarzRadii.md),
@@ -165,10 +176,10 @@ class _CampaignAnalyticsContent extends StatelessWidget {
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      _StatusBadge(status: analytics.status),
+                      _StatusBadge(status: status),
                       const SizedBox(width: 8),
                       Text(
-                        analytics.campaignType.toUpperCase(),
+                        typeName,
                         style: TextStyle(fontSize: 12, color: textSecondary),
                       ),
                     ],
@@ -182,7 +193,14 @@ class _CampaignAnalyticsContent extends StatelessWidget {
     );
   }
 
-  Widget _buildMetricsGrid(CampaignMetrics metrics, AppLocalizations l10n) {
+  Widget _buildMetricsGrid(CampaignAnalytics analytics, AppLocalizations l10n) {
+    final conversionRate = analytics.clicks > 0
+        ? (analytics.conversions / analytics.clicks) * 100
+        : 0.0;
+    final costPerClick = analytics.clicks > 0
+        ? analytics.spend / analytics.clicks
+        : 0.0;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -197,7 +215,7 @@ class _CampaignAnalyticsContent extends StatelessWidget {
               child: _MetricCard(
                 icon: Icons.visibility,
                 label: l10n.impressions,
-                value: _formatNumber(metrics.impressions),
+                value: _formatNumber(analytics.impressions),
               ),
             ),
             const SizedBox(width: 12),
@@ -205,7 +223,7 @@ class _CampaignAnalyticsContent extends StatelessWidget {
               child: _MetricCard(
                 icon: Icons.touch_app,
                 label: l10n.clicks,
-                value: _formatNumber(metrics.clicks),
+                value: _formatNumber(analytics.clicks),
               ),
             ),
           ],
@@ -217,7 +235,7 @@ class _CampaignAnalyticsContent extends StatelessWidget {
               child: _MetricCard(
                 icon: Icons.shopping_bag,
                 label: l10n.conversions,
-                value: _formatNumber(metrics.conversions),
+                value: _formatNumber(analytics.conversions),
               ),
             ),
             const SizedBox(width: 12),
@@ -225,7 +243,7 @@ class _CampaignAnalyticsContent extends StatelessWidget {
               child: _MetricCard(
                 icon: Icons.percent,
                 label: 'CTR',
-                value: '${metrics.ctr.toStringAsFixed(2)}%',
+                value: '${analytics.ctr.toStringAsFixed(2)}%',
               ),
             ),
           ],
@@ -237,7 +255,7 @@ class _CampaignAnalyticsContent extends StatelessWidget {
               child: _MetricCard(
                 icon: Icons.attach_money,
                 label: l10n.cost_per_click,
-                value: 'R\$ ${metrics.costPerClick.toStringAsFixed(2)}',
+                value: 'R\$ ${costPerClick.toStringAsFixed(2)}',
               ),
             ),
             const SizedBox(width: 12),
@@ -245,7 +263,7 @@ class _CampaignAnalyticsContent extends StatelessWidget {
               child: _MetricCard(
                 icon: Icons.trending_up,
                 label: l10n.conversion_rate,
-                value: '${metrics.conversionRate.toStringAsFixed(1)}%',
+                value: '${conversionRate.toStringAsFixed(1)}%',
               ),
             ),
           ],
@@ -254,10 +272,18 @@ class _CampaignAnalyticsContent extends StatelessWidget {
     );
   }
 
-  Widget _buildBudgetCard(BudgetBreakdown budget, AppLocalizations l10n) {
-    final progress = budget.total > 0
-        ? (budget.spent / budget.total).clamp(0.0, 1.0)
+  Widget _buildBudgetCard(
+    CampaignAnalytics analytics,
+    AdCampaign? campaign,
+    AppLocalizations l10n,
+  ) {
+    final total = campaign?.budgetAmount ?? analytics.spend;
+    final progress = total > 0
+        ? (analytics.spend / total).clamp(0.0, 1.0)
         : 0.0;
+    final remaining = (total - analytics.spend).clamp(0.0, double.infinity);
+    final days = analytics.periodEnd.difference(analytics.periodStart).inDays;
+    final dailyAverage = days > 0 ? analytics.spend / days : analytics.spend;
 
     return Card(
       shape: RoundedRectangleBorder(
@@ -277,7 +303,7 @@ class _CampaignAnalyticsContent extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'R\$ ${budget.spent.toStringAsFixed(0)} / R\$ ${budget.total.toStringAsFixed(0)}',
+                  'R\$ ${analytics.spend.toStringAsFixed(0)} / R\$ ${total.toStringAsFixed(0)}',
                 ),
                 Text(
                   '${(progress * 100).toStringAsFixed(0)}%',
@@ -303,78 +329,13 @@ class _CampaignAnalyticsContent extends StatelessWidget {
               children: [
                 _BudgetStat(
                   label: l10n.remaining,
-                  value: 'R\$ ${budget.remaining.toStringAsFixed(0)}',
+                  value: 'R\$ ${remaining.toStringAsFixed(0)}',
                 ),
                 _BudgetStat(
                   label: l10n.daily_average,
-                  value: 'R\$ ${budget.dailyAverage.toStringAsFixed(0)}',
+                  value: 'R\$ ${dailyAverage.toStringAsFixed(0)}',
                 ),
               ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDailyChart(List<DailyMetrics> daily, AppLocalizations l10n) {
-    if (daily.isEmpty) return const SizedBox.shrink();
-
-    final maxImpressions = daily
-        .map((d) => d.impressions)
-        .reduce((a, b) => a > b ? a : b);
-
-    return Card(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(BarzRadii.md),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              l10n.daily_breakdown,
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            SizedBox(
-              height: 150,
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: daily.take(7).map((d) {
-                  final height = maxImpressions > 0
-                      ? (d.impressions / maxImpressions) * 120
-                      : 0.0;
-                  return Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 2),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Text(
-                            d.impressions.toString(),
-                            style: const TextStyle(fontSize: 10),
-                          ),
-                          const SizedBox(height: 4),
-                          Container(
-                            height: height.clamp(4.0, 120.0),
-                            decoration: BoxDecoration(
-                              color: barzGold,
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            d.date.substring(5),
-                            style: const TextStyle(fontSize: 9),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ),
             ),
           ],
         ),
