@@ -334,3 +334,103 @@ class HealthRoutes:
             version=DPE_VERSION,
             gateways=gateway_status,
         ), 200
+
+
+class WebhookRoutes:
+    
+    @staticmethod
+    async def process_gateway_webhook(gateway_name: str, payload_bytes: bytes, headers: dict) -> tuple[Dict[str, Any] | ErrorResponse, int]:
+        ctx = RequestContext.get_current()
+        request_id = ctx.request_id if ctx else str(uuid.uuid4())
+        
+        import httpx
+        import os
+        from ..core.webhooks import WebhookHandler, WebhookVerificationError
+        
+        try:
+            stripe_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
+            pagarme_secret = os.getenv("PAGARME_WEBHOOK_SECRET") or os.getenv("PAGARME_USERNAME")
+            paypal_secret = os.getenv("PAYPAL_WEBHOOK_SECRET")
+            
+            handler = WebhookHandler(
+                stripe_secret=stripe_secret,
+                pagarme_secret=pagarme_secret,
+                paypal_secret=paypal_secret,
+            )
+            
+            # Verify and parse the payload using core webhooks implementation
+            webhook_payload = handler.handle(payload_bytes, headers, gateway=gateway_name)
+            
+            logger.info(f"[{request_id}] Received valid webhook for {gateway_name}: {webhook_payload.event_type}")
+            
+            # Determine normalized status based on the gateway's event
+            normalized_status = "unknown"
+            if webhook_payload.event_type in ["charge.paid", "order.paid"]:
+                normalized_status = "succeeded"
+            elif webhook_payload.event_type in ["charge.payment_failed", "order.payment_failed", "charge.failed"]:
+                normalized_status = "failed"
+            elif webhook_payload.event_type in ["charge.refunded"]:
+                normalized_status = "refunded"
+            else:
+                return {"status": "ignored", "reason": f"unhandled_event: {webhook_payload.event_type}"}, 200
+
+            # Map the parsed webhook fields
+            data = webhook_payload.data
+            
+            # Barz-Backend needs 'payment_id' and 'order_id'
+            payment_id = webhook_payload.event_id
+            order_id = ""
+            amount_cents = data.get("amount", 0)
+            
+            from ..api.schemas import DpeBackendWebhookPayload
+            
+            # Forward to Barz-Backend
+            backend_url = os.getenv("BARZ_BACKEND_URL", "http://localhost:8000")
+            backend_secret = os.getenv("DPE_SERVICE_SECRET")
+            
+            if gateway_name == "stone":
+                order_id = data.get("code") or data.get("order", {}).get("code") or ""
+                # PagarMe payload data contains the charge or order id, webhook_payload.event_id is just the webhook ID
+                payment_id = data.get("id") or payment_id
+            
+            out_payload = DpeBackendWebhookPayload(
+                event=webhook_payload.event_type,
+                payment_id=payment_id or "",
+                order_id=order_id,
+                status=normalized_status,
+                amount_cents=amount_cents,
+                currency="BRL",
+                gateway=gateway_name,
+                created_at=webhook_payload.timestamp,
+            )
+            
+            async with httpx.AsyncClient() as client:
+                resp = await client.post(
+                    f"{backend_url}/payments/webhook",
+                    json=out_payload.model_dump(mode="json"),
+                    headers={
+                        "X-Service-Auth": backend_secret or "",
+                        "X-Request-ID": request_id,
+                    },
+                    timeout=10.0,
+                )
+                resp.raise_for_status()
+                
+            logger.info(f"[{request_id}] Successfully forwarded {gateway_name} webhook to Barz-Backend")
+            return {"status": "processed"}, 200
+            
+        except WebhookVerificationError as e:
+            logger.warning(f"[{request_id}] Webhook signature verification failed: {e.code}")
+            return ErrorResponse(
+                error_code="UNAUTHORIZED",
+                message="Invalid webhook signature",
+                request_id=request_id,
+            ), 401
+            
+        except Exception as e:
+            logger.exception(f"[{request_id}] Webhook processing failed: {e}")
+            return ErrorResponse(
+                error_code="INTERNAL_ERROR",
+                message=str(e),
+                request_id=request_id,
+            ), 500

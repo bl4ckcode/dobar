@@ -124,3 +124,14 @@ class HealthResponse(BaseModel):
     version: str
     gateways: Dict[str, str]
     timestamp: Optional[datetime] = None
+
+
+class DpeBackendWebhookPayload(BaseModel):
+    event: str
+    payment_id: str
+    order_id: str
+    status: str
+    amount_cents: Optional[int] = None
+    currency: Optional[str] = None
+    gateway: Optional[str] = None
+    created_at: Optional[datetime] = None

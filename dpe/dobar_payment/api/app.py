@@ -123,7 +123,10 @@ def create_app(
         authenticated = True
         service_name = None
         
-        if enable_auth and request.url.path not in ["/health", "/docs", "/redoc", "/openapi.json"]:
+        bypass_paths = ["/health", "/docs", "/redoc", "/openapi.json"]
+        is_webhook = request.url.path.startswith("/webhooks/")
+        
+        if enable_auth and request.url.path not in bypass_paths and not is_webhook:
             authenticated, service_name = verify_service_auth(headers)
             if not authenticated:
                 return JSONResponse(
@@ -195,6 +198,23 @@ def create_app(
         response, status_code = await PixRoutes.generate_brcode(request)
         if status_code != 200:
             raise HTTPException(status_code=status_code, detail=response.model_dump())
+        return response
+    
+    @app.post(
+        "/webhooks/{gateway}",
+        responses={401: {"model": ErrorResponse}, 500: {"model": ErrorResponse}},
+    )
+    async def handle_webhook(gateway: str, request: Request):
+        from .routes import WebhookRoutes
+        payload = await request.body()
+        headers = dict(request.headers)
+        
+        response, status_code = await WebhookRoutes.process_gateway_webhook(gateway, payload, headers)
+        if status_code != 200:
+            if isinstance(response, ErrorResponse):
+                raise HTTPException(status_code=status_code, detail=response.model_dump())
+            else:
+                raise HTTPException(status_code=status_code, detail=response)
         return response
     
     @app.get("/health", response_model=HealthResponse)
