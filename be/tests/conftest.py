@@ -72,6 +72,7 @@ with patch("firebase_admin.initialize_app", return_value=mock_firebase_app), \
     from app.auth.rbac_models import UserProfile, BarStaff, StaffInvitation
     from app.auth.mfa_models import MFASecret
     from app.auth.recovery_models import RecoveryToken
+    from app.payment.models import PaymentCard
     import fakeredis.aioredis
 
 # Test database URL (use SQLite for testing)

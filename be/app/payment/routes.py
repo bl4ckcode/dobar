@@ -1,22 +1,30 @@
-from fastapi import APIRouter, Depends, Query, Header
+from fastapi import APIRouter, Depends, Query, Header, Request, HTTPException
 from typing import Optional
 from datetime import datetime, timedelta
 import json
 import uuid
+import sqlite3
+import sqlalchemy.exc
 
 from app.errors import APIError, map_gateway_error
 from app.auth.dependencies import get_current_user
 from app.auth.auth_models import User
 from app.database import database
+from app.bars_and_restaurants.models.relational_models import Order as OrderModel
+from app.bars_and_restaurants.models.cart_models import OrderStatusHistory as OrderStatusHistoryModel
+from app.order_queue import OrderQueue
 from .schemas import (
     PaymentRequest, RefundRequest,
     DPEChargeRequest, DPEChargeResponse,
     DPERefundRequest, DPERefundResponse,
     DPEPaymentStatusResponse,
     PixGenerateRequest, PixGenerateResponse,
+    CardCreate, CardResponse,
+    DpeWebhookPayload
 )
-from .models import IdempotencyKey
+from .models import IdempotencyKey, PaymentCard
 from . import get_payment_gateway, PaymentGateway, get_dpe_client, DPEClient
+from .dpe_client import DPE_SERVICE_SECRET
 
 payment_router = APIRouter(prefix="/payments", tags=["Payments"])
 
@@ -339,3 +347,157 @@ async def generate_pix_code(
         expires_at=result["expires_at"],
         status=result.get("pix_status", "pending"),
     )
+
+
+cards_router = APIRouter(prefix="/me/cards", tags=["Payment Cards"])
+
+@payment_router.post("/webhook", status_code=200)
+async def dpe_webhook(
+    payload: DpeWebhookPayload,
+    request: Request
+):
+    """Handle async payment confirmations from DPE."""
+    auth_header = request.headers.get("X-Service-Auth")
+    if not auth_header or auth_header != DPE_SERVICE_SECRET:
+        raise HTTPException(status_code=401, detail="Unauthorized webhook")
+    
+    order_id = int(payload.order_id)
+    
+    # Start transaction
+    transaction = await database.transaction()
+    
+    try:
+        # Fetch order
+        get_query = OrderModel.__table__.select().where(OrderModel.id == order_id)
+        db_order = await database.fetch_one(get_query)
+        
+        if not db_order:
+            await transaction.rollback()
+            return {"status": "ignored", "reason": "order_not_found"}
+        
+        # Only process if payment_status isn't already paid/failed
+        if db_order["payment_status"] in ["paid", "failed"]:
+            await transaction.rollback()
+            return {"status": "ignored", "reason": "already_processed"}
+            
+        new_payment_status = "paid" if payload.status == "succeeded" else "failed"
+        new_order_status = "confirmed" if new_payment_status == "paid" else db_order["status"]
+        
+        # Update order
+        update_query = (
+            OrderModel.__table__
+            .update()
+            .where(OrderModel.id == order_id)
+            .values(
+                payment_status=new_payment_status,
+                payment_id=payload.payment_id,
+                status=new_order_status,
+                updated_at=datetime.utcnow()
+            )
+        )
+        await database.execute(update_query)
+        
+        if new_order_status != db_order["status"]:
+            history_data = {
+                "order_id": order_id,
+                "status": new_order_status,
+                "updated_by_user_id": db_order["user_id"],
+                "notes": f"System updated status via payment webhook ({payload.event})"
+            }
+            await database.execute(
+                OrderStatusHistoryModel.__table__.insert().values(**history_data)
+            )
+            
+        await transaction.commit()
+        
+        # If status changed, publish to WebSocket
+        if new_order_status != db_order["status"]:
+            await OrderQueue.publish_status_change(
+                order_id=order_id,
+                bar_id=db_order["bar_id"],
+                old_status=db_order["status"],
+                new_status=new_order_status
+            )
+            
+        return {"status": "processed", "payment_status": new_payment_status}
+        
+    except Exception as e:
+        await transaction.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+
+@cards_router.post("", response_model=CardResponse, status_code=201)
+async def add_card(
+    card_in: CardCreate,
+    current_user: User = Depends(get_current_user)
+):
+    """Add a new tokenized credit card for the current user."""
+    # Check if this card token is already added by the user
+    query = PaymentCard.__table__.select().where(
+        PaymentCard.user_id == current_user.id,
+        PaymentCard.card_token == card_in.card_token
+    )
+    existing = await database.fetch_one(query)
+    if existing:
+        raise APIError.conflict("Card already added")
+
+    # If is_default, unset other default cards
+    if card_in.is_default:
+        await database.execute(
+            PaymentCard.__table__.update().where(
+                PaymentCard.user_id == current_user.id
+            ).values(is_default=0)
+        )
+
+    insert_query = PaymentCard.__table__.insert().values(
+        user_id=current_user.id,
+        card_token=card_in.card_token,
+        last_four=card_in.last_four[-4:],
+        brand=card_in.brand,
+        exp_month=card_in.exp_month,
+        exp_year=card_in.exp_year,
+        is_default=1 if card_in.is_default else 0,
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow()
+    )
+    try:
+        card_id = await database.execute(insert_query)
+    except (sqlite3.IntegrityError, sqlalchemy.exc.IntegrityError):
+        raise APIError.conflict("Card token already added")
+    
+    # Fetch and return the created card
+    get_query = PaymentCard.__table__.select().where(PaymentCard.id == card_id)
+    new_card = await database.fetch_one(get_query)
+    return {**new_card, "is_default": bool(new_card["is_default"])}
+
+
+@cards_router.get("", response_model=list[CardResponse])
+async def list_cards(
+    current_user: User = Depends(get_current_user)
+):
+    """List all saved credit cards for the current user."""
+    query = PaymentCard.__table__.select().where(
+        PaymentCard.user_id == current_user.id
+    ).order_by(PaymentCard.created_at.desc())
+    
+    cards = await database.fetch_all(query)
+    return [{**card, "is_default": bool(card["is_default"])} for card in cards]
+
+
+@cards_router.delete("/{card_id}", status_code=204)
+async def delete_card(
+    card_id: int,
+    current_user: User = Depends(get_current_user)
+):
+    """Delete a saved credit card."""
+    query = PaymentCard.__table__.select().where(
+        PaymentCard.id == card_id,
+        PaymentCard.user_id == current_user.id
+    )
+    existing = await database.fetch_one(query)
+    if not existing:
+        raise APIError.not_found("Card not found")
+        
+    delete_query = PaymentCard.__table__.delete().where(PaymentCard.id == card_id)
+    await database.execute(delete_query)

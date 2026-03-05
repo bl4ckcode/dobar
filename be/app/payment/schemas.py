@@ -134,3 +134,38 @@ class PixGenerateResponse(BaseModel):
     expires_at: datetime
     status: str = "pending"
 
+
+class CardCreate(BaseModel):
+    card_token: str
+    last_four: str = Field(..., min_length=4, max_length=4)
+    brand: str
+    exp_month: int = Field(..., ge=1, le=12)
+    exp_year: int = Field(..., ge=2024)
+    is_default: bool = False
+
+
+class CardResponse(BaseModel):
+    id: int
+    user_id: int
+    card_token: str
+    last_four: str
+    brand: str
+    exp_month: int
+    exp_year: int
+    is_default: bool
+    created_at: datetime
+    updated_at: datetime | None = None
+    
+    class Config:
+        from_attributes = True
+
+
+class DpeWebhookPayload(BaseModel):
+    event: str
+    payment_id: str
+    order_id: str
+    status: str
+    amount_cents: Optional[int] = None
+    currency: Optional[str] = None
+    gateway: Optional[str] = None
+    created_at: Optional[datetime] = None
