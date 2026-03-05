@@ -55,8 +55,7 @@ def verify_service_auth(headers: dict) -> tuple[bool, Optional[str]]:
     
     expected_secret = os.environ.get("DPE_SERVICE_SECRET")
     if not expected_secret:
-        logger.warning("DPE_SERVICE_SECRET not configured, auth disabled")
-        return True, "unknown"
+        return False, None
     
     if auth_header == expected_secret:
         return True, "barz-backend"

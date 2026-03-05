@@ -106,10 +106,26 @@ class TestAPIMiddleware:
         assert middleware.error_code_to_http_status("UNKNOWN_CODE") == 500
     
     def test_service_auth_missing(self):
+        if "DPE_SERVICE_SECRET" in os.environ:
+            del os.environ["DPE_SERVICE_SECRET"]
         authenticated, service = middleware.verify_service_auth({})
         assert authenticated is False
         assert service is None
     
+    def test_service_auth_not_configured(self):
+        if "DPE_SERVICE_SECRET" in os.environ:
+            del os.environ["DPE_SERVICE_SECRET"]
+        authenticated, service = middleware.verify_service_auth({"x-service-auth": "any_secret"})
+        assert authenticated is False
+        assert service is None
+        
+    def test_service_auth_invalid(self):
+        os.environ["DPE_SERVICE_SECRET"] = "test_secret"
+        authenticated, service = middleware.verify_service_auth({"x-service-auth": "wrong_secret"})
+        assert authenticated is False
+        assert service is None
+        del os.environ["DPE_SERVICE_SECRET"]
+
     def test_service_auth_valid(self):
         os.environ["DPE_SERVICE_SECRET"] = "test_secret"
         
