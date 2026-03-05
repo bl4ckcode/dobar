@@ -240,6 +240,29 @@ Response 200:
 }
 ```
 
+### POST /payments/webhook (DPE → BARZ-BACKEND)
+
+DPE listens for external gateways at `POST /webhooks/{gateway}` automatically, validates signatures, and natively standardizes and forwards them directly to the backend here.
+
+```json
+Request (from DPE, protected by X-Service-Auth):
+{
+  "event": "charge.paid",
+  "payment_id": "ch_XXX",
+  "order_id": "order_XXXXX",
+  "status": "succeeded",
+  "amount_cents": 4550,
+  "currency": "BRL",
+  "gateway": "stone",
+  "created_at": "2026-03-05T00:00:00Z"
+}
+
+Response 200:
+{
+  "status": "processed"
+}
+```
+
 ### POST /pix/generate (Brazil only)
 
 ```json
@@ -396,27 +419,29 @@ DPE automatically routes payments to the appropriate gateway based on country:
 
 ## DEPLOYMENT PHASES
 
-### Phase 1: Current (Testing Complete)
+### Phase 1: Integration Complete ✅
 
 - [x] DPE API layer implemented
 - [x] Gateway routing logic
 - [x] Request/response contracts defined
 - [x] BE DPE client implemented (dpe_client.py)
 - [x] BE v2 payment endpoints ready
-- [x] PIX endpoint ready
+- [x] PIX endpoint ready and working end-to-end
 - [x] Deploy DPE as separate service (tested locally)
 - [x] DPE auto-loads gateways from environment variables
 - [x] Stone & Stripe gateways registered and healthy
 - [x] Full HTTP flow tested: BE → DPE → Stone gateway
-- [ ] Add customer data to DPE schema (required for PagarMe)
-- [ ] Fix PIX BR Code generation in DPE
+- [x] Added customer_info to BE schemas and DPE client
+- [x] PIX BR Code generation working
+- [x] PagarMe sandbox configuration (detects sk_test_ prefix)
 - [ ] Configure shared secret for BE ↔ DPE auth
+- [ ] Deploy to production (Fly.io)
 
-### Phase 2: Integration
+### Phase 2: Integration ✅
 
-- [ ] BE calls DPE for all payments
-- [ ] Wallet stays in BE
-- [ ] Webhooks for async payment updates
+- [x] BE calls DPE for all payments
+- [x] Wallet stays in BE
+- [x] Webhooks for async payment updates (`POST /payments/webhook`)
 
 ### Phase 3: Multi-Product
 
@@ -523,6 +548,11 @@ All payment operations logged with:
 
 | Date | Change |
 |------|--------|
+| 2026-01-18 | 📁 Moved all .md docs to ./docs folder (except README.md) for better organization |
+| 2026-01-18 | ✅ DPE sandbox environment working - auto-detects sk_test_ vs sk_live_ prefix |
+| 2026-01-18 | 🎉 **END-TO-END INTEGRATION COMPLETE** - PIX working, full BE→DPE→Gateway flow tested |
+| 2026-01-18 | ✅ Added CustomerInfo to BE schemas (name, email, document, phone) |
+| 2026-01-18 | ✅ Updated dpe_client.py and routes.py to pass customer_info to DPE |
 | 2026-01-18 | ✅ Clarified PagarMe env: Uses API key prefix (sk_test_ vs sk_live_), not env var |
 | 2026-01-18 | ✅ Added 4 new tests for PagarMe client configuration - 193 tests passing |
 | 2026-01-18 | ✅ Fixed PIX BR Code parameter names (key, receiver_name, receiver_city, txid) |
