@@ -14,6 +14,16 @@ abstract class PaymentDatasource {
   );
   Future<PaymentMethod> setDefaultPaymentMethod(int methodId);
   Future<bool> removePaymentMethod(int methodId);
+  Future<List<PaymentMethod>> getSavedCards();
+  Future<PaymentMethod> addSavedCard({
+    required String cardToken,
+    required String lastFour,
+    required String brand,
+    required int expMonth,
+    required int expYear,
+    bool isDefault = false,
+  });
+  Future<bool> deleteSavedCard(int cardId);
   Future<Transaction> processPayment(
     PaymentRequest request, {
     String? idempotencyKey,
@@ -105,6 +115,68 @@ class PaymentNetworkDatasource implements PaymentDatasource {
     } on DioException catch (e) {
       throw ServerException(
         e.response?.data?['detail'] ?? 'Failed to remove payment method',
+        e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<List<PaymentMethod>> getSavedCards() async {
+    try {
+      final response = await dio.get(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.savedCards}',
+      );
+      return (response.data as List)
+          .map((json) => PaymentMethod.fromJson(json))
+          .toList();
+    } on DioException catch (e) {
+      throw ServerException(
+        e.response?.data?['detail'] ?? 'Failed to get saved cards',
+        e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<PaymentMethod> addSavedCard({
+    required String cardToken,
+    required String lastFour,
+    required String brand,
+    required int expMonth,
+    required int expYear,
+    bool isDefault = false,
+  }) async {
+    try {
+      final response = await dio.post(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.savedCards}',
+        data: {
+          'card_token': cardToken,
+          'last_four': lastFour,
+          'brand': brand,
+          'exp_month': expMonth,
+          'exp_year': expYear,
+          'is_default': isDefault,
+        },
+      );
+      return PaymentMethod.fromJson(response.data);
+    } on DioException catch (e) {
+      throw ServerException(
+        e.response?.data?['detail'] ?? 'Failed to add card',
+        e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<bool> deleteSavedCard(int cardId) async {
+    try {
+      await dio.delete(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.savedCard(cardId)}',
+      );
+      return true;
+    } on DioException catch (e) {
+      throw ServerException(
+        e.response?.data?['detail'] ?? 'Failed to delete card',
         e.response?.statusCode,
       );
     }

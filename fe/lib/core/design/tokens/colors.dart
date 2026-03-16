@@ -41,6 +41,20 @@ const Color barzDarkLight = Color(
   0xFF121212,
 ); // Elevated surfaces in dark mode (Matte)
 const Color barzDarkMuted = Color(0xFF2C2C2C); // Secondary text, icons, borders
+const Color barzDarkCard = Color(
+  0xFF1A1A1A,
+); // Dialog/card backgrounds (between barzDark and barzDarkLight)
+const Color barzDarkCardLight = Color(
+  0xFF1E1E1E,
+); // Slightly lighter card surface
+
+// Gold gradient pair used across Sprint 3 CTAs
+const Color barzGoldGradientStart = Color(0xFFFFDF73);
+const Color barzGoldGradientEnd = Color(0xFFFFC000);
+
+// PIX / payment semantic greens
+const Color pixGreen = Color(0xFF00B37E);
+const Color pixGreenDark = Color(0xFF00875A);
 
 // =============================================================================
 // SEMANTIC COLORS - Meaning-driven

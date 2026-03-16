@@ -12,6 +12,7 @@ import '../../domain/models/ad_campaign.dart';
 import '../widgets/vip_upsell_banner.dart';
 import '../widgets/campaign_card.dart';
 import '../widgets/campaign_analytics_sheet.dart';
+import '../widgets/create_campaign_sheet.dart';
 
 /// Campaign management page for bar owners.
 ///
@@ -132,11 +133,7 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
                           const SizedBox(height: 32),
 
                           // VIP Banner
-                          VipUpsellBanner(
-                            onUpgrade: () {
-                              // TODO: Handle VIP Upgrade logic
-                            },
-                          ),
+                          VipUpsellBanner(onUpgrade: () {}),
 
                           const SizedBox(height: 32),
 
@@ -166,7 +163,7 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
                     ),
                   ),
 
-                  // Campaign List
+                  // Campaign Grid
                   if (state.campaigns.isEmpty)
                     SliverFillRemaining(
                       hasScrollBody: false,
@@ -175,16 +172,20 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
                   else
                     SliverPadding(
                       padding: const EdgeInsets.symmetric(horizontal: 24),
-                      sliver: SliverList(
+                      sliver: SliverGrid(
+                        gridDelegate:
+                            const SliverGridDelegateWithMaxCrossAxisExtent(
+                              maxCrossAxisExtent: 600,
+                              mainAxisExtent: 205,
+                              crossAxisSpacing: 24,
+                              mainAxisSpacing: 24,
+                            ),
                         delegate: SliverChildBuilderDelegate((context, index) {
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 16),
-                            child: CampaignCard(
-                              campaign: state.campaigns[index],
-                              onAnalytics: () => _showCampaignDetails(
-                                context,
-                                state.campaigns[index],
-                              ),
+                          return CampaignCard(
+                            campaign: state.campaigns[index],
+                            onAnalytics: () => _showCampaignDetails(
+                              context,
+                              state.campaigns[index],
                             ),
                           );
                         }, childCount: state.campaigns.length),
@@ -199,12 +200,8 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
           },
         ),
       ),
-      floatingActionButton: FloatingActionButton(
+      floatingActionButton: _CreateCampaignFab(
         onPressed: () => _showCreateCampaignDialog(context),
-        backgroundColor: barzGold,
-        foregroundColor: barzDark,
-        elevation: 8,
-        child: const Icon(Icons.add, size: 28),
       ),
     );
   }
@@ -294,15 +291,7 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
       return;
     }
 
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: context.dobarColors.background,
-      builder: (ctx) => _CreateCampaignSheet(
-        barId: sessionState.session.activeBar!.barId,
-        bloc: context.read<AdvertisingBloc>(),
-      ),
-    );
+    CreateCampaignSheet.show(context);
   }
 
   void _showCampaignDetails(BuildContext context, AdCampaign campaign) {
@@ -311,169 +300,85 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
   }
 }
 
-class _CreateCampaignSheet extends StatefulWidget {
-  final int barId;
-  final AdvertisingBloc bloc;
+class _CreateCampaignFab extends StatefulWidget {
+  final VoidCallback onPressed;
 
-  const _CreateCampaignSheet({required this.barId, required this.bloc});
+  const _CreateCampaignFab({required this.onPressed});
 
   @override
-  State<_CreateCampaignSheet> createState() => _CreateCampaignSheetState();
+  State<_CreateCampaignFab> createState() => _CreateCampaignFabState();
 }
 
-class _CreateCampaignSheetState extends State<_CreateCampaignSheet> {
-  final _nameController = TextEditingController();
-  final _taglineController = TextEditingController();
-  CampaignType _selectedType = CampaignType.featured;
-  double _budget = 500;
-  bool _isCreating = false;
+class _CreateCampaignFabState extends State<_CreateCampaignFab>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller;
+  late final Animation<double> _scaleAnimation;
+  bool _isHovered = false;
+  bool _isPressed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _scaleAnimation = CurvedAnimation(
+      parent: _controller,
+      curve: Curves.elasticOut,
+    );
+    Future.delayed(const Duration(milliseconds: 600), () {
+      if (mounted) _controller.forward();
+    });
+  }
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _taglineController.dispose();
+    _controller.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: EdgeInsets.only(
-        left: 24,
-        right: 24,
-        top: 24,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
+    return ScaleTransition(
+      scale: _scaleAnimation,
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        child: GestureDetector(
+          onTapDown: (_) => setState(() => _isPressed = true),
+          onTapUp: (_) => setState(() => _isPressed = false),
+          onTapCancel: () => setState(() => _isPressed = false),
+          onTap: widget.onPressed,
+          child: AnimatedScale(
+            scale: _isPressed ? 0.95 : (_isHovered ? 1.08 : 1.0),
+            duration: const Duration(milliseconds: 150),
+            curve: Curves.easeOut,
             child: Container(
-              width: 40,
-              height: 4,
+              width: 56,
+              height: 56,
               decoration: BoxDecoration(
-                color: textTertiary,
-                borderRadius: BorderRadius.circular(2),
+                shape: BoxShape.circle,
+                gradient: const LinearGradient(
+                  colors: [barzGoldGradientStart, barzGoldGradientEnd],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(
+                      0xFFFFD700,
+                    ).withValues(alpha: _isHovered ? 0.6 : 0.3),
+                    blurRadius: _isHovered ? 24 : 16,
+                    spreadRadius: _isHovered ? 4 : 0,
+                  ),
+                ],
               ),
+              child: const Icon(Icons.add, color: Colors.black, size: 28),
             ),
           ),
-          const SizedBox(height: 24),
-          const Text(
-            'Nova Campanha',
-            style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 24),
-          TextField(
-            controller: _nameController,
-            decoration: const InputDecoration(
-              labelText: 'Nome da campanha',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _taglineController,
-            decoration: const InputDecoration(
-              labelText: 'Tagline (opcional)',
-              hintText: 'Ex: Os melhores drinks da cidade!',
-              border: OutlineInputBorder(),
-            ),
-            maxLength: 60,
-          ),
-          const SizedBox(height: 16),
-          const Text(
-            'Tipo de campanha',
-            style: TextStyle(fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 8,
-            children: [
-              _buildTypeChip(CampaignType.featured, 'Destaque', Icons.star),
-              _buildTypeChip(CampaignType.search, 'Busca', Icons.search),
-              _buildTypeChip(CampaignType.map, 'Mapa', Icons.map),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Orçamento: R\$ ${_budget.toInt()}',
-            style: const TextStyle(fontWeight: FontWeight.w600),
-          ),
-          Slider(
-            value: _budget,
-            min: 100,
-            max: 5000,
-            divisions: 49,
-            activeColor: barzGold,
-            onChanged: (v) => setState(() => _budget = v),
-          ),
-          const SizedBox(height: 24),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: _isCreating ? null : _createCampaign,
-              style: FilledButton.styleFrom(
-                backgroundColor: barzDark,
-                foregroundColor: barzGold,
-                padding: const EdgeInsets.all(16),
-              ),
-              child: _isCreating
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: barzGold,
-                      ),
-                    )
-                  : const Text('Criar Campanha'),
-            ),
-          ),
-        ],
+        ),
       ),
-    );
-  }
-
-  Widget _buildTypeChip(CampaignType value, String label, IconData icon) {
-    final isSelected = _selectedType == value;
-    return ChoiceChip(
-      label: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [Icon(icon, size: 16), const SizedBox(width: 4), Text(label)],
-      ),
-      selected: isSelected,
-      selectedColor: barzGold,
-      onSelected: (_) => setState(() => _selectedType = value),
-    );
-  }
-
-  void _createCampaign() {
-    if (_nameController.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Digite o nome da campanha')),
-      );
-      return;
-    }
-
-    setState(() => _isCreating = true);
-
-    final request = CreateCampaignRequest(
-      barId: widget.barId,
-      name: _nameController.text.trim(),
-      campaignType: _selectedType,
-      budgetType: BudgetType.cash,
-      budgetAmount: _budget,
-      startDate: DateTime.now(),
-      creative: _taglineController.text.isNotEmpty
-          ? CampaignCreative(tagline: _taglineController.text.trim())
-          : null,
-    );
-
-    widget.bloc.add(AdvertisingEvent.createCampaign(request: request));
-    Navigator.pop(context);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Campanha "${_nameController.text}" criada!')),
     );
   }
 }

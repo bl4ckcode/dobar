@@ -58,6 +58,50 @@ class PaymentRepositoryImpl implements PaymentRepository {
   }
 
   @override
+  Future<Either<Failure, List<PaymentMethod>>> getSavedCards() async {
+    try {
+      final result = await _datasource.getSavedCards();
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message, e.statusCode));
+    }
+  }
+
+  @override
+  Future<Either<Failure, PaymentMethod>> addSavedCard({
+    required String cardToken,
+    required String lastFour,
+    required String brand,
+    required int expMonth,
+    required int expYear,
+    bool isDefault = false,
+  }) async {
+    try {
+      final result = await _datasource.addSavedCard(
+        cardToken: cardToken,
+        lastFour: lastFour,
+        brand: brand,
+        expMonth: expMonth,
+        expYear: expYear,
+        isDefault: isDefault,
+      );
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message, e.statusCode));
+    }
+  }
+
+  @override
+  Future<Either<Failure, bool>> deleteSavedCard(int cardId) async {
+    try {
+      final result = await _datasource.deleteSavedCard(cardId);
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message, e.statusCode));
+    }
+  }
+
+  @override
   Future<Either<Failure, Transaction>> processPayment(
     PaymentRequest request,
   ) async {

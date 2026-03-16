@@ -9,6 +9,7 @@ part 'payment_state.freezed.dart';
 abstract class PaymentState with _$PaymentState {
   const factory PaymentState({
     @Default([]) List<PaymentMethod> paymentMethods,
+    @Default([]) List<PaymentMethod> savedCards,
     @Default([]) List<Transaction> transactions,
     @Default(false) bool isLoading,
     @Default(false) bool isProcessing,

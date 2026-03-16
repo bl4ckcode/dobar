@@ -20,6 +20,9 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     on<TopUpWallet>(_onTopUpWallet);
     on<ClearPixPayment>(_onClearPixPayment);
     on<ClearPaymentError>(_onClearError);
+    on<LoadSavedCards>(_onLoadSavedCards);
+    on<AddSavedCard>(_onAddSavedCard);
+    on<DeleteSavedCard>(_onDeleteSavedCard);
   }
 
   Future<void> _onLoadPaymentMethods(
@@ -213,5 +216,65 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
 
   void _onClearError(ClearPaymentError event, Emitter<PaymentState> emit) {
     emit(state.copyWith(error: null));
+  }
+
+  Future<void> _onLoadSavedCards(
+    LoadSavedCards event,
+    Emitter<PaymentState> emit,
+  ) async {
+    emit(state.copyWith(isLoading: true, error: null));
+    final result = await _usecase.getSavedCards();
+    result.fold(
+      (failure) =>
+          emit(state.copyWith(isLoading: false, error: failure.errorMessage)),
+      (cards) => emit(state.copyWith(isLoading: false, savedCards: cards)),
+    );
+  }
+
+  Future<void> _onAddSavedCard(
+    AddSavedCard event,
+    Emitter<PaymentState> emit,
+  ) async {
+    emit(state.copyWith(isProcessing: true, error: null));
+    final result = await _usecase.addSavedCard(
+      cardToken: event.cardToken,
+      lastFour: event.lastFour,
+      brand: event.brand,
+      expMonth: event.expMonth,
+      expYear: event.expYear,
+      isDefault: event.isDefault,
+    );
+    result.fold(
+      (failure) => emit(
+        state.copyWith(isProcessing: false, error: failure.errorMessage),
+      ),
+      (card) => emit(
+        state.copyWith(
+          isProcessing: false,
+          savedCards: [...state.savedCards, card],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _onDeleteSavedCard(
+    DeleteSavedCard event,
+    Emitter<PaymentState> emit,
+  ) async {
+    emit(state.copyWith(isProcessing: true, error: null));
+    final result = await _usecase.deleteSavedCard(event.cardId);
+    result.fold(
+      (failure) => emit(
+        state.copyWith(isProcessing: false, error: failure.errorMessage),
+      ),
+      (_) => emit(
+        state.copyWith(
+          isProcessing: false,
+          savedCards: state.savedCards
+              .where((c) => c.id != event.cardId)
+              .toList(),
+        ),
+      ),
+    );
   }
 }

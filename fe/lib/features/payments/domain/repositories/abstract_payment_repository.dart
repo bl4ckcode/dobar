@@ -12,6 +12,16 @@ abstract class PaymentRepository {
   );
   Future<Either<Failure, PaymentMethod>> setDefaultPaymentMethod(int methodId);
   Future<Either<Failure, bool>> removePaymentMethod(int methodId);
+  Future<Either<Failure, List<PaymentMethod>>> getSavedCards();
+  Future<Either<Failure, PaymentMethod>> addSavedCard({
+    required String cardToken,
+    required String lastFour,
+    required String brand,
+    required int expMonth,
+    required int expYear,
+    bool isDefault = false,
+  });
+  Future<Either<Failure, bool>> deleteSavedCard(int cardId);
   Future<Either<Failure, Transaction>> processPayment(PaymentRequest request);
   Future<Either<Failure, PixPaymentResponse>> initiatePixPayment(
     PaymentRequest request,

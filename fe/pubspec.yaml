@@ -87,8 +87,8 @@ dependencies:
   map_launcher: ^4.4.3              # Launch external map apps
 
   # --- FIREBASE (CRITICAL - UPDATED) ---
-  firebase_core: ^4.3.0             # Latest stable
-  firebase_auth: ^6.1.3             # Latest with security fixes
+  firebase_core: ^4.5.0             # Latest stable
+  firebase_auth: ^6.2.0             # Latest with security fixes
 
   # --- SOCIAL LOGIN ---
   google_sign_in: ^7.2.0            # Updated
@@ -118,6 +118,8 @@ dependencies:
   rxdart: ^0.28.0
   local_auth: ^3.0.1
   url_launcher: ^6.3.2
+  lucide_icons: ^0.257.0
+  qr_flutter: ^4.1.0
 
 dev_dependencies:
   flutter_test:

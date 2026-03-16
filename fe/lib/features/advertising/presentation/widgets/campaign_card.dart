@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/features/advertising/domain/models/models.dart';
 import 'package:intl/intl.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 
 class CampaignCard extends StatefulWidget {
   final AdCampaign campaign;
@@ -17,8 +18,26 @@ class CampaignCard extends StatefulWidget {
   State<CampaignCard> createState() => _CampaignCardState();
 }
 
-class _CampaignCardState extends State<CampaignCard> {
+class _CampaignCardState extends State<CampaignCard>
+    with SingleTickerProviderStateMixin {
   bool _isHovered = false;
+  bool _isAnalyticsHovered = false;
+  late final AnimationController _pulseController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
 
   String _formatNumber(int number) {
     if (number >= 1000000) {
@@ -146,12 +165,15 @@ class _CampaignCardState extends State<CampaignCard> {
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       if (isActive) ...[
-                                        Container(
-                                          width: 6,
-                                          height: 6,
-                                          decoration: BoxDecoration(
-                                            color: statusColor,
-                                            shape: BoxShape.circle,
+                                        FadeTransition(
+                                          opacity: _pulseController,
+                                          child: Container(
+                                            width: 6,
+                                            height: 6,
+                                            decoration: BoxDecoration(
+                                              color: statusColor,
+                                              shape: BoxShape.circle,
+                                            ),
                                           ),
                                         ),
                                         const SizedBox(width: 6),
@@ -174,18 +196,32 @@ class _CampaignCardState extends State<CampaignCard> {
                           AnimatedOpacity(
                             duration: const Duration(milliseconds: 200),
                             opacity: _isHovered ? 1.0 : 0.0,
-                            child: Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: barzGold.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(
-                                  BarzRadii.sm,
+                            child: MouseRegion(
+                              onEnter: (_) =>
+                                  setState(() => _isAnalyticsHovered = true),
+                              onExit: (_) =>
+                                  setState(() => _isAnalyticsHovered = false),
+                              child: GestureDetector(
+                                onTap: widget.onAnalytics,
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: _isAnalyticsHovered
+                                        ? barzGold.withValues(alpha: 0.1)
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(
+                                      BarzRadii.sm,
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    LucideIcons.barChart3,
+                                    size: 16,
+                                    color: _isAnalyticsHovered
+                                        ? barzGold
+                                        : dobar.labelSecondary,
+                                  ),
                                 ),
-                              ),
-                              child: const Icon(
-                                Icons.bar_chart,
-                                size: 16,
-                                color: barzGold,
                               ),
                             ),
                           ),
@@ -195,23 +231,24 @@ class _CampaignCardState extends State<CampaignCard> {
                       const SizedBox(height: 20),
 
                       // Metrics Grid
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Wrap(
+                        spacing: 24,
+                        runSpacing: 16,
                         children: [
                           _buildMetricColumn(
-                            icon: Icons.visibility,
+                            icon: LucideIcons.eye,
                             label: 'IMPRESSIONS',
                             value: _formatNumber(widget.campaign.impressions),
                             dobar: dobar,
                           ),
                           _buildMetricColumn(
-                            icon: Icons.ads_click,
+                            icon: LucideIcons.mousePointerClick,
                             label: 'CLICKS',
                             value: _formatNumber(widget.campaign.clicks),
                             dobar: dobar,
                           ),
                           _buildMetricColumn(
-                            icon: Icons.attach_money,
+                            icon: LucideIcons.dollarSign,
                             label: 'BUDGET',
                             value: currencyFormat.format(budgetTotal),
                             dobar: dobar,

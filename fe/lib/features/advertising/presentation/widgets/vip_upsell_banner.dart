@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:barz/core/design/design_system.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 
 class VipUpsellBanner extends StatefulWidget {
   final VoidCallback onUpgrade;
@@ -13,7 +14,9 @@ class VipUpsellBanner extends StatefulWidget {
 class _VipUpsellBannerState extends State<VipUpsellBanner>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  late Animation<double> _scaleAnimation;
+  late Animation<double> _shimmerAnimation;
+  bool _isCtaHovered = false;
+  bool _isCtaPressed = false;
 
   @override
   void initState() {
@@ -23,10 +26,10 @@ class _VipUpsellBannerState extends State<VipUpsellBanner>
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
 
-    _scaleAnimation = Tween<double>(
-      begin: 1.0,
-      end: 1.05,
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+    _shimmerAnimation = Tween<double>(
+      begin: -1.0,
+      end: 2.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.linear));
   }
 
   @override
@@ -37,7 +40,6 @@ class _VipUpsellBannerState extends State<VipUpsellBanner>
 
   @override
   Widget build(BuildContext context) {
-    // Equivalent colors from DobarColors
     final dobar = context.dobarColors;
     final isDark = context.isDark;
 
@@ -58,125 +60,168 @@ class _VipUpsellBannerState extends State<VipUpsellBanner>
           end: Alignment.bottomRight,
           colors: [
             dobar.surface,
-            isDark ? const Color(0xFF1E1E1E) : const Color(0xFFF0F0F0),
+            isDark ? barzDarkCardLight : surfaceLight,
             dobar.surface,
           ],
         ),
       ),
       child: Stack(
         children: [
-          // Subtle Grid Pattern Simulation
           Positioned.fill(
             child: Opacity(
               opacity: 0.03,
               child: CustomPaint(painter: _GridPainter(color: barzGold)),
             ),
           ),
-          // Content
           Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            padding: const EdgeInsets.symmetric(
+              horizontal: 32.0,
+              vertical: 24.0,
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Icon
-                    ScaleTransition(
-                      scale: _scaleAnimation,
-                      child: Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          color: barzGold.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(BarzRadii.sm),
-                          border: Border.all(
-                            color: barzGold.withValues(alpha: 0.2),
-                          ),
-                        ),
-                        child: const Icon(
-                          Icons.workspace_premium,
-                          color: barzGold,
-                          size: 32,
-                        ),
+                FadeTransition(
+                  opacity: _controller,
+                  child: Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      color: barzGold.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(BarzRadii.md),
+                      border: Border.all(
+                        color: barzGold.withValues(alpha: 0.2),
                       ),
                     ),
-                    const SizedBox(width: 24),
-                    // Text Content
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                    child: const Icon(
+                      LucideIcons.crown,
+                      color: barzGold,
+                      size: 32,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 24),
+                // Text Content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Upgrade to VIP',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: dobar.labelPrimary,
+                          height: 1.2,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Reach more customers, unlock advanced targeting, and dominate your local nightlife scene with premium campaign tools.',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: dobar.labelSecondary,
+                          height: 1.5,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
                         children: [
-                          Text(
-                            'Upgrade to VIP',
-                            style: TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: dobar.labelPrimary,
-                              height: 1.2,
-                            ),
+                          _BenefitBadge(
+                            icon: LucideIcons.zap,
+                            label: 'Priority delivery',
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Reach more customers, unlock advanced targeting, and dominate your local nightlife scene with premium campaign tools.',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: dobar.labelSecondary,
-                              height: 1.5,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          // Badges
-                          Row(
-                            children: [
-                              _BenefitBadge(
-                                icon: Icons.bolt,
-                                label: 'Priority delivery',
-                              ),
-                              const SizedBox(width: 12),
-                              _BenefitBadge(
-                                icon: Icons.track_changes,
-                                label: 'Advanced targeting',
-                              ),
-                            ],
+                          const SizedBox(width: 12),
+                          _BenefitBadge(
+                            icon: LucideIcons.target,
+                            label: 'Advanced targeting',
                           ),
                         ],
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-                const SizedBox(height: 24),
-                // CTA Button aligned right
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: ElevatedButton(
-                    onPressed: widget.onUpgrade,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: barzGold,
-                      foregroundColor: barzDark,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 16,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(BarzRadii.sm),
-                      ),
-                      elevation: 4,
-                      shadowColor: barzGold.withValues(alpha: 0.4),
-                    ),
-                    child: const Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          'Upgrade Now',
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
+                const SizedBox(width: 24),
+                // CTA Button
+                MouseRegion(
+                  onEnter: (_) => setState(() => _isCtaHovered = true),
+                  onExit: (_) => setState(() => _isCtaHovered = false),
+                  cursor: SystemMouseCursors.click,
+                  child: GestureDetector(
+                    onTapDown: (_) => setState(() => _isCtaPressed = true),
+                    onTapUp: (_) {
+                      setState(() => _isCtaPressed = false);
+                      widget.onUpgrade();
+                    },
+                    onTapCancel: () => setState(() => _isCtaPressed = false),
+                    child: AnimatedScale(
+                      scale: _isCtaPressed
+                          ? 0.97
+                          : (_isCtaHovered ? 1.03 : 1.0),
+                      duration: const Duration(milliseconds: 150),
+                      curve: Curves.easeOut,
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: barzGold,
+                          borderRadius: BorderRadius.circular(BarzRadii.md),
+                          boxShadow: [
+                            BoxShadow(
+                              color: barzGold.withValues(
+                                alpha: _isCtaHovered ? 0.6 : 0.4,
+                              ),
+                              blurRadius: _isCtaHovered ? 16 : 8,
+                              spreadRadius: _isCtaHovered ? 2 : 0,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: AnimatedBuilder(
+                          animation: _shimmerAnimation,
+                          builder: (context, child) {
+                            return ShaderMask(
+                              shaderCallback: (bounds) {
+                                return LinearGradient(
+                                  begin: const Alignment(-1.0, -0.5),
+                                  end: const Alignment(1.0, 0.5),
+                                  stops: const [0.0, 0.4, 0.5, 0.6, 1.0],
+                                  colors: [
+                                    barzDark,
+                                    barzDark,
+                                    barzDark.withValues(alpha: 0.6),
+                                    barzDark,
+                                    barzDark,
+                                  ],
+                                  transform: GradientRotation(
+                                    _shimmerAnimation.value,
+                                  ),
+                                ).createShader(bounds);
+                              },
+                              blendMode: BlendMode.srcIn,
+                              child: child,
+                            );
+                          },
+                          child: const Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Upgrade Now',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              SizedBox(width: 8),
+                              Icon(LucideIcons.arrowRight, size: 18),
+                            ],
                           ),
                         ),
-                        SizedBox(width: 8),
-                        Icon(Icons.arrow_forward, size: 18),
-                      ],
+                      ),
                     ),
                   ),
                 ),

@@ -34,4 +34,14 @@ sealed class PaymentEvent with _$PaymentEvent {
   }) = TopUpWallet;
   const factory PaymentEvent.clearPixPayment() = ClearPixPayment;
   const factory PaymentEvent.clearError() = ClearPaymentError;
+  const factory PaymentEvent.loadSavedCards() = LoadSavedCards;
+  const factory PaymentEvent.addSavedCard({
+    required String cardToken,
+    required String lastFour,
+    required String brand,
+    required int expMonth,
+    required int expYear,
+    @Default(false) bool isDefault,
+  }) = AddSavedCard;
+  const factory PaymentEvent.deleteSavedCard(int cardId) = DeleteSavedCard;
 }

@@ -11,7 +11,7 @@ import 'package:barz/features/checkin/presentation/bloc/checkin_bloc.dart';
 import 'package:barz/features/checkin/presentation/bloc/checkin_event.dart'
     as checkin_event;
 import 'package:barz/features/checkin/presentation/bloc/checkin_state.dart';
-import 'package:barz/l10n/app_localizations.dart';
+import 'package:barz/features/payments/presentation/pages/payment_result_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -140,50 +140,15 @@ class _CartPageContentState extends State<_CartPageContent> {
   }
 
   void _showOrderSuccessDialog(BuildContext context, int orderId) {
-    final l10n = AppLocalizations.of(context)!;
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        icon: Container(
-          width: 64,
-          height: 64,
-          decoration: BoxDecoration(
-            color: successGreen.withValues(alpha: 0.1),
-            shape: BoxShape.circle,
-          ),
-          child: const Icon(Icons.check_circle, size: 48, color: successGreen),
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => PaymentResultPage(
+          result: PaymentResultType.success,
+          orderId: orderId.toString(),
+          onContinue: () {
+            Navigator.of(context).popUntil((r) => r.isFirst);
+          },
         ),
-        title: Text(l10n.checkout_success),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(l10n.checkout_order_placed),
-            const SizedBox(height: 8),
-            Text(
-              'Order #$orderId',
-              style: Theme.of(
-                context,
-              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              context.pop();
-            },
-            child: Text(l10n.close),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              AppRoute.goOrder(context, orderId);
-            },
-            child: Text(l10n.order_tracking),
-          ),
-        ],
       ),
     );
   }
@@ -210,15 +175,6 @@ class _CartPageContentState extends State<_CartPageContent> {
             spotId: locationIdentifier,
           ),
         );
-        // We return here. If available, the listener should handle it.
-        // But we need a way to know we triggered it.
-        // Since we didn't add a specific "CheckTriggered" state,
-        // we can rely on the listener checking `spotAvailability`
-        // However, we need to know if we *should* proceed.
-        // For simplicity in this iteration, we will check spot availability,
-        // and if it returns success, the user has to click checkout again?
-        // Or we use a flag.
-        // Given complexity, I'll add a provisional flag.
         _isCheckoutPending = true;
         return;
       }

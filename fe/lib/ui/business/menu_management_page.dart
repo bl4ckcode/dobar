@@ -145,10 +145,10 @@ class _MenuManagementContentState extends State<_MenuManagementContent> {
         top: BarzSpacing.xl,
         bottom: BarzSpacing.lg,
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 560;
+          final titleBlock = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
@@ -166,8 +166,10 @@ class _MenuManagementContentState extends State<_MenuManagementContent> {
                 style: TextStyle(color: mutedTextColor, fontSize: 14),
               ),
             ],
-          ),
-          Row(
+          );
+
+          final actionsRow = Row(
+            mainAxisSize: MainAxisSize.min,
             children: [
               IconButton(
                 onPressed: () => _toggleAllCategories(state),
@@ -202,7 +204,7 @@ class _MenuManagementContentState extends State<_MenuManagementContent> {
               FilledButton.icon(
                 onPressed: () => _navigateToMenuReader(context),
                 icon: const Icon(Icons.auto_awesome, size: 18),
-                label: const Text('Scan Menu with AI'),
+                label: Text(isNarrow ? 'Scan AI' : 'Scan Menu with AI'),
                 style: FilledButton.styleFrom(
                   backgroundColor: barzGold,
                   foregroundColor: barzDark,
@@ -213,8 +215,27 @@ class _MenuManagementContentState extends State<_MenuManagementContent> {
                 ),
               ),
             ],
-          ),
-        ],
+          );
+
+          if (isNarrow) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                titleBlock,
+                const SizedBox(height: BarzSpacing.md),
+                actionsRow,
+              ],
+            );
+          }
+
+          return Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(child: titleBlock),
+              actionsRow,
+            ],
+          );
+        },
       ),
     );
   }

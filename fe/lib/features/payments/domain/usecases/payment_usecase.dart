@@ -68,4 +68,30 @@ class PaymentUsecase {
       paymentMethodId: paymentMethodId,
     );
   }
+
+  Future<Either<Failure, List<PaymentMethod>>> getSavedCards() {
+    return _repository.getSavedCards();
+  }
+
+  Future<Either<Failure, PaymentMethod>> addSavedCard({
+    required String cardToken,
+    required String lastFour,
+    required String brand,
+    required int expMonth,
+    required int expYear,
+    bool isDefault = false,
+  }) {
+    return _repository.addSavedCard(
+      cardToken: cardToken,
+      lastFour: lastFour,
+      brand: brand,
+      expMonth: expMonth,
+      expYear: expYear,
+      isDefault: isDefault,
+    );
+  }
+
+  Future<Either<Failure, bool>> deleteSavedCard(int cardId) {
+    return _repository.deleteSavedCard(cardId);
+  }
 }

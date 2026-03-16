@@ -209,64 +209,64 @@ class _CampaignAnalyticsContent extends StatelessWidget {
           style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _MetricCard(
-                icon: Icons.visibility,
-                label: l10n.impressions,
-                value: _formatNumber(analytics.impressions),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _MetricCard(
-                icon: Icons.touch_app,
-                label: l10n.clicks,
-                value: _formatNumber(analytics.clicks),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _MetricCard(
-                icon: Icons.shopping_bag,
-                label: l10n.conversions,
-                value: _formatNumber(analytics.conversions),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _MetricCard(
-                icon: Icons.percent,
-                label: 'CTR',
-                value: '${analytics.ctr.toStringAsFixed(2)}%',
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _MetricCard(
-                icon: Icons.attach_money,
-                label: l10n.cost_per_click,
-                value: 'R\$ ${costPerClick.toStringAsFixed(2)}',
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _MetricCard(
-                icon: Icons.trending_up,
-                label: l10n.conversion_rate,
-                value: '${conversionRate.toStringAsFixed(1)}%',
-              ),
-            ),
-          ],
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final cardWidth = (constraints.maxWidth - 12) / 2;
+            return Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: [
+                SizedBox(
+                  width: cardWidth,
+                  child: _MetricCard(
+                    icon: Icons.visibility,
+                    label: l10n.impressions,
+                    value: _formatNumber(analytics.impressions),
+                  ),
+                ),
+                SizedBox(
+                  width: cardWidth,
+                  child: _MetricCard(
+                    icon: Icons.touch_app,
+                    label: l10n.clicks,
+                    value: _formatNumber(analytics.clicks),
+                  ),
+                ),
+                SizedBox(
+                  width: cardWidth,
+                  child: _MetricCard(
+                    icon: Icons.shopping_bag,
+                    label: l10n.conversions,
+                    value: _formatNumber(analytics.conversions),
+                  ),
+                ),
+                SizedBox(
+                  width: cardWidth,
+                  child: _MetricCard(
+                    icon: Icons.percent,
+                    label: 'CTR',
+                    value: '${analytics.ctr.toStringAsFixed(2)}%',
+                  ),
+                ),
+                SizedBox(
+                  width: cardWidth,
+                  child: _MetricCard(
+                    icon: Icons.attach_money,
+                    label: l10n.cost_per_click,
+                    value: 'R\$ ${costPerClick.toStringAsFixed(2)}',
+                  ),
+                ),
+                SizedBox(
+                  width: cardWidth,
+                  child: _MetricCard(
+                    icon: Icons.trending_up,
+                    label: l10n.conversion_rate,
+                    value: '${conversionRate.toStringAsFixed(1)}%',
+                  ),
+                ),
+              ],
+            );
+          },
         ),
       ],
     );

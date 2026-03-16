@@ -93,6 +93,8 @@ class _DashboardContent extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        _QuickActionsSection(activeBar: activeBar),
+                        const SizedBox(height: 24),
                         _SummaryCardsGrid(
                           isOwnerOrAdmin: isOwnerOrAdmin,
                           stats: dashboardState is DashboardLoaded
@@ -110,11 +112,7 @@ class _DashboardContent extends StatelessWidget {
                         const SizedBox(height: 24),
                         if (isOwnerOrAdmin) ...[
                           _PromoteCampaignCard(),
-                          const SizedBox(height: 24),
-                          _BarsOverviewSection(bars: allBars),
-                          const SizedBox(height: 24),
                         ],
-                        _QuickActionsSection(activeBar: activeBar),
                         const SizedBox(height: 32),
                       ],
                     ),
@@ -853,202 +851,7 @@ class _PromoteCampaignCard extends StatelessWidget {
   }
 }
 
-class _BarsOverviewSection extends StatelessWidget {
-  final List<BarAccess> bars;
 
-  const _BarsOverviewSection({required this.bars});
-
-  Future<void> _navigateToCreateBar(BuildContext context) async {
-    final result = await context.push<bool>('/create-bar');
-    if (result == true && context.mounted) {
-      context.read<SessionBloc>().add(const SessionEvent.refreshBarAccess());
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final textColor = isDark ? textOnDark : textPrimary;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'My Bars',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: textColor,
-              ),
-            ),
-            TextButton.icon(
-              onPressed: () => _navigateToCreateBar(context),
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('Add Bar'),
-              style: TextButton.styleFrom(
-                foregroundColor: barzGold,
-                textStyle: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        SizedBox(
-          height: 100,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            itemCount: bars.length + 1,
-            separatorBuilder: (context, index) => const SizedBox(width: 12),
-            itemBuilder: (context, index) {
-              if (index == bars.length) {
-                return _AddBarCard(onTap: () => _navigateToCreateBar(context));
-              }
-              final bar = bars[index];
-              return _BarMiniCard(bar: bar);
-            },
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _AddBarCard extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const _AddBarCard({required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final cardBg = isDark ? const Color(0xFF1E1E1E) : surfaceWhite;
-
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          width: 120,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: cardBg,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: barzGold,
-              style: BorderStyle.solid,
-              width: 2,
-            ),
-          ),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: barzGold.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  Icons.add_business_rounded,
-                  color: barzGold,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Add Bar',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  fontSize: 13,
-                  color: barzGold,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BarMiniCard extends StatelessWidget {
-  final BarAccess bar;
-
-  const _BarMiniCard({required this.bar});
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final cardBg = isDark ? const Color(0xFF1E1E1E) : surfaceWhite;
-    final borderColor = isDark ? barzDarkMuted : surfaceDim;
-    final textColor = isDark ? textOnDark : textPrimary;
-
-    return Container(
-      width: 160,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: barzGold.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(Icons.local_bar_rounded, color: barzGold, size: 20),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  bar.barName,
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 14,
-                    color: textColor,
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: barzGold.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(6),
-            ),
-            child: Text(
-              bar.role.displayName,
-              style: TextStyle(
-                color: barzGold,
-                fontSize: 11,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
 
 class _QuickActionsSection extends StatelessWidget {
   final BarAccess activeBar;
