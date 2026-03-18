@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:barz/core/design/design_system.dart';
+import 'package:barz/ui/business/widgets/business_toolbars.dart';
 import 'package:barz/core/rbac/rbac.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
@@ -171,81 +173,40 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
   }
 
   Widget _buildHeader(bool isDark, StaffState staffState, int barId) {
-    final dobar = context.dobarColors;
-    final textColor = dobar.labelPrimary;
-    final mutedTextColor = dobar.labelSecondary;
-    final iconBg = dobar.surfaceElevated;
-
     final staffCount = staffState.maybeWhen(
       loaded: (list) => list.length,
       actionSuccess: (_, list) => list.length,
       orElse: () => 0,
     );
 
-    return Container(
-      color: Colors.transparent,
-      padding: const EdgeInsets.only(
-        top: BarzSpacing.xl,
-        bottom: BarzSpacing.xl,
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  color: iconBg,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  Icons.people_outline,
-                  color: textColor.withValues(alpha: 0.8),
-                ),
-              ),
-              const SizedBox(width: BarzSpacing.md),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Staff',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: textColor,
-                      fontFamily: 'Space Grotesk',
-                    ),
-                  ),
-                  if (staffState.maybeWhen(
-                    initial: () => false,
-                    loading: () => false,
-                    orElse: () => true,
-                  ))
-                    Text(
-                      '$staffCount members',
-                      style: TextStyle(color: mutedTextColor, fontSize: 13),
-                    ),
-                ],
-              ),
-            ],
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return BusinessActionToolbar(
+          title: 'Staff',
+          subtitle: staffState.maybeWhen(
+            initial: () => null,
+            loading: () => null,
+            orElse: () => '$staffCount members',
           ),
-          FilledButton.icon(
-            onPressed: () => _showInviteDialog(context, barId),
-            icon: const Icon(Icons.add, size: 18),
-            label: const Text('Invite Staff'),
-            style: FilledButton.styleFrom(
-              backgroundColor: barzGold,
-              foregroundColor: barzDark,
-              padding: const EdgeInsets.symmetric(
-                horizontal: BarzSpacing.lg,
-                vertical: BarzSpacing.md,
+          icon: LucideIcons.users,
+          isNarrow: constraints.maxWidth < 600,
+          actions: [
+            FilledButton.icon(
+              onPressed: () => _showInviteDialog(context, barId),
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('Invite Staff'),
+              style: FilledButton.styleFrom(
+                backgroundColor: barzGold,
+                foregroundColor: barzDark,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: BarzSpacing.md,
+                  vertical: BarzSpacing.sm,
+                ),
               ),
             ),
-          ),
-        ],
-      ),
+          ],
+        );
+      },
     );
   }
 

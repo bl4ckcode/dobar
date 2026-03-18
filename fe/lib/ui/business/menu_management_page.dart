@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:barz/core/design/design_system.dart';
+import 'package:barz/ui/business/widgets/business_toolbars.dart';
 import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/features/bars/domain/models/menu_model.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
@@ -123,10 +125,8 @@ class _MenuManagementContentState extends State<_MenuManagementContent> {
     BusinessMenuState state,
     bool isDark,
   ) {
-    final headerBg = Colors.transparent;
     final dobar = context.dobarColors;
     final textColor = dobar.labelPrimary;
-    final mutedTextColor = dobar.labelSecondary;
 
     int totalCategories = 0;
     for (final menu in state.menus) {
@@ -139,104 +139,60 @@ class _MenuManagementContentState extends State<_MenuManagementContent> {
     final allExpanded =
         totalCategories > 0 && _expandedCategories.length >= totalCategories;
 
-    return Container(
-      color: headerBg,
-      padding: const EdgeInsets.only(
-        top: BarzSpacing.xl,
-        bottom: BarzSpacing.lg,
-      ),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final isNarrow = constraints.maxWidth < 560;
-          final titleBlock = Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Menu Management',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isNarrow = constraints.maxWidth < 600;
+
+        return BusinessActionToolbar(
+          title: 'Menu Management',
+          subtitle: '${state.totalItems} items across ${state.menus.length} categories',
+          icon: LucideIcons.wine,
+          isNarrow: isNarrow,
+          actions: [
+            IconButton(
+              onPressed: () => _toggleAllCategories(state),
+              icon: AnimatedRotation(
+                turns: allExpanded ? 0.5 : 0,
+                duration: const Duration(milliseconds: 200),
+                child: Icon(
+                  Icons.expand_circle_down_outlined,
                   color: textColor,
-                  fontFamily: 'Space Grotesk',
                 ),
               ),
-              const SizedBox(height: BarzSpacing.xs),
-              Text(
-                '${state.totalItems} items across ${state.menus.length} categories',
-                style: TextStyle(color: mutedTextColor, fontSize: 14),
-              ),
-            ],
-          );
-
-          final actionsRow = Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              IconButton(
-                onPressed: () => _toggleAllCategories(state),
-                icon: AnimatedRotation(
-                  turns: allExpanded ? 0.5 : 0,
-                  duration: const Duration(milliseconds: 200),
-                  child: Icon(
-                    Icons.expand_circle_down_outlined,
-                    color: textColor,
-                  ),
+              tooltip: allExpanded ? 'Colapsar Tudo' : 'Expandir Tudo',
+            ),
+            OutlinedButton.icon(
+              onPressed: () =>
+                  context.read<BusinessMenuBloc>().add(RefreshMenus()),
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: const Text('Refresh'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: textColor,
+                side: BorderSide(
+                  color: Theme.of(context).colorScheme.outline,
                 ),
-                tooltip: allExpanded ? 'Colapsar Tudo' : 'Expandir Tudo',
-              ),
-              const SizedBox(width: BarzSpacing.sm),
-              OutlinedButton.icon(
-                onPressed: () =>
-                    context.read<BusinessMenuBloc>().add(RefreshMenus()),
-                icon: const Icon(Icons.refresh_rounded, size: 18),
-                label: const Text('Refresh'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: textColor,
-                  side: BorderSide(
-                    color: Theme.of(context).colorScheme.outline,
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: BarzSpacing.md,
-                    vertical: BarzSpacing.md,
-                  ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: BarzSpacing.md,
+                  vertical: BarzSpacing.md,
                 ),
               ),
-              const SizedBox(width: BarzSpacing.sm),
-              FilledButton.icon(
-                onPressed: () => _navigateToMenuReader(context),
-                icon: const Icon(Icons.auto_awesome, size: 18),
-                label: Text(isNarrow ? 'Scan AI' : 'Scan Menu with AI'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: barzGold,
-                  foregroundColor: barzDark,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: BarzSpacing.lg,
-                    vertical: BarzSpacing.md,
-                  ),
+            ),
+            FilledButton.icon(
+              onPressed: () => _navigateToMenuReader(context),
+              icon: const Icon(Icons.auto_awesome, size: 18),
+              label: Text(isNarrow ? 'Scan' : 'Scan Menu with AI'),
+              style: FilledButton.styleFrom(
+                backgroundColor: barzGold,
+                foregroundColor: barzDark,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: BarzSpacing.lg,
+                  vertical: BarzSpacing.md,
                 ),
               ),
-            ],
-          );
-
-          if (isNarrow) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                titleBlock,
-                const SizedBox(height: BarzSpacing.md),
-                actionsRow,
-              ],
-            );
-          }
-
-          return Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Expanded(child: titleBlock),
-              actionsRow,
-            ],
-          );
-        },
-      ),
+            ),
+          ],
+        );
+      },
     );
   }
 

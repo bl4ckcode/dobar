@@ -2,7 +2,9 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:barz/core/design/design_system.dart';
+import 'package:barz/ui/business/widgets/business_toolbars.dart';
 import 'package:get_it/get_it.dart';
 import 'package:barz/features/orders/domain/models/live_order_model.dart';
 import 'package:barz/features/orders/presentation/bloc/live_orders_bloc.dart';
@@ -121,39 +123,23 @@ class _CashierPageState extends State<CashierPage>
             value: _liveOrdersBloc!,
             child: Scaffold(
               backgroundColor: bgColor,
-              appBar: AppBar(
-                title: const Text(
-                  'Caixa',
-                  style: TextStyle(fontWeight: FontWeight.w600),
-                ),
-                backgroundColor: cardColor,
-                foregroundColor: textColor,
-                elevation: 0,
-                actions: [
-                  IconButton(
-                    icon: Icon(
-                      _soundOn ? Icons.volume_up : Icons.volume_off,
-                      size: 20,
-                      color: _soundOn ? barzGold : mutedColor,
-                    ),
-                    tooltip: _soundOn ? 'Mute sounds' : 'Enable sounds',
-                    onPressed: () => setState(() => _soundOn = !_soundOn),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 4),
-                    child: Text(
-                      '$_totalOrders orders',
-                      style: TextStyle(
-                        fontFamily: 'JetBrains Mono',
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: mutedColor,
+              appBar: PreferredSize(
+                preferredSize: const Size.fromHeight(64),
+                child: BusinessStatusToolbar(
+                  title: 'Caixa',
+                  subtitle: '$_totalOrders orders in pipeline',
+                  showStatusToggle: false,
+                  actions: [
+                    IconButton(
+                      icon: Icon(
+                        _soundOn ? LucideIcons.volume2 : LucideIcons.volumeX,
+                        size: 20,
+                        color: _soundOn ? barzGold : mutedColor,
                       ),
+                      onPressed: () => setState(() => _soundOn = !_soundOn),
                     ),
-                  ),
-                  Padding(
-                    padding: const EdgeInsets.only(right: 4),
-                    child: Row(
+                    const SizedBox(width: 8),
+                    Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         AnimatedBuilder(
@@ -171,29 +157,31 @@ class _CashierPageState extends State<CashierPage>
                             ),
                           ),
                         ),
-                        const SizedBox(width: 6),
+                        const SizedBox(width: 8),
                         Text(
                           'LIVE',
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.bold,
                             color: mutedColor,
+                            fontFamily: 'JetBrains Mono',
                           ),
                         ),
                       ],
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.refresh),
-                    onPressed: () {
-                      if (_activeBarId != null) {
-                        _liveOrdersBloc?.add(
-                          LiveOrdersEvent.loadOrders(_activeBarId!),
-                        );
-                      }
-                    },
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: const Icon(LucideIcons.refreshCw, size: 18),
+                      onPressed: () {
+                        if (_activeBarId != null) {
+                          _liveOrdersBloc?.add(
+                            LiveOrdersEvent.loadOrders(_activeBarId!),
+                          );
+                        }
+                      },
+                    ),
+                  ],
+                ),
               ),
               body: BlocBuilder<SessionBloc, SessionState>(
                 builder: (context, sessionState) {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:barz/core/rbac/rbac.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/core/design/tokens/dobar_colors.dart';
@@ -7,9 +8,10 @@ import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
 import 'package:barz/features/session/presentation/bloc/session_event.dart';
 import 'package:barz/features/session/domain/models/bar_access.dart';
-import 'package:barz/features/advertising/presentation/pages/campaigns_page.dart';
 import 'package:barz/l10n/app_localizations.dart';
+import 'package:barz/features/advertising/presentation/pages/campaigns_page.dart';
 import 'business_dashboard_page.dart';
+import 'business_settings_page.dart';
 import 'cashier_page.dart';
 import 'menu_management_page.dart';
 import 'staff_management_page.dart';
@@ -296,49 +298,56 @@ class _BusinessShellState extends State<BusinessShell> {
     BuildContext context,
     BarAccess activeBar,
   ) {
-    final l10n = AppLocalizations.of(context)!;
     final items = <BusinessNavItem>[
-      BusinessNavItem(
-        icon: Icons.dashboard,
-        label: l10n.business_dashboard,
-        page: const BusinessDashboardPage(),
+      const BusinessNavItem(
+        icon: LucideIcons.layoutDashboard,
+        label: 'Dashboard',
+        page: BusinessDashboardPage(),
       ),
-      BusinessNavItem(
-        icon: Icons.point_of_sale,
-        label: l10n.business_orders,
-        page: const CashierPage(),
+      const BusinessNavItem(
+        icon: LucideIcons.shoppingBag,
+        label: 'Orders',
+        page: CashierPage(),
       ),
     ];
 
     if (activeBar.canEditMenu) {
       items.add(
-        BusinessNavItem(
-          icon: Icons.restaurant_menu,
-          label: l10n.business_menu,
-          page: const MenuManagementPage(),
-        ),
-      );
-    }
-
-    if (activeBar.canManageAds) {
-      items.add(
-        BusinessNavItem(
-          icon: Icons.campaign,
-          label: l10n.business_promotions,
-          page: const CampaignsPage(),
+        const BusinessNavItem(
+          icon: LucideIcons.utensilsCrossed,
+          label: 'Menu',
+          page: MenuManagementPage(),
         ),
       );
     }
 
     if (activeBar.canManageStaff) {
       items.add(
-        BusinessNavItem(
-          icon: Icons.people,
-          label: 'Staff',
-          page: const StaffManagementPage(),
+        const BusinessNavItem(
+          icon: LucideIcons.users,
+          label: 'Team',
+          page: StaffManagementPage(),
         ),
       );
     }
+
+    if (activeBar.canManageAds) {
+      items.add(
+        const BusinessNavItem(
+          icon: LucideIcons.megaphone,
+          label: 'Marketing',
+          page: CampaignsPage(),
+        ),
+      );
+    }
+
+    items.add(
+      const BusinessNavItem(
+        icon: LucideIcons.settings,
+        label: 'Settings',
+        page: BusinessSettingsPage(),
+      ),
+    );
 
     return items;
   }

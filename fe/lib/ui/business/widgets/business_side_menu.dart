@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:barz/core/design/design_system.dart';
@@ -76,17 +77,17 @@ class _BusinessSideMenuState extends State<BusinessSideMenu> {
                 _buildSidebarButton(
                   isDark: isDark,
                   icon: _isExpanded
-                      ? Icons.keyboard_double_arrow_left
-                      : Icons.keyboard_double_arrow_right,
-                  label: 'Collapse',
+    ? LucideIcons.chevronsLeft
+    : LucideIcons.chevronsRight,
+label: 'Collapse',
                   onTap: () => setState(() => _isExpanded = !_isExpanded),
                   isGold: false,
                 ),
                 const SizedBox(height: 4),
                 _buildSidebarButton(
                   isDark: isDark,
-                  icon: Icons.logout,
-                  label: 'Logout',
+                  icon: LucideIcons.logOut,
+label: 'Logout',
                   onTap: () => context.read<SessionBloc>().add(
                     const SessionEvent.logout(),
                   ),
@@ -126,7 +127,7 @@ class _BusinessSideMenuState extends State<BusinessSideMenu> {
                 color: barzGold,
                 borderRadius: BorderRadius.circular(8),
               ),
-              child: const Icon(Icons.wine_bar, color: barzDark, size: 20),
+              child: const Icon(LucideIcons.glassWater, color: barzDark, size: 20),
             ),
             // The expanding/fading part
             Expanded(

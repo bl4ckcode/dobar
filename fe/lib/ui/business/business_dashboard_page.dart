@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:barz/core/design/design_system.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'package:barz/core/rbac/rbac.dart';
 import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
-import 'package:barz/features/session/presentation/bloc/session_event.dart';
 import 'package:barz/features/session/domain/models/bar_access.dart';
 import 'package:barz/features/bars/presentation/bloc/dashboard_bloc.dart';
 import 'package:barz/features/bars/domain/models/dashboard_models.dart';
-import 'package:barz/shared/presentation/widget/theme_toggle_button.dart';
+import 'package:barz/ui/business/widgets/business_toolbars.dart';
 
 class BusinessDashboardPage extends StatelessWidget {
   const BusinessDashboardPage({super.key});
@@ -142,182 +142,11 @@ class _BusinessDashboardHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final dobar = context.dobarColors;
-    final headerBg = dobar.surfaceElevated;
-    final borderColor = theme.colorScheme.outline;
-    final textColor = dobar.labelPrimary;
-    final mutedTextColor = dobar.labelSecondary;
-
-    return Container(
-      height: 64,
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      decoration: BoxDecoration(
-        color: headerBg,
-        border: Border(bottom: BorderSide(color: borderColor)),
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Dashboard',
-                style: TextStyle(
-                  color: textColor,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                'Welcome back, ${role.displayName}',
-                style: TextStyle(color: mutedTextColor, fontSize: 12),
-              ),
-            ],
-          ),
-          Row(
-            children: [
-              // Open/Closed Toggle
-              GestureDetector(
-                onTap: onToggleOpen,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isOpen
-                        ? successGreen.withValues(alpha: 0.15)
-                        : errorRed.withValues(alpha: 0.15),
-                    border: Border.all(
-                      color: isOpen
-                          ? successGreen.withValues(alpha: 0.3)
-                          : errorRed.withValues(alpha: 0.3),
-                    ),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 6,
-                        height: 6,
-                        decoration: BoxDecoration(
-                          color: isOpen ? successGreen : errorRed,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                      const SizedBox(width: 6),
-                      Text(
-                        isOpen ? 'Open' : 'Closed',
-                        style: TextStyle(
-                          color: isOpen ? successGreen : errorRed,
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          letterSpacing: 0.5,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              // Search
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  border: Border.all(color: borderColor),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Icon(Icons.search, size: 16, color: mutedTextColor),
-              ),
-              const SizedBox(width: 12),
-              // Notifications
-              Stack(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      border: Border.all(color: borderColor),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Icon(
-                      Icons.notifications_outlined,
-                      size: 16,
-                      color: mutedTextColor,
-                    ),
-                  ),
-                  Positioned(
-                    right: -2,
-                    top: -2,
-                    child: Container(
-                      width: 12,
-                      height: 12,
-                      decoration: BoxDecoration(
-                        color: barzGold,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: headerBg, width: 2),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(width: 12),
-              // Theme Toggle
-              const ThemeToggleButton(),
-              const SizedBox(width: 12),
-              // Switch to client
-              TextButton.icon(
-                icon: const Icon(Icons.person_outline, size: 20),
-                label: const Text('Switch to Client Mode'),
-                style: TextButton.styleFrom(
-                  foregroundColor: mutedTextColor,
-                  textStyle: const TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 8,
-                  ),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
-                    side: BorderSide(color: borderColor),
-                  ),
-                ),
-                onPressed: () {
-                  context.read<SessionBloc>().add(
-                    const SessionEvent.switchToClientMode(),
-                  );
-                },
-              ),
-              const SizedBox(width: 12),
-              // Avatar
-              Container(
-                width: 36,
-                height: 36,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  color: barzGold.withValues(alpha: 0.1),
-                  border: Border.all(color: barzGold.withValues(alpha: 0.3)),
-                  shape: BoxShape.circle,
-                ),
-                child: const Text(
-                  'JD',
-                  style: TextStyle(
-                    color: barzGold,
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
+    return BusinessStatusToolbar(
+      title: 'Dashboard',
+      subtitle: 'Welcome back, ${role.displayName}',
+      isOpen: isOpen,
+      onToggleOpen: onToggleOpen,
     );
   }
 }
@@ -790,63 +619,62 @@ class _PromoteCampaignCard extends StatelessWidget {
         ],
       ),
       child: Row(
+  children: [
+    Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        color: barzDark.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const Icon(LucideIcons.megaphone, color: barzDark, size: 24),
+    ),
+    const SizedBox(width: 16),
+    Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.campaign_rounded, color: barzDark, size: 24),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Boost Your Sales',
-                      style: TextStyle(
-                        color: barzDark,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Create a campaign and reach more customers in your area!',
-                  style: TextStyle(
-                    color: barzDark.withValues(alpha: 0.7),
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                FilledButton.icon(
-                  onPressed: () {},
-                  style: FilledButton.styleFrom(
-                    backgroundColor: barzDark,
-                    foregroundColor: barzGold,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 12,
-                    ),
-                    textStyle: const TextStyle(inherit: false),
-                  ),
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Create Campaign'),
-                ),
-              ],
+          Text(
+            'Boost Your Sales',
+            style: TextStyle(
+              color: barzDark,
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(width: 16),
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              color: barzDark.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(16),
+          const SizedBox(height: 4),
+          Text(
+            'Create a campaign and reach more customers in your area!',
+            style: TextStyle(
+              color: barzDark.withValues(alpha: 0.7),
+              fontSize: 14,
             ),
-            child: Icon(Icons.trending_up_rounded, color: barzDark, size: 40),
           ),
         ],
       ),
+    ),
+    const SizedBox(width: 24),
+    FilledButton.icon(
+      onPressed: () {},
+      style: FilledButton.styleFrom(
+        backgroundColor: barzDark,
+        foregroundColor: barzGold,
+        padding: const EdgeInsets.symmetric(
+          horizontal: 20,
+          vertical: 16,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+      ),
+      icon: const Icon(LucideIcons.plus, size: 18),
+      label: const Text(
+        'Create Campaign',
+        style: TextStyle(fontWeight: FontWeight.bold),
+      ),
+    ),
+  ],
+),
     );
   }
 }
@@ -893,35 +721,35 @@ class _QuickActionsSection extends StatelessWidget {
           runSpacing: 12,
           children: [
             _QuickActionChip(
-              icon: Icons.point_of_sale_rounded,
-              label: 'Cashier',
-              onTap: () => context.go(AppRoute.businessCashier.path),
-            ),
-            if (activeBar.canEditMenu)
-              _QuickActionChip(
-                icon: Icons.restaurant_menu_rounded,
-                label: 'Edit Menu',
-                onTap: () => context.go(AppRoute.businessMenu.path),
-              ),
-            if (isOwnerOrAdmin) ...[
-              _QuickActionChip(
-                icon: Icons.local_offer_rounded,
-                label: 'New Promo',
-                onTap: () => context.go(AppRoute.businessCampaigns.path),
-              ),
-              _QuickActionChip(
-                icon: Icons.qr_code_rounded,
-                label: 'Table QR',
-                onTap: () => _showComingSoon(context, 'Table QR Generator'),
-              ),
-            ],
-            if (activeBar.canManageStaff)
-              _QuickActionChip(
-                icon: Icons.person_add_rounded,
-                label: 'Invite Staff',
-                onTap: () => _showComingSoon(context, 'Staff Invitations'),
-                highlighted: true,
-              ),
+  icon: LucideIcons.wallet,
+  label: 'Cashier',
+  onTap: () => context.go(AppRoute.businessCashier.path),
+),
+if (activeBar.canEditMenu)
+  _QuickActionChip(
+    icon: LucideIcons.utensilsCrossed,
+    label: 'Edit Menu',
+    onTap: () => context.go(AppRoute.businessMenu.path),
+  ),
+if (isOwnerOrAdmin) ...[
+  _QuickActionChip(
+    icon: LucideIcons.tag,
+    label: 'New Promo',
+    onTap: () => context.go(AppRoute.businessCampaigns.path),
+  ),
+  _QuickActionChip(
+    icon: LucideIcons.qrCode,
+    label: 'Table QR',
+    onTap: () => _showComingSoon(context, 'Table QR Generator'),
+  ),
+],
+if (activeBar.canManageStaff)
+  _QuickActionChip(
+    icon: LucideIcons.userPlus,
+    label: 'Invite Staff',
+    onTap: () => _showComingSoon(context, 'Staff Invitations'),
+    highlighted: true,
+  ),
           ],
         ),
       ],

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/core/utils/injections.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+import 'package:barz/ui/business/widgets/business_toolbars.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
 import '../bloc/advertising_bloc.dart';
@@ -86,48 +88,11 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          // Header Title
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: barzGold.withValues(alpha: 0.1),
-                                  borderRadius: BorderRadius.circular(
-                                    BarzRadii.md,
-                                  ),
-                                  border: Border.all(
-                                    color: barzGold.withValues(alpha: 0.2),
-                                  ),
-                                ),
-                                child: const Icon(
-                                  Icons.campaign,
-                                  color: barzGold,
-                                  size: 24,
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    'Campaigns',
-                                    style: TextStyle(
-                                      fontSize: 28,
-                                      fontWeight: FontWeight.bold,
-                                      color: dobar.labelPrimary,
-                                    ),
-                                  ),
-                                  Text(
-                                    'Manage and monitor your marketing campaigns',
-                                    style: TextStyle(
-                                      fontSize: 14,
-                                      color: dobar.labelSecondary,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
+                          BusinessStatusToolbar(
+                            title: 'Campaigns',
+                            subtitle: 'Manage and monitor your marketing campaigns',
+                            showStatusToggle: false,
+                            showAvatar: false,
                           ),
 
                           const SizedBox(height: 32),
@@ -214,7 +179,7 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: errorRed),
+            const Icon(LucideIcons.alertTriangle, size: 64, color: errorRed),
             const SizedBox(height: 16),
             Text(
               error,
@@ -224,7 +189,7 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: _loadCampaigns,
-              icon: const Icon(Icons.refresh),
+              icon: const Icon(LucideIcons.refreshCw),
               label: const Text('Tentar novamente'),
             ),
           ],
@@ -242,7 +207,7 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.campaign_outlined,
+              LucideIcons.megaphone,
               size: 80,
               color: barzGold.withValues(alpha: 0.6),
             ),
@@ -272,7 +237,7 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
                   vertical: 12,
                 ),
               ),
-              icon: const Icon(Icons.add),
+              icon: const Icon(LucideIcons.plus),
               label: const Text('Criar Campanha'),
             ),
           ],
@@ -374,7 +339,7 @@ class _CreateCampaignFabState extends State<_CreateCampaignFab>
                   ),
                 ],
               ),
-              child: const Icon(Icons.add, color: Colors.black, size: 28),
+              child: const Icon(LucideIcons.plus, color: Colors.black, size: 28),
             ),
           ),
         ),
