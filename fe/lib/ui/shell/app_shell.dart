@@ -39,6 +39,9 @@ class _AppShellState extends State<AppShell> {
                 context.go(AppRoute.businessDashboard.path);
               }
             },
+            loggedOut: () {
+              AppRoute.login.go(context);
+            },
           );
         },
         builder: (context, state) {
@@ -66,8 +69,8 @@ class _AppShellState extends State<AppShell> {
 
               return const WireframeShell();
             },
-            error: (message) => const WireframeShell(),
-            loggedOut: () => const WireframeShell(),
+            error: (message) => const _LoadingView(),
+            loggedOut: () => const _LoadingView(),
           );
         },
       ),

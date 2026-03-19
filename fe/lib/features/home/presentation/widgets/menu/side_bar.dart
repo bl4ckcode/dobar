@@ -1,9 +1,7 @@
 import 'package:barz/core/design/design_system.dart';
-import 'package:barz/core/network/dio_network.dart';
-import 'package:barz/core/utils/injections.dart';
-import 'package:barz/features/authentication/domain/usecases/login_usecase.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
+import 'package:barz/features/session/presentation/bloc/session_event.dart';
 import 'package:barz/shared/domain/models/bottom_nav_bar/menu_model.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -74,11 +72,8 @@ class _SideBarState extends State<SideBar> {
     );
 
     if (confirmed == true) {
-      await getItInjector<LoginUsecase>().logout();
-      await DioNetwork.clearTokens();
-
       if (mounted) {
-        AppRoute.login.go(context);
+        context.read<SessionBloc>().add(const SessionEvent.logout());
       }
     }
   }

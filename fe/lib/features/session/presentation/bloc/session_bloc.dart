@@ -1,4 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:barz/core/network/dio_network.dart';
+import 'package:barz/features/authentication/domain/usecases/login_usecase.dart';
 import 'package:barz/features/session/domain/usecases/session_usecase.dart';
 import 'session_event.dart';
 import 'session_state.dart';
@@ -12,10 +14,14 @@ import 'session_state.dart';
 /// - Handling staff invitation acceptance
 class SessionBloc extends Bloc<SessionEvent, SessionState> {
   final SessionUsecase _sessionUsecase;
+  final LoginUsecase _loginUsecase;
 
-  SessionBloc({required SessionUsecase sessionUsecase})
-    : _sessionUsecase = sessionUsecase,
-      super(const SessionState.initial()) {
+  SessionBloc({
+    required SessionUsecase sessionUsecase,
+    required LoginUsecase loginUsecase,
+  }) : _sessionUsecase = sessionUsecase,
+       _loginUsecase = loginUsecase,
+       super(const SessionState.initial()) {
     on<InitializeSession>(_onInitialize);
     on<RefreshBarAccess>(_onRefreshBarAccess);
     on<SwitchActiveBar>(_onSwitchActiveBar);
@@ -119,7 +125,9 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     );
   }
 
-  void _onLogout(LogoutSession event, Emitter<SessionState> emit) {
+  Future<void> _onLogout(LogoutSession event, Emitter<SessionState> emit) async {
+    await _loginUsecase.logout();
+    await DioNetwork.clearTokens();
     emit(const SessionState.loggedOut());
   }
 

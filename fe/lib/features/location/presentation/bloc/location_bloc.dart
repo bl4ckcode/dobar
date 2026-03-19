@@ -84,10 +84,11 @@ class LocationBloc extends Bloc<LocationEvent, LocationState> {
       }
     }
 
-    // Ensure we have permission before reading location.
-    // On iOS especially, calling getLocation() without permission can fail silently
-    // or return nulls, which prevents the app from loading nearby content.
-    final permissionResult = await _usecase.checkLocationPermission();
+    try {
+      // Ensure we have permission before reading location.
+      // On iOS especially, calling getLocation() without permission can fail silently
+      // or return nulls, which prevents the app from loading nearby content.
+      final permissionResult = await _usecase.checkLocationPermission();
     final hasPermission = await permissionResult.fold(
       (_) async => false,
       (granted) async => granted,
@@ -146,6 +147,9 @@ class LocationBloc extends Bloc<LocationEvent, LocationState> {
         );
       },
     );
+    } catch (e) {
+      emit(state.copyWith(isLoading: false, error: e.toString()));
+    }
   }
 
   void _onStartTracking(

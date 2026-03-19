@@ -7,6 +7,8 @@ import 'package:barz/features/session/domain/usecases/session_usecase.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/user/domain/repositories/abstract_user_repository.dart';
 
+import 'package:barz/features/authentication/domain/usecases/login_usecase.dart';
+
 Future<void> initSessionInjection() async {
   // Datasource
   getItInjector.registerLazySingleton<SessionDatasource>(
@@ -28,6 +30,9 @@ Future<void> initSessionInjection() async {
 
   // Bloc - Singleton because it holds app-wide session state
   getItInjector.registerLazySingleton<SessionBloc>(
-    () => SessionBloc(sessionUsecase: getItInjector<SessionUsecase>()),
+    () => SessionBloc(
+      sessionUsecase: getItInjector<SessionUsecase>(),
+      loginUsecase: getItInjector<LoginUsecase>(),
+    ),
   );
 }

@@ -19,113 +19,120 @@ class BusinessRootShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<SessionBloc, SessionState>(
-      builder: (context, state) {
-        if (state is! SessionReady) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+    return BlocListener<SessionBloc, SessionState>(
+      listener: (context, state) {
+        if (state is SessionLoggedOut) {
+          AppRoute.login.go(context);
+        }
+      },
+      child: BlocBuilder<SessionBloc, SessionState>(
+        builder: (context, state) {
+          if (state is! SessionReady) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          final session = state.session;
+          final activeBar = session.activeBar;
+
+          if (session.barAccess.isEmpty) {
+            return const BusinessOnboardingView();
+          }
+
+          if (activeBar == null && session.barAccess.isNotEmpty) {
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              context.read<SessionBloc>().add(
+                SessionEvent.switchActiveBar(
+                  barId: session.barAccess.first.barId,
+                ),
+              );
+            });
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          if (activeBar == null) {
+            return const BusinessOnboardingView();
+          }
+
+          final isWide =
+              MediaQuery.of(context).size.width >= kBusinessWebBreakpoint;
+          final currentRoute = AppRouteX.fromLocation(
+            GoRouterState.of(context).uri.toString(),
           );
-        }
+          final navItems = buildBusinessNavItems(
+            canEditMenu: activeBar.canEditMenu,
+            canManageAds: activeBar.canManageAds,
+            canManageStaff: activeBar.canManageStaff,
+          );
 
-        final session = state.session;
-        final activeBar = session.activeBar;
-
-        if (session.barAccess.isEmpty) {
-          return const BusinessOnboardingView();
-        }
-
-        if (activeBar == null && session.barAccess.isNotEmpty) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            context.read<SessionBloc>().add(
-              SessionEvent.switchActiveBar(
-                barId: session.barAccess.first.barId,
+          if (isWide) {
+            return Scaffold(
+              body: Directionality(
+                textDirection: TextDirection.rtl,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Directionality(
+                        textDirection: TextDirection.ltr,
+                        child: child,
+                      ),
+                    ),
+                    Directionality(
+                      textDirection: TextDirection.ltr,
+                      child: _BusinessSideNav(
+                        bars: session.barAccess,
+                        activeBar: activeBar,
+                        navItems: navItems,
+                        currentRoute: currentRoute,
+                        onNavItemSelected: (route) => context.go(route.path),
+                        onBarSelected: (barId) {
+                          context.read<SessionBloc>().add(
+                            SessionEvent.switchActiveBar(barId: barId),
+                          );
+                          context.go(AppRoute.businessDashboard.path);
+                        },
+                        onSwitchToClientMode: () {
+                          context.read<SessionBloc>().add(
+                            const SessionEvent.switchToClientMode(),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
               ),
             );
-          });
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        if (activeBar == null) {
-          return const BusinessOnboardingView();
-        }
-
-        final isWide =
-            MediaQuery.of(context).size.width >= kBusinessWebBreakpoint;
-        final currentRoute = AppRouteX.fromLocation(
-          GoRouterState.of(context).uri.toString(),
-        );
-        final navItems = buildBusinessNavItems(
-          canEditMenu: activeBar.canEditMenu,
-          canManageAds: activeBar.canManageAds,
-          canManageStaff: activeBar.canManageStaff,
-        );
-
-        if (isWide) {
-          return Scaffold(
-            body: Directionality(
-              textDirection: TextDirection.rtl,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Directionality(
-                      textDirection: TextDirection.ltr,
-                      child: child,
-                    ),
-                  ),
-                  Directionality(
-                    textDirection: TextDirection.ltr,
-                    child: _BusinessSideNav(
-                      bars: session.barAccess,
-                      activeBar: activeBar,
-                      navItems: navItems,
-                      currentRoute: currentRoute,
-                      onNavItemSelected: (route) => context.go(route.path),
-                      onBarSelected: (barId) {
-                        context.read<SessionBloc>().add(
-                          SessionEvent.switchActiveBar(barId: barId),
-                        );
-                        context.go(AppRoute.businessDashboard.path);
-                      },
-                      onSwitchToClientMode: () {
-                        context.read<SessionBloc>().add(
-                          const SessionEvent.switchToClientMode(),
-                        );
-                      },
-                    ),
+          } else {
+            return Scaffold(
+              appBar: AppBar(
+                backgroundColor: barzDark,
+                foregroundColor: Colors.white,
+                title: _buildBarSelector(context, session.barAccess, activeBar),
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.person_outline),
+                    tooltip: 'Client Mode',
+                    onPressed: () {
+                      context.read<SessionBloc>().add(
+                        const SessionEvent.switchToClientMode(),
+                      );
+                    },
                   ),
                 ],
               ),
-            ),
-          );
-        } else {
-          return Scaffold(
-            appBar: AppBar(
-              backgroundColor: barzDark,
-              foregroundColor: Colors.white,
-              title: _buildBarSelector(context, session.barAccess, activeBar),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.person_outline),
-                  tooltip: 'Client Mode',
-                  onPressed: () {
-                    context.read<SessionBloc>().add(
-                      const SessionEvent.switchToClientMode(),
-                    );
-                  },
-                ),
-              ],
-            ),
-            body: child,
-            bottomNavigationBar: _buildBottomNav(
-              context,
-              navItems,
-              currentRoute,
-            ),
-          );
-        }
-      },
+              body: child,
+              bottomNavigationBar: _buildBottomNav(
+                context,
+                navItems,
+                currentRoute,
+              ),
+            );
+          }
+        },
+      ),
     );
   }
 
