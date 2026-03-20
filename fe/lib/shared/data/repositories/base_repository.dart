@@ -1,9 +1,9 @@
+import 'package:barz/core/api/api_endpoints.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class BaseRepository {
-  final String baseUrl =
-      "http://127.0.0.1:8000"; // Replace with your actual API endpoint
+  final String baseUrl = ApiEndpoints.baseUrl;
 
   Future<Map<String, dynamic>> login(
     String phoneNumber,

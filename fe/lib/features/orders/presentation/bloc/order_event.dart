@@ -18,6 +18,15 @@ class LoadMyOrders extends OrderEvent {
   List<Object?> get props => [page, pageSize, status];
 }
 
+class LoadMoreOrders extends OrderEvent {
+  final String? status;
+
+  const LoadMoreOrders({this.status});
+
+  @override
+  List<Object?> get props => [status];
+}
+
 class LoadOrder extends OrderEvent {
   final int orderId;
 

@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:barz/core/services/version_migration_service.dart';
+import 'package:barz/core/services/notifications/notification_navigation_handler.dart';
 
 /// AppInitializer handles all startup tasks for the app
 ///
@@ -10,9 +11,13 @@ import 'package:barz/core/services/version_migration_service.dart';
 /// 4. Proper error handling during initialization
 class AppInitializer {
   final VersionMigrationService _versionMigrationService;
+  final NotificationNavigationHandler _notificationNavigationHandler;
 
-  AppInitializer({required VersionMigrationService versionMigrationService})
-    : _versionMigrationService = versionMigrationService;
+  AppInitializer({
+    required VersionMigrationService versionMigrationService,
+    required NotificationNavigationHandler notificationNavigationHandler,
+  }) : _versionMigrationService = versionMigrationService,
+       _notificationNavigationHandler = notificationNavigationHandler;
 
   void _debugLog(String message) {
     if (kDebugMode) {
@@ -52,6 +57,10 @@ class AppInitializer {
 
   Future<void> _initializeServices() async {
     _debugLog('Initializing services...');
+    
+    // Initialize notification navigation handler
+    _notificationNavigationHandler.init();
+    
     // Check auth status at startup
     final isAuth = await isUserAuthenticated();
     _debugLog('🔐 Authenticated at startup: $isAuth');

@@ -3,6 +3,7 @@ import 'package:barz/core/router/app_router.dart';
 import 'package:barz/core/services/biometry_service.dart';
 import 'package:barz/core/services/email_prompt_service.dart';
 import 'package:barz/core/services/image_refresh_service.dart';
+import 'package:barz/core/services/notifications/notification_navigation_handler.dart';
 import 'package:barz/core/services/notifications/notification_service.dart';
 import 'package:barz/core/services/token_storage_service.dart';
 import 'package:barz/core/services/offline/offline.dart';
@@ -131,7 +132,13 @@ Future<void> initNotificationInjections() async {
   final notificationService = NotificationService();
   getItInjector.registerSingleton<NotificationService>(notificationService);
 
+  // Register NotificationNavigationHandler
+  getItInjector.registerLazySingleton<NotificationNavigationHandler>(
+    () => NotificationNavigationHandler(
+      notificationService: getItInjector<NotificationService>(),
+    ),
+  );
+
   // Initialize notifications in background - don't block app startup
-  // Permission will be requested lazily, and if denied, app still works
   notificationService.initializeInBackground();
 }

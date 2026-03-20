@@ -31,43 +31,75 @@ class TokenStorageService {
     }
   }
 
-  Future<void> _write(String key, String value) async {
-    if (kIsWeb) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setString(key, value);
-    } else {
-      await _storage!.write(key: key, value: value);
+  Future<void> _write(String key, String value, {bool isRetry = false}) async {
+    try {
+      if (kIsWeb) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString(key, value);
+      } else {
+        await _storage!.write(key: key, value: value);
+      }
+    } catch (e) {
+      _log('[TOKEN ERROR] Failed to write $key: $e');
+      
+      // On iOS, if we get a keychain error, try to clear all and retry once
+      if (!kIsWeb && !isRetry) {
+        _log('[TOKEN RECOVERY] Attempting to clear storage and retry write...');
+        try {
+          await _storage!.deleteAll();
+          await _storage!.write(key: key, value: value);
+          _log('[TOKEN RECOVERY] Write retry successful after clearing');
+        } catch (retryError) {
+          _log('[TOKEN RECOVERY] Write retry failed: $retryError');
+          rethrow;
+        }
+      } else {
+        rethrow;
+      }
     }
   }
 
   Future<String?> _read(String key) async {
-    if (kIsWeb) {
-      final prefs = await SharedPreferences.getInstance();
-      return prefs.getString(key);
-    } else {
-      return await _storage!.read(key: key);
+    try {
+      if (kIsWeb) {
+        final prefs = await SharedPreferences.getInstance();
+        return prefs.getString(key);
+      } else {
+        return await _storage!.read(key: key);
+      }
+    } catch (e) {
+      _log('[TOKEN ERROR] Failed to read $key: $e');
+      return null;
     }
   }
 
   Future<void> _delete(String key) async {
-    if (kIsWeb) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(key);
-    } else {
-      await _storage!.delete(key: key);
+    try {
+      if (kIsWeb) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove(key);
+      } else {
+        await _storage!.delete(key: key);
+      }
+    } catch (e) {
+      _log('[TOKEN ERROR] Failed to delete $key: $e');
     }
   }
 
   Future<void> _deleteAll() async {
-    if (kIsWeb) {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_accessTokenKey);
-      await prefs.remove(_refreshTokenKey);
-      await prefs.remove(_userIdKey);
-      await prefs.remove(_userEmailKey);
-      await prefs.remove(_userNameKey);
-    } else {
-      await _storage!.deleteAll();
+    try {
+      if (kIsWeb) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove(_accessTokenKey);
+        await prefs.remove(_refreshTokenKey);
+        await prefs.remove(_userIdKey);
+        await prefs.remove(_userEmailKey);
+        await prefs.remove(_userNameKey);
+      } else {
+        await _storage!.deleteAll();
+      }
+    } catch (e) {
+      _log('[TOKEN ERROR] Failed to delete all: $e');
     }
   }
 
@@ -77,21 +109,16 @@ class TokenStorageService {
       await _write(_accessTokenKey, token);
       _log('[TOKEN] Access token saved (${token.length} chars)');
     } catch (e) {
-      _log('[TOKEN] ERROR saving access token: $e');
+      _log('[TOKEN] CRITICAL: Failed to save access token: $e');
     }
   }
 
   Future<String?> getAccessToken() async {
-    try {
-      final token = await _read(_accessTokenKey);
-      _log(
-        '[TOKEN] Access token read: ${token != null ? "exists (${token.length} chars)" : "null"}',
-      );
-      return token;
-    } catch (e) {
-      _log('[TOKEN] ERROR reading access token: $e');
-      return null;
+    final token = await _read(_accessTokenKey);
+    if (token != null) {
+      _log('[TOKEN] Access token read: exists (${token.length} chars)');
     }
+    return token;
   }
 
   Future<void> deleteAccessToken() async {
@@ -101,8 +128,12 @@ class TokenStorageService {
 
   // Refresh Token
   Future<void> saveRefreshToken(String token) async {
-    await _write(_refreshTokenKey, token);
-    _log('[TOKEN] Refresh token saved');
+    try {
+      await _write(_refreshTokenKey, token);
+      _log('[TOKEN] Refresh token saved');
+    } catch (e) {
+      _log('[TOKEN] CRITICAL: Failed to save refresh token: $e');
+    }
   }
 
   Future<String?> getRefreshToken() async {
@@ -120,10 +151,14 @@ class TokenStorageService {
     String? email,
     String? name,
   }) async {
-    await _write(_userIdKey, userId);
-    if (email != null) await _write(_userEmailKey, email);
-    if (name != null) await _write(_userNameKey, name);
-    _log('[TOKEN] User info saved: $userId');
+    try {
+      await _write(_userIdKey, userId);
+      if (email != null) await _write(_userEmailKey, email);
+      if (name != null) await _write(_userNameKey, name);
+      _log('[TOKEN] User info saved: $userId');
+    } catch (e) {
+      _log('[TOKEN] CRITICAL: Failed to save user info: $e');
+    }
   }
 
   Future<Map<String, String?>> getUserInfo() async {

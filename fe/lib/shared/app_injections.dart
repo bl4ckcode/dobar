@@ -3,7 +3,7 @@ import 'package:barz/core/storage/secure_storage.dart';
 import 'package:barz/core/services/token_storage_service.dart';
 import 'package:barz/core/services/version_migration_service.dart';
 import 'package:barz/core/services/app_initializer.dart';
-
+import 'package:barz/core/services/notifications/notification_navigation_handler.dart';
 import 'data/data_sources/app_shared_prefs.dart';
 
 Future<void> initAppInjections() async {
@@ -25,6 +25,8 @@ Future<void> initAppInjections() async {
   getItInjector.registerLazySingleton<AppInitializer>(
     () => AppInitializer(
       versionMigrationService: getItInjector<VersionMigrationService>(),
+      notificationNavigationHandler:
+          getItInjector<NotificationNavigationHandler>(),
     ),
   );
 }

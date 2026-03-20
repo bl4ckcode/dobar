@@ -1,3 +1,4 @@
+import 'package:barz/features/orders/domain/models/order_model.dart';
 import 'package:barz/features/orders/domain/usecases/order_usecase.dart';
 import 'package:barz/features/orders/presentation/bloc/order_event.dart';
 import 'package:barz/features/orders/presentation/bloc/order_state.dart';
@@ -8,6 +9,7 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
 
   OrderBloc({required this.orderUsecase}) : super(OrderInitial()) {
     on<LoadMyOrders>(_onLoadMyOrders);
+    on<LoadMoreOrders>(_onLoadMoreOrders);
     on<LoadOrder>(_onLoadOrder);
     on<LoadOrderTimeline>(_onLoadOrderTimeline);
     on<CancelOrder>(_onCancelOrder);
@@ -25,7 +27,48 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     );
     result.fold(
       (failure) => emit(OrderError(message: failure.errorMessage)),
-      (paginatedOrders) => emit(OrdersLoaded(paginatedOrders: paginatedOrders)),
+      (paginatedOrders) => emit(OrdersLoaded(
+        paginatedOrders: paginatedOrders,
+        hasReachedMax: paginatedOrders.orders.length >= paginatedOrders.total,
+      )),
+    );
+  }
+
+  Future<void> _onLoadMoreOrders(
+    LoadMoreOrders event,
+    Emitter<OrderState> emit,
+  ) async {
+    if (state is! OrdersLoaded) return;
+    final currentState = state as OrdersLoaded;
+    if (currentState.hasReachedMax || currentState.isFetchingMore) return;
+
+    emit(currentState.copyWith(isFetchingMore: true));
+
+    final nextPage = currentState.paginatedOrders.page + 1;
+    final result = await orderUsecase.getMyOrders(
+      page: nextPage,
+      pageSize: currentState.paginatedOrders.pageSize,
+      status: event.status,
+    );
+
+    result.fold(
+      (failure) => emit(currentState.copyWith(isFetchingMore: false)),
+      (paginatedOrders) {
+        final allOrders =
+            List<OrderModel>.from(currentState.paginatedOrders.orders)
+              ..addAll(paginatedOrders.orders);
+
+        emit(OrdersLoaded(
+          paginatedOrders: PaginatedOrders(
+            orders: allOrders,
+            total: paginatedOrders.total,
+            page: paginatedOrders.page,
+            pageSize: paginatedOrders.pageSize,
+          ),
+          hasReachedMax: allOrders.length >= paginatedOrders.total,
+          isFetchingMore: false,
+        ));
+      },
     );
   }
 

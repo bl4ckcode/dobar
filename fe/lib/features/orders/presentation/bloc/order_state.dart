@@ -14,11 +14,29 @@ class OrderLoading extends OrderState {}
 
 class OrdersLoaded extends OrderState {
   final PaginatedOrders paginatedOrders;
+  final bool hasReachedMax;
+  final bool isFetchingMore;
 
-  const OrdersLoaded({required this.paginatedOrders});
+  const OrdersLoaded({
+    required this.paginatedOrders,
+    this.hasReachedMax = false,
+    this.isFetchingMore = false,
+  });
+
+  OrdersLoaded copyWith({
+    PaginatedOrders? paginatedOrders,
+    bool? hasReachedMax,
+    bool? isFetchingMore,
+  }) {
+    return OrdersLoaded(
+      paginatedOrders: paginatedOrders ?? this.paginatedOrders,
+      hasReachedMax: hasReachedMax ?? this.hasReachedMax,
+      isFetchingMore: isFetchingMore ?? this.isFetchingMore,
+    );
+  }
 
   @override
-  List<Object?> get props => [paginatedOrders];
+  List<Object?> get props => [paginatedOrders, hasReachedMax, isFetchingMore];
 }
 
 class OrderLoaded extends OrderState {
