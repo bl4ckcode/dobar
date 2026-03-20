@@ -240,6 +240,29 @@ Response 200:
 }
 ```
 
+### POST /payments/webhook (DPE → BARZ-BACKEND)
+
+DPE listens for external gateways at `POST /webhooks/{gateway}` automatically, validates signatures, and natively standardizes and forwards them directly to the backend here.
+
+```json
+Request (from DPE, protected by X-Service-Auth):
+{
+  "event": "charge.paid",
+  "payment_id": "ch_XXX",
+  "order_id": "order_XXXXX",
+  "status": "succeeded",
+  "amount_cents": 4550,
+  "currency": "BRL",
+  "gateway": "stone",
+  "created_at": "2026-03-05T00:00:00Z"
+}
+
+Response 200:
+{
+  "status": "processed"
+}
+```
+
 ### POST /pix/generate (Brazil only)
 
 ```json
@@ -414,11 +437,11 @@ DPE automatically routes payments to the appropriate gateway based on country:
 - [ ] Configure shared secret for BE ↔ DPE auth
 - [ ] Deploy to production (Fly.io)
 
-### Phase 2: Integration
+### Phase 2: Integration ✅
 
-- [ ] BE calls DPE for all payments
-- [ ] Wallet stays in BE
-- [ ] Webhooks for async payment updates
+- [x] BE calls DPE for all payments
+- [x] Wallet stays in BE
+- [x] Webhooks for async payment updates (`POST /payments/webhook`)
 
 ### Phase 3: Multi-Product
 

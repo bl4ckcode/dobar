@@ -86,11 +86,10 @@ class OrderWithHistory(Order):
     status_history: List[dict] = []
 
 
-class OrderListResponse(BaseModel):
+class OrderHistoryResponse(BaseModel):
     orders: List[Order]
-    total: int
-    page: int
-    page_size: int
+    next_cursor: Optional[str] = None
+    has_more: bool = False
 
 
 class SyncOperation(BaseModel):

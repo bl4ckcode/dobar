@@ -11,158 +11,105 @@ from app.bars_and_restaurants.models.cart_models import OrderItem, OrderStatusHi
 
 
 class TestOrderHistory:
-    """Test order history and listing."""
-    
+
     @pytest.mark.asyncio
-    async def test_get_empty_order_history(self, client: AsyncClient, mock_firebase_token):
-        """Test getting order history when user has no orders."""
-        response = await client.get(
-            "/orders/user/me",
-            headers={"Authorization": f"Bearer {mock_firebase_token}"}
-        )
-        
+    async def test_get_empty_order_history(self, auth_client):
+        client, headers, user = auth_client
+        response = await client.get("/orders/user/me", headers=headers)
         assert response.status_code == 200
         data = response.json()
         assert data["orders"] == []
-        assert data["total"] == 0
-        assert data["page"] == 1
-        assert data["page_size"] == 10
-    
+        assert data["has_more"] is False
+        assert data["next_cursor"] is None
+
     @pytest.mark.asyncio
-    async def test_get_order_history_with_orders(self, client: AsyncClient, mock_firebase_token, setup_database, sample_user_data):
-        """Test getting order history with multiple orders."""
+    async def test_get_order_history_with_orders(self, auth_client, test_bar_in_db):
+        client, headers, user = auth_client
         from app.database import database
-        
-        # Create a bar
-        bar_data = {
-            "name": "Test Bar",
-            "address": "123 Test St",
-            "latitude": 40.7128,
-            "longitude": -74.0060
-        }
-        bar_id = await database.execute(Bar.__table__.insert().values(**bar_data))
-        
-        # Create multiple orders
+        from datetime import timezone
+        now = datetime.now(timezone.utc)
         for i in range(5):
-            order_data = {
-                "user_id": sample_user_data["id"],
-                "bar_id": bar_id,
-                "status": "completed" if i < 3 else "pending",
-                "order_type": "delivery",
-                "subtotal": 50.00,
-                "tax": 5.00,
-                "tip": 10.00,
-                "delivery_fee": 5.00,
-                "discount": 0.00,
-                "total": 70.00,
-                "payment_method": "credit_card",
-                "payment_status": "completed"
-            }
-            await database.execute(Order.__table__.insert().values(**order_data))
-        
-        # Get order history
-        response = await client.get(
-            "/orders/user/me",
-            headers={"Authorization": f"Bearer {mock_firebase_token}"}
-        )
-        
+            await database.execute(Order.__table__.insert().values(
+                user_id=user["id"],
+                bar_id=test_bar_in_db["id"],
+                status="completed" if i < 3 else "pending",
+                total_price=70.00,
+                subtotal=50.00,
+                tax=5.00,
+                tip=10.00,
+                delivery_fee=5.00,
+                discount=0.00,
+                order_type="delivery",
+                payment_method="credit_card",
+                created_at=now,
+                updated_at=now,
+            ))
+        response = await client.get("/orders/user/me", headers=headers)
         assert response.status_code == 200
         data = response.json()
         assert len(data["orders"]) == 5
-        assert data["total"] == 5
-    
+        assert "next_cursor" in data
+        assert "has_more" in data
+
     @pytest.mark.asyncio
-    async def test_get_order_history_with_status_filter(self, client: AsyncClient, mock_firebase_token, setup_database, sample_user_data):
-        """Test filtering order history by status."""
+    async def test_get_order_history_with_status_filter(self, auth_client, test_bar_in_db):
+        client, headers, user = auth_client
         from app.database import database
-        
-        # Create a bar
-        bar_data = {
-            "name": "Test Bar",
-            "address": "123 Test St",
-            "latitude": 40.7128,
-            "longitude": -74.0060
-        }
-        bar_id = await database.execute(Bar.__table__.insert().values(**bar_data))
-        
-        # Create orders with different statuses
-        statuses = ["pending", "confirmed", "preparing", "completed", "completed"]
-        for status in statuses:
-            order_data = {
-                "user_id": sample_user_data["id"],
-                "bar_id": bar_id,
-                "status": status,
-                "order_type": "pickup",
-                "subtotal": 30.00,
-                "tax": 3.00,
-                "total": 33.00,
-                "payment_method": "credit_card",
-                "payment_status": "completed"
-            }
-            await database.execute(Order.__table__.insert().values(**order_data))
-        
-        # Filter by completed status
-        response = await client.get(
-            "/orders/user/me?status=completed",
-            headers={"Authorization": f"Bearer {mock_firebase_token}"}
-        )
-        
+        from datetime import timezone
+        now = datetime.now(timezone.utc)
+        for status in ["pending", "confirmed", "preparing", "completed", "completed"]:
+            await database.execute(Order.__table__.insert().values(
+                user_id=user["id"],
+                bar_id=test_bar_in_db["id"],
+                status=status,
+                total_price=33.00,
+                subtotal=30.00,
+                tax=3.00,
+                order_type="pickup",
+                payment_method="credit_card",
+                created_at=now,
+                updated_at=now,
+            ))
+        response = await client.get("/orders/user/me?status=completed", headers=headers)
         assert response.status_code == 200
         data = response.json()
         assert len(data["orders"]) == 2
         for order in data["orders"]:
             assert order["status"] == "completed"
-    
+
     @pytest.mark.asyncio
-    async def test_order_history_pagination(self, client: AsyncClient, mock_firebase_token, setup_database, sample_user_data):
-        """Test pagination of order history."""
+    async def test_order_history_cursor_pagination(self, auth_client, test_bar_in_db):
+        client, headers, user = auth_client
         from app.database import database
-        
-        # Create a bar
-        bar_data = {
-            "name": "Test Bar",
-            "address": "123 Test St",
-            "latitude": 40.7128,
-            "longitude": -74.0060
-        }
-        bar_id = await database.execute(Bar.__table__.insert().values(**bar_data))
-        
-        # Create 25 orders
-        for i in range(25):
-            order_data = {
-                "user_id": sample_user_data["id"],
-                "bar_id": bar_id,
-                "status": "completed",
-                "order_type": "delivery",
-                "subtotal": 50.00,
-                "total": 50.00,
-                "payment_method": "credit_card",
-                "payment_status": "completed"
-            }
-            await database.execute(Order.__table__.insert().values(**order_data))
-        
-        # Get first page
-        response1 = await client.get(
-            "/orders/user/me?page=1&page_size=10",
-            headers={"Authorization": f"Bearer {mock_firebase_token}"}
-        )
-        
+        from datetime import timezone
+        now = datetime.now(timezone.utc)
+        for _ in range(25):
+            await database.execute(Order.__table__.insert().values(
+                user_id=user["id"],
+                bar_id=test_bar_in_db["id"],
+                status="completed",
+                total_price=50.00,
+                order_type="delivery",
+                payment_method="credit_card",
+                created_at=now,
+                updated_at=now,
+            ))
+        response1 = await client.get("/orders/user/me?limit=10", headers=headers)
         assert response1.status_code == 200
         data1 = response1.json()
         assert len(data1["orders"]) == 10
-        assert data1["total"] == 25
-        assert data1["page"] == 1
-        
-        # Get second page
-        response2 = await client.get(
-            "/orders/user/me?page=2&page_size=10",
-            headers={"Authorization": f"Bearer {mock_firebase_token}"}
-        )
-        
+        assert data1["has_more"] is True
+        assert data1["next_cursor"] is not None
+
+        cursor = data1["next_cursor"]
+        response2 = await client.get(f"/orders/user/me?limit=10&cursor={cursor}", headers=headers)
         assert response2.status_code == 200
         data2 = response2.json()
         assert len(data2["orders"]) == 10
-        assert data2["page"] == 2
+
+        ids1 = {o["id"] for o in data1["orders"]}
+        ids2 = {o["id"] for o in data2["orders"]}
+        assert ids1.isdisjoint(ids2)
 
 
 class TestOrderDetails:

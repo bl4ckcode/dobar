@@ -154,6 +154,11 @@ class PrivacySettings(BaseModel):
     location_enabled: bool = False
 
 
+class FcmTokenUpdate(BaseModel):
+    token: str
+    platform: Literal["ios", "android", "web"] = "android"
+
+
 class OnboardingUpdate(BaseModel):
     """Used during onboarding to set user type and country"""
     user_type: Literal["client", "business"]
@@ -416,6 +421,24 @@ async def update_privacy_settings(
         )
     )
     return data
+
+
+@profile_router.put("/fcm-token")
+async def update_fcm_token(
+    data: FcmTokenUpdate,
+    current_user: AuthUser = Depends(get_current_user)
+):
+    await get_or_create_profile(current_user.id)
+    await database.execute(
+        UserProfile.__table__.update()
+        .where(UserProfile.user_id == current_user.id)
+        .values(
+            fcm_token=data.token,
+            fcm_token_updated_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
+        )
+    )
+    return {"message": "FCM token updated"}
 
 
 @profile_router.delete("/data")

@@ -13,7 +13,7 @@ from ..schemas.orders import (
     Order as OrderSchema, 
     OrderStatusUpdate, 
     OrderWithHistory,
-    OrderListResponse,
+    OrderHistoryResponse,
     SyncRequest,
     SyncResponse
 )
@@ -62,40 +62,50 @@ async def create_order(
     
     return db_order
 
-@orders_router.get("/user/me", response_model=OrderListResponse)
+@orders_router.get("/user/me", response_model=OrderHistoryResponse)
 async def get_my_orders(
-    page: int = Query(1, ge=1),
-    page_size: int = Query(10, ge=1, le=100),
+    cursor: Optional[str] = None,
+    limit: int = Query(20, ge=1, le=100),
     status: Optional[str] = None,
     current_user: User = Depends(get_current_active_user)
 ):
-    """Get the current user's order history with pagination."""
-    # Build query
+    import base64
+
     query = OrderModel.__table__.select().where(OrderModel.user_id == current_user["id"])
-    
-    # Filter by status if provided
+
     if status:
         query = query.where(OrderModel.status == status)
-    
-    # Order by created_at descending (newest first)
-    query = query.order_by(desc(OrderModel.created_at))
-    
-    # Get total count
-    count_query = query.with_only_columns(OrderModel.id).alias("count")
-    total = await database.fetch_val(f"SELECT COUNT(*) FROM ({count_query.compile(compile_kwargs={'literal_binds': True})}) AS count")
-    
-    # Apply pagination
-    offset = (page - 1) * page_size
-    query = query.limit(page_size).offset(offset)
-    
-    # Fetch orders
-    orders = await database.fetch_all(query)
-    
-    return OrderListResponse(
-        orders=[OrderSchema(**dict(order)) for order in orders],
-        total=total or 0,
-        page=page,
-        page_size=page_size
+
+    if cursor:
+        try:
+            decoded = base64.b64decode(cursor.encode()).decode()
+            cursor_ts, cursor_id = decoded.split("|")
+            from datetime import datetime
+            cursor_dt = datetime.fromisoformat(cursor_ts)
+            query = query.where(
+                (OrderModel.created_at < cursor_dt) |
+                ((OrderModel.created_at == cursor_dt) & (OrderModel.id < int(cursor_id)))
+            )
+        except Exception:
+            pass
+
+    query = query.order_by(desc(OrderModel.created_at), desc(OrderModel.id))
+    query = query.limit(limit + 1)
+
+    rows = await database.fetch_all(query)
+    has_more = len(rows) > limit
+    orders = rows[:limit]
+
+    next_cursor = None
+    if has_more and orders:
+        last = orders[-1]
+        raw = f"{last['created_at'].isoformat()}|{last['id']}"
+        next_cursor = base64.b64encode(raw.encode()).decode()
+
+    return OrderHistoryResponse(
+        orders=[OrderSchema(**dict(o)) for o in orders],
+        next_cursor=next_cursor,
+        has_more=has_more
     )
 
 

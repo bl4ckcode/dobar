@@ -126,7 +126,7 @@ async def get_current_user(
     Returns AuthUser with roles for all bars they're associated with.
     """
     if not credentials:
-        raise APIError.not_authenticated()
+        raise APIError.unauthorized()
     
     try:
         token = credentials.credentials

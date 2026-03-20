@@ -34,11 +34,11 @@ class TestOrderRetrieval:
 
     async def test_get_my_orders_pagination(self, auth_client, test_order_in_db):
         client, headers, user = auth_client
-        response = await client.get("/orders/user/me?page=1&page_size=5", headers=headers)
+        response = await client.get("/orders/user/me?limit=5", headers=headers)
         assert response.status_code == 200
         data = response.json()
-        assert data["page"] == 1
-        assert data["page_size"] == 5
+        assert "has_more" in data
+        assert "next_cursor" in data
 
     async def test_get_order_by_id(self, auth_client, test_order_in_db):
         client, headers, user = auth_client
