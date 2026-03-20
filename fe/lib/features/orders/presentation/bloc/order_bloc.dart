@@ -20,16 +20,12 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     Emitter<OrderState> emit,
   ) async {
     emit(OrderLoading());
-    final result = await orderUsecase.getMyOrders(
-      page: event.page,
-      pageSize: event.pageSize,
-      status: event.status,
-    );
+    final result = await orderUsecase.getMyOrders(status: event.status);
     result.fold(
       (failure) => emit(OrderError(message: failure.errorMessage)),
       (paginatedOrders) => emit(OrdersLoaded(
         paginatedOrders: paginatedOrders,
-        hasReachedMax: paginatedOrders.orders.length >= paginatedOrders.total,
+        hasReachedMax: !paginatedOrders.hasMore,
       )),
     );
   }
@@ -44,10 +40,8 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
 
     emit(currentState.copyWith(isFetchingMore: true));
 
-    final nextPage = currentState.paginatedOrders.page + 1;
     final result = await orderUsecase.getMyOrders(
-      page: nextPage,
-      pageSize: currentState.paginatedOrders.pageSize,
+      cursor: currentState.paginatedOrders.nextCursor,
       status: event.status,
     );
 
@@ -61,11 +55,10 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
         emit(OrdersLoaded(
           paginatedOrders: PaginatedOrders(
             orders: allOrders,
-            total: paginatedOrders.total,
-            page: paginatedOrders.page,
-            pageSize: paginatedOrders.pageSize,
+            hasMore: paginatedOrders.hasMore,
+            nextCursor: paginatedOrders.nextCursor,
           ),
-          hasReachedMax: allOrders.length >= paginatedOrders.total,
+          hasReachedMax: !paginatedOrders.hasMore,
           isFetchingMore: false,
         ));
       },

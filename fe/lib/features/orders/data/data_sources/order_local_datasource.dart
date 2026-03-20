@@ -28,29 +28,35 @@ class OrderLocalDataSource {
   }
 
   PaginatedOrders getCachedOrdersPaginated({
-    required int page,
-    required int pageSize,
+    String? cursor,
+    int limit = 20,
     String? status,
   }) {
     var allOrders = getCachedOrders();
+    allOrders.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
     if (status != null && status.isNotEmpty) {
       allOrders = allOrders.where((o) => o.status == status).toList();
     }
 
-    final total = allOrders.length;
-    final startIndex = (page - 1) * pageSize;
-    final endIndex = (startIndex + pageSize).clamp(0, total);
+    int startIndex = 0;
+    if (cursor != null) {
+      final cursorIndex = int.tryParse(cursor);
+      if (cursorIndex != null) startIndex = cursorIndex;
+    }
 
-    final paginatedOrders = startIndex < total
+    final endIndex = (startIndex + limit).clamp(0, allOrders.length);
+    final pageOrders = startIndex < allOrders.length
         ? allOrders.sublist(startIndex, endIndex)
         : <OrderModel>[];
 
+    final hasMore = endIndex < allOrders.length;
+    final nextCursor = hasMore ? endIndex.toString() : null;
+
     return PaginatedOrders(
-      orders: paginatedOrders,
-      total: total,
-      page: page,
-      pageSize: pageSize,
+      orders: pageOrders,
+      hasMore: hasMore,
+      nextCursor: nextCursor,
     );
   }
 

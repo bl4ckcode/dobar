@@ -10,14 +10,14 @@ class OrderNetworkDataSource {
   OrderNetworkDataSource({required this.dio});
 
   Future<PaginatedOrders> getMyOrders({
-    required int page,
-    required int pageSize,
+    int limit = 20,
+    String? cursor,
     String? status,
   }) async {
     try {
       final queryParams = {
-        'page': page,
-        'page_size': pageSize,
+        'limit': limit,
+        if (cursor != null) 'cursor': cursor,
         if (status != null) 'status': status,
       };
       final response = await dio.get(

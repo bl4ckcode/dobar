@@ -1,23 +1,23 @@
+import 'dart:io';
+import 'package:dio/dio.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
+import 'package:barz/core/api/api_endpoints.dart';
 import 'package:barz/core/services/version_migration_service.dart';
 import 'package:barz/core/services/notifications/notification_navigation_handler.dart';
 
-/// AppInitializer handles all startup tasks for the app
-///
-/// This is critical for a payments app to ensure:
-/// 1. Version migrations are run before the app starts
-/// 2. Storage integrity is validated
-/// 3. User sessions are preserved across updates
-/// 4. Proper error handling during initialization
 class AppInitializer {
   final VersionMigrationService _versionMigrationService;
   final NotificationNavigationHandler _notificationNavigationHandler;
+  final Dio _dio;
 
   AppInitializer({
     required VersionMigrationService versionMigrationService,
     required NotificationNavigationHandler notificationNavigationHandler,
+    required Dio dio,
   }) : _versionMigrationService = versionMigrationService,
-       _notificationNavigationHandler = notificationNavigationHandler;
+       _notificationNavigationHandler = notificationNavigationHandler,
+       _dio = dio;
 
   void _debugLog(String message) {
     if (kDebugMode) {
@@ -26,26 +26,17 @@ class AppInitializer {
     }
   }
 
-  /// Run all initialization tasks
-  /// This should be called after dependencies are registered but before runApp
   Future<void> run() async {
     _debugLog('🚀 Starting app initialization...');
 
     try {
-      // 1. Run version migrations first
       await _runVersionMigrations();
-
-      // 2. Initialize any other startup services
       await _initializeServices();
-
-      // 3. Preload any necessary data
       await _preloadData();
-
       _debugLog('✅ App initialization complete');
     } catch (e, stackTrace) {
       _debugLog('❌ App initialization failed: $e');
       _debugLog('Stack trace: $stackTrace');
-      // Don't rethrow - let the app start anyway and handle errors gracefully
     }
   }
 
@@ -57,27 +48,53 @@ class AppInitializer {
 
   Future<void> _initializeServices() async {
     _debugLog('Initializing services...');
-    
-    // Initialize notification navigation handler
+
     _notificationNavigationHandler.init();
-    
-    // Check auth status at startup
+
     final isAuth = await isUserAuthenticated();
     _debugLog('🔐 Authenticated at startup: $isAuth');
+
+    if (isAuth) {
+      await _registerFcmToken();
+    }
+  }
+
+  Future<void> _registerFcmToken() async {
+    try {
+      final token = await FirebaseMessaging.instance.getToken();
+      if (token == null) return;
+
+      final platform = Platform.isIOS ? 'ios' : 'android';
+      await _dio.put(
+        '${ApiEndpoints.baseUrl}/me/fcm-token',
+        data: {'token': token, 'platform': platform},
+      );
+      _debugLog('📱 FCM token registered ($platform)');
+
+      FirebaseMessaging.instance.onTokenRefresh.listen((refreshedToken) async {
+        try {
+          await _dio.put(
+            '${ApiEndpoints.baseUrl}/me/fcm-token',
+            data: {'token': refreshedToken, 'platform': platform},
+          );
+          _debugLog('📱 FCM token refreshed');
+        } catch (e) {
+          _debugLog('⚠️ FCM token refresh failed: $e');
+        }
+      });
+    } catch (e) {
+      _debugLog('⚠️ FCM token registration failed: $e');
+    }
   }
 
   Future<void> _preloadData() async {
     _debugLog('Preloading data...');
-    // Add any data preloading here
-    // e.g., user preferences, cached data, etc.
   }
 
-  /// Check if user is authenticated
   Future<bool> isUserAuthenticated() async {
     return await _versionMigrationService.isAuthenticated();
   }
 
-  /// Get the stored app version
   Future<String?> getStoredVersion() async {
     return await _versionMigrationService.getStoredVersion();
   }

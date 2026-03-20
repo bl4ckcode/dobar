@@ -149,15 +149,13 @@ class StatusHistory {
 
 class PaginatedOrders {
   final List<OrderModel> orders;
-  final int total;
-  final int page;
-  final int pageSize;
+  final String? nextCursor;
+  final bool hasMore;
 
   PaginatedOrders({
     required this.orders,
-    required this.total,
-    required this.page,
-    required this.pageSize,
+    required this.hasMore,
+    this.nextCursor,
   });
 
   factory PaginatedOrders.fromJson(Map<String, dynamic> json) {
@@ -165,9 +163,8 @@ class PaginatedOrders {
       orders: (json['orders'] as List<dynamic>)
           .map((e) => OrderModel.fromJson(e))
           .toList(),
-      total: json['total'],
-      page: json['page'],
-      pageSize: json['page_size'],
+      nextCursor: json['next_cursor'] as String?,
+      hasMore: json['has_more'] as bool? ?? false,
     );
   }
 }

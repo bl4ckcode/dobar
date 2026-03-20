@@ -25,19 +25,19 @@ class OrderRepositoryImpl extends AbstractOrderRepository {
 
   @override
   Future<Either<Failure, PaginatedOrders>> getMyOrders({
-    required int page,
-    required int pageSize,
+    int limit = 20,
+    String? cursor,
     String? status,
   }) async {
     final cachedOrders = localDataSource.getCachedOrdersPaginated(
-      page: page,
-      pageSize: pageSize,
+      cursor: cursor,
+      limit: limit,
       status: status,
     );
 
     if (!connectivityService.isOnline) {
       debugPrint('[OrderRepo] Offline - returning cached orders');
-      if (cachedOrders.orders.isEmpty && page == 1) {
+      if (cachedOrders.orders.isEmpty && cursor == null) {
         return const Left(CacheFailure('No cached orders available'));
       }
       return Right(cachedOrders);
@@ -45,12 +45,12 @@ class OrderRepositoryImpl extends AbstractOrderRepository {
 
     try {
       final result = await networkDataSource.getMyOrders(
-        page: page,
-        pageSize: pageSize,
+        limit: limit,
+        cursor: cursor,
         status: status,
       );
 
-      if (page == 1) {
+      if (cursor == null) {
         await localDataSource.cacheOrders(result.orders);
       } else {
         for (final order in result.orders) {
@@ -66,7 +66,7 @@ class OrderRepositoryImpl extends AbstractOrderRepository {
       debugPrint(
         '[OrderRepo] Network error - falling back to cache: ${e.message}',
       );
-      if (cachedOrders.orders.isNotEmpty || page > 1) {
+      if (cachedOrders.orders.isNotEmpty || cursor != null) {
         return Right(cachedOrders);
       }
       return Left(ServerFailure(e.message, e.statusCode));

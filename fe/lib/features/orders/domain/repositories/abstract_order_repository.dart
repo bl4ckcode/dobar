@@ -4,8 +4,8 @@ import 'package:dartz/dartz.dart';
 
 abstract class AbstractOrderRepository {
   Future<Either<Failure, PaginatedOrders>> getMyOrders({
-    required int page,
-    required int pageSize,
+    int limit,
+    String? cursor,
     String? status,
   });
   Future<Either<Failure, OrderModel>> getOrder(int orderId);

@@ -9,13 +9,13 @@ class OrderUsecase {
   OrderUsecase({required this.repository});
 
   Future<Either<Failure, PaginatedOrders>> getMyOrders({
-    required int page,
-    required int pageSize,
+    int limit = 20,
+    String? cursor,
     String? status,
   }) {
     return repository.getMyOrders(
-      page: page,
-      pageSize: pageSize,
+      limit: limit,
+      cursor: cursor,
       status: status,
     );
   }

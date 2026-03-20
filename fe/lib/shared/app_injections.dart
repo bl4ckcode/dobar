@@ -4,6 +4,7 @@ import 'package:barz/core/services/token_storage_service.dart';
 import 'package:barz/core/services/version_migration_service.dart';
 import 'package:barz/core/services/app_initializer.dart';
 import 'package:barz/core/services/notifications/notification_navigation_handler.dart';
+import 'package:dio/dio.dart';
 import 'data/data_sources/app_shared_prefs.dart';
 
 Future<void> initAppInjections() async {
@@ -27,6 +28,7 @@ Future<void> initAppInjections() async {
       versionMigrationService: getItInjector<VersionMigrationService>(),
       notificationNavigationHandler:
           getItInjector<NotificationNavigationHandler>(),
+      dio: getItInjector<Dio>(),
     ),
   );
 }
