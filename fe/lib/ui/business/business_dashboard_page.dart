@@ -142,6 +142,37 @@ class _BusinessDashboardHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isWeb = MediaQuery.of(context).size.width >= 768.0;
+
+    if (!isWeb) {
+      return Padding(
+        padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Dashboard',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Space Grotesk',
+                  ),
+                ),
+                Text(
+                  'Welcome back, ${role.displayName}',
+                  style: const TextStyle(color: Colors.grey, fontSize: 13),
+                ),
+              ],
+            ),
+            BusinessStatusToggle(isOpen: isOpen, onTap: onToggleOpen),
+          ],
+        ),
+      );
+    }
+
     return BusinessStatusToolbar(
       title: 'Dashboard',
       subtitle: 'Welcome back, ${role.displayName}',
@@ -618,63 +649,100 @@ class _PromoteCampaignCard extends StatelessWidget {
           ),
         ],
       ),
-      child: Row(
-  children: [
-    Container(
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(
-        color: barzDark.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final isNarrow = constraints.maxWidth < 450;
+          
+          return Flex(
+            direction: isNarrow ? Axis.vertical : Axis.horizontal,
+            crossAxisAlignment: isNarrow ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      color: barzDark.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(LucideIcons.megaphone, color: barzDark, size: 24),
+                  ),
+                  if (isNarrow) ...[
+                    const SizedBox(width: 16),
+                    Text(
+                      'Boost Your Sales',
+                      style: TextStyle(
+                        color: barzDark,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              if (isNarrow) const SizedBox(height: 12),
+              if (!isNarrow) ...[
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Boost Your Sales',
+                        style: TextStyle(
+                          color: barzDark,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'Create a campaign and reach more customers in your area!',
+                        style: TextStyle(
+                          color: barzDark.withValues(alpha: 0.7),
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else
+                Text(
+                  'Create a campaign and reach more customers in your area!',
+                  style: TextStyle(
+                    color: barzDark.withValues(alpha: 0.7),
+                    fontSize: 14,
+                  ),
+                ),
+              if (isNarrow) const SizedBox(height: 20),
+              if (!isNarrow) const SizedBox(width: 24),
+              SizedBox(
+                width: isNarrow ? double.infinity : null,
+                child: FilledButton.icon(
+                  onPressed: () {},
+                  style: FilledButton.styleFrom(
+                    backgroundColor: barzDark,
+                    foregroundColor: barzGold,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 16,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  icon: const Icon(LucideIcons.plus, size: 18),
+                  label: const Text(
+                    'Create Campaign',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          );
+        },
       ),
-      child: const Icon(LucideIcons.megaphone, color: barzDark, size: 24),
-    ),
-    const SizedBox(width: 16),
-    Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Boost Your Sales',
-            style: TextStyle(
-              color: barzDark,
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Create a campaign and reach more customers in your area!',
-            style: TextStyle(
-              color: barzDark.withValues(alpha: 0.7),
-              fontSize: 14,
-            ),
-          ),
-        ],
-      ),
-    ),
-    const SizedBox(width: 24),
-    FilledButton.icon(
-      onPressed: () {},
-      style: FilledButton.styleFrom(
-        backgroundColor: barzDark,
-        foregroundColor: barzGold,
-        padding: const EdgeInsets.symmetric(
-          horizontal: 20,
-          vertical: 16,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-      ),
-      icon: const Icon(LucideIcons.plus, size: 18),
-      label: const Text(
-        'Create Campaign',
-        style: TextStyle(fontWeight: FontWeight.bold),
-      ),
-    ),
-  ],
-),
     );
   }
 }

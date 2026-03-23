@@ -8,14 +8,22 @@ import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
 import 'package:barz/features/session/presentation/bloc/session_event.dart';
 import 'package:barz/features/session/domain/models/bar_access.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import 'widgets/business_onboarding_view.dart';
 
 const double kBusinessWebBreakpoint = 768.0;
 
-class BusinessRootShell extends StatelessWidget {
+class BusinessRootShell extends StatefulWidget {
   final Widget child;
 
   const BusinessRootShell({super.key, required this.child});
+
+  @override
+  State<BusinessRootShell> createState() => _BusinessRootShellState();
+}
+
+class _BusinessRootShellState extends State<BusinessRootShell> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   Widget build(BuildContext context) {
@@ -77,7 +85,7 @@ class BusinessRootShell extends StatelessWidget {
                     Expanded(
                       child: Directionality(
                         textDirection: TextDirection.ltr,
-                        child: child,
+                        child: widget.child,
                       ),
                     ),
                     Directionality(
@@ -107,28 +115,29 @@ class BusinessRootShell extends StatelessWidget {
             );
           } else {
             return Scaffold(
+              key: _scaffoldKey,
               appBar: AppBar(
                 backgroundColor: barzDark,
-                foregroundColor: Colors.white,
+                elevation: 0,
+                leading: IconButton(
+                  icon: const Icon(LucideIcons.menu, color: Colors.white),
+                  onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+                ),
                 title: _buildBarSelector(context, session.barAccess, activeBar),
                 actions: [
                   IconButton(
-                    icon: const Icon(Icons.person_outline),
-                    tooltip: 'Client Mode',
-                    onPressed: () {
-                      context.read<SessionBloc>().add(
-                        const SessionEvent.switchToClientMode(),
-                      );
-                    },
+                    icon: const Icon(LucideIcons.bell, color: Colors.white),
+                    onPressed: () {},
                   ),
                 ],
               ),
-              body: child,
-              bottomNavigationBar: _buildBottomNav(
-                context,
-                navItems,
-                currentRoute,
+              drawer: _BusinessDrawer(
+                bars: session.barAccess,
+                activeBar: activeBar,
+                navItems: navItems,
+                currentRoute: currentRoute,
               ),
+              body: widget.child,
             );
           }
         },
@@ -145,10 +154,20 @@ class BusinessRootShell extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(activeBar.barName, style: const TextStyle(fontSize: 16)),
+          Text(
+            activeBar.barName,
+            style: const TextStyle(
+              fontSize: 16,
+              color: Colors.white,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
           Text(
             activeBar.role.displayName,
-            style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.white.withValues(alpha: 0.6),
+            ),
           ),
         ],
       );
@@ -161,14 +180,24 @@ class BusinessRootShell extends StatelessWidget {
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(activeBar.barName, style: const TextStyle(fontSize: 16)),
+              Text(
+                activeBar.barName,
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
               Text(
                 activeBar.role.displayName,
-                style: TextStyle(fontSize: 12, color: Colors.grey[400]),
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.white.withValues(alpha: 0.6),
+                ),
               ),
             ],
           ),
-          const Icon(Icons.arrow_drop_down),
+          const Icon(Icons.arrow_drop_down, color: Colors.white),
         ],
       ),
       itemBuilder: (context) => bars.map((bar) {
@@ -192,32 +221,6 @@ class BusinessRootShell extends StatelessWidget {
     );
   }
 
-  Widget _buildBottomNav(
-    BuildContext context,
-    List<BusinessNavigationItem> navItems,
-    AppRoute? currentRoute,
-  ) {
-    final selectedIndex = navItems.indexWhere(
-      (item) => item.route == currentRoute,
-    );
-
-    return BottomNavigationBar(
-      currentIndex: selectedIndex >= 0 ? selectedIndex : 0,
-      onTap: (index) => context.go(navItems[index].route.path),
-      type: BottomNavigationBarType.fixed,
-      backgroundColor: barzDark,
-      selectedItemColor: barzGold,
-      unselectedItemColor: Colors.white60,
-      items: navItems
-          .map(
-            (item) => BottomNavigationBarItem(
-              icon: Icon(item.icon),
-              label: item.label,
-            ),
-          )
-          .toList(),
-    );
-  }
 }
 
 class _BusinessSideNav extends StatefulWidget {
@@ -551,6 +554,238 @@ class _BusinessSideNavState extends State<_BusinessSideNav> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _BusinessDrawer extends StatelessWidget {
+  final List<BarAccess> bars;
+  final BarAccess activeBar;
+  final List<BusinessNavigationItem> navItems;
+  final AppRoute? currentRoute;
+
+  const _BusinessDrawer({
+    required this.bars,
+    required this.activeBar,
+    required this.navItems,
+    required this.currentRoute,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+
+    return Drawer(
+      backgroundColor: barzDark,
+      child: SafeArea(
+        child: Column(
+          children: [
+            // Bar Info Header (InfoCard style)
+            Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Row(
+                children: [
+                  Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: barzGold,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: barzGold.withValues(alpha: 0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(Icons.storefront, color: barzDark, size: 28),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          activeBar.barName,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            fontFamily: "Inter",
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          activeBar.role.displayName,
+                          style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.5),
+                            fontSize: 14,
+                            fontFamily: "Inter",
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const Padding(
+              padding: EdgeInsets.only(left: 24, bottom: 8),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  "BROWSE",
+                  style: TextStyle(
+                    color: Colors.white24,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ),
+            ),
+
+            // Navigation Items
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                children: [
+                  ...navItems.map((item) {
+                    final isSelected = item.route == currentRoute;
+                    return _DrawerTile(
+                      icon: item.icon,
+                      label: item.label,
+                      isSelected: isSelected,
+                      onTap: () {
+                        Navigator.pop(context);
+                        context.go(item.route.path);
+                      },
+                    );
+                  }),
+
+                  const Padding(
+                    padding: EdgeInsets.only(left: 8, top: 24, bottom: 8),
+                    child: Text(
+                      "ACTIONS",
+                      style: TextStyle(
+                        color: Colors.white24,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                  ),
+
+                  // Client Mode
+                  _DrawerTile(
+                    icon: LucideIcons.user,
+                    label: 'Client Mode',
+                    isSelected: false,
+                    onTap: () {
+                      Navigator.pop(context);
+                      context.read<SessionBloc>().add(
+                        const SessionEvent.switchToClientMode(),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            // Bottom area: Logout
+            Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: _DrawerTile(
+                icon: LucideIcons.logOut,
+                label: 'Logout',
+                isSelected: false,
+                isWarning: true,
+                onTap: () {
+                  Navigator.pop(context);
+                  context.read<SessionBloc>().add(
+                    const SessionEvent.logout(),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DrawerTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final bool isWarning;
+
+  const _DrawerTile({
+    required this.icon,
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+    this.isWarning = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Stack(
+        children: [
+          // Background Animation
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.fastOutSlowIn,
+            height: 56,
+            width: isSelected ? double.infinity : 0,
+            decoration: BoxDecoration(
+              color: isSelected ? barzGold : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: onTap,
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                height: 56,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  children: [
+                    Icon(
+                      icon,
+                      color: isSelected
+                          ? barzDark
+                          : (isWarning ? Colors.redAccent : Colors.white70),
+                      size: 24,
+                    ),
+                    const SizedBox(width: 16),
+                    Text(
+                      label,
+                      style: TextStyle(
+                        color: isSelected
+                            ? barzDark
+                            : (isWarning ? Colors.redAccent : Colors.white),
+                        fontSize: 16,
+                        fontWeight:
+                            isSelected ? FontWeight.bold : FontWeight.w500,
+                        fontFamily: "Inter",
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

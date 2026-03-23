@@ -185,47 +185,9 @@ class BusinessStatusToolbar extends StatelessWidget {
               ],
               // Open/Closed Toggle
               if (showStatusToggle && isOpen != null && onToggleOpen != null) ...[
-                GestureDetector(
-                  onTap: onToggleOpen,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
-                      vertical: 6,
-                    ),
-                    decoration: BoxDecoration(
-                      color: isOpen!
-                          ? successGreen.withValues(alpha: 0.15)
-                          : errorRed.withValues(alpha: 0.15),
-                      border: Border.all(
-                        color: isOpen!
-                            ? successGreen.withValues(alpha: 0.3)
-                            : errorRed.withValues(alpha: 0.3),
-                      ),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 6,
-                          height: 6,
-                          decoration: BoxDecoration(
-                            color: isOpen! ? successGreen : errorRed,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          isOpen! ? 'Open' : 'Closed',
-                          style: TextStyle(
-                            color: isOpen! ? successGreen : errorRed,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                BusinessStatusToggle(
+                  isOpen: isOpen!,
+                  onTap: onToggleOpen!,
                 ),
                 const SizedBox(width: 12),
               ],
@@ -344,6 +306,66 @@ class _ClientModeButton extends StatelessWidget {
           const SessionEvent.switchToClientMode(),
         );
       },
+    );
+  }
+}
+
+class BusinessStatusToggle extends StatelessWidget {
+  final bool isOpen;
+  final VoidCallback onTap;
+  final bool compact;
+
+  const BusinessStatusToggle({
+    super.key,
+    required this.isOpen,
+    required this.onTap,
+    this.compact = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(
+          horizontal: compact ? 8 : 10,
+          vertical: compact ? 4 : 6,
+        ),
+        decoration: BoxDecoration(
+          color: isOpen
+              ? successGreen.withValues(alpha: 0.15)
+              : errorRed.withValues(alpha: 0.15),
+          border: Border.all(
+            color: isOpen
+                ? successGreen.withValues(alpha: 0.3)
+                : errorRed.withValues(alpha: 0.3),
+          ),
+          borderRadius: BorderRadius.circular(6),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: isOpen ? successGreen : errorRed,
+                shape: BoxShape.circle,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              isOpen ? 'Open' : 'Closed',
+              style: TextStyle(
+                color: isOpen ? successGreen : errorRed,
+                fontSize: compact ? 10 : 12,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

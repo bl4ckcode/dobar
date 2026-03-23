@@ -397,11 +397,12 @@ class _LogoArea extends StatelessWidget {
               );
             },
           ),
-          Image.asset(
-            'assets/icons/dobar-logo.png',
-            width: 176,
-            height: 176,
-            fit: BoxFit.contain,
+          Hero(
+            tag: 'logo',
+            child: Image.asset(
+              'assets/icons/dobar-logo-animated-transparent.gif',
+              height: 120,
+            ),
           ),
         ],
       ),

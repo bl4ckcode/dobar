@@ -6,6 +6,7 @@ import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/ui/shell/app_shell.dart';
 import 'package:barz/ui/business/business_root_shell.dart';
+import 'package:barz/ui/business/business_settings_page.dart';
 import 'package:barz/ui/business/business_dashboard_page.dart';
 import 'package:barz/ui/business/cashier_page.dart';
 import 'package:barz/ui/business/menu_management_page.dart';
@@ -172,6 +173,11 @@ final appRouter = GoRouter(
           path: AppRoute.businessSubscriptionPlans.path,
           name: AppRoute.businessSubscriptionPlans.name,
           builder: (context, state) => const SubscriptionPlansPage(),
+        ),
+        GoRoute(
+          path: AppRoute.businessSettings.path,
+          name: AppRoute.businessSettings.name,
+          builder: (context, state) => const BusinessSettingsPage(),
         ),
       ],
     ),

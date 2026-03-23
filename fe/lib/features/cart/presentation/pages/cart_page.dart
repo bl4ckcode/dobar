@@ -21,6 +21,7 @@ import '../widgets/coupon_input_section.dart';
 import '../widgets/active_promotions_section.dart';
 import '../widgets/order_summary_section.dart';
 import 'package:barz/core/presentation/widgets/barz_loading_widget.dart';
+import 'package:barz/core/theme/theme_cubit.dart';
 
 class CartPage extends StatefulWidget {
   final int? barId;
@@ -511,6 +512,31 @@ class _CartPageContentState extends State<_CartPageContent> {
                   ),
                 ),
               ],
+            ),
+          ),
+          GestureDetector(
+            onTap: () => context.read<ThemeCubit>().toggleTheme(),
+            child: Container(
+              width: 44,
+              height: 44,
+              decoration: BoxDecoration(
+                color: isDark ? barzDarkLight : surfaceWhite,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: isDark
+                    ? []
+                    : [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+              ),
+              child: Icon(
+                isDark ? Icons.wb_sunny_rounded : Icons.nightlight_round,
+                color: isDark ? barzGold : barzDark,
+                size: 22,
+              ),
             ),
           ),
         ],

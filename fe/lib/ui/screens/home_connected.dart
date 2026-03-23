@@ -139,7 +139,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
                   children: [
                     const SizedBox(height: 32),
                     _buildCategoriesSection(context),
-                    const SizedBox(height: BarzSpacing.lg),
+                    const SizedBox(height: BarzSpacing.md),
 
                     // Promotions Section
                     BlocBuilder<HomeBloc, HomeState>(
@@ -159,11 +159,11 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
                                 colors,
                               ),
                               const SizedBox(height: BarzSpacing.md),
-                              _buildPromotionsList(
-                                context,
-                                state.data.activePromotions,
-                              ),
-                              const SizedBox(height: BarzSpacing.xl),
+                                _buildPromotionsList(
+                                  context,
+                                  state.data.activePromotions,
+                                ),
+                                const SizedBox(height: BarzSpacing.lg),
                             ],
                           );
                         }
@@ -324,14 +324,15 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
   // ===========================================================================
 
   Widget _buildLoadingCard() {
-    return Container(
-      height: 160,
-      margin: const EdgeInsets.symmetric(horizontal: BarzSpacing.lg),
-      decoration: BoxDecoration(
-        color: Colors.grey[200],
-        borderRadius: BorderRadius.circular(BarzRadii.lg),
+    return const SizedBox(
+      height: 60,
+      child: Center(
+        child: SizedBox(
+          width: 24,
+          height: 24,
+          child: CircularProgressIndicator(strokeWidth: 2.5),
+        ),
       ),
-      child: const Center(child: CircularProgressIndicator()),
     );
   }
 
@@ -364,24 +365,18 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
   }
 
   Widget _buildEmptyCard(String message, IconData icon) {
-    return Container(
-      height: 160,
-      margin: const EdgeInsets.symmetric(horizontal: BarzSpacing.lg),
-      decoration: BoxDecoration(
-        color: Colors.grey[100],
-        borderRadius: BorderRadius.circular(BarzRadii.lg),
-        border: Border.all(color: Colors.grey[300]!),
-      ),
+    return SizedBox(
+      height: 100,
       child: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: Colors.grey[400], size: 32),
+            Icon(icon, color: Colors.grey[400], size: 28),
             const SizedBox(height: 8),
             Text(
               message,
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.grey[600]),
+              style: TextStyle(color: Colors.grey[600], fontSize: 13),
             ),
           ],
         ),
@@ -791,24 +786,11 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
   }
 
   Widget _drinkPlaceholder() {
-    return Container(
-      color: Colors.grey[300],
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const SizedBox(
-              width: 24,
-              height: 24,
-              child: CircularProgressIndicator(color: barzGold, strokeWidth: 2),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              AppLocalizations.of(context)!.loading_text,
-              style: const TextStyle(color: textSecondary),
-            ),
-          ],
-        ),
+    return const Center(
+      child: SizedBox(
+        width: 20,
+        height: 20,
+        child: CircularProgressIndicator(color: barzGold, strokeWidth: 2),
       ),
     );
   }

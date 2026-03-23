@@ -30,6 +30,7 @@ enum AppRoute {
   businessCampaignAnalytics('/business/campaign/:campaignId/analytics'),
   businessStaff('/business/staff'),
   businessSubscriptionPlans('/business/subscription-plans'),
+  businessSettings('/business/settings'),
   termsOfService('/legal/terms'),
   privacyPolicy('/legal/privacy');
 
@@ -186,6 +187,14 @@ List<BusinessNavigationItem> buildBusinessNavItems({
       ),
     );
   }
+
+  items.add(
+    const BusinessNavigationItem(
+      icon: Icons.settings,
+      label: 'Settings',
+      route: AppRoute.businessSettings,
+    ),
+  );
 
   return items;
 }

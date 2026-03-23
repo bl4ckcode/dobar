@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:barz/core/rbac/rbac.dart';
 import 'package:barz/core/design/design_system.dart';
-import 'package:barz/core/design/tokens/dobar_colors.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
 import 'package:barz/features/session/presentation/bloc/session_event.dart';
@@ -62,6 +61,7 @@ class BusinessShell extends StatefulWidget {
 }
 
 class _BusinessShellState extends State<BusinessShell> {
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _selectedIndex = 0;
   late List<BusinessNavItem> _currentNavItems = [];
 
@@ -148,7 +148,6 @@ class _BusinessShellState extends State<BusinessShell> {
     );
   }
 
-  /// Mobile layout with bottom navigation bar
   Widget _buildMobileLayout(
     BuildContext context,
     List<BarAccess> bars,
@@ -156,42 +155,51 @@ class _BusinessShellState extends State<BusinessShell> {
     List<BusinessNavItem> navItems,
   ) {
     final colors = context.dobarColors;
+
+    // For mobile bottom nav, we only show the first 5 items
+    final bottomNavItems = navItems.take(5).toList();
+    if (_selectedIndex >= bottomNavItems.length) {
+      // If settings was selected, it will now be in the drawer
+    }
+
     return Scaffold(
+      key: _scaffoldKey,
       appBar: AppBar(
         backgroundColor: colors.navBackground,
         foregroundColor: colors.navIconSelected,
+        leading: IconButton(
+          icon: const Icon(LucideIcons.menu),
+          onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+        ),
         title: _buildBarSelector(context, bars, activeBar, colors),
         actions: [
-          IconButton(
-            icon: Icon(Icons.person_outline, color: colors.navIconSelected),
-            tooltip: AppLocalizations.of(context)!.business_client_mode,
-            onPressed: () {
-              context.read<SessionBloc>().add(
-                const SessionEvent.switchToClientMode(),
-              );
-            },
-          ),
-          IconButton(
-            icon: Icon(Icons.logout, color: colors.navIconSelected),
-            tooltip: 'Logout',
-            onPressed: () {
-              context.read<SessionBloc>().add(const SessionEvent.logout());
-            },
-          ),
+          IconButton(icon: const Icon(LucideIcons.bell), onPressed: () {}),
         ],
+      ),
+      drawer: _BusinessDrawer(
+        bars: bars,
+        activeBar: activeBar,
+        navItems: navItems,
+        selectedIndex: _selectedIndex,
+        onNavItemSelected: (index) {
+          Navigator.pop(context); // Close drawer
+          navigateToTab(index);
+        },
       ),
       body: IndexedStack(
         index: _selectedIndex,
         children: navItems.map((item) => item.page).toList(),
       ),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
+        currentIndex: _selectedIndex < bottomNavItems.length
+            ? _selectedIndex
+            : 0,
         onTap: (index) => setState(() => _selectedIndex = index),
         type: BottomNavigationBarType.fixed,
         backgroundColor: colors.navBackground,
         selectedItemColor: colors.navIconSelected,
         unselectedItemColor: colors.navIcon,
-        items: navItems
+        items: bottomNavItems
             .map(
               (item) => BottomNavigationBarItem(
                 icon: Icon(item.icon),
@@ -350,6 +358,160 @@ class _BusinessShellState extends State<BusinessShell> {
     );
 
     return items;
+  }
+}
+
+class _BusinessDrawer extends StatelessWidget {
+  final List<BarAccess> bars;
+  final BarAccess activeBar;
+  final List<BusinessNavItem> navItems;
+  final int selectedIndex;
+  final Function(int) onNavItemSelected;
+
+  const _BusinessDrawer({
+    required this.bars,
+    required this.activeBar,
+    required this.navItems,
+    required this.selectedIndex,
+    required this.onNavItemSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.dobarColors;
+    final theme = Theme.of(context);
+    final borderColor = theme.colorScheme.outline;
+
+    return Drawer(
+      backgroundColor: colors.background,
+      child: Column(
+        children: [
+          // Drawer Header
+          DrawerHeader(
+            decoration: BoxDecoration(
+              color: colors.surfaceElevated,
+              border: Border(bottom: BorderSide(color: borderColor)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: barzGold,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    LucideIcons.glassWater,
+                    color: barzDark,
+                    size: 24,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  activeBar.barName,
+                  style: TextStyle(
+                    color: colors.labelPrimary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  activeBar.role.displayName,
+                  style: TextStyle(color: colors.labelSecondary, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+
+          // Navigation Items
+          Expanded(
+            child: ListView(
+              padding: EdgeInsets.zero,
+              children: [
+                ...navItems.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final item = entry.value;
+                  final isSelected = selectedIndex == index;
+
+                  return ListTile(
+                    leading: Icon(
+                      item.icon,
+                      color: isSelected ? barzGold : colors.labelSecondary,
+                      size: 22,
+                    ),
+                    title: Text(
+                      item.label,
+                      style: TextStyle(
+                        color: isSelected ? barzGold : colors.labelPrimary,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.normal,
+                      ),
+                    ),
+                    selected: isSelected,
+                    onTap: () => onNavItemSelected(index),
+                  );
+                }),
+
+                const Divider(),
+
+                // Client Mode
+                ListTile(
+                  leading: Icon(
+                    LucideIcons.user,
+                    color: colors.labelSecondary,
+                    size: 22,
+                  ),
+                  title: Text(
+                    AppLocalizations.of(context)!.business_client_mode,
+                    style: TextStyle(color: colors.labelPrimary),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    context.read<SessionBloc>().add(
+                      const SessionEvent.switchToClientMode(),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+
+          // Bottom area: Logout
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              children: [
+                const Divider(),
+                ListTile(
+                  leading: const Icon(
+                    LucideIcons.logOut,
+                    color: Colors.redAccent,
+                    size: 22,
+                  ),
+                  title: const Text(
+                    'Logout',
+                    style: TextStyle(
+                      color: Colors.redAccent,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    context.read<SessionBloc>().add(
+                      const SessionEvent.logout(),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

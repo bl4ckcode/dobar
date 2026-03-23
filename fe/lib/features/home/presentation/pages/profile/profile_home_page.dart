@@ -124,7 +124,7 @@ class _ProfileHomePageState extends State<ProfileHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
-        bottom: false,
+        bottom: true,
         child: BlocBuilder<SessionBloc, SessionState>(
           builder: (context, state) {
             final session = state.currentSession;
