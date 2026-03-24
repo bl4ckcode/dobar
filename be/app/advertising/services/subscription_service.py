@@ -28,7 +28,25 @@ class SubscriptionService:
             AdvertisingSubscription.bar_id == bar_id
         )
         result = await database.fetch_one(query)
-        return dict(result) if result else None
+        if not result:
+            return None
+            
+        data = dict(result)
+        # Convert enums to strings for Pydantic
+        if hasattr(data.get("tier"), "value"):
+            data["tier"] = data["tier"].value
+        if hasattr(data.get("status"), "value"):
+            data["status"] = data["status"].value
+            
+        # Ensure credits is a dict
+        if isinstance(data.get("credits"), str):
+            import json
+            try:
+                data["credits"] = json.loads(data["credits"])
+            except:
+                data["credits"] = {"featured_hours": 0, "search_clicks": 0, "map_hours": 0, "boost_impressions": 0}
+                
+        return data
     
     @staticmethod
     async def create_default_subscription(bar_id: int, region_code: str = "BR") -> Dict[str, Any]:
@@ -73,19 +91,25 @@ class SubscriptionService:
     async def subscribe(
         bar_id: int,
         tier: str,
-        payment_method_id: str,
+        payment_method: Dict[str, Any],
         billing_cycle: str = "monthly",
         region_code: str = "BR"
     ) -> Dict[str, Any]:
         """Subscribe to a paid plan"""
         # Get region pricing
+        import sys
+        print(f"DEBUG: Starting subscribe for bar_id={bar_id}, tier={tier}", file=sys.stderr)
+        
         pricing_query = RegionPricing.__table__.select().where(
             RegionPricing.region_code == region_code
         )
         pricing = await database.fetch_one(pricing_query)
         
         if not pricing:
+            print(f"DEBUG: Pricing not found for {region_code}", file=sys.stderr)
             raise APIError.not_found(f"Pricing not available for region: {region_code}")
+        
+        print(f"DEBUG: Pricing found: {pricing['currency']}", file=sys.stderr)
         
         # Determine pricing and commission based on tier
         tier_value = tier.value if hasattr(tier, 'value') else tier
@@ -102,6 +126,14 @@ class SubscriptionService:
             monthly_fee = Decimal("0.00")
             commission_rate = pricing["regular_commission"]
             credits = {"featured_hours": 0, "search_clicks": 0, "map_hours": 0, "boost_impressions": 0}
+
+        # Ensure credits is a dict
+        if isinstance(credits, str):
+            import json
+            try:
+                credits = json.loads(credits)
+            except:
+                credits = {"featured_hours": 0, "search_clicks": 0, "map_hours": 0, "boost_impressions": 0}
         
         now = datetime.now(timezone.utc)
         next_billing = now + timedelta(days=30 if billing_cycle == "monthly" else 365)
@@ -127,44 +159,163 @@ class SubscriptionService:
         )
         invoice_id = await database.execute(invoice_insert)
 
+        # Format DPE payload based on payment method type
+        if hasattr(payment_method, "model_dump"):
+            pm_dict = payment_method.model_dump()
+        elif hasattr(payment_method, "dict"):
+            pm_dict = payment_method.dict()
+        else:
+            pm_dict = payment_method
+            
+        pm_type = pm_dict.get("type", "card")
+        if hasattr(pm_type, "value"):
+            pm_type = pm_type.value
+            
+        dpe_pm = {}
+        
+        if pm_type == "pix":
+            dpe_pm = {
+                "payment_method": "pix",
+                "expires_in": 3600
+            }
+        else:
+            dpe_pm = {
+                "payment_method": "credit_card",
+                "card_token": payment_method.get("token"),
+                "installments": 1,
+                "statement_descriptor": "BARZ"
+            }
         # Process payment via DPE
         dpe = get_dpe_client()
-        try:
-            payment_result = await dpe.charge(
-                order_id=invoice_id,
-                user_id=bar["owner_id"],
-                bar_id=bar_id,
-                amount=float(monthly_fee),
-                currency=pricing["currency"],
-                country=region_code,
-                payment_method={"type": "card", "token": payment_method_id},
-                idempotency_key=f"sub_{bar_id}_{int(now.timestamp())}",
-                description=f"Barz {tier_value.capitalize()} Subscription"
-            )
+        
+        metadata = {
+            "type": "subscription",
+            "tier": tier_value,
+            "billing_cycle": billing_cycle,
+            "bar_id": bar_id,
+            "invoice_id": invoice_id
+        }
+        
+        payment_result = await dpe.charge(
+            order_id=f"inv_{invoice_id}",
+            user_id=bar["owner_id"],
+            bar_id=bar_id,
+            amount=float(monthly_fee),
+            currency=pricing["currency"],
+            country=region_code,
+            payment_method=dpe_pm,
+            idempotency_key=f"sub_{bar_id}_{int(now.timestamp())}",
+            description=f"Barz {tier_value.capitalize()} Subscription",
+            metadata=metadata
+        )
 
-            if payment_result["status"] != "succeeded":
-                raise APIError.payment_required(f"Payment failed: {payment_result.get('message', 'Unknown error')}")
+        if payment_result["status"] == "error":
+            raise APIError.payment_declined(f"Payment failed: {payment_result.get('message', 'Unknown error')}")
 
-            # Payment succeeded - update invoice
+        # Handle PIX (Async payment)
+        if pm_type == "pix":
+            # Update invoice to WAITING_PAYMENT
             invoice_update = AdvertisingInvoice.__table__.update().where(
                 AdvertisingInvoice.id == invoice_id
             ).values(
-                status=InvoiceStatus.PAID.value,
-                payment_gateway_ref=payment_result["payment_id"],
-                paid_at=datetime.now(timezone.utc)
+                status=InvoiceStatus.WAITING_PAYMENT.value,
+                payment_gateway_ref=payment_result["payment_id"]
             )
             await database.execute(invoice_update)
+            
+            return {
+                "status": "waiting_payment",
+                "pix_qr_code": payment_result.get("pix_qr_code") or payment_result.get("pix_copia_e_cola"),
+                "pix_copia_e_cola": payment_result.get("pix_copia_e_cola") or payment_result.get("pix_qr_code"),
+                "pix_expires_at": payment_result.get("pix_expires_at"),
+                "invoice_id": invoice_id
+            }
 
-        except Exception as e:
-            if isinstance(e, APIError):
-                raise e
-            raise APIError.internal_error(f"Payment processing error: {str(e)}")
+        # Handle Credit Card (Immediate success if succeeded)
+        if payment_result["status"] != "succeeded":
+             raise APIError.payment_declined(f"Payment declined: {payment_result.get('message', 'Unknown error')}")
 
-        # Check if subscription exists and update/create
-        existing = await SubscriptionService.get_subscription(bar_id)
+        # Activation call
+        return await SubscriptionService.activate_subscription(
+            bar_id=bar_id,
+            tier=tier_value,
+            billing_cycle=billing_cycle,
+            invoice_id=invoice_id,
+            payment_id=payment_result["payment_id"]
+        )
+    
+    @staticmethod
+    async def activate_subscription(
+        bar_id: int,
+        tier: str,
+        billing_cycle: str,
+        invoice_id: int,
+        payment_id: str
+    ) -> Dict[str, Any]:
+        """Activate a subscription after successful payment (sync or async)"""
+        now = datetime.now(timezone.utc)
         
+        # Get bar info for region settings
+        from app.bars_and_restaurants.models.relational_models import Bar as BarModel
+        query = BarModel.__table__.select().where(BarModel.id == bar_id)
+        bar = await database.fetch_one(query)
+        if not bar:
+            raise APIError.not_found("Bar not found")
+            
+        region_code = bar["region_code"] if "region_code" in dict(bar._mapping) else "BR"
+        
+        # Get region pricing
+        pricing_query = RegionPricing.__table__.select().where(RegionPricing.region_code == region_code)
+        pricing = await database.fetch_one(pricing_query)
+        if not pricing:
+             raise APIError.not_found(f"Pricing not available for region: {region_code}")
+
+        # Map tier to values
+        tier_value = tier.value if hasattr(tier, 'value') else tier
+        tier_map = {
+           "master": {
+               "fee": pricing["master_monthly"] if billing_cycle == "monthly" else pricing["master_annual"] / 12,
+               "commission": pricing["master_commission"],
+               "credits": pricing["master_credits"]
+           },
+           "vip": {
+               "fee": pricing["vip_monthly"] if billing_cycle == "monthly" else pricing["vip_annual"] / 12,
+               "commission": pricing["vip_commission"],
+               "credits": pricing["vip_credits"]
+           }
+        }
+        
+        plan = tier_map.get(tier_value)
+        if not plan:
+            raise APIError.bad_request(f"Invalid tier for paid subscription: {tier_value}")
+
+        monthly_fee = plan["fee"]
+        commission_rate = plan["commission"]
+        credits = plan["credits"]
+        
+        # Ensure credits is a dict (handle potential string from some DB drivers)
+        if isinstance(credits, str):
+            import json
+            try:
+                credits = json.loads(credits)
+            except:
+                credits = {}
+        
+        next_billing = now + timedelta(days=365 if billing_cycle == "annual" else 30)
+
+        # Update invoice
+        invoice_update = AdvertisingInvoice.__table__.update().where(
+            AdvertisingInvoice.id == invoice_id
+        ).values(
+            status=InvoiceStatus.PAID.value,
+            payment_gateway_ref=payment_id,
+            paid_at=now
+        )
+        await database.execute(invoice_update)
+
+        # Update or Create subscription
+        existing = await SubscriptionService.get_subscription(bar_id)
         if existing:
-            # Update existing subscription
             update_query = AdvertisingSubscription.__table__.update().where(
                 AdvertisingSubscription.bar_id == bar_id
             ).values(
@@ -173,14 +324,12 @@ class SubscriptionService:
                 monthly_fee=monthly_fee,
                 commission_rate=commission_rate,
                 credits=credits,
-                payment_method_id=payment_method_id,
                 billing_cycle_start=now,
                 next_billing_date=next_billing,
                 updated_at=now
             )
             await database.execute(update_query)
         else:
-            # Create new subscription
             insert_query = AdvertisingSubscription.__table__.insert().values(
                 bar_id=bar_id,
                 tier=tier_value,
@@ -189,16 +338,15 @@ class SubscriptionService:
                 monthly_fee=monthly_fee,
                 commission_rate=commission_rate,
                 credits=credits,
-                payment_method_id=payment_method_id,
                 billing_cycle_start=now,
                 next_billing_date=next_billing,
                 created_at=now,
                 updated_at=now
             )
             await database.execute(insert_query)
-        
+            
         return await SubscriptionService.get_subscription(bar_id)
-    
+
     @staticmethod
     async def change_tier(bar_id: int, new_tier: str) -> Dict[str, Any]:
         """Change subscription tier (upgrade/downgrade)"""

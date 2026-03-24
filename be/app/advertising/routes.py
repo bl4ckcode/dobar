@@ -6,7 +6,7 @@ Based on: docs/business/ADVERTISING_BACKEND.md
 """
 from datetime import datetime, timezone, date
 from decimal import Decimal
-from typing import Optional, List
+from typing import Optional, List, Union
 from fastapi import APIRouter, Depends, Query, HTTPException, status, BackgroundTasks, Request
 from sqlalchemy import select, and_, func
 from sqlalchemy.orm import Session
@@ -23,7 +23,7 @@ from .models import (
     SubscriptionTier, SubscriptionStatus, CampaignStatus, CampaignType, AdAction
 )
 from .schemas import (
-    SubscriptionTierEnum, SubscriptionStatusEnum, SubscriptionResponse, SubscribeRequest, ChangePlanRequest,
+    SubscriptionTierEnum, SubscriptionStatusEnum, SubscriptionResponse, SubscribeRequest, PixSubscriptionResponse, ChangePlanRequest,
     SubscriptionPlansResponse, SubscriptionPlanInfo, CreditsBalance,
     CampaignCreate, CampaignUpdate, CampaignResponse, CampaignListResponse,
     CampaignStatusEnum, CampaignTypeEnum, CampaignTargeting, CampaignCreative,
@@ -117,28 +117,33 @@ async def get_my_plan(
     )
 
 
-@advertising_router.post("/subscribe", response_model=SubscriptionResponse)
+@advertising_router.post("/subscribe", response_model=Union[SubscriptionResponse, PixSubscriptionResponse])
 async def subscribe_to_plan(
     request: SubscribeRequest,
     bar_id: int = Query(..., description="Bar ID to subscribe"),
     auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_MANAGE))
 ):
     """Subscribe to a plan or upgrade existing subscription."""
-    subscription = await SubscriptionService.subscribe(
-        bar_id=bar_id, tier=request.tier, payment_method_id=request.payment_method_id,
+    result = await SubscriptionService.subscribe(
+        bar_id=bar_id, tier=request.tier, payment_method=request.payment_method.model_dump(),
         billing_cycle=request.billing_cycle
     )
     
+    # If it's a PIX payment, return the PixSubscriptionResponse data
+    if result.get("status") == "waiting_payment":
+        return PixSubscriptionResponse(**result)
+    
+    # Otherwise return the standard SubscriptionResponse
     return SubscriptionResponse(
-        id=subscription["id"], bar_id=subscription["bar_id"],
-        tier=SubscriptionTierEnum(subscription["tier"]),
-        status=SubscriptionStatusEnum(subscription["status"]),
-        region_code=subscription["region_code"], monthly_fee=subscription["monthly_fee"],
-        commission_rate=subscription["commission_rate"],
-        credits=CreditsBalance(**subscription["credits"]),
-        billing_cycle_start=subscription["billing_cycle_start"],
-        next_billing_date=subscription["next_billing_date"],
-        created_at=subscription["created_at"]
+        id=result["id"], bar_id=result["bar_id"],
+        tier=SubscriptionTierEnum(result["tier"]),
+        status=SubscriptionStatusEnum(result["status"]),
+        region_code=result["region_code"], monthly_fee=result["monthly_fee"],
+        commission_rate=result["commission_rate"],
+        credits=CreditsBalance(**result["credits"]),
+        billing_cycle_start=result["billing_cycle_start"],
+        next_billing_date=result["next_billing_date"],
+        created_at=result["created_at"]
     )
 
 

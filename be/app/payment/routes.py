@@ -361,7 +361,38 @@ async def dpe_webhook(
     if not auth_header or auth_header != DPE_SERVICE_SECRET:
         raise HTTPException(status_code=401, detail="Unauthorized webhook")
     
-    order_id = int(payload.order_id)
+    metadata = payload.metadata or {}
+    
+    # 1. Handle Subscription Payments
+    if metadata.get("type") == "subscription":
+        if payload.status == "succeeded":
+            from app.advertising.services.subscription_service import SubscriptionService
+            try:
+                await SubscriptionService.activate_subscription(
+                    bar_id=int(metadata["bar_id"]),
+                    tier=metadata["tier"],
+                    billing_cycle=metadata["billing_cycle"],
+                    invoice_id=int(metadata["invoice_id"]),
+                    payment_id=payload.payment_id
+                )
+                return {"status": "processed", "type": "subscription_activated"}
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"Subscription activation failed: {str(e)}")
+        return {"status": "processed", "type": "subscription_failed"}
+
+    # 2. Handle Order Payments (Default)
+    order_id_str = payload.order_id
+    if order_id_str.startswith("ord_"):
+        order_id_str = order_id_str[4:]
+    elif order_id_str.startswith("inv_"):
+        # This should have been caught by metadata type 'subscription'
+        # but if not, logic for plain invoices could go here
+        return {"status": "ignored", "reason": "invoice_without_subscription_metadata"}
+
+    try:
+        order_id = int(order_id_str)
+    except ValueError:
+        return {"status": "ignored", "reason": "invalid_order_id_format"}
     
     # Start transaction
     transaction = await database.transaction()

@@ -75,6 +75,7 @@ class AdAction(str, enum.Enum):
 class InvoiceStatus(str, enum.Enum):
     """Payment status for invoices"""
     PENDING = "pending"
+    WAITING_PAYMENT = "waiting_payment"
     PAID = "paid"
     OVERDUE = "overdue"
     REFUNDED = "refunded"

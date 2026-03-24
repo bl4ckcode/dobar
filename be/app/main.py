@@ -188,14 +188,11 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
     """Handle unexpected exceptions with standardized error response."""
-    # Log the actual error for debugging (in production, use proper logging)
-    print(f"Unhandled exception: {type(exc).__name__}: {str(exc)}")
-    
     return JSONResponse(
         status_code=500,
         content=ErrorResponse(
             error_code=ErrorCode.UNKNOWN.value,
-            message="An unexpected error occurred"
+            message="Internal Server Error"
         ).model_dump(exclude_none=True)
     )
 

@@ -168,4 +168,5 @@ class DpeWebhookPayload(BaseModel):
     amount_cents: Optional[int] = None
     currency: Optional[str] = None
     gateway: Optional[str] = None
+    metadata: Optional[Dict[str, Any]] = None
     created_at: Optional[datetime] = None

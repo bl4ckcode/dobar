@@ -107,11 +107,27 @@ class SubscriptionResponse(BaseModel):
         from_attributes = True
 
 
+class PaymentMethodType(str, Enum):
+    CARD = "card"
+    PIX = "pix"
+
+class PaymentMethodSchema(BaseModel):
+    type: PaymentMethodType = Field(..., description="Payment method type (card or pix)")
+    token: Optional[str] = Field(None, description="Payment token for cards")
+
 class SubscribeRequest(BaseModel):
     """Request to subscribe to a plan"""
     tier: SubscriptionTierEnum
-    payment_method_id: str = Field(..., description="Payment gateway token/ID")
+    payment_method: PaymentMethodSchema
     billing_cycle: str = Field(default="monthly", pattern="^(monthly|annual)$")
+
+class PixSubscriptionResponse(BaseModel):
+    """Response returned when PIX is selected for subscription"""
+    status: str = "waiting_payment"
+    pix_qr_code: str
+    pix_copia_e_cola: str
+    pix_expires_at: datetime
+    invoice_id: int
 
 
 class ChangePlanRequest(BaseModel):

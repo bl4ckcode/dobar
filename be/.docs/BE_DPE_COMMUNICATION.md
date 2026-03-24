@@ -204,6 +204,23 @@ Response 402:
 }
 ```
 
+### POST /payments/charge (Subscription Context)
+
+Used for monthly/annual Pro plan subscriptions. The `barz-backend` creates an `AdvertisingInvoice` record in `PENDING` state before calling this.
+
+```json
+Request:
+{
+  "order_id": "inv_sub_123", // Invoice ID
+  "user_id": "owner_456",
+  "bar_id": "bar_789",
+  "amount_cents": 4900,
+  "currency": "BRL",
+  "payment_method": { "type": "card", "token": "pm_xxx" },
+  "metadata": { "type": "subscription", "plan": "master" }
+}
+```
+
 ### POST /payments/refund
 
 ```json
@@ -548,6 +565,8 @@ All payment operations logged with:
 
 | Date | Change |
 |------|--------|
+| 2026-03-23 | ✅ **Subscription Integration**: `barz-backend` now uses DPE for Pro plan recurring charges. |
+| 2026-03-23 | ✅ **Analytics Hardware**: Implemented time-series aggregation for campaign performance. |
 | 2026-01-18 | 📁 Moved all .md docs to ./docs folder (except README.md) for better organization |
 | 2026-01-18 | ✅ DPE sandbox environment working - auto-detects sk_test_ vs sk_live_ prefix |
 | 2026-01-18 | 🎉 **END-TO-END INTEGRATION COMPLETE** - PIX working, full BE→DPE→Gateway flow tested |
