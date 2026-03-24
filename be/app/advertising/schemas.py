@@ -255,6 +255,15 @@ class AdTrackEvent(BaseModel):
 # ANALYTICS SCHEMAS
 # =============================================================================
 
+class DailyAnalytics(BaseModel):
+    """Analytics for a single day"""
+    date: str  # ISO date YYYY-MM-DD
+    impressions: int = 0
+    clicks: int = 0
+    conversions: int = 0
+    spend: Decimal = Decimal("0.00")
+
+
 class CampaignAnalytics(BaseModel):
     """Analytics for a single campaign"""
     campaign_id: int
@@ -266,6 +275,7 @@ class CampaignAnalytics(BaseModel):
     spend: Decimal
     period_start: datetime
     period_end: datetime
+    daily_stats: List[DailyAnalytics] = []
 
 
 class DashboardAnalytics(BaseModel):
@@ -276,6 +286,7 @@ class DashboardAnalytics(BaseModel):
     total_spend: Decimal
     average_ctr: float
     campaigns: List[CampaignAnalytics]
+    daily_stats: List[DailyAnalytics] = []
     period_start: datetime
     period_end: datetime
 

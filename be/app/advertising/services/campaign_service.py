@@ -10,6 +10,7 @@ import hashlib
 
 from app.database import database
 from app.errors import APIError
+from sqlalchemy import func, cast, Date, select
 from app.advertising.models import (
     AdvertisingCampaign, AdvertisingImpression,
     CampaignStatus, CampaignType, AdAction, BudgetType
@@ -17,7 +18,7 @@ from app.advertising.models import (
 from app.advertising.schemas import (
     CampaignCreate, CampaignUpdate, CampaignStatusEnum,
     FeaturedAd, SearchAd, MapSpotlight,
-    DashboardAnalytics, CampaignAnalytics
+    DashboardAnalytics, CampaignAnalytics, DailyAnalytics
 )
 
 
@@ -483,6 +484,10 @@ class CampaignService:
         total_spend = Decimal("0.00")
         
         campaign_analytics = []
+        campaign_ids = [c["id"] for c in campaigns]
+        
+        # Get overall daily stats
+        daily_stats = await CampaignService._get_daily_stats(campaign_ids, start_dt, end_dt) if campaign_ids else []
         
         for campaign in campaigns:
             impressions = campaign["impressions"] or 0
@@ -496,6 +501,9 @@ class CampaignService:
             total_conversions += conversions
             total_spend += spend
             
+            # For each campaign, get its own daily stats
+            c_daily = await CampaignService._get_daily_stats([campaign["id"]], start_dt, end_dt)
+            
             campaign_analytics.append(CampaignAnalytics(
                 campaign_id=campaign["id"],
                 campaign_name=campaign["name"],
@@ -505,7 +513,8 @@ class CampaignService:
                 ctr=ctr,
                 spend=spend,
                 period_start=start_dt,
-                period_end=end_dt
+                period_end=end_dt,
+                daily_stats=c_daily
             ))
         
         average_ctr = (total_clicks / total_impressions * 100) if total_impressions > 0 else 0.0
@@ -517,6 +526,7 @@ class CampaignService:
             total_spend=total_spend,
             average_ctr=average_ctr,
             campaigns=campaign_analytics,
+            daily_stats=daily_stats,
             period_start=start_dt,
             period_end=end_dt
         )
@@ -543,6 +553,8 @@ class CampaignService:
         spend = Decimal(str(campaign["budget_spent"]))
         ctr = (clicks / impressions * 100) if impressions > 0 else 0.0
         
+        daily_stats = await CampaignService._get_daily_stats([campaign_id], start_dt, end_dt)
+        
         return CampaignAnalytics(
             campaign_id=campaign["id"],
             campaign_name=campaign["name"],
@@ -552,5 +564,55 @@ class CampaignService:
             ctr=ctr,
             spend=spend,
             period_start=start_dt,
-            period_end=end_dt
+            period_end=end_dt,
+            daily_stats=daily_stats
         )
+
+    @staticmethod
+    async def _get_daily_stats(
+        campaign_ids: List[int],
+        start_dt: datetime,
+        end_dt: datetime
+    ) -> List[DailyAnalytics]:
+        """Fetch daily stats from impressions log"""
+        # Group by date and action using SQLAlchemy
+        # Note: func.date() works for Postgres. For SQLite, it might be different, but we assume Postgres.
+        query = select(
+            func.date(AdvertisingImpression.timestamp).label("day"),
+            AdvertisingImpression.action,
+            func.count(AdvertisingImpression.id).label("count")
+        ).where(
+            AdvertisingImpression.campaign_id.in_(campaign_ids),
+            AdvertisingImpression.timestamp >= start_dt,
+            AdvertisingImpression.timestamp <= end_dt
+        ).group_by(
+            func.date(AdvertisingImpression.timestamp),
+            AdvertisingImpression.action
+        )
+        
+        results = await database.fetch_all(query)
+        
+        # Consolidate results by day
+        stats_by_day = {}
+        for row in results:
+            # Row access depends on the raw database result format
+            # day can be a date object or string
+            day_val = row["day"]
+            day_str = day_val.isoformat() if hasattr(day_val, 'isoformat') else str(day_val)
+            
+            if day_str not in stats_by_day:
+                stats_by_day[day_str] = DailyAnalytics(date=day_str)
+            
+            action = row["action"]
+            count = row["count"]
+            
+            # AdAction values are lowercase strings
+            if action == AdAction.IMPRESSION.value:
+                stats_by_day[day_str].impressions = count
+            elif action == AdAction.CLICK.value:
+                stats_by_day[day_str].clicks = count
+            elif action == AdAction.CONVERSION.value:
+                stats_by_day[day_str].conversions = count
+        
+        # Sort by date and return
+        return sorted(stats_by_day.values(), key=lambda x: x.date)

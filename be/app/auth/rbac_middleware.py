@@ -219,15 +219,22 @@ def require_bar_role(*allowed_roles: BarRole):
         request: Request,
         user: AuthUser = Depends(get_current_user)
     ) -> BarAuthContext:
-        # Get bar_id from path
-        bar_id = request.path_params.get("bar_id")
+        # Get bar_id from path or query
+        bar_id = request.path_params.get("bar_id") or request.query_params.get("bar_id")
+        
         if bar_id is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="bar_id is required in path"
+                detail="bar_id is required in path or query"
             )
         
-        bar_id = int(bar_id)
+        try:
+            bar_id = int(bar_id)
+        except (ValueError, TypeError):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid bar_id format"
+            )
         
         # Check if user has a role at this bar
         user_role = user.get_role_at_bar(bar_id)
@@ -305,14 +312,21 @@ def require_bar_permission(permission: Permission):
         request: Request,
         user: AuthUser = Depends(get_current_user)
     ) -> BarAuthContext:
-        bar_id = request.path_params.get("bar_id")
+        bar_id = request.path_params.get("bar_id") or request.query_params.get("bar_id")
+        
         if bar_id is None:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="bar_id is required in path"
+                detail="bar_id is required in path or query"
             )
         
-        bar_id = int(bar_id)
+        try:
+            bar_id = int(bar_id)
+        except (ValueError, TypeError):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid bar_id format"
+            )
         user_role = user.get_role_at_bar(bar_id)
         
         if not user_role:

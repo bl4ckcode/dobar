@@ -39,8 +39,7 @@ class StaffMember(BaseModel):
     phone: Optional[str] = None
 
 class StaffInviteRequest(BaseModel):
-    email: Optional[EmailStr] = None
-    phone: Optional[str] = None
+    contact: str  # Email or phone number
     role: str
 
 class StaffUpdateRequest(BaseModel):
@@ -96,8 +95,18 @@ async def invite_staff(
     auth: BarAuthContext = Depends(require_bar_permission(Permission.STAFF_MANAGE))
 ):
     """Invite someone to join the bar's staff."""
-    if not invite.email and not invite.phone:
-        raise HTTPException(status_code=400, detail="Either email or phone required")
+    # Detect if contact is email or phone
+    email = None
+    phone = None
+    
+    if "@" in invite.contact:
+        email = invite.contact
+    else:
+        # Assume phone if no @ (should ideally validate E.164)
+        phone = invite.contact
+    
+    if not email and not phone:
+        raise HTTPException(status_code=400, detail="Valid email or phone required")
     
     try:
         role = BarRole(invite.role)
@@ -109,13 +118,15 @@ async def invite_staff(
     
     # Check if user already exists
     existing_user = None
-    if invite.email:
+    # Check if user already exists
+    existing_user = None
+    if email:
         existing_user = await database.fetch_one(
-            User.__table__.select().where(User.email == invite.email)
+            User.__table__.select().where(User.email == email)
         )
-    elif invite.phone:
+    elif phone:
         existing_user = await database.fetch_one(
-            User.__table__.select().where(User.phone_number == invite.phone)
+            User.__table__.select().where(User.phone_number == phone)
         )
     
     invitation_code = secrets.token_urlsafe(16)
@@ -137,8 +148,8 @@ async def invite_staff(
     
     invitation_data = {
         "bar_id": bar_id,
-        "email": invite.email,
-        "phone": invite.phone,
+        "email": email,
+        "phone": phone,
         "role": role.value,
         "invitation_code": invitation_code,
         "status": status_val,
@@ -151,7 +162,7 @@ async def invite_staff(
     )
     
     return StaffInvitationResponse(
-        id=inv_id, bar_id=bar_id, email=invite.email, phone=invite.phone,
+        id=inv_id, bar_id=bar_id, email=email, phone=phone,
         role=role.value, status=status_val, invitation_code=invitation_code,
         expires_at=expires_at
     )

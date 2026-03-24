@@ -73,6 +73,10 @@ with patch("firebase_admin.initialize_app", return_value=mock_firebase_app), \
     from app.auth.mfa_models import MFASecret
     from app.auth.recovery_models import RecoveryToken
     from app.payment.models import PaymentCard
+    from app.advertising.models import (
+        AdvertisingSubscription, AdvertisingCampaign, AdvertisingImpression,
+        RegionPricing, AdvertisingInvoice
+    )
     import fakeredis.aioredis
 
 # Test database URL (use SQLite for testing)
@@ -150,6 +154,11 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
     menus_routes.database = test_database
     cart_routes.database = test_database
     wallet_routes.database = test_database
+    
+    import app.advertising.routes as advertising_routes
+    import app.bars_and_restaurants.routes.staff as staff_routes
+    advertising_routes.database = test_database
+    staff_routes.database = test_database
     
     # Patch new discounts service
     import app.bars_and_restaurants.services.discounts as discounts_service

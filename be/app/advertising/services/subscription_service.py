@@ -11,8 +11,11 @@ from app.database import database
 from app.errors import APIError
 from app.advertising.models import (
     AdvertisingSubscription, RegionPricing,
-    SubscriptionTier, SubscriptionStatus
+    SubscriptionTier, SubscriptionStatus,
+    AdvertisingInvoice, InvoiceStatus
 )
+from app.bars_and_restaurants.models.relational_models import Bar
+from app.payment.dpe_client import get_dpe_client
 
 
 class SubscriptionService:
@@ -103,7 +106,61 @@ class SubscriptionService:
         now = datetime.now(timezone.utc)
         next_billing = now + timedelta(days=30 if billing_cycle == "monthly" else 365)
         
-        # Check if subscription exists
+        # Get bar info for owner_id and currency
+        bar_query = Bar.__table__.select().where(Bar.id == bar_id)
+        bar = await database.fetch_one(bar_query)
+        if not bar:
+            raise APIError.not_found(f"Bar not found: {bar_id}")
+
+        # Create PENDING invoice
+        invoice_insert = AdvertisingInvoice.__table__.insert().values(
+            bar_id=bar_id,
+            period_start=now,
+            period_end=next_billing,
+            subscription_amount=monthly_fee,
+            advertising_amount=Decimal("0.00"),
+            tax_amount=Decimal("0.00"),
+            total_amount=monthly_fee,
+            currency=pricing["currency"],
+            status=InvoiceStatus.PENDING.value,
+            created_at=now
+        )
+        invoice_id = await database.execute(invoice_insert)
+
+        # Process payment via DPE
+        dpe = get_dpe_client()
+        try:
+            payment_result = await dpe.charge(
+                order_id=invoice_id,
+                user_id=bar["owner_id"],
+                bar_id=bar_id,
+                amount=float(monthly_fee),
+                currency=pricing["currency"],
+                country=region_code,
+                payment_method={"type": "card", "token": payment_method_id},
+                idempotency_key=f"sub_{bar_id}_{int(now.timestamp())}",
+                description=f"Barz {tier_value.capitalize()} Subscription"
+            )
+
+            if payment_result["status"] != "succeeded":
+                raise APIError.payment_required(f"Payment failed: {payment_result.get('message', 'Unknown error')}")
+
+            # Payment succeeded - update invoice
+            invoice_update = AdvertisingInvoice.__table__.update().where(
+                AdvertisingInvoice.id == invoice_id
+            ).values(
+                status=InvoiceStatus.PAID.value,
+                payment_gateway_ref=payment_result["payment_id"],
+                paid_at=datetime.now(timezone.utc)
+            )
+            await database.execute(invoice_update)
+
+        except Exception as e:
+            if isinstance(e, APIError):
+                raise e
+            raise APIError.internal_error(f"Payment processing error: {str(e)}")
+
+        # Check if subscription exists and update/create
         existing = await SubscriptionService.get_subscription(bar_id)
         
         if existing:
@@ -139,9 +196,6 @@ class SubscriptionService:
                 updated_at=now
             )
             await database.execute(insert_query)
-        
-        # TODO: Process payment via payment gateway
-        # await PaymentGateway.charge(payment_method_id, monthly_fee, pricing["currency"])
         
         return await SubscriptionService.get_subscription(bar_id)
     
