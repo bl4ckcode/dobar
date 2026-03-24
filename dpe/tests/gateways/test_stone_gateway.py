@@ -34,8 +34,9 @@ class TestStoneGateway(unittest.IsolatedAsyncioTestCase):
         
         result = self.gateway._normalize_order(mock_response, "pix")
         self.assertEqual(result["status"], "success")
-        self.assertEqual(result["qr_code"], mock_tx.qr_code)
+        self.assertEqual(result["pix_qr_code"], mock_tx.qr_code)
         self.assertEqual(result["pix_copia_e_cola"], mock_tx.qr_code)
+        self.assertEqual(result["pix_qr_code_url"], mock_tx.qr_code_url)
 
     async def test_normalize_cc_order(self):
         mock_response = MagicMock()
@@ -50,6 +51,8 @@ class TestStoneGateway(unittest.IsolatedAsyncioTestCase):
         mock_tx.id = "tx_456"
         mock_tx.status = "captured"
         mock_tx.acquirer_message = "Success"
+        mock_tx.brand = "visa"
+        mock_tx.last_four_digits = "1234"
         
         mock_charge.last_transaction = mock_tx
         mock_response.charges = [mock_charge]
@@ -57,6 +60,8 @@ class TestStoneGateway(unittest.IsolatedAsyncioTestCase):
         result = self.gateway._normalize_order(mock_response, "credit_card")
         self.assertEqual(result["status"], "success")
         self.assertEqual(result["transaction_status"], "captured")
+        self.assertEqual(result["card_brand"], "visa")
+        self.assertEqual(result["card_last_four"], "1234")
 
     async def test_refund_charge(self):
         mock_response = MagicMock()
@@ -64,7 +69,6 @@ class TestStoneGateway(unittest.IsolatedAsyncioTestCase):
         mock_response.status = "canceled"
         mock_response.canceled_amount = 5000
         
-        # mock_run_sync is used in StonePaymentGateway for SDK calls
         with patch.object(self.gateway, '_run_sync', return_value=mock_response):
             result = await self.gateway.refund_charge(charge_id="ch_789", amount=50.0)
         

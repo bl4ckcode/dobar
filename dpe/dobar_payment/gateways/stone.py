@@ -192,13 +192,15 @@ class StonePaymentGateway(PaymentGateway):
                 result["transaction_id"] = getattr(tx, "id", None)
                 result["transaction_status"] = getattr(tx, "status", None)
                 if method == "pix":
-                    result["qr_code"] = getattr(tx, "qr_code", None)
-                    result["qr_code_url"] = getattr(tx, "qr_code_url", None)
+                    result["pix_qr_code"] = getattr(tx, "qr_code", None)
+                    result["pix_qr_code_url"] = getattr(tx, "qr_code_url", None)
                     result["pix_copia_e_cola"] = getattr(tx, "qr_code", None)
-                    result["expires_at"] = getattr(tx, "expires_at", None)
+                    result["pix_expires_at"] = getattr(tx, "expires_at", None)
                 if method in ("credit_card", "debit_card"):
                     result["acquirer_message"] = getattr(tx, "acquirer_message", None)
                     result["acquirer_return_code"] = getattr(tx, "acquirer_return_code", None)
+                    result["card_last_four"] = getattr(tx, "last_four_digits", None)
+                    result["card_brand"] = getattr(tx, "brand", None)
         return result
 
     def _normalize_charge(self, response: Any, method: str) -> Dict[str, Any]:
@@ -215,13 +217,16 @@ class StonePaymentGateway(PaymentGateway):
             result["transaction_id"] = getattr(tx, "id", None)
             result["transaction_status"] = getattr(tx, "status", None)
             if method == "pix":
-                result["qr_code"] = getattr(tx, "qr_code", None)
-                result["qr_code_url"] = getattr(tx, "qr_code_url", None)
+                result["pix_qr_code"] = getattr(tx, "qr_code", None)
+                result["pix_qr_code_url"] = getattr(tx, "qr_code_url", None)
                 result["pix_copia_e_cola"] = getattr(tx, "qr_code", None)
-                result["expires_at"] = getattr(tx, "expires_at", None)
+                result["pix_expires_at"] = getattr(tx, "expires_at", None)
             if method in ("credit_card", "debit_card"):
                 result["acquirer_message"] = getattr(tx, "acquirer_message", None)
                 result["acquirer_return_code"] = getattr(tx, "acquirer_return_code", None)
+                result["card_last_four"] = getattr(tx, "last_four_digits", None)
+                result["card_brand"] = getattr(tx, "brand", None)
+
         return result
 
     async def create_charge(
