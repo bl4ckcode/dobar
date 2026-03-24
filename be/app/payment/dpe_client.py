@@ -91,9 +91,11 @@ class DPEClient:
                 "created_at": data["created_at"],
                 "pix_qr_code": data.get("pix_qr_code"),
                 "pix_copia_e_cola": data.get("pix_copia_e_cola"),
+                "pix_qr_code_url": data.get("pix_qr_code_url"),
                 "pix_expires_at": data.get("pix_expires_at"),
                 "card_last_four": data.get("card_last_four"),
                 "card_brand": data.get("card_brand"),
+                "acquirer_message": data.get("acquirer_message"),
             }
         
         error_data = response.json()

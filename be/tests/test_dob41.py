@@ -49,7 +49,10 @@ class TestDOB41:
                 f"/advertising/subscribe?bar_id={bar_id}",
                 json={
                     "tier": "master",
-                    "payment_method_id": "pm_test_123",
+                    "payment_method": {
+                        "type": "card",
+                        "token": "pm_test_123"
+                    },
                     "billing_cycle": "monthly"
                 },
                 headers=headers

@@ -227,6 +227,7 @@ class SubscriptionService:
                 "status": "waiting_payment",
                 "pix_qr_code": payment_result.get("pix_qr_code") or payment_result.get("pix_copia_e_cola"),
                 "pix_copia_e_cola": payment_result.get("pix_copia_e_cola") or payment_result.get("pix_qr_code"),
+                "pix_qr_code_url": payment_result.get("pix_qr_code_url"),
                 "pix_expires_at": payment_result.get("pix_expires_at"),
                 "invoice_id": invoice_id
             }

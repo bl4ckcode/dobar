@@ -88,9 +88,11 @@ class DPEChargeResponse(BaseModel):
     created_at: datetime
     pix_qr_code: Optional[str] = None
     pix_copia_e_cola: Optional[str] = None
+    pix_qr_code_url: Optional[str] = None
     pix_expires_at: Optional[datetime] = None
     card_last_four: Optional[str] = None
     card_brand: Optional[str] = None
+    acquirer_message: Optional[str] = None
 
 
 class DPERefundRequest(BaseModel):
