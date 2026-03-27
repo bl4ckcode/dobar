@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 
 enum AppRoute {
   home('/'),
@@ -147,12 +148,12 @@ List<BusinessNavigationItem> buildBusinessNavItems({
 }) {
   final items = <BusinessNavigationItem>[
     const BusinessNavigationItem(
-      icon: Icons.dashboard,
+      icon: LucideIcons.layoutDashboard,
       label: 'Dashboard',
       route: AppRoute.businessDashboard,
     ),
     const BusinessNavigationItem(
-      icon: Icons.point_of_sale,
+      icon: LucideIcons.shoppingBag,
       label: 'Cashier',
       route: AppRoute.businessCashier,
     ),
@@ -161,7 +162,7 @@ List<BusinessNavigationItem> buildBusinessNavItems({
   if (canEditMenu) {
     items.add(
       const BusinessNavigationItem(
-        icon: Icons.restaurant_menu,
+        icon: LucideIcons.utensilsCrossed,
         label: 'Menu',
         route: AppRoute.businessMenu,
       ),
@@ -171,7 +172,7 @@ List<BusinessNavigationItem> buildBusinessNavItems({
   if (canManageAds) {
     items.add(
       const BusinessNavigationItem(
-        icon: Icons.campaign,
+        icon: LucideIcons.megaphone,
         label: 'Campaigns',
         route: AppRoute.businessCampaigns,
       ),
@@ -181,7 +182,7 @@ List<BusinessNavigationItem> buildBusinessNavItems({
   if (canManageStaff) {
     items.add(
       const BusinessNavigationItem(
-        icon: Icons.people,
+        icon: LucideIcons.users,
         label: 'Staff',
         route: AppRoute.businessStaff,
       ),
@@ -190,7 +191,7 @@ List<BusinessNavigationItem> buildBusinessNavItems({
 
   items.add(
     const BusinessNavigationItem(
-      icon: Icons.settings,
+      icon: LucideIcons.settings,
       label: 'Settings',
       route: AppRoute.businessSettings,
     ),

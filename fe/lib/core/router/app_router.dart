@@ -161,7 +161,8 @@ final appRouter = GoRouter(
           name: AppRoute.businessCampaignAnalytics.name,
           builder: (context, state) {
             final campaignId = int.parse(state.pathParameters['campaignId']!);
-            return CampaignAnalyticsPage(campaignId: campaignId);
+            final barId = int.parse(state.uri.queryParameters['bar_id'] ?? '0');
+            return CampaignAnalyticsPage(campaignId: campaignId, barId: barId);
           },
         ),
         GoRoute(

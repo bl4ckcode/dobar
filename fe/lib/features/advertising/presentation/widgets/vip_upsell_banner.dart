@@ -206,14 +206,14 @@ class _VipUpsellBannerState extends State<VipUpsellBanner>
                               child: child,
                             );
                           },
-                          child: const Row(
+                          child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
                                 'Upgrade Now',
-                                style: TextStyle(
-                                  fontSize: 14,
+                                style: Theme.of(context).textTheme.labelLarge?.copyWith(
                                   fontWeight: FontWeight.bold,
+                                  inherit: true,
                                 ),
                               ),
                               SizedBox(width: 8),

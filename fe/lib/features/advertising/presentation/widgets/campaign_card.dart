@@ -138,8 +138,7 @@ class _CampaignCardState extends State<CampaignCard>
                               children: [
                                 Text(
                                   widget.campaign.name,
-                                  style: TextStyle(
-                                    fontSize: 16,
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                     fontWeight: FontWeight.bold,
                                     color: dobar.labelPrimary,
                                   ),
@@ -181,8 +180,7 @@ class _CampaignCardState extends State<CampaignCard>
                                       Text(
                                         status.substring(0, 1).toUpperCase() +
                                             status.substring(1),
-                                        style: TextStyle(
-                                          fontSize: 10,
+                                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
                                           fontWeight: FontWeight.bold,
                                           color: statusColor,
                                         ),
@@ -228,7 +226,7 @@ class _CampaignCardState extends State<CampaignCard>
                         ],
                       ),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
 
                       // Metrics Grid
                       Wrap(
@@ -256,7 +254,7 @@ class _CampaignCardState extends State<CampaignCard>
                         ],
                       ),
 
-                      const SizedBox(height: 20),
+                      const SizedBox(height: 16),
 
                       // Progress Bar
                       Row(
@@ -264,14 +262,14 @@ class _CampaignCardState extends State<CampaignCard>
                         children: [
                           Text(
                             '$budgetPercentText% spent',
-                            style: TextStyle(
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               fontSize: 10,
                               color: dobar.labelSecondary,
                             ),
                           ),
                           Text(
                             '${currencyFormat.format(budgetTotal)} total',
-                            style: TextStyle(
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               fontSize: 10,
                               color: dobar.labelSecondary,
                             ),
@@ -315,7 +313,7 @@ class _CampaignCardState extends State<CampaignCard>
             const SizedBox(width: 4),
             Text(
               label,
-              style: TextStyle(
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 fontSize: 9,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 0.5,
@@ -327,8 +325,7 @@ class _CampaignCardState extends State<CampaignCard>
         const SizedBox(height: 4),
         Text(
           value,
-          style: TextStyle(
-            fontSize: 18,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
             fontWeight: FontWeight.bold,
             fontFamily: 'SF Pro Display',
             color: dobar.labelPrimary,

@@ -14,7 +14,7 @@ class ResponsiveCenterContainer extends StatelessWidget {
   final EdgeInsetsGeometry? padding;
   final Color? backgroundColor;
 
-  /// Maximum width percentage for web (0.3 to 0.5 means 30% to 50%)
+  /// Maximum width percentage for web (0.1 to 0.95)
   final double maxWidthPercentage;
 
   /// Minimum width in pixels to prevent content from being too narrow
@@ -36,8 +36,8 @@ class ResponsiveCenterContainer extends StatelessWidget {
     this.maxWidth = 600,
     this.applyResponsiveLayout,
   }) : assert(
-         maxWidthPercentage >= 0.3 && maxWidthPercentage <= 0.8,
-         'maxWidthPercentage must be between 0.3 and 0.8',
+         maxWidthPercentage >= 0.1 && maxWidthPercentage <= 0.95,
+         'maxWidthPercentage must be between 0.1 and 0.95',
        );
 
   @override
@@ -101,7 +101,7 @@ class ResponsiveScaffold extends StatelessWidget {
   /// Whether to wrap the body in ResponsiveCenterContainer
   final bool centerBody;
 
-  /// Custom max width percentage (0.3-0.8)
+  /// Custom max width percentage (0.1-0.95)
   final double maxWidthPercentage;
 
   /// Custom padding for the centered body

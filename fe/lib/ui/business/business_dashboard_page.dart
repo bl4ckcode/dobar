@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:barz/features/advertising/presentation/widgets/create_campaign_sheet.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:barz/core/rbac/rbac.dart';
@@ -60,65 +61,72 @@ class _DashboardContent extends StatelessWidget {
       builder: (context, dashboardState) {
         return Scaffold(
           backgroundColor: dobar.background,
-          body: RefreshIndicator(
-            onRefresh: () async {
-              context.read<DashboardBloc>().add(
-                RefreshDashboard(barId: activeBar.barId),
-              );
-            },
-            child: CustomScrollView(
-              slivers: [
-                SliverToBoxAdapter(
-                  child: _BusinessDashboardHeader(
-                    barName: activeBar.barName,
-                    role: activeBar.role,
-                    isOpen: dashboardState is DashboardLoaded
-                        ? dashboardState.status.isOpen
-                        : true,
-                    onToggleOpen: () {
-                      if (dashboardState is DashboardLoaded) {
-                        context.read<DashboardBloc>().add(
-                          ToggleBarOpen(
-                            barId: activeBar.barId,
-                            isOpen: !dashboardState.status.isOpen,
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _QuickActionsSection(activeBar: activeBar),
-                        const SizedBox(height: 24),
-                        _SummaryCardsGrid(
-                          isOwnerOrAdmin: isOwnerOrAdmin,
-                          stats: dashboardState is DashboardLoaded
-                              ? dashboardState.stats
-                              : null,
-                          isLoading: dashboardState is DashboardLoading,
-                        ),
-                        const SizedBox(height: 24),
-                        _LiveOrderQueue(
-                          orders: dashboardState is DashboardLoaded
-                              ? dashboardState.recentOrders
-                              : null,
-                          isLoading: dashboardState is DashboardLoading,
-                        ),
-                        const SizedBox(height: 24),
-                        if (isOwnerOrAdmin) ...[
-                          _PromoteCampaignCard(),
-                        ],
-                        const SizedBox(height: 32),
-                      ],
+          body: ResponsiveCenterContainer(
+            maxWidthPercentage: 0.9,
+            maxWidth: 1400,
+            padding: EdgeInsets.zero,
+            child: RefreshIndicator(
+              onRefresh: () async {
+                context.read<DashboardBloc>().add(
+                  RefreshDashboard(barId: activeBar.barId),
+                );
+              },
+              child: CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: _BusinessDashboardHeader(
+                      barName: activeBar.barName,
+                      role: activeBar.role,
+                      isOpen: dashboardState is DashboardLoaded
+                          ? dashboardState.status.isOpen
+                          : true,
+                      onToggleOpen: () {
+                        if (dashboardState is DashboardLoaded) {
+                          context.read<DashboardBloc>().add(
+                            ToggleBarOpen(
+                              barId: activeBar.barId,
+                              isOpen: !dashboardState.status.isOpen,
+                            ),
+                          );
+                        }
+                      },
                     ),
                   ),
-                ),
-              ],
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          _QuickActionsSection(activeBar: activeBar),
+                          const SizedBox(height: 24),
+                          _SummaryCardsGrid(
+                            isOwnerOrAdmin: isOwnerOrAdmin,
+                            stats: dashboardState is DashboardLoaded
+                                ? dashboardState.stats
+                                : null,
+                            isLoading: dashboardState is DashboardLoading,
+                          ),
+                          const SizedBox(height: 24),
+                          _LiveOrderQueue(
+                            orders: dashboardState is DashboardLoaded
+                                ? dashboardState.recentOrders
+                                : null,
+                            isLoading: dashboardState is DashboardLoading,
+                          ),
+                          const SizedBox(height: 24),
+                          if (isOwnerOrAdmin) ...[
+                            _PromoteCampaignCard(
+                              key: const ValueKey('promote_campaign_card'),
+                            ),
+                          ],
+                          const SizedBox(height: 32),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         );
@@ -304,7 +312,7 @@ class _BusinessSummaryCardState extends State<_BusinessSummaryCard> {
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
             color: _isHovering
-                ? (isDark ? const Color(0xFF262626) : dobar.surfaceElevated)
+                ? (isDark ? const Color(0xFF111111) : dobar.surfaceElevated)
                 : cardBg,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
@@ -630,6 +638,8 @@ class _QueueOrderItem extends StatelessWidget {
 }
 
 class _PromoteCampaignCard extends StatelessWidget {
+  const _PromoteCampaignCard({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -652,10 +662,12 @@ class _PromoteCampaignCard extends StatelessWidget {
       child: LayoutBuilder(
         builder: (context, constraints) {
           final isNarrow = constraints.maxWidth < 450;
-          
+
           return Flex(
             direction: isNarrow ? Axis.vertical : Axis.horizontal,
-            crossAxisAlignment: isNarrow ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+            crossAxisAlignment: isNarrow
+                ? CrossAxisAlignment.start
+                : CrossAxisAlignment.center,
             children: [
               Row(
                 children: [
@@ -666,16 +678,20 @@ class _PromoteCampaignCard extends StatelessWidget {
                       color: barzDark.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(LucideIcons.megaphone, color: barzDark, size: 24),
+                    child: const Icon(
+                      LucideIcons.megaphone,
+                      color: barzDark,
+                      size: 24,
+                    ),
                   ),
                   if (isNarrow) ...[
                     const SizedBox(width: 16),
                     Text(
                       'Boost Your Sales',
-                      style: TextStyle(
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         color: barzDark,
-                        fontSize: 18,
                         fontWeight: FontWeight.bold,
+                        inherit: true,
                       ),
                     ),
                   ],
@@ -690,18 +706,19 @@ class _PromoteCampaignCard extends StatelessWidget {
                     children: [
                       Text(
                         'Boost Your Sales',
-                        style: TextStyle(
-                          color: barzDark,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                        style: Theme.of(context).textTheme.titleMedium
+                            ?.copyWith(
+                              color: barzDark,
+                              fontWeight: FontWeight.bold,
+                              inherit: true,
+                            ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'Create a campaign and reach more customers in your area!',
-                        style: TextStyle(
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: barzDark.withValues(alpha: 0.7),
-                          fontSize: 14,
+                          inherit: true,
                         ),
                       ),
                     ],
@@ -710,17 +727,18 @@ class _PromoteCampaignCard extends StatelessWidget {
               ] else
                 Text(
                   'Create a campaign and reach more customers in your area!',
-                  style: TextStyle(
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: barzDark.withValues(alpha: 0.7),
-                    fontSize: 14,
+                    inherit: true,
                   ),
                 ),
               if (isNarrow) const SizedBox(height: 20),
               if (!isNarrow) const SizedBox(width: 24),
               SizedBox(
+                key: const ValueKey('promote_btn_wrapper'),
                 width: isNarrow ? double.infinity : null,
                 child: FilledButton.icon(
-                  onPressed: () {},
+                  onPressed: () => CreateCampaignSheet.show(context),
                   style: FilledButton.styleFrom(
                     backgroundColor: barzDark,
                     foregroundColor: barzGold,
@@ -733,9 +751,14 @@ class _PromoteCampaignCard extends StatelessWidget {
                     ),
                   ),
                   icon: const Icon(LucideIcons.plus, size: 18),
-                  label: const Text(
+                  label: Text(
                     'Create Campaign',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    key: const ValueKey('promote_btn_label'),
+                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: barzGold,
+                      inherit: true,
+                    ),
                   ),
                 ),
               ),
@@ -746,8 +769,6 @@ class _PromoteCampaignCard extends StatelessWidget {
     );
   }
 }
-
-
 
 class _QuickActionsSection extends StatelessWidget {
   final BarAccess activeBar;
@@ -789,35 +810,35 @@ class _QuickActionsSection extends StatelessWidget {
           runSpacing: 12,
           children: [
             _QuickActionChip(
-  icon: LucideIcons.wallet,
-  label: 'Cashier',
-  onTap: () => context.go(AppRoute.businessCashier.path),
-),
-if (activeBar.canEditMenu)
-  _QuickActionChip(
-    icon: LucideIcons.utensilsCrossed,
-    label: 'Edit Menu',
-    onTap: () => context.go(AppRoute.businessMenu.path),
-  ),
-if (isOwnerOrAdmin) ...[
-  _QuickActionChip(
-    icon: LucideIcons.tag,
-    label: 'New Promo',
-    onTap: () => context.go(AppRoute.businessCampaigns.path),
-  ),
-  _QuickActionChip(
-    icon: LucideIcons.qrCode,
-    label: 'Table QR',
-    onTap: () => _showComingSoon(context, 'Table QR Generator'),
-  ),
-],
-if (activeBar.canManageStaff)
-  _QuickActionChip(
-    icon: LucideIcons.userPlus,
-    label: 'Invite Staff',
-    onTap: () => _showComingSoon(context, 'Staff Invitations'),
-    highlighted: true,
-  ),
+              icon: LucideIcons.wallet,
+              label: 'Cashier',
+              onTap: () => context.go(AppRoute.businessCashier.path),
+            ),
+            if (activeBar.canEditMenu)
+              _QuickActionChip(
+                icon: LucideIcons.utensilsCrossed,
+                label: 'Edit Menu',
+                onTap: () => context.go(AppRoute.businessMenu.path),
+              ),
+            if (isOwnerOrAdmin) ...[
+              _QuickActionChip(
+                icon: LucideIcons.tag,
+                label: 'New Promo',
+                onTap: () => context.go(AppRoute.businessCampaigns.path),
+              ),
+              _QuickActionChip(
+                icon: LucideIcons.qrCode,
+                label: 'Table QR',
+                onTap: () => _showComingSoon(context, 'Table QR Generator'),
+              ),
+            ],
+            if (activeBar.canManageStaff)
+              _QuickActionChip(
+                icon: LucideIcons.userPlus,
+                label: 'Invite Staff',
+                onTap: () => _showComingSoon(context, 'Staff Invitations'),
+                highlighted: true,
+              ),
           ],
         ),
       ],

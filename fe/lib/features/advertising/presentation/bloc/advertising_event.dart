@@ -91,6 +91,8 @@ sealed class AdvertisingEvent with _$AdvertisingEvent {
       ResumeCampaign;
 
   /// Load campaign analytics.
-  const factory AdvertisingEvent.loadAnalytics({required int campaignId}) =
-      LoadAnalytics;
+  const factory AdvertisingEvent.loadAnalytics({
+    required int campaignId,
+    required int barId,
+  }) = LoadAnalytics;
 }

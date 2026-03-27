@@ -138,8 +138,9 @@ class BusinessStatusToolbar extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final dobar = context.dobarColors;
-    final headerBg = dobar.surfaceElevated;
-    final borderColor = theme.colorScheme.outline;
+    final isDark = theme.brightness == Brightness.dark;
+    final headerBg = isDark ? const Color(0xFF0A0A0A) : dobar.surfaceElevated;
+    final borderColor = isDark ? const Color(0xFF1A1A1A) : theme.colorScheme.outline;
     final textColor = dobar.labelPrimary;
     final mutedTextColor = dobar.labelSecondary;
 

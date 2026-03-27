@@ -77,5 +77,8 @@ abstract class AdvertisingRepository {
   Future<AdCampaign> resumeCampaign(int campaignId);
 
   /// Get campaign analytics.
-  Future<CampaignAnalytics> getCampaignAnalytics(int campaignId);
+  Future<CampaignAnalytics> getCampaignAnalytics({
+    required int campaignId,
+    required int barId,
+  });
 }

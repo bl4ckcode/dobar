@@ -291,7 +291,10 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
   ) async {
     emit(state.copyWith(isLoadingAnalytics: true, error: null));
     try {
-      final analytics = await _usecase.getCampaignAnalytics(event.campaignId);
+      final analytics = await _usecase.getCampaignAnalytics(
+        campaignId: event.campaignId,
+        barId: event.barId,
+      );
       emit(state.copyWith(analytics: analytics, isLoadingAnalytics: false));
     } catch (e) {
       emit(state.copyWith(isLoadingAnalytics: false, error: e.toString()));

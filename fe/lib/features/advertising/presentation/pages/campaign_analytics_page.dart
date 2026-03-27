@@ -12,24 +12,33 @@ import '../../domain/models/ad_campaign.dart';
 
 class CampaignAnalyticsPage extends StatelessWidget {
   final int campaignId;
+  final int barId;
 
-  const CampaignAnalyticsPage({super.key, required this.campaignId});
+  const CampaignAnalyticsPage({
+    super.key,
+    required this.campaignId,
+    required this.barId,
+  });
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (_) =>
           getItInjector<AdvertisingBloc>()
-            ..add(LoadAnalytics(campaignId: campaignId)),
-      child: _CampaignAnalyticsContent(campaignId: campaignId),
+            ..add(LoadAnalytics(campaignId: campaignId, barId: barId)),
+      child: _CampaignAnalyticsContent(campaignId: campaignId, barId: barId),
     );
   }
 }
 
 class _CampaignAnalyticsContent extends StatelessWidget {
   final int campaignId;
+  final int barId;
 
-  const _CampaignAnalyticsContent({required this.campaignId});
+  const _CampaignAnalyticsContent({
+    required this.campaignId,
+    required this.barId,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -76,7 +85,7 @@ class _CampaignAnalyticsContent extends StatelessWidget {
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: () => context.read<AdvertisingBloc>().add(
-                LoadAnalytics(campaignId: campaignId),
+                LoadAnalytics(campaignId: campaignId, barId: barId),
               ),
               icon: const Icon(Icons.refresh),
               label: const Text('Tentar novamente'),
@@ -117,7 +126,7 @@ class _CampaignAnalyticsContent extends StatelessWidget {
     return RefreshIndicator(
       onRefresh: () async {
         context.read<AdvertisingBloc>().add(
-          LoadAnalytics(campaignId: campaignId),
+          LoadAnalytics(campaignId: campaignId, barId: barId),
         );
       },
       child: SingleChildScrollView(

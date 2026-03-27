@@ -133,7 +133,13 @@ class AdvertisingRepositoryImpl implements AdvertisingRepository {
   }
 
   @override
-  Future<CampaignAnalytics> getCampaignAnalytics(int campaignId) {
-    return _datasource.getCampaignAnalytics(campaignId);
+  Future<CampaignAnalytics> getCampaignAnalytics({
+    required int campaignId,
+    required int barId,
+  }) {
+    return _datasource.getCampaignAnalytics(
+      campaignId: campaignId,
+      barId: barId,
+    );
   }
 }

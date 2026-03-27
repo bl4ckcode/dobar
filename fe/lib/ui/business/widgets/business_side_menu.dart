@@ -39,8 +39,8 @@ class _BusinessSideMenuState extends State<BusinessSideMenu> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    final bgColor = isDark ? const Color(0xFF1A1A1A) : surfaceWhite;
-    final borderColor = isDark ? barzDarkMuted : surfaceDim;
+    final bgColor = isDark ? const Color(0xFF0A0A0A) : surfaceWhite;
+    final borderColor = isDark ? const Color(0xFF1A1A1A) : surfaceDim;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 250),
@@ -106,74 +106,104 @@ label: 'Logout',
     bool isDark,
     Color borderColor,
   ) {
+    const bgColor = Color(0xFF0A0A0A);
+    const cardColor = Color(0xFF121212);
+    const goldColor = Color(0xFFFFDE59);
+
     return InkWell(
       onTap: widget.bars.length > 1
           ? () => _showBarSelectorMenu(context, isDark)
           : null,
-      hoverColor: isDark ? Colors.white12 : Colors.black12,
+      hoverColor: Colors.white.withValues(alpha: 0.05),
       child: Container(
-        height: 64, // h-16 in Tailwind
-        decoration: BoxDecoration(
-          border: Border(bottom: BorderSide(color: borderColor)),
+        height: 80,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: const BoxDecoration(
+          color: bgColor,
+          border: Border(bottom: BorderSide(color: Colors.white10)),
         ),
         child: Row(
           children: [
-            const SizedBox(width: 22),
-            // Icon box
+            // Premium Icon Box
             Container(
-              width: 36,
-              height: 36,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
-                color: barzGold,
-                borderRadius: BorderRadius.circular(8),
+                color: cardColor,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: goldColor.withValues(alpha: 0.3)),
+                boxShadow: [
+                  BoxShadow(
+                    color: goldColor.withValues(alpha: 0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              child: const Icon(LucideIcons.glassWater, color: barzDark, size: 20),
+              child: const Icon(
+                LucideIcons.store,
+                color: goldColor,
+                size: 22,
+              ),
             ),
-            // The expanding/fading part
+            // Information Section
             Expanded(
               child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 150),
+                duration: const Duration(milliseconds: 200),
                 opacity: _isExpanded ? 1.0 : 0.0,
                 child: Row(
                   children: [
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            widget.activeBar.barName,
-                            style: TextStyle(
-                              color: isDark ? textOnDark : textPrimary,
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: -0.5,
+                            widget.activeBar.barName.toUpperCase(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
+                              fontFamily: 'SF Pro Display',
                             ),
                             maxLines: 1,
-                            overflow: TextOverflow.clip,
-                            softWrap: false,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          Text(
-                            widget.activeBar.role.displayName,
-                            style: TextStyle(
-                              color: isDark ? textTertiary : textSecondary,
-                              fontSize: 12,
+                          const SizedBox(height: 4),
+                          // Role Badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.clip,
-                            softWrap: false,
+                            decoration: BoxDecoration(
+                              color: goldColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: goldColor.withValues(alpha: 0.2),
+                              ),
+                            ),
+                            child: Text(
+                              widget.activeBar.role.displayName.toUpperCase(),
+                              style: const TextStyle(
+                                color: goldColor,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
                           ),
                         ],
                       ),
                     ),
                     if (widget.bars.length > 1)
-                      Icon(
-                        Icons.unfold_more,
-                        color: isDark ? textTertiary : textSecondary,
+                      const Icon(
+                        LucideIcons.chevronsUpDown,
+                        color: Colors.white38,
                         size: 16,
                       ),
-                    const SizedBox(width: 16),
                   ],
                 ),
               ),
@@ -189,51 +219,104 @@ label: 'Logout',
     final RenderBox overlay =
         Overlay.of(context).context.findRenderObject() as RenderBox;
 
-    final bgColor = isDark ? barzDarkLight : surfaceWhite;
-    final textColor = isDark ? textOnDark : textPrimary;
-    final secTextColor = isDark ? textTertiary : textSecondary;
+    const bgColor = Color(0xFF121212);
+    const goldColor = Color(0xFFFFDE59);
 
     final menuItems = <PopupMenuEntry<int>>[
+      const PopupMenuSectionHeader(label: 'SWITCH BUSINESS'),
       ...widget.bars.map((bar) {
         final isActive = bar.barId == widget.activeBar.barId;
         return PopupMenuItem<int>(
           value: bar.barId,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isActive ? Colors.white.withValues(alpha: 0.05) : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isActive ? goldColor.withValues(alpha: 0.3) : Colors.transparent,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: isActive ? goldColor : Colors.white10,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    LucideIcons.store,
+                    color: isActive ? Colors.black : Colors.white70,
+                    size: 16,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        bar.barName.toUpperCase(),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        bar.role.displayName.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: isActive ? goldColor : Colors.white38,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (isActive)
+                  const Icon(LucideIcons.check, color: goldColor, size: 16),
+              ],
+            ),
+          ),
+        );
+      }),
+      const PopupMenuDivider(height: 1),
+      PopupMenuItem<int>(
+        value: -1,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
           child: Row(
             children: [
-              Icon(
-                isActive ? Icons.check_circle : Icons.radio_button_unchecked,
-                color: isActive ? barzGold : secTextColor,
-                size: 20,
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.white10),
+                ),
+                child: const Icon(LucideIcons.plus, color: goldColor, size: 16),
               ),
               const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(bar.barName, style: TextStyle(color: textColor)),
-                    Text(
-                      bar.role.displayName,
-                      style: TextStyle(fontSize: 12, color: secTextColor),
-                    ),
-                  ],
+              const Text(
+                'ADD NEW BUSINESS',
+                style: TextStyle(
+                  color: goldColor,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.0,
                 ),
               ),
             ],
           ),
-        );
-      }),
-      const PopupMenuDivider(),
-      PopupMenuItem<int>(
-        value: -1,
-        child: Row(
-          children: [
-            const Icon(Icons.add_business_rounded, color: barzGold, size: 20),
-            const SizedBox(width: 12),
-            const Text(
-              'Add Bar',
-              style: TextStyle(color: barzGold, fontWeight: FontWeight.w600),
-            ),
-          ],
         ),
       ),
     ];
@@ -241,6 +324,11 @@ label: 'Logout',
     showMenu<int>(
       context: context,
       color: bgColor,
+      elevation: 8,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: Colors.white10),
+      ),
       position: RelativeRect.fromRect(
         button.localToGlobal(Offset.zero) & button.size,
         Offset.zero & overlay.size,
@@ -273,16 +361,17 @@ label: 'Logout',
     required bool isGold,
     Color? backgroundColor,
   }) {
-    final hoverBg = isDark ? Colors.white12 : Colors.black12;
     final iconColor = isGold
         ? barzGold
-        : (isDark ? textTertiary : textSecondary);
+        : (isDark ? Colors.white.withValues(alpha: 0.5) : textSecondary);
     final textColor = isGold
         ? barzGold
-        : (isDark ? const Color(0xFFB0B0B0) : textSecondary);
+        : (isDark ? Colors.white.withValues(alpha: 0.7) : textSecondary);
+    final selectedBg = isDark ? barzGold.withValues(alpha: 0.08) : barzGold.withValues(alpha: 0.1);
+    final hoverBg = isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05);
 
     return Material(
-      color: backgroundColor ?? Colors.transparent,
+      color: isGold ? selectedBg : (backgroundColor ?? Colors.transparent),
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: onTap,
@@ -335,6 +424,37 @@ label: 'Logout',
       onTap: () => widget.onNavItemSelected(index),
       isGold: isSelected,
       backgroundColor: isSelected ? selectedBg : null,
+    );
+  }
+}
+class PopupMenuSectionHeader extends PopupMenuEntry<Never> {
+  final String label;
+  const PopupMenuSectionHeader({super.key, required this.label});
+
+  @override
+  double get height => 40;
+
+  @override
+  bool represents(Never? value) => false;
+
+  @override
+  State<PopupMenuSectionHeader> createState() => _PopupMenuSectionHeaderState();
+}
+
+class _PopupMenuSectionHeaderState extends State<PopupMenuSectionHeader> {
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(left: 16, top: 16, bottom: 8),
+      child: Text(
+        widget.label,
+        style: const TextStyle(
+          color: Colors.white38,
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 1.5,
+        ),
+      ),
     );
   }
 }

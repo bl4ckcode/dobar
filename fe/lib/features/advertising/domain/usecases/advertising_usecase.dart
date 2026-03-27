@@ -163,7 +163,13 @@ class AdvertisingUsecase {
   }
 
   /// Get campaign analytics.
-  Future<CampaignAnalytics> getCampaignAnalytics(int campaignId) {
-    return _repository.getCampaignAnalytics(campaignId);
+  Future<CampaignAnalytics> getCampaignAnalytics({
+    required int campaignId,
+    required int barId,
+  }) {
+    return _repository.getCampaignAnalytics(
+      campaignId: campaignId,
+      barId: barId,
+    );
   }
 }

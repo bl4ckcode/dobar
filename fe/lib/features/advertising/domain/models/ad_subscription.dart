@@ -33,8 +33,26 @@ abstract class PlansResponse with _$PlansResponse {
     required List<SubscriptionPlan> plans,
   }) = _PlansResponse;
 
-  factory PlansResponse.fromJson(Map<String, dynamic> json) =>
-      _$PlansResponseFromJson(json);
+  factory PlansResponse.fromJson(Map<String, dynamic> json) {
+    final rawPlans = json['plans'];
+    final List<SubscriptionPlan> plansList;
+
+    if (rawPlans is Map) {
+      plansList = rawPlans.values
+          .map((e) => SubscriptionPlan.fromJson(e as Map<String, dynamic>))
+          .toList();
+    } else {
+      plansList = (rawPlans as List? ?? [])
+          .map((e) => SubscriptionPlan.fromJson(e as Map<String, dynamic>))
+          .toList();
+    }
+
+    return PlansResponse(
+      regionCode: json['region_code'] as String? ?? 'US',
+      currency: json['currency'] as String? ?? 'USD',
+      plans: plansList,
+    );
+  }
 }
 
 /// Bar subscription model

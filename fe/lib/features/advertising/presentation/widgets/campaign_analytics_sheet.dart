@@ -31,7 +31,7 @@ class CampaignAnalyticsSheet extends StatefulWidget {
               providers: [
                 BlocProvider.value(
                   value: context.read<AdvertisingBloc>()
-                    ..add(LoadAnalytics(campaignId: campaign.id)),
+                    ..add(LoadAnalytics(campaignId: campaign.id, barId: campaign.barId)),
                 ),
               ],
               child: CampaignAnalyticsSheet(campaign: campaign),
@@ -294,7 +294,7 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
                           physics: const NeverScrollableScrollPhysics(),
                           mainAxisSpacing: 12,
                           crossAxisSpacing: 12,
-                          childAspectRatio: 2.2,
+                          childAspectRatio: 3.2,
                           children: [
                             _MetricCard(
                               icon: LucideIcons.eye,
@@ -524,7 +524,7 @@ class _MetricCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: dobar.background,
         borderRadius: BorderRadius.circular(12),
@@ -536,13 +536,13 @@ class _MetricCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(icon, size: 16, color: barzGold),
+              Icon(icon, size: 14, color: barzGold),
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
                   label,
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 9,
                     fontWeight: FontWeight.w600,
                     letterSpacing: 0.5,
                     color: dobar.labelSecondary,
@@ -552,11 +552,11 @@ class _MetricCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           Text(
             value,
             style: TextStyle(
-              fontSize: 24,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
               fontFamily: 'SF Pro Display',
               color: dobar.labelPrimary,

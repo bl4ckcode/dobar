@@ -15,6 +15,7 @@ import '../widgets/vip_upsell_banner.dart';
 import '../widgets/campaign_card.dart';
 import '../widgets/campaign_analytics_sheet.dart';
 import '../widgets/create_campaign_sheet.dart';
+import '../widgets/subscription_plans_sheet.dart';
 
 /// Campaign management page for bar owners.
 ///
@@ -73,93 +74,109 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
               return _buildErrorState(state.error!);
             }
 
-            return RefreshIndicator(
-              onRefresh: () async => _loadCampaigns(),
-              color: barzGold,
-              backgroundColor: dobar.surface,
-              child: CustomScrollView(
-                slivers: [
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 24,
-                      vertical: 24,
-                    ),
-                    sliver: SliverToBoxAdapter(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          BusinessStatusToolbar(
-                            title: 'Campaigns',
-                            subtitle: 'Manage and monitor your marketing campaigns',
-                            showStatusToggle: false,
-                            showAvatar: false,
-                          ),
-
-                          const SizedBox(height: 32),
-
-                          // VIP Banner
-                          VipUpsellBanner(onUpgrade: () {}),
-
-                          const SizedBox(height: 32),
-
-                          // Active Campaigns Header
-                          Row(
-                            children: [
-                              Text(
-                                'Active Campaigns',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.w600,
-                                  color: dobar.labelPrimary,
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                '(${state.campaigns.length})',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: dobar.labelSecondary,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  // Campaign Grid
-                  if (state.campaigns.isEmpty)
-                    SliverFillRemaining(
-                      hasScrollBody: false,
-                      child: _buildEmptyState(),
-                    )
-                  else
+            return ResponsiveCenterContainer(
+              maxWidthPercentage: 0.9,
+              maxWidth: 1400,
+              padding: EdgeInsets.zero,
+              child: RefreshIndicator(
+                onRefresh: () async => _loadCampaigns(),
+                color: barzGold,
+                backgroundColor: dobar.surface,
+                child: CustomScrollView(
+                  slivers: [
                     SliverPadding(
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                      sliver: SliverGrid(
-                        gridDelegate:
-                            const SliverGridDelegateWithMaxCrossAxisExtent(
-                              maxCrossAxisExtent: 600,
-                              mainAxisExtent: 205,
-                              crossAxisSpacing: 24,
-                              mainAxisSpacing: 24,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 24,
+                      ),
+                      sliver: SliverToBoxAdapter(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            BusinessStatusToolbar(
+                              title: 'Campaigns',
+                              subtitle: 'Manage and monitor your marketing campaigns',
+                              showStatusToggle: false,
+                              showAvatar: false,
                             ),
-                        delegate: SliverChildBuilderDelegate((context, index) {
-                          return CampaignCard(
-                            campaign: state.campaigns[index],
-                            onAnalytics: () => _showCampaignDetails(
-                              context,
-                              state.campaigns[index],
+
+                            const SizedBox(height: 32),
+
+                            // VIP Banner
+                            VipUpsellBanner(
+                              onUpgrade: () {
+                                final sessionState = context.read<SessionBloc>().state;
+                                if (sessionState is SessionReady &&
+                                    sessionState.session.activeBar != null) {
+                                  SubscriptionPlansSheet.show(
+                                    context,
+                                    sessionState.session.activeBar!.barId,
+                                  );
+                                }
+                              },
                             ),
-                          );
-                        }, childCount: state.campaigns.length),
+
+                            const SizedBox(height: 32),
+
+                            // Active Campaigns Header
+                            Row(
+                              children: [
+                                Text(
+                                  'Active Campaigns',
+                                  style: TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.w600,
+                                    color: dobar.labelPrimary,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  '(${state.campaigns.length})',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: dobar.labelSecondary,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
 
-                  // Bottom padding safe area for FAB
-                  const SliverToBoxAdapter(child: SizedBox(height: 100)),
-                ],
+                    // Campaign Grid
+                    if (state.campaigns.isEmpty)
+                      SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: _buildEmptyState(),
+                      )
+                    else
+                      SliverPadding(
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                        sliver: SliverGrid(
+                          gridDelegate:
+                              const SliverGridDelegateWithMaxCrossAxisExtent(
+                                maxCrossAxisExtent: 600,
+                                mainAxisExtent: 215,
+                                crossAxisSpacing: 24,
+                                mainAxisSpacing: 24,
+                              ),
+                          delegate: SliverChildBuilderDelegate((context, index) {
+                            return CampaignCard(
+                              campaign: state.campaigns[index],
+                              onAnalytics: () => _showCampaignDetails(
+                                context,
+                                state.campaigns[index],
+                              ),
+                            );
+                          }, childCount: state.campaigns.length),
+                        ),
+                      ),
+
+                    // Bottom padding safe area for FAB
+                    const SliverToBoxAdapter(child: SizedBox(height: 100)),
+                  ],
+                ),
               ),
             );
           },
@@ -184,7 +201,9 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
             Text(
               error,
               textAlign: TextAlign.center,
-              style: TextStyle(color: dobar.labelSecondary),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: dobar.labelSecondary,
+              ),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
@@ -214,8 +233,7 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
             const SizedBox(height: 24),
             Text(
               'Nenhuma campanha ativa',
-              style: TextStyle(
-                fontSize: 20,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: dobar.labelPrimary,
               ),
@@ -224,7 +242,9 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
             Text(
               'Crie sua primeira campanha para\nimpulsionar seu bar!',
               textAlign: TextAlign.center,
-              style: TextStyle(color: dobar.labelSecondary),
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: dobar.labelSecondary,
+              ),
             ),
             const SizedBox(height: 32),
             ElevatedButton.icon(

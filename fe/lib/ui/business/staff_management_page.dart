@@ -425,19 +425,19 @@ class _RoleBadge extends StatelessWidget {
     Color baseColor;
     switch (role) {
       case BarRole.owner:
-        baseColor = Colors.amber;
+        baseColor = const Color(0xFFFFD700); // Pure Gold
         break;
       case BarRole.admin:
-        baseColor = Colors.blue;
+        baseColor = const Color(0xFFC0C0C0); // Silver
         break;
       case BarRole.manager:
-        baseColor = Colors.teal;
+        baseColor = const Color(0xFFCD7F32); // Bronze
         break;
       case BarRole.cashier:
-        baseColor = Colors.purple;
+        baseColor = const Color(0xFF9E9E9E); // Platinum/Gray
         break;
       case BarRole.staff:
-        baseColor = Colors.grey;
+        baseColor = const Color(0xFF757575); // Steel
         break;
     }
 

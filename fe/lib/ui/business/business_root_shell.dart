@@ -117,19 +117,30 @@ class _BusinessRootShellState extends State<BusinessRootShell> {
             return Scaffold(
               key: _scaffoldKey,
               appBar: AppBar(
-                backgroundColor: barzDark,
+                backgroundColor: const Color(0xFF0A0A0A),
                 elevation: 0,
+                centerTitle: false,
+                leadingWidth: 48,
                 leading: IconButton(
-                  icon: const Icon(LucideIcons.menu, color: Colors.white),
+                  icon: const Icon(LucideIcons.menu, color: Colors.white, size: 20),
                   onPressed: () => _scaffoldKey.currentState?.openDrawer(),
                 ),
+                titleSpacing: 0,
                 title: _buildBarSelector(context, session.barAccess, activeBar),
                 actions: [
                   IconButton(
-                    icon: const Icon(LucideIcons.bell, color: Colors.white),
+                    icon: const Icon(LucideIcons.bell, color: Colors.white, size: 20),
                     onPressed: () {},
                   ),
+                  const SizedBox(width: 8),
                 ],
+                bottom: PreferredSize(
+                  preferredSize: const Size.fromHeight(1),
+                  child: Container(
+                    color: const Color(0xFF1A1A1A),
+                    height: 1,
+                  ),
+                ),
               ),
               drawer: _BusinessDrawer(
                 bars: session.barAccess,
@@ -150,75 +161,183 @@ class _BusinessRootShellState extends State<BusinessRootShell> {
     List<BarAccess> bars,
     BarAccess activeBar,
   ) {
-    if (bars.length == 1) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            activeBar.barName,
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          Text(
-            activeBar.role.displayName,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.white.withValues(alpha: 0.6),
-            ),
-          ),
-        ],
-      );
-    }
+    const goldColor = Color(0xFFFFDE59);
+    const cardColor = Color(0xFF121212);
 
-    return PopupMenuButton<int>(
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                activeBar.barName,
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Colors.white,
-                  fontWeight: FontWeight.w600,
-                ),
+    return InkWell(
+      onTap: bars.length > 1 ? () => _showBarSelectorMenu(bars, activeBar) : null,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Mini Icon Box
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                color: cardColor,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: goldColor.withValues(alpha: 0.3)),
               ),
-              Text(
-                activeBar.role.displayName,
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.white.withValues(alpha: 0.6),
-                ),
+              child: const Icon(
+                LucideIcons.store,
+                color: goldColor,
+                size: 16,
               ),
-            ],
-          ),
-          const Icon(Icons.arrow_drop_down, color: Colors.white),
-        ],
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      activeBar.barName.toUpperCase(),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.5,
+                        fontFamily: 'SF Pro Display',
+                      ),
+                    ),
+                    if (bars.length > 1) ...[
+                      const SizedBox(width: 4),
+                      const Icon(
+                        LucideIcons.chevronDown,
+                        color: Colors.white38,
+                        size: 12,
+                      ),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 2),
+                // Tiny Role Badge
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 1,
+                  ),
+                  decoration: BoxDecoration(
+                    color: goldColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(3),
+                  ),
+                  child: Text(
+                    activeBar.role.displayName.toUpperCase(),
+                    style: const TextStyle(
+                      color: goldColor,
+                      fontSize: 8,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
-      itemBuilder: (context) => bars.map((bar) {
+    );
+  }
+
+  void _showBarSelectorMenu(
+    List<BarAccess> bars,
+    BarAccess activeBar,
+  ) {
+    const bgColor = Color(0xFF121212);
+    const goldColor = Color(0xFFFFDE59);
+
+    final RenderBox appBarBox = context.findRenderObject() as RenderBox;
+
+    showMenu<int>(
+      context: context,
+      color: bgColor,
+      elevation: 8,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: const BorderSide(color: Colors.white10),
+      ),
+      position: RelativeRect.fromRect(
+        appBarBox.localToGlobal(Offset.zero) & appBarBox.size,
+        Offset.zero & MediaQuery.of(context).size,
+      ),
+      items: bars.map((bar) {
+        final isActive = bar.barId == activeBar.barId;
         return PopupMenuItem<int>(
           value: bar.barId,
-          child: ListTile(
-            leading: bar.barId == activeBar.barId
-                ? const Icon(Icons.check, color: barzGold)
-                : const SizedBox(width: 24),
-            title: Text(bar.barName),
-            subtitle: Text(bar.role.displayName),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: isActive ? Colors.white.withValues(alpha: 0.05) : Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: isActive ? goldColor.withValues(alpha: 0.3) : Colors.transparent,
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 32,
+                  height: 32,
+                  decoration: BoxDecoration(
+                    color: isActive ? goldColor : Colors.white10,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    LucideIcons.store,
+                    color: isActive ? Colors.black : Colors.white70,
+                    size: 16,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        bar.barName.toUpperCase(),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        bar.role.displayName.toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: isActive ? goldColor : Colors.white38,
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.0,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                if (isActive)
+                  const Icon(LucideIcons.check, color: goldColor, size: 16),
+              ],
+            ),
           ),
         );
       }).toList(),
-      onSelected: (barId) {
+    ).then((barId) {
+      if (!mounted) return;
+      if (barId != null && barId != activeBar.barId) {
         context.read<SessionBloc>().add(
           SessionEvent.switchActiveBar(barId: barId),
         );
         context.go(AppRoute.businessDashboard.path);
-      },
-    );
+      }
+    });
   }
 
 }
@@ -394,63 +513,104 @@ class _BusinessSideNavState extends State<_BusinessSideNav> {
   }
 
   Widget _buildHeader(BuildContext context) {
+    const bgColor = Color(0xFF0A0A0A);
+    const cardColor = Color(0xFF121212);
+    const goldColor = Color(0xFFFFDE59);
+
     return InkWell(
       onTap: widget.bars.length > 1
           ? () => _showBarSelectorMenu(context)
           : null,
-      hoverColor: Colors.white10,
+      hoverColor: Colors.white.withValues(alpha: 0.05),
       child: Container(
-        height: 72,
+        height: 80,
         padding: const EdgeInsets.symmetric(horizontal: 16),
+        decoration: const BoxDecoration(
+          color: bgColor,
+          border: Border(bottom: BorderSide(color: Colors.white10)),
+        ),
         child: Row(
           children: [
+            // Premium Icon Box
             Container(
-              width: 48,
-              height: 48,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
-                color: barzGold,
+                color: cardColor,
                 borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: goldColor.withValues(alpha: 0.3)),
+                boxShadow: [
+                  BoxShadow(
+                    color: goldColor.withValues(alpha: 0.1),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              child: const Icon(Icons.storefront, color: barzDark, size: 28),
+              child: const Icon(
+                LucideIcons.store,
+                color: goldColor,
+                size: 22,
+              ),
             ),
+            // Information Section
             Expanded(
               child: AnimatedOpacity(
-                duration: const Duration(milliseconds: 150),
+                duration: const Duration(milliseconds: 200),
                 opacity: _isExpanded ? 1.0 : 0.0,
                 child: Row(
                   children: [
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 14),
                     Expanded(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            widget.activeBar.barName,
+                            widget.activeBar.barName.toUpperCase(),
                             style: const TextStyle(
                               color: Colors.white,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5,
+                              fontFamily: 'SF Pro Display',
                             ),
                             maxLines: 1,
-                            overflow: TextOverflow.clip,
-                            softWrap: false,
+                            overflow: TextOverflow.ellipsis,
                           ),
-                          Text(
-                            widget.activeBar.role.displayName,
-                            style: const TextStyle(
-                              color: Colors.white54,
-                              fontSize: 12,
+                          const SizedBox(height: 4),
+                          // Role Badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 2,
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.clip,
-                            softWrap: false,
+                            decoration: BoxDecoration(
+                              color: goldColor.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(
+                                color: goldColor.withValues(alpha: 0.2),
+                              ),
+                            ),
+                            child: Text(
+                              widget.activeBar.role.displayName.toUpperCase(),
+                              style: const TextStyle(
+                                color: goldColor,
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 0.5,
+                              ),
+                            ),
                           ),
                         ],
                       ),
                     ),
                     if (widget.bars.length > 1)
-                      const Icon(Icons.unfold_more, color: Colors.white54),
+                      const Icon(
+                        LucideIcons.chevronsUpDown,
+                        color: Colors.white38,
+                        size: 16,
+                      ),
                   ],
                 ),
               ),
@@ -576,59 +736,96 @@ class _BusinessDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
 
     return Drawer(
-      backgroundColor: barzDark,
+      backgroundColor: const Color(0xFF0A0A0A),
       child: SafeArea(
         child: Column(
           children: [
-            // Bar Info Header (InfoCard style)
+            // Premium Bar Info Header
             Padding(
               padding: const EdgeInsets.all(24.0),
-              child: Row(
-                children: [
-                  Container(
-                    width: 52,
-                    height: 52,
-                    decoration: BoxDecoration(
-                      color: barzGold,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: barzGold.withValues(alpha: 0.3),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: const Icon(Icons.storefront, color: barzDark, size: 28),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF121212),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: const Color(0xFFFFDE59).withValues(alpha: 0.1),
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          activeBar.barName,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            fontFamily: "Inter",
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          activeBar.role.displayName,
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.5),
-                            fontSize: 14,
-                            fontFamily: "Inter",
-                          ),
-                        ),
-                      ],
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.3),
+                      blurRadius: 15,
+                      offset: const Offset(0, 8),
                     ),
-                  ),
-                ],
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    // Premium Gold Icon Box
+                    Container(
+                      width: 52,
+                      height: 52,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFDE59),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: const Color(0xFFFFDE59).withValues(alpha: 0.3),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        LucideIcons.store,
+                        color: Color(0xFF0A0A0A),
+                        size: 28,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            activeBar.barName.toUpperCase(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.5,
+                              fontFamily: 'SF Pro Display',
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          // Role Badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFFFDE59).withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: const Color(0xFFFFDE59).withValues(alpha: 0.2),
+                              ),
+                            ),
+                            child: Text(
+                              activeBar.role.displayName.toUpperCase(),
+                              style: const TextStyle(
+                                color: Color(0xFFFFDE59),
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: 1.0,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
 

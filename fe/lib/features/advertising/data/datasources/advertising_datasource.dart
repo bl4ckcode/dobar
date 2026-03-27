@@ -50,7 +50,10 @@ abstract class AdvertisingDatasource {
   Future<AdCampaign> createCampaign(CreateCampaignRequest request);
   Future<AdCampaign> pauseCampaign(int campaignId);
   Future<AdCampaign> resumeCampaign(int campaignId);
-  Future<CampaignAnalytics> getCampaignAnalytics(int campaignId);
+  Future<CampaignAnalytics> getCampaignAnalytics({
+    required int campaignId,
+    required int barId,
+  });
 }
 
 class AdvertisingNetworkDatasource implements AdvertisingDatasource {
@@ -346,10 +349,14 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
   }
 
   @override
-  Future<CampaignAnalytics> getCampaignAnalytics(int campaignId) async {
+  Future<CampaignAnalytics> getCampaignAnalytics({
+    required int campaignId,
+    required int barId,
+  }) async {
     try {
       final response = await dio.get(
         '${ApiEndpoints.baseUrl}${ApiEndpoints.campaignAnalytics(campaignId)}',
+        queryParameters: {'bar_id': barId},
       );
       return CampaignAnalytics.fromJson(response.data);
     } on DioException catch (e) {
