@@ -481,4 +481,45 @@ async def sync_cart(
     This is a server-driven UI endpoint that returns the full view state for the cart.
     """
     from ..services.cart_service import CartService
-    return await CartService.sync_cart(current_user["id"], request)
+    from ..models.relational_models import Menu, MenuItem
+    from datetime import datetime
+    
+    response = await CartService.sync_cart(current_user["id"], request)
+    
+    # Persist the cart state in DB if there are no hard errors
+    has_errors = any(issue.severity == "error" for issue in response.validation_issues)
+    if not has_errors:
+        cart = await get_or_create_cart(current_user["id"])
+        
+        # Clear existing items
+        delete_query = CartItemModel.__table__.delete().where(CartItemModel.cart_id == cart["id"])
+        await database.execute(delete_query)
+        
+        # Insert new items
+        if response.items:
+            first_item_id = response.items[0].menu_item_id
+            query = MenuItem.__table__.select().where(MenuItem.id == first_item_id)
+            menu_item_record = await database.fetch_one(query)
+            bar_id = None
+            if menu_item_record:
+                menu_query = Menu.__table__.select().where(Menu.id == menu_item_record["menu_id"])
+                menu_record = await database.fetch_one(menu_query)
+                if menu_record:
+                    bar_id = menu_record["bar_id"]
+            
+            if bar_id:
+                for item in response.items:
+                    now = datetime.utcnow()
+                    item_data = {
+                        "cart_id": cart["id"],
+                        "menu_item_id": item.menu_item_id,
+                        "menu_item_name": item.name,
+                        "bar_id": bar_id,
+                        "quantity": item.quantity,
+                        "unit_price": item.unit_price,
+                        "created_at": now,
+                        "updated_at": now
+                    }
+                    await database.execute(CartItemModel.__table__.insert().values(**item_data))
+                    
+    return response
