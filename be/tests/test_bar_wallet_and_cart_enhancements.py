@@ -2,6 +2,7 @@ import pytest
 from decimal import Decimal
 from datetime import datetime, timezone
 from httpx import AsyncClient
+from unittest.mock import AsyncMock
 
 from app.bars_and_restaurants.models.wallet_models import BarWallet, FundingSource
 from app.bars_and_restaurants.services.wallet_service import WalletService
@@ -239,8 +240,21 @@ class TestRedisLocking:
             "unit_price": 10.00
         }, headers=headers)
         
-        mock_lock = mocker.patch("app.redis_client.WalletLock.__aenter__")
-        mock_lock.return_value = None
+        mock_lock_enter = mocker.patch("app.redis_client.WalletLock.__aenter__", new_callable=AsyncMock)
+        mock_lock_enter.return_value = None
+        mocker.patch("app.redis_client.WalletLock.__aexit__", new_callable=AsyncMock, return_value=False)
+        mocker.patch(
+            "app.bars_and_restaurants.services.connection_manager.manager.notify_bar",
+            new_callable=AsyncMock
+        )
+        mock_transaction = mocker.MagicMock()
+        mock_transaction.commit = AsyncMock()
+        mock_transaction.rollback = AsyncMock()
+        mocker.patch(
+            "app.bars_and_restaurants.routes.cart.database.transaction",
+            new_callable=AsyncMock,
+            return_value=mock_transaction
+        )
         
         checkout_data = {
             "order_type": "pickup",
@@ -249,7 +263,7 @@ class TestRedisLocking:
         
         await client.post("/cart/checkout", json=checkout_data, headers=headers)
         
-        mock_lock.assert_called_once()
+        mock_lock_enter.assert_called_once()
 
 
 @pytest.mark.asyncio

@@ -352,12 +352,15 @@ async def checkout(
             
             order_id = await database.execute(OrderModel.__table__.insert().values(**order_data))
             
-            await manager.notify_bar_new_order(bar_id, {
-                "event": "new_order_pending",
+            await manager.notify_bar(bar_id, {
+                "type": "new_order",
                 "order_id": order_id,
+                "bar_id": bar_id,
                 "status": "pending",
-                "total": float(total),
-                "items_count": len(cart_items)
+                "total_price": float(total),
+                "items_count": len(cart_items),
+                "timestamp": datetime.utcnow().isoformat(),
+                "message": "🔔 New order received! Awaiting your confirmation"
             })
             
             for cart_item in cart_items:
