@@ -290,7 +290,8 @@ async def checkout(
     idempotency_key = str(uuid.uuid4())
     
     async with WalletLock(current_user["id"], idempotency_key):
-        cart = await get_or_create_cart(current_user["id"])
+        user_dict = dict(current_user)
+        cart = await get_or_create_cart(user_dict["id"])
         cart_items = await get_cart_items(cart["id"])
         
         if not cart_items:
@@ -306,7 +307,7 @@ async def checkout(
     
         from ..services.discounts import calculate_progressive_discount
         
-        progressive_data = await calculate_progressive_discount(current_user["id"], bar_id)
+        progressive_data = await calculate_progressive_discount(user_dict["id"], bar_id)
         progressive_pct = Decimal(str(progressive_data["percentage"]))
         progressive_discount_amount = subtotal * progressive_pct
         
@@ -333,7 +334,7 @@ async def checkout(
         
         try:
             order_data = {
-                "user_id": current_user["id"],
+                "user_id": user_dict["id"],
                 "bar_id": bar_id,
                 "status": "pending",
                 "order_type": checkout_request.order_type,
@@ -384,9 +385,9 @@ async def checkout(
                     amount=payment_amount,
                     currency="usd",
                     customer={
-                        "email": current_user.get("email"),
-                        "phone": current_user.get("phone_number"),
-                        "name": current_user.get("name")
+                        "email": user_dict.get("email"),
+                        "phone": user_dict.get("phone_number"),
+                        "name": user_dict.get("name")
                     },
                     payment_method=checkout_request.payment_details or {}
                 )
@@ -421,7 +422,7 @@ async def checkout(
                 payment_error = str(e)
             
             if payment_error:
-                await transaction.rollback()
+                # No internal rollback here, let the outer catch blocks handle it
                 raise APIError.payment_declined(message=payment_error)
             
             await database.execute(
