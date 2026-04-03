@@ -11,7 +11,7 @@ class TestProgressiveDiscounts:
         assert result["percentage"] == 0.0
         assert result["current_order_number"] == 1
 
-    async def test_discount_tiers_logic(self, auth_client, test_bar_in_db, test_user_in_db, setup_database):
+    async def test_discount_tiers_logic(self, auth_client, test_bar_in_db, test_user_in_db, cleanup_database):
         """
         Verify progressive discount tier calculation based on order count.
         """

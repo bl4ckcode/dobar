@@ -116,7 +116,7 @@ class TestOrderDetails:
     """Test order detail retrieval."""
     
     @pytest.mark.asyncio
-    async def test_get_order_details(self, client: AsyncClient, mock_firebase_token, setup_database, sample_user_data):
+    async def test_get_order_details(self, client: AsyncClient, mock_firebase_token, cleanup_database, sample_user_data):
         """Test getting order details."""
         from app.database import database
         
@@ -170,7 +170,7 @@ class TestOrderDetails:
         assert response.status_code == 404
     
     @pytest.mark.asyncio
-    async def test_cannot_view_other_users_order(self, client: AsyncClient, mock_firebase_token, setup_database):
+    async def test_cannot_view_other_users_order(self, client: AsyncClient, mock_firebase_token, cleanup_database):
         """Test that users cannot view other users' orders."""
         from app.database import database
         
@@ -209,7 +209,7 @@ class TestOrderTimeline:
     """Test order timeline/status history."""
     
     @pytest.mark.asyncio
-    async def test_get_order_timeline(self, client: AsyncClient, mock_firebase_token, setup_database, sample_user_data):
+    async def test_get_order_timeline(self, client: AsyncClient, mock_firebase_token, cleanup_database, sample_user_data):
         """Test getting order timeline with status history."""
         from app.database import database
         
@@ -259,7 +259,7 @@ class TestOrderTimeline:
         assert data["status_history"][1]["new_status"] == "preparing"
     
     @pytest.mark.asyncio
-    async def test_timeline_requires_ownership(self, client: AsyncClient, mock_firebase_token, setup_database):
+    async def test_timeline_requires_ownership(self, client: AsyncClient, mock_firebase_token, cleanup_database):
         """Test that timeline endpoint requires order ownership."""
         from app.database import database
         
@@ -298,7 +298,7 @@ class TestOrderCancellation:
     """Test order cancellation."""
     
     @pytest.mark.asyncio
-    async def test_cancel_pending_order(self, client: AsyncClient, mock_firebase_token, setup_database, sample_user_data):
+    async def test_cancel_pending_order(self, client: AsyncClient, mock_firebase_token, cleanup_database, sample_user_data):
         """Test canceling a pending order."""
         from app.database import database
         
@@ -343,7 +343,7 @@ class TestOrderCancellation:
         assert history[0]["note"] == "Cancelled by customer"
     
     @pytest.mark.asyncio
-    async def test_cancel_confirmed_order(self, client: AsyncClient, mock_firebase_token, setup_database, sample_user_data):
+    async def test_cancel_confirmed_order(self, client: AsyncClient, mock_firebase_token, cleanup_database, sample_user_data):
         """Test canceling a confirmed order."""
         from app.database import database
         
@@ -379,7 +379,7 @@ class TestOrderCancellation:
         assert response.json()["status"] == "cancelled"
     
     @pytest.mark.asyncio
-    async def test_cannot_cancel_preparing_order(self, client: AsyncClient, mock_firebase_token, setup_database, sample_user_data):
+    async def test_cannot_cancel_preparing_order(self, client: AsyncClient, mock_firebase_token, cleanup_database, sample_user_data):
         """Test that preparing orders cannot be cancelled."""
         from app.database import database
         
@@ -416,7 +416,7 @@ class TestOrderCancellation:
         assert "cannot cancel" in response.json()["message"].lower()
     
     @pytest.mark.asyncio
-    async def test_cannot_cancel_other_users_order(self, client: AsyncClient, mock_firebase_token, setup_database):
+    async def test_cannot_cancel_other_users_order(self, client: AsyncClient, mock_firebase_token, cleanup_database):
         """Test that users cannot cancel other users' orders."""
         from app.database import database
         
@@ -455,7 +455,7 @@ class TestOrderStatusUpdate:
     """Test order status updates (for bar owners)."""
     
     @pytest.mark.asyncio
-    async def test_update_order_status(self, client: AsyncClient, mock_firebase_token, setup_database, sample_user_data):
+    async def test_update_order_status(self, client: AsyncClient, mock_firebase_token, cleanup_database, sample_user_data):
         """Test updating order status."""
         from app.database import database
         
@@ -504,7 +504,7 @@ class TestOrderStatusUpdate:
         assert history[0]["note"] == "Started preparing order"
     
     @pytest.mark.asyncio
-    async def test_invalid_status_transition(self, client: AsyncClient, mock_firebase_token, setup_database, sample_user_data):
+    async def test_invalid_status_transition(self, client: AsyncClient, mock_firebase_token, cleanup_database, sample_user_data):
         """Test that invalid status transitions are rejected."""
         from app.database import database
         
@@ -544,7 +544,7 @@ class TestOrderStatusUpdate:
         assert "invalid" in response.json()["message"].lower()
     
     @pytest.mark.asyncio
-    async def test_update_completed_order_status(self, client: AsyncClient, mock_firebase_token, setup_database, sample_user_data):
+    async def test_update_completed_order_status(self, client: AsyncClient, mock_firebase_token, cleanup_database, sample_user_data):
         """Test that completed orders cannot be updated."""
         from app.database import database
         
@@ -582,7 +582,7 @@ class TestOrderStatusUpdate:
         assert response.status_code == 400
     
     @pytest.mark.asyncio
-    async def test_status_update_sets_completed_at(self, client: AsyncClient, mock_firebase_token, setup_database, sample_user_data):
+    async def test_status_update_sets_completed_at(self, client: AsyncClient, mock_firebase_token, cleanup_database, sample_user_data):
         """Test that completing an order sets completed_at timestamp."""
         from app.database import database
         

@@ -1,0 +1,200 @@
+/Users/carlosalves/Documents/PDev/barz-backend/venv/lib/python3.12/site-packages/pytest_asyncio/plugin.py:208: PytestDeprecationWarning: The configuration option "asyncio_default_fixture_loop_scope" is unset.
+The event loop scope for asynchronous fixtures will default to the fixture caching scope. Future versions of pytest-asyncio will default the loop scope for asynchronous fixtures to function scope. Set the default fixture loop scope explicitly in order to avoid unexpected behavior in the future. Valid fixture loop scopes are: "function", "class", "module", "package", "session"
+
+  warnings.warn(PytestDeprecationWarning(_DEFAULT_FIXTURE_LOOP_SCOPE_UNSET))
+============================= test session starts ==============================
+platform darwin -- Python 3.12.11, pytest-8.3.3, pluggy-1.6.0 -- /Users/carlosalves/Documents/PDev/barz-backend/venv/bin/python
+cachedir: .pytest_cache
+rootdir: /Users/carlosalves/Documents/PDev/barz-backend
+configfile: pytest.ini
+plugins: asyncio-0.24.0, cov-5.0.0, anyio-4.12.0, Faker-30.8.2, mock-3.14.0
+asyncio: mode=Mode.AUTO, default_loop_scope=None
+collecting ... collected 1 item
+
+tests/test_progressive_discounts.py::TestProgressiveDiscounts::test_discount_tiers_logic ERROR [100%]
+
+==================================== ERRORS ====================================
+_____ ERROR at setup of TestProgressiveDiscounts.test_discount_tiers_logic _____
+file /Users/carlosalves/Documents/PDev/barz-backend/tests/test_progressive_discounts.py, line 14
+      async def test_discount_tiers_logic(self, auth_client, test_bar_in_db, test_user_in_db, setup_database):
+          """
+          Verify progressive discount tier calculation based on order count.
+          """
+          from app.bars_and_restaurants.services.discounts import calculate_progressive_discount
+          from app.bars_and_restaurants.services import discounts
+          from app.bars_and_restaurants.models.relational_models import Order as OrderModel
+
+          # Import database from conftest - it's the patched test_database
+          database = discounts.database
+
+          client, headers, user = auth_client
+          bar_id = test_bar_in_db["id"]
+          user_id = user["id"]
+
+          # Tier 1: No prior orders = 0% discount
+          result1 = await calculate_progressive_discount(user_id, bar_id)
+          assert result1["percentage"] == 0.0, f"Expected 0%, got {result1['percentage']}"
+          assert result1["current_order_number"] == 1
+
+          # Simulate creating an order in the session
+          now = datetime.now(timezone.utc)
+          await database.execute(OrderModel.__table__.insert().values(
+              user_id=user_id, bar_id=bar_id, status="confirmed",
+              total_price=100.0, subtotal=100.0, tax=10.0, order_type="dine_in",
+              payment_method="credit_card", created_at=now
+          ))
+
+          # Tier 2: 1 prior order = 5% discount
+          result2 = await calculate_progressive_discount(user_id, bar_id)
+          assert result2["percentage"] == 0.05, f"Expected 5%, got {result2['percentage']}"
+          assert result2["current_order_number"] == 2
+
+          # Simulate second order
+          await database.execute(OrderModel.__table__.insert().values(
+              user_id=user_id, bar_id=bar_id, status="confirmed",
+              total_price=100.0, subtotal=100.0, tax=10.0, order_type="dine_in",
+              payment_method="credit_card", created_at=now
+          ))
+
+          # Tier 3: 2 prior orders = 10% discount
+          result3 = await calculate_progressive_discount(user_id, bar_id)
+          assert result3["percentage"] == 0.10, f"Expected 10%, got {result3['percentage']}"
+          assert result3["current_order_number"] == 3
+
+          # Simulate third order
+          await database.execute(OrderModel.__table__.insert().values(
+              user_id=user_id, bar_id=bar_id, status="confirmed",
+              total_price=100.0, subtotal=100.0, tax=10.0, order_type="dine_in",
+              payment_method="credit_card", created_at=now
+          ))
+
+          # Tier 4 (cap): 3+ prior orders = 15% discount
+          result4 = await calculate_progressive_discount(user_id, bar_id)
+          assert result4["percentage"] == 0.15, f"Expected 15%, got {result4['percentage']}"
+          assert result4["current_order_number"] == 4
+E       fixture 'setup_database' not found
+>       available fixtures: _session_event_loop, _session_faker, anyio_backend, anyio_backend_name, anyio_backend_options, auth_client, auth_headers, cache, capfd, capfdbinary, caplog, capsys, capsysbinary, class_mocker, cleanup_database, client, cov, db_session, doctest_namespace, event_loop, event_loop_policy, faker, free_tcp_port, free_tcp_port_factory, free_udp_port, free_udp_port_factory, inactive_promotion, mock_firebase_token, mock_mongo_collections, mock_payment_gateway, mock_redis, mocker, module_mocker, monkeypatch, no_cover, package_mocker, pytestconfig, record_property, record_testsuite_property, record_xml_attribute, recwarn, sample_apple_login, sample_bar_data, sample_google_login, sample_user_data, second_test_bar_in_db, session_mocker, setup_database_schema, test_bar, test_bar_in_db, test_bar_owner_in_db, test_bar_with_spots, test_completed_order_in_db, test_menu_in_db, test_order, test_order_in_db, test_promotion, test_user, test_user_in_db, tests/test_progressive_discounts.py::<event_loop>, tests/test_progressive_discounts.py::TestProgressiveDiscounts::<event_loop>, tmp_path, tmp_path_factory, tmpdir, tmpdir_factory, unused_tcp_port, unused_tcp_port_factory, unused_udp_port, unused_udp_port_factory
+>       use 'pytest --fixtures [testpath]' for help on them.
+
+/Users/carlosalves/Documents/PDev/barz-backend/tests/test_progressive_discounts.py:14
+=============================== warnings summary ===============================
+app/database.py:50
+  /Users/carlosalves/Documents/PDev/barz-backend/app/database.py:50: MovedIn20Warning: The ``declarative_base()`` function is now available as sqlalchemy.orm.declarative_base(). (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    Base = declarative_base()
+
+app/bars_and_restaurants/schemas/menus.py:54
+  /Users/carlosalves/Documents/PDev/barz-backend/app/bars_and_restaurants/schemas/menus.py:54: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class MenuItem(MenuItemBase):
+
+app/bars_and_restaurants/schemas/menus.py:98
+  /Users/carlosalves/Documents/PDev/barz-backend/app/bars_and_restaurants/schemas/menus.py:98: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class Menu(BaseModel):
+
+app/bars_and_restaurants/schemas/menus.py:112
+  /Users/carlosalves/Documents/PDev/barz-backend/app/bars_and_restaurants/schemas/menus.py:112: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class MenuWithItems(Menu):
+
+app/bars_and_restaurants/schemas/orders.py:14
+  /Users/carlosalves/Documents/PDev/barz-backend/app/bars_and_restaurants/schemas/orders.py:14: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class OrderItem(OrderItemBase):
+
+app/bars_and_restaurants/schemas/orders.py:54
+  /Users/carlosalves/Documents/PDev/barz-backend/app/bars_and_restaurants/schemas/orders.py:54: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class Order(BaseModel):
+
+app/bars_and_restaurants/schemas/cart.py:29
+  /Users/carlosalves/Documents/PDev/barz-backend/app/bars_and_restaurants/schemas/cart.py:29: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class CartItem(CartItemBase):
+
+app/bars_and_restaurants/schemas/cart.py:51
+  /Users/carlosalves/Documents/PDev/barz-backend/app/bars_and_restaurants/schemas/cart.py:51: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class Cart(CartBase):
+
+app/bars_and_restaurants/schemas/cart.py:159
+  /Users/carlosalves/Documents/PDev/barz-backend/app/bars_and_restaurants/schemas/cart.py:159: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class CartResponse(BaseModel):
+
+app/bars_and_restaurants/schemas/promotions.py:58
+  /Users/carlosalves/Documents/PDev/barz-backend/app/bars_and_restaurants/schemas/promotions.py:58: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class Promotion(PromotionBase):
+
+app/bars_and_restaurants/schemas/wallet.py:65
+  /Users/carlosalves/Documents/PDev/barz-backend/app/bars_and_restaurants/schemas/wallet.py:65: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class WalletBalanceResponse(BaseModel):
+
+app/bars_and_restaurants/schemas/wallet.py:77
+  /Users/carlosalves/Documents/PDev/barz-backend/app/bars_and_restaurants/schemas/wallet.py:77: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class CashbackTransactionResponse(BaseModel):
+
+app/bars_and_restaurants/schemas/wallet.py:96
+  /Users/carlosalves/Documents/PDev/barz-backend/app/bars_and_restaurants/schemas/wallet.py:96: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class WalletHistoryResponse(BaseModel):
+
+app/bars_and_restaurants/schemas/wallet.py:108
+  /Users/carlosalves/Documents/PDev/barz-backend/app/bars_and_restaurants/schemas/wallet.py:108: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class CashbackEarnedResponse(BaseModel):
+
+app/bars_and_restaurants/schemas/wallet.py:122
+  /Users/carlosalves/Documents/PDev/barz-backend/app/bars_and_restaurants/schemas/wallet.py:122: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class CashbackAppliedResponse(BaseModel):
+
+app/bars_and_restaurants/schemas/wallet.py:133
+  /Users/carlosalves/Documents/PDev/barz-backend/app/bars_and_restaurants/schemas/wallet.py:133: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class InsufficientBalanceError(BaseModel):
+
+app/bars_and_restaurants/schemas/wallet.py:147
+  /Users/carlosalves/Documents/PDev/barz-backend/app/bars_and_restaurants/schemas/wallet.py:147: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class CashbackCalculation(BaseModel):
+
+app/bars_and_restaurants/routes/dashboard.py:140
+  /Users/carlosalves/Documents/PDev/barz-backend/app/bars_and_restaurants/routes/dashboard.py:140: DeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+    period: str = Query("today", regex="^(today|week|month)$"),
+
+app/bars_and_restaurants/routes/dashboard.py:215
+  /Users/carlosalves/Documents/PDev/barz-backend/app/bars_and_restaurants/routes/dashboard.py:215: DeprecationWarning: `regex` has been deprecated, please use `pattern` instead
+    status: str = Query("all", regex="^(all|pending|preparing|ready|completed|cancelled)$"),
+
+app/payment/schemas.py:149
+  /Users/carlosalves/Documents/PDev/barz-backend/app/payment/schemas.py:149: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class CardResponse(BaseModel):
+
+app/advertising/schemas.py:92
+  /Users/carlosalves/Documents/PDev/barz-backend/app/advertising/schemas.py:92: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class SubscriptionResponse(BaseModel):
+
+app/advertising/schemas.py:151
+  /Users/carlosalves/Documents/PDev/barz-backend/app/advertising/schemas.py:151: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    @validator("days", each_item=True)
+
+app/advertising/schemas.py:178
+  /Users/carlosalves/Documents/PDev/barz-backend/app/advertising/schemas.py:178: PydanticDeprecatedSince20: Pydantic V1 style `@validator` validators are deprecated. You should migrate to Pydantic V2 style `@field_validator` validators, see the migration guide for more details. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    @validator("end_time")
+
+app/advertising/schemas.py:194
+  /Users/carlosalves/Documents/PDev/barz-backend/app/advertising/schemas.py:194: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class CampaignResponse(BaseModel):
+
+app/advertising/schemas.py:314
+  /Users/carlosalves/Documents/PDev/barz-backend/app/advertising/schemas.py:314: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class InvoiceResponse(BaseModel):
+
+app/advertising/schemas.py:343
+  /Users/carlosalves/Documents/PDev/barz-backend/app/advertising/schemas.py:343: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class RegionPricingResponse(BaseModel):
+
+app/bars_and_restaurants/schemas/bundles.py:70
+  /Users/carlosalves/Documents/PDev/barz-backend/app/bars_and_restaurants/schemas/bundles.py:70: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class BundlePromotion(BundlePromotionBase):
+
+tests/test_progressive_discounts.py::TestProgressiveDiscounts::test_discount_tiers_logic
+  /Users/carlosalves/Documents/PDev/barz-backend/venv/lib/python3.12/site-packages/fakeredis/aioredis.py:244: DeprecationWarning: Call to '__init__' function with deprecated usage of input argument/s 'retry_on_timeout'. (TimeoutError is included by default.) -- Deprecated since version 6.0.0.
+    super().__init__(**kwargs)
+
+tests/test_progressive_discounts.py::TestProgressiveDiscounts::test_discount_tiers_logic
+  /Users/carlosalves/Documents/PDev/barz-backend/tests/conftest.py:432: DeprecationWarning: Call to deprecated close. (Use aclose() instead) -- Deprecated since version 5.0.1.
+    await fake_redis.close()
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+ERROR tests/test_progressive_discounts.py::TestProgressiveDiscounts::test_discount_tiers_logic
+======================== 29 warnings, 1 error in 0.75s =========================
