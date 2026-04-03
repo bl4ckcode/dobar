@@ -410,14 +410,33 @@ async def notify_new_order_push(
 
 async def notify_order_ready_push(
     user_device_token: str,
+    user_id: int,
     order_id: int,
     bar_name: str
 ):
-    """Send push notification to user when their order is ready."""
+    """Send push notification to user when their order is ready and persist it."""
+    title = "🎉 Order Ready!"
+    body = f"Your order #{order_id} at {bar_name} is ready for pickup!"
+    
+    try:
+        from app.database import database
+        from app.bars_and_restaurants.models.relational_models import Notification
+        
+        insert_stmt = Notification.__table__.insert().values(
+            user_id=user_id,
+            title=title,
+            message=body,
+            notification_type="order_update",
+            reference_id=str(order_id)
+        )
+        await database.execute(insert_stmt)
+    except Exception as e:
+        print(f"Failed to persist notification: {e}")
+        
     return await push_service.send_to_device(
         token=user_device_token,
-        title="🎉 Order Ready!",
-        body=f"Your order #{order_id} at {bar_name} is ready for pickup!",
+        title=title,
+        body=body,
         data={
             "action": "order_ready",
             "order_id": str(order_id),
@@ -428,11 +447,12 @@ async def notify_order_ready_push(
 
 async def notify_order_status_push(
     user_device_token: str,
+    user_id: int,
     order_id: int,
     status: str,
     bar_name: str
 ):
-    """Send push notification for order status change."""
+    """Send push notification for order status change and persist it."""
     status_messages = {
         "confirmed": ("✅ Order Confirmed", f"{bar_name} confirmed your order #{order_id}"),
         "preparing": ("👨‍🍳 Preparing", f"Your order #{order_id} is being prepared"),
@@ -442,6 +462,21 @@ async def notify_order_status_push(
     }
     
     title, body = status_messages.get(status, ("Order Update", f"Order #{order_id} status: {status}"))
+    
+    try:
+        from app.database import database
+        from app.bars_and_restaurants.models.relational_models import Notification
+        
+        insert_stmt = Notification.__table__.insert().values(
+            user_id=user_id,
+            title=title,
+            message=body,
+            notification_type="order_update",
+            reference_id=str(order_id)
+        )
+        await database.execute(insert_stmt)
+    except Exception as e:
+        print(f"Failed to persist notification: {e}")
     
     return await push_service.send_to_device(
         token=user_device_token,
@@ -458,14 +493,33 @@ async def notify_order_status_push(
 
 async def notify_payment_success_push(
     user_device_token: str,
+    user_id: int,
     order_id: int,
     amount: float
 ):
-    """Send push notification for successful payment."""
+    """Send push notification for successful payment and persist it."""
+    title = "💳 Payment Confirmed"
+    body = f"Payment of R$ {amount:.2f} for order #{order_id} was successful!"
+    
+    try:
+        from app.database import database
+        from app.bars_and_restaurants.models.relational_models import Notification
+        
+        insert_stmt = Notification.__table__.insert().values(
+            user_id=user_id,
+            title=title,
+            message=body,
+            notification_type="system",
+            reference_id=str(order_id)
+        )
+        await database.execute(insert_stmt)
+    except Exception as e:
+        print(f"Failed to persist notification: {e}")
+        
     return await push_service.send_to_device(
         token=user_device_token,
-        title="💳 Payment Confirmed",
-        body=f"Payment of R$ {amount:.2f} for order #{order_id} was successful!",
+        title=title,
+        body=body,
         data={
             "action": "payment_success",
             "order_id": str(order_id),

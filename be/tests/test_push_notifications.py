@@ -91,7 +91,7 @@ class TestPushNotificationWiring:
         with patch(
             "app.order_worker.notify_order_status_change", new_callable=AsyncMock
         ) as mock_ws, patch(
-            "app.order_worker._get_order_user_token", new_callable=AsyncMock, return_value="user_tok"
+            "app.order_worker._get_order_user_token", new_callable=AsyncMock, return_value=("user_tok", 123)
         ), patch(
             "app.order_worker.notify_order_status_push", new_callable=AsyncMock
         ) as mock_push:
@@ -106,7 +106,7 @@ class TestPushNotificationWiring:
         with patch(
             "app.order_worker.notify_order_status_change", new_callable=AsyncMock
         ), patch(
-            "app.order_worker._get_order_user_token", new_callable=AsyncMock, return_value="user_tok"
+            "app.order_worker._get_order_user_token", new_callable=AsyncMock, return_value=("user_tok", 123)
         ), patch(
             "app.order_worker.notify_order_status_push", new_callable=AsyncMock
         ) as mock_push:

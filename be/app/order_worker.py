@@ -7,7 +7,7 @@ from app.bars_and_restaurants.services.push_notifications import (
 )
 
 
-async def _get_order_user_token(order_id: int) -> str | None:
+async def _get_order_user_token(order_id: int) -> tuple[str | None, int | None]:
     try:
         from app.database import database
         from app.bars_and_restaurants.models.relational_models import Order
@@ -15,17 +15,17 @@ async def _get_order_user_token(order_id: int) -> str | None:
 
         order = await database.fetch_one(Order.__table__.select().where(Order.id == order_id))
         if not order:
-            return None
+            return None, None
         profile = await database.fetch_one(
             UserProfile.__table__.select().where(UserProfile.user_id == order["user_id"])
         )
         if not profile:
-            return None
+            return None, None
         if not profile["push_notifications_enabled"] or not profile["order_updates_enabled"]:
-            return None
-        return profile["fcm_token"]
+            return None, None
+        return profile["fcm_token"], order["user_id"]
     except Exception:
-        return None
+        return None, None
 
 
 async def _get_bar_owner_tokens(bar_id: int) -> list[str]:
@@ -77,10 +77,11 @@ async def handle_status_change(order_id: int, data: dict):
     new_status = data.get("new_status")
     if bar_id and new_status:
         await notify_order_status_change(order_id, bar_id, new_status)
-        user_token = await _get_order_user_token(order_id)
-        if user_token:
+        user_token, user_id = await _get_order_user_token(order_id)
+        if user_token and user_id:
             await notify_order_status_push(
                 user_device_token=user_token,
+                user_id=user_id,
                 order_id=order_id,
                 status=new_status,
                 bar_name=data.get("bar_name", ""),
@@ -91,10 +92,11 @@ async def handle_order_cancelled(order_id: int, data: dict):
     bar_id = data.get("bar_id")
     if bar_id:
         await notify_order_status_change(order_id, bar_id, "cancelled")
-        user_token = await _get_order_user_token(order_id)
-        if user_token:
+        user_token, user_id = await _get_order_user_token(order_id)
+        if user_token and user_id:
             await notify_order_status_push(
                 user_device_token=user_token,
+                user_id=user_id,
                 order_id=order_id,
                 status="cancelled",
                 bar_name=data.get("bar_name", ""),

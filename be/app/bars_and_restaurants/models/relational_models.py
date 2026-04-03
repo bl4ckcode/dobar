@@ -191,3 +191,18 @@ class BundlePromotion(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     bar = relationship("Bar", back_populates="bundle_promotions")
+
+
+class Notification(Base):
+    __tablename__ = "notifications"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    title = Column(String(200), nullable=False)
+    message = Column(String(500), nullable=True)
+    notification_type = Column(String(50), nullable=False, default="system")
+    is_read = Column(Boolean, default=False, index=True)
+    reference_id = Column(String, nullable=True)
+    
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

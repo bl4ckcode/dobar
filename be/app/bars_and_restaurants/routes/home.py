@@ -148,10 +148,15 @@ async def get_home_dashboard(
     user_status = None
     if current_user:
         active_cart = await get_active_cart_summary(current_user["id"])
-        # Mock unread notifications for now
+        
+        # Real notification fetching
+        count_query = "SELECT COUNT(id) FROM notifications WHERE user_id = :user_id AND is_read = false"
+        unread_count_val = await database.fetch_val(count_query, {"user_id": current_user["id"]})
+        unread_count_int = int(unread_count_val) if unread_count_val else 0
+        
         user_status = UserStatus(
             active_cart=active_cart,
-            unread_notifications=0 
+            unread_notifications=unread_count_int 
         )
     
     # 2. Nearby Bars
@@ -180,12 +185,12 @@ async def get_home_dashboard(
     # "Hottest" = Promoted items (simulated for now by reusing most wanted or specific query)
     most_wanted = await get_trending_items(limit=5)
     
-    # For Hottest, let's query items that are actively promoted (promotional_price set)
+    # For Hottest, query items actively promoted and order by highest discount percentage relative to price
     hottest_query = """
         SELECT id, name, price, promotional_price, picture 
         FROM menu_items 
-        WHERE promotional_price IS NOT NULL AND available = true
-        ORDER BY RANDOM() 
+        WHERE promotional_price IS NOT NULL AND price > 0 AND available = true
+        ORDER BY ((price - promotional_price) / price) DESC, id DESC
         LIMIT 5
     """
     hottest_rows = await database.fetch_all(hottest_query)
