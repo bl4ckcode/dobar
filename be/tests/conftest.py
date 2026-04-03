@@ -3,7 +3,7 @@ import asyncio
 from typing import AsyncGenerator, Generator
 from httpx import AsyncClient, ASGITransport
 from databases import Database
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, pool
 from sqlalchemy.orm import sessionmaker
 import os
 import sys
@@ -85,7 +85,8 @@ TEST_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
 # Create test database engine (for sync operations like create_all/drop_all)
 test_engine = create_engine(
     "sqlite:///./test.db",
-    connect_args={"check_same_thread": False}
+    connect_args={"check_same_thread": False, "timeout": 10},
+    poolclass=pool.NullPool
 )
 
 @pytest.fixture(scope="function", autouse=True)
@@ -98,31 +99,58 @@ def mock_mongo_collections():
         yield
 
 # Create test database (for async operations)
-test_database = Database(TEST_DATABASE_URL)
+test_database = Database(TEST_DATABASE_URL, timeout=10)
 
 
-@pytest.fixture(scope="session")
-def event_loop() -> Generator:
-    """Create an instance of the default event loop for the test session."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
 
 
-@pytest.fixture(scope="function", autouse=True)
-async def setup_database():
-    """Create tables before each test and drop after."""
-    # Create all tables
+
+@pytest.fixture(scope="session", autouse=True)
+def setup_database_schema():
+    """Create tables once for the entire session."""
+    import time
+    # Ensure a fresh database file
+    db_file = Path("./test.db")
+    if db_file.exists():
+        try:
+            db_file.unlink()
+        except:
+            pass
+            
+    # Create all tables using the sync engine
     Base.metadata.create_all(bind=test_engine)
-    
-    # Connect to test database
-    await test_database.connect()
     
     yield
     
-    # Disconnect and drop all tables
-    await test_database.disconnect()
-    Base.metadata.drop_all(bind=test_engine)
+    # Cleanup at the very end
+    try:
+        # Close all connections in the pool
+        test_engine.dispose()
+        # Small sleep to let OS close file handles
+        time.sleep(0.5)
+        if db_file.exists():
+            db_file.unlink()
+    except:
+        pass
+
+@pytest.fixture(scope="function", autouse=True)
+async def cleanup_database():
+    """Clean up data between tests instead of dropping tables."""
+    # Connect to test database
+    if not test_database.is_connected:
+        await test_database.connect()
+    
+    yield
+    
+    # Truncate tables in reverse order of dependencies
+    try:
+        # Get all tables from SQLAlchemy metadata
+        for table in reversed(Base.metadata.sorted_tables):
+            await test_database.execute(table.delete())
+    except Exception as e:
+        print(f"Cleanup error (likely database locked during truncate): {e}")
+    finally:
+        await test_database.disconnect()
 
 
 @pytest.fixture
@@ -143,6 +171,8 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
     original_db = db_module.database
     
     db_module.database = test_database
+    db_module.SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
+    db_module.ReplicaSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=test_engine)
     auth_routes.database = test_database
     auth_middleware.database = test_database
     auth_dependencies.database = test_database
@@ -193,7 +223,7 @@ def mock_firebase_token():
 
 
 @pytest.fixture
-async def test_user_in_db(setup_database):
+async def test_user_in_db(cleanup_database):
     from app.auth.auth_models import User
     user_data = {
         "firebase_uid": "test_firebase_uid_123",
@@ -241,7 +271,7 @@ def sample_bar_data():
 
 
 @pytest.fixture
-async def test_bar_owner_in_db(setup_database):
+async def test_bar_owner_in_db(cleanup_database):
     from app.bars_and_restaurants.models.relational_models import BarOwner
     import random
     owner_data = {

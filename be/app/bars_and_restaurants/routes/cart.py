@@ -329,153 +329,149 @@ async def checkout(
         total = subtotal + tax + tip + delivery_fee - discount
         
         estimated_ready_time = datetime.utcnow() + timedelta(minutes=30)
+        payment_gateway = get_payment_gateway()
         
-        transaction = await database.transaction()
-        await transaction.start()
-
-        
-        try:
-            order_data = {
-                "user_id": user_dict["id"],
-                "bar_id": bar_id,
-                "status": "pending",
-                "order_type": checkout_request.order_type,
-                "subtotal": float(subtotal),
-                "tax": float(tax),
-                "tip": float(tip),
-                "delivery_fee": float(delivery_fee),
-                "discount": float(discount),
-                "total_price": float(total),
-                "payment_method": checkout_request.payment_method,
-                "payment_status": "pending",
-                "estimated_ready_time": estimated_ready_time,
-                "delivery_address": checkout_request.delivery_address,
-                "special_instructions": checkout_request.special_instructions
-            }
-            
-            order_id = await database.execute(OrderModel.__table__.insert().values(**order_data))
-            
-            await manager.notify_bar(bar_id, {
-                "type": "new_order",
-                "order_id": order_id,
-                "bar_id": bar_id,
-                "status": "pending",
-                "total_price": float(total),
-                "items_count": len(cart_items),
-                "timestamp": datetime.utcnow().isoformat(),
-                "message": "🔔 New order received! Awaiting your confirmation"
-            })
-            
-            for cart_item in cart_items:
-                order_item_data = {
-                    "order_id": order_id,
-                    "menu_item_id": cart_item["menu_item_id"],
-                    "menu_item_name": cart_item["menu_item_name"],
-                    "quantity": cart_item["quantity"],
-                    "unit_price": cart_item["unit_price"],
-                    "total_price": cart_item["quantity"] * cart_item["unit_price"],
+        async with database.transaction():
+            try:
+                order_data = {
+                    "user_id": user_dict["id"],
+                    "bar_id": bar_id,
+                    "status": "pending",
+                    "order_type": checkout_request.order_type,
+                    "subtotal": float(subtotal),
+                    "tax": float(tax),
+                    "tip": float(tip),
+                    "delivery_fee": float(delivery_fee),
+                    "discount": float(discount),
+                    "total_price": float(total),
+                    "payment_method": checkout_request.payment_method,
+                    "payment_status": "pending",
+                    "estimated_ready_time": estimated_ready_time,
+                    "delivery_address": checkout_request.delivery_address,
+                    "special_instructions": checkout_request.special_instructions
                 }
-                await database.execute(OrderItemModel.__table__.insert().values(**order_item_data))
-            
-            payment_result = None
-            payment_error = None
-            
-            try:
-                payment_amount = int(total * 100)
                 
-                payment_result = payment_gateway.create_charge(
-                    amount=payment_amount,
-                    currency="usd",
-                    customer={
-                        "email": user_dict.get("email"),
-                        "phone": user_dict.get("phone_number"),
-                        "name": user_dict.get("name")
-                    },
-                    payment_method=checkout_request.payment_details or {}
-                )
+                order_id = await database.execute(OrderModel.__table__.insert().values(**order_data))
                 
-                if payment_result.get("status") == "succeeded":
-                    update_data = {
-                        "payment_status": "completed",
-                        "payment_id": payment_result.get("id"),
-                        "status": "confirmed"
+                await manager.notify_bar(bar_id, {
+                    "type": "new_order",
+                    "order_id": order_id,
+                    "bar_id": bar_id,
+                    "status": "pending",
+                    "total_price": float(total),
+                    "items_count": len(cart_items),
+                    "timestamp": datetime.utcnow().isoformat(),
+                    "message": "🔔 New order received! Awaiting your confirmation"
+                })
+                
+                for cart_item in cart_items:
+                    order_item_data = {
+                        "order_id": order_id,
+                        "menu_item_id": cart_item["menu_item_id"],
+                        "menu_item_name": cart_item["menu_item_name"],
+                        "quantity": cart_item["quantity"],
+                        "unit_price": cart_item["unit_price"],
+                        "total_price": cart_item["quantity"] * cart_item["unit_price"],
                     }
-                else:
-                    update_data = {
-                        "payment_status": "failed",
-                        "payment_id": payment_result.get("id")
-                    }
-                    payment_error = payment_result.get("message", "Payment failed")
+                    await database.execute(OrderItemModel.__table__.insert().values(**order_item_data))
                 
-                await database.execute(
-                    OrderModel.__table__
-                    .update()
-                    .where(OrderModel.id == order_id)
-                    .values(**update_data)
-                )
+                payment_result = None
+                payment_error = None
                 
-            except Exception as e:
-                await database.execute(
-                    OrderModel.__table__
-                    .update()
-                    .where(OrderModel.id == order_id)
-                    .values(payment_status="failed")
-                )
-                payment_error = str(e)
-            
-            if payment_error:
-                # No internal rollback here, let the outer catch blocks handle it
-                raise APIError.payment_declined(message=payment_error)
-            
-            await database.execute(
-                CartItemModel.__table__.delete().where(CartItemModel.cart_id == cart["id"])
-            )
-            
-            await transaction.commit()
-            
-            order = await database.fetch_one(
-                OrderModel.__table__.select().where(OrderModel.id == order_id)
-            )
-            
-            try:
-                from app.bars_and_restaurants.services.wallet_service import WalletService
-                from app.bars_and_restaurants.schemas.wallet import EarnCashbackRequest
-                from app.bars_and_restaurants.models.wallet_models import FundingSource
-                from app.database import SessionLocal
-                
-                db = SessionLocal()
                 try:
-                    cashback_req = EarnCashbackRequest(
-                        user_id=current_user["id"],
-                        order_id=order_id,
-                        bar_id=bar_id,
-                        order_total=total,
-                        cashback_percentage=Decimal("0.05"),
-                        funded_by=FundingSource.BARZ,
-                        expires_days=90
+                    payment_amount = int(total * 100)
+                    
+                    payment_result = payment_gateway.create_charge(
+                        amount=payment_amount,
+                        currency="usd",
+                        customer={
+                            "email": user_dict.get("email"),
+                            "phone": user_dict.get("phone_number"),
+                            "name": user_dict.get("name")
+                        },
+                        payment_method=checkout_request.payment_details or {}
                     )
                     
-                    WalletService.earn_cashback(db, cashback_req, auto_available=False)
-                finally:
-                    db.close()
-            except Exception as cashback_error:
-                print(f"Failed to generate cashback for order {order_id}: {cashback_error}")
+                    if payment_result.get("status") == "succeeded":
+                        update_data = {
+                            "payment_status": "completed",
+                            "payment_id": payment_result.get("id"),
+                            "status": "confirmed"
+                        }
+                    else:
+                        update_data = {
+                            "payment_status": "failed",
+                            "payment_id": payment_result.get("id")
+                        }
+                        payment_error = payment_result.get("message", "Payment failed")
+                    
+                    await database.execute(
+                        OrderModel.__table__
+                        .update()
+                        .where(OrderModel.id == order_id)
+                        .values(**update_data)
+                    )
+                    
+                except Exception as e:
+                    await database.execute(
+                        OrderModel.__table__
+                        .update()
+                        .where(OrderModel.id == order_id)
+                        .values(payment_status="failed")
+                    )
+                    payment_error = str(e)
+                
+                if payment_error:
+                    raise APIError.payment_declined(message=payment_error)
+                
+                await database.execute(
+                    CartItemModel.__table__.delete().where(CartItemModel.cart_id == cart["id"])
+                )
+                
+            except APIError:
+                raise
+            except Exception as e:
+                raise APIError.server_error(f"Checkout failed: {str(e)}")
+                
+        # Transaction committed automatically here
+        
+        order_record = await database.fetch_one(
+            OrderModel.__table__.select().where(OrderModel.id == order_id)
+        )
+        order = dict(order_record)
+        
+        try:
+            from app.bars_and_restaurants.services.wallet_service import WalletService
+            from app.bars_and_restaurants.schemas.wallet import EarnCashbackRequest
+            from app.bars_and_restaurants.models.wallet_models import FundingSource
+            from app.database import SessionLocal
             
-            return CheckoutResponse(
-                order_id=order["id"],
-                status=order["status"],
-                payment_status=order["payment_status"],
-                payment_id=order.get("payment_id"),
-                total=order["total_price"],
-                estimated_ready_time=order["estimated_ready_time"]
-            )
-            
-        except APIError:
-            await transaction.rollback()
-            raise
-        except Exception as e:
-            await transaction.rollback()
-            raise APIError.server_error(f"Checkout failed: {str(e)}")
+            db = SessionLocal()
+            try:
+                cashback_req = EarnCashbackRequest(
+                    user_id=current_user["id"],
+                    order_id=order_id,
+                    bar_id=bar_id,
+                    order_total=total,
+                    cashback_percentage=Decimal("0.05"),
+                    funded_by=FundingSource.BARZ,
+                    expires_days=90
+                )
+                
+                WalletService.earn_cashback(db, cashback_req, auto_available=False)
+            finally:
+                db.close()
+        except Exception as cashback_error:
+            print(f"Failed to generate cashback for order {order_id}: {cashback_error}")
+        
+        return CheckoutResponse(
+            order_id=order["id"],
+            status=order["status"],
+            payment_status=order["payment_status"],
+            payment_id=order["payment_id"],
+            total=order["total_price"],
+            estimated_ready_time=order["estimated_ready_time"]
+        )
 
 @cart_router.post("/sync", response_model=CartResponse)
 async def sync_cart(

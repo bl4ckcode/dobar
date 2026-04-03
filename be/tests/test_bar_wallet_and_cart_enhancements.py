@@ -248,11 +248,10 @@ class TestRedisLocking:
             new_callable=AsyncMock
         )
         mock_transaction = mocker.MagicMock()
-        mock_transaction.commit = AsyncMock()
-        mock_transaction.rollback = AsyncMock()
+        mock_transaction.__aenter__ = AsyncMock(return_value=mock_transaction)
+        mock_transaction.__aexit__ = AsyncMock(return_value=False)
         mocker.patch(
             "app.bars_and_restaurants.routes.cart.database.transaction",
-            new_callable=AsyncMock,
             return_value=mock_transaction
         )
         
