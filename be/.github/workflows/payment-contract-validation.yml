@@ -30,7 +30,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements-test.txt
-          pip install git+https://${{ secrets.GH_PAT }}@github.com/bl4ckcode/dobar-payment-engine.git
+          pip install git+https://${{ secrets.GH_PAT_WRITE_ACCESS }}@github.com/bl4ckcode/dobar-payment-engine.git
       
       - name: Detect changes in payment/wallet layer
         id: detect_changes

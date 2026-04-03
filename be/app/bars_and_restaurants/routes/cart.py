@@ -331,6 +331,8 @@ async def checkout(
         estimated_ready_time = datetime.utcnow() + timedelta(minutes=30)
         
         transaction = await database.transaction()
+        await transaction.start()
+
         
         try:
             order_data = {
