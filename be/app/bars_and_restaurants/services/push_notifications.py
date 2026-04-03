@@ -35,8 +35,12 @@ Usage:
 import os
 import json
 import asyncio
+import logging
 from typing import Optional, Dict, List
 from datetime import datetime, timezone
+
+# Setup logger
+logger = logging.getLogger(__name__)
 
 # Firebase Admin SDK
 try:
@@ -431,7 +435,7 @@ async def notify_order_ready_push(
         )
         await database.execute(insert_stmt)
     except Exception as e:
-        print(f"Failed to persist notification: {e}")
+        logger.error(f"Failed to persist notification: {e}")
         
     return await push_service.send_to_device(
         token=user_device_token,
@@ -476,7 +480,7 @@ async def notify_order_status_push(
         )
         await database.execute(insert_stmt)
     except Exception as e:
-        print(f"Failed to persist notification: {e}")
+        logger.error(f"Failed to persist notification: {e}")
     
     return await push_service.send_to_device(
         token=user_device_token,
@@ -514,7 +518,7 @@ async def notify_payment_success_push(
         )
         await database.execute(insert_stmt)
     except Exception as e:
-        print(f"Failed to persist notification: {e}")
+        logger.error(f"Failed to persist notification: {e}")
         
     return await push_service.send_to_device(
         token=user_device_token,

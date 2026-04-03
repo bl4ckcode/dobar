@@ -27,6 +27,24 @@ if config.config_file_name is not None:
 # add your model's MetaData object here
 # for 'autogenerate' support
 from app.database import Base
+# Import all models here so Alembic can see them
+from app.auth.auth_models import User, Token, RefreshToken
+from app.auth.rbac_models import UserProfile, BarStaff, StaffInvitation
+from app.auth.mfa_models import MFASecret
+from app.auth.recovery_models import RecoveryToken
+from app.payment.models import PaymentCard
+from app.bars_and_restaurants.models.relational_models import (
+    BarOwner, Bar, Menu, MenuItem, Order,
+    Promotion, BundlePromotion, Notification
+)
+from app.bars_and_restaurants.models.cart_models import OrderItem
+from app.bars_and_restaurants.models.bank_account import BarBankAccount
+from app.bars_and_restaurants.models.wallet_models import CashbackLedger, UserWallet, BarWallet
+from app.advertising.models import (
+    AdvertisingSubscription, AdvertisingCampaign, AdvertisingImpression,
+    RegionPricing, AdvertisingInvoice
+)
+
 target_metadata = Base.metadata
 
 # other values from the config, defined by the needs of env.py,
