@@ -207,12 +207,20 @@ async def get_bars_by_ids(bars_info: list[dict]):
     # Reassemble merged results in the ORIGINAL order of bar_ids (distance order)
     merged_results = []
     for b_info in bars_info:
-        b_id = b_info["bar_id"]
+        # Robustly handle string/int bar_id from MongoDB
+        try:
+            b_id = int(b_info["bar_id"])
+        except (ValueError, TypeError):
+            continue
+
         if b_id in pg_bars_map:
-            bar_dict = pg_bars_map[b_id]
+            bar_dict = pg_bars_map[b_id].copy() # Use .copy() to avoid mutating the map source
             if b_id in extra_data:
                 bar_dict.update(extra_data[b_id])
             merged_results.append(bar_dict)
+    
+    # Trace for debugging
+    print(f"DEBUG: get_bars_by_ids: Matched {len(merged_results)}/{len(bars_info)} bars from Mongo into Postgres")
     
     return merged_results
 

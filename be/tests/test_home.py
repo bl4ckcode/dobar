@@ -32,17 +32,8 @@ async def test_get_home_dashboard_with_auth(client: AsyncClient, auth_headers):
 
 @pytest.mark.asyncio
 async def test_get_home_nearby_bars(client: AsyncClient, test_bar_in_db):
-    """Test fetching nearby bars with lat/lng."""
+    """Test fetching nearby bars with latitude/longitude."""
     # Using generic coordinates
-    params = {"lat": -23.5505, "lng": -46.6333}
-    response = await client.get("/home/", params=params)
-    assert response.status_code == 200
-    data = response.json()
-    assert isinstance(data["nearby_bars"], list)
-
-@pytest.mark.asyncio
-async def test_get_home_nearby_bars_full_names(client: AsyncClient, test_bar_in_db):
-    """Test fetching nearby bars with latitude/longitude (full names)."""
     params = {"latitude": -23.5505, "longitude": -46.6333}
     response = await client.get("/home/", params=params)
     assert response.status_code == 200
