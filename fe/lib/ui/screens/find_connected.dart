@@ -10,6 +10,7 @@ import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/bars/presentation/bloc/bar_bloc.dart';
 import 'package:barz/features/bars/presentation/bloc/bar_state.dart';
+import 'package:barz/features/bars/presentation/bloc/bar_event.dart';
 import 'package:barz/features/bars/domain/models/bar_model.dart';
 import 'package:barz/features/promotions/presentation/bloc/promotions_bloc.dart';
 
@@ -135,7 +136,17 @@ class _FindConnectedViewState extends State<FindConnectedView>
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        final barState = context.read<BarBloc>().state;
+        final locationState = context.read<LocationBloc>().state;
+        final barBloc = context.read<BarBloc>();
+        final barState = barBloc.state;
+
+        // Ensure bars are loaded
+        if (barState is! BarsLoaded && barState is! BarLoading) {
+          final lat = locationState.currentLocation?.latitude ?? _defaultLat;
+          final lng = locationState.currentLocation?.longitude ?? _defaultLng;
+          barBloc.add(LoadNearbyBars(lat: lat, lng: lng));
+        }
+
         if (barState is BarsLoaded) {
           _filterBars(_searchController.text, barState.bars);
           _loadMarkers(barState.bars);

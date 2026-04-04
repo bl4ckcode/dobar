@@ -1,6 +1,7 @@
 import 'package:barz/core/design/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:barz/l10n/app_localizations.dart';
 
 enum PaymentResultType { success, failure, pending }
 
@@ -25,6 +26,7 @@ class PaymentResultPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dobar = context.dobarColors;
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: dobar.background,
       body: SafeArea(
@@ -38,7 +40,7 @@ class PaymentResultPage extends StatelessWidget {
               _ResultIcon(result: result),
               const SizedBox(height: 32),
               Text(
-                _title,
+                _title(context),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 28,
@@ -68,7 +70,7 @@ class PaymentResultPage extends StatelessWidget {
                   child: Column(
                     children: [
                       Text(
-                        'Amount Paid',
+                        l10n.payment_amount_paid,
                         style: TextStyle(
                           color: dobar.labelSecondary,
                           fontSize: 13,
@@ -86,7 +88,7 @@ class PaymentResultPage extends StatelessWidget {
                       if (orderId != null) ...[
                         const SizedBox(height: 4),
                         Text(
-                          'Order #$orderId',
+                          '${l10n.order_number_prefix}$orderId',
                           style: TextStyle(
                             color: dobar.labelSecondary,
                             fontSize: 13,
@@ -132,7 +134,7 @@ class PaymentResultPage extends StatelessWidget {
                   onPressed: () =>
                       Navigator.of(context).popUntil((r) => r.isFirst),
                   child: Text(
-                    'Return to Menu',
+                    l10n.payment_return_to_menu,
                     style: TextStyle(color: dobar.labelSecondary, fontSize: 16),
                   ),
                 ),
@@ -144,22 +146,21 @@ class PaymentResultPage extends StatelessWidget {
     );
   }
 
-  String get _title {
+  String _title(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return switch (result) {
-      PaymentResultType.success => '🎉 Payment Confirmed!',
-      PaymentResultType.failure => 'Payment Failed',
-      PaymentResultType.pending => 'Payment Pending',
+      PaymentResultType.success => l10n.payment_result_success,
+      PaymentResultType.failure => l10n.payment_result_failed,
+      PaymentResultType.pending => l10n.payment_result_pending,
     };
   }
 
   String _subtitle(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return switch (result) {
-      PaymentResultType.success =>
-        'Your order has been placed.\nEnjoy your night! 🥂',
-      PaymentResultType.failure =>
-        'Something went wrong processing your payment. Please try again.',
-      PaymentResultType.pending =>
-        'Your payment is being processed. We\'ll notify you once it\'s confirmed.',
+      PaymentResultType.success => l10n.payment_result_success_subtitle,
+      PaymentResultType.failure => l10n.payment_result_failed_subtitle,
+      PaymentResultType.pending => l10n.payment_result_pending_subtitle,
     };
   }
 }
@@ -234,6 +235,7 @@ class _PrimaryButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     if (result == PaymentResultType.success) {
       return GestureDetector(
         onTap:
@@ -257,10 +259,10 @@ class _PrimaryButton extends StatelessWidget {
               ),
             ],
           ),
-          child: const Center(
+          child: Center(
             child: Text(
-              'Back to Home',
-              style: TextStyle(
+              l10n.payment_back_to_home,
+              style: const TextStyle(
                 color: Colors.black,
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
@@ -281,10 +283,10 @@ class _PrimaryButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: Colors.redAccent.withValues(alpha: 0.5)),
         ),
-        child: const Center(
+        child: Center(
           child: Text(
-            'Try Again',
-            style: TextStyle(
+            l10n.retry,
+            style: const TextStyle(
               color: Colors.redAccent,
               fontSize: 16,
               fontWeight: FontWeight.bold,

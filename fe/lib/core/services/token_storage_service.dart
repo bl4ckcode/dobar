@@ -41,7 +41,7 @@ class TokenStorageService {
       }
     } catch (e) {
       _log('[TOKEN ERROR] Failed to write $key: $e');
-      
+
       // On iOS, if we get a keychain error, try to clear all and retry once
       if (!kIsWeb && !isRetry) {
         _log('[TOKEN RECOVERY] Attempting to clear storage and retry write...');

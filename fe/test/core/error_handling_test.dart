@@ -33,7 +33,10 @@ void main() {
     });
 
     test('Cart error codes exist and have correct values', () {
-      expect(ErrorCode.fromCode('CART_ITEM_NOT_FOUND'), ErrorCode.cartItemNotFound);
+      expect(
+        ErrorCode.fromCode('CART_ITEM_NOT_FOUND'),
+        ErrorCode.cartItemNotFound,
+      );
       expect(ErrorCode.fromCode('CART_EMPTY'), ErrorCode.cartEmpty);
       expect(ErrorCode.cartItemNotFound.defaultMessage, 'Cart item not found');
       expect(ErrorCode.cartEmpty.defaultMessage, 'Cart is empty');
@@ -70,7 +73,9 @@ void main() {
     });
 
     test('displayMessage returns message or default', () {
-      final withMessage = ServerException.fromResponse({'message': 'Custom'}, 400);
+      final withMessage = ServerException.fromResponse({
+        'message': 'Custom',
+      }, 400);
       final withoutMessage = ServerException.unknown();
 
       expect(withMessage.displayMessage, 'Custom');
@@ -199,7 +204,10 @@ void main() {
 
   group('Failures', () {
     test('ServerFailure has correct properties', () {
-      final failure = ServerFailure.fromCode(ErrorCode.notFound, 'Resource not found');
+      final failure = ServerFailure.fromCode(
+        ErrorCode.notFound,
+        'Resource not found',
+      );
 
       expect(failure.errorCode, ErrorCode.notFound);
       expect(failure.displayMessage, 'Resource not found');
@@ -208,7 +216,10 @@ void main() {
     test('NetworkFailure factories work correctly', () {
       expect(NetworkFailure.timeout().errorCode, ErrorCode.networkTimeout);
       expect(NetworkFailure.noInternet().errorCode, ErrorCode.noInternet);
-      expect(NetworkFailure.connectionError().errorCode, ErrorCode.networkError);
+      expect(
+        NetworkFailure.connectionError().errorCode,
+        ErrorCode.networkError,
+      );
     });
 
     test('AuthFailure factories work correctly', () {
@@ -229,15 +240,23 @@ void main() {
 
     test('ValidationFailure getFieldError works', () {
       const failure = ValidationFailure(
-        fieldErrors: {'amount': ['Must be positive']},
+        fieldErrors: {
+          'amount': ['Must be positive'],
+        },
       );
 
       expect(failure.getFieldError('amount'), 'Must be positive');
     });
 
     test('LocationFailure factories work correctly', () {
-      expect(LocationFailure.permissionDenied().errorCode, ErrorCode.locationPermissionDenied);
-      expect(LocationFailure.serviceDisabled().errorCode, ErrorCode.locationServiceDisabled);
+      expect(
+        LocationFailure.permissionDenied().errorCode,
+        ErrorCode.locationPermissionDenied,
+      );
+      expect(
+        LocationFailure.serviceDisabled().errorCode,
+        ErrorCode.locationServiceDisabled,
+      );
     });
   });
 
@@ -309,7 +328,9 @@ void main() {
           statusCode: 422,
           data: {
             'message': 'Validation failed',
-            'errors': {'email': ['Invalid']},
+            'errors': {
+              'email': ['Invalid'],
+            },
           },
         ),
       );
@@ -317,7 +338,9 @@ void main() {
       final exception = ErrorHandler.handleDioException(dioException);
 
       expect(exception, isA<ValidationException>());
-      expect((exception as ValidationException).fieldErrors?['email'], ['Invalid']);
+      expect((exception as ValidationException).fieldErrors?['email'], [
+        'Invalid',
+      ]);
     });
 
     test('handleDioException handles payment errors as PaymentException', () {
@@ -362,7 +385,9 @@ void main() {
         isA<ValidationFailure>(),
       );
       expect(
-        ErrorHandler.mapExceptionToFailure(LocationException.permissionDenied()),
+        ErrorHandler.mapExceptionToFailure(
+          LocationException.permissionDenied(),
+        ),
         isA<LocationFailure>(),
       );
     });

@@ -4,11 +4,13 @@ import '../design_system.dart';
 
 class HomeConnectedHeader extends StatelessWidget {
   final VoidCallback? onNotificationTap;
+  final VoidCallback? onBarTap;
   final String? nearbyBarName;
 
   const HomeConnectedHeader({
     super.key,
     this.onNotificationTap,
+    this.onBarTap,
     this.nearbyBarName,
   });
 
@@ -32,7 +34,9 @@ class HomeConnectedHeader extends StatelessWidget {
           if (nearbyBarName != null)
             Expanded(
               child:
-                  Container(
+                    GestureDetector(
+                      onTap: onBarTap,
+                      child: Container(
                         padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
                         decoration: BoxDecoration(
                           color: colors.surface.withValues(alpha: 0.9),
@@ -86,7 +90,8 @@ class HomeConnectedHeader extends StatelessWidget {
                             ),
                           ],
                         ),
-                      )
+                      ),
+                    )
                       .animate(
                         onPlay: (controller) =>
                             controller.repeat(reverse: true),

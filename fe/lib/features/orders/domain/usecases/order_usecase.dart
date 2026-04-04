@@ -13,11 +13,7 @@ class OrderUsecase {
     String? cursor,
     String? status,
   }) {
-    return repository.getMyOrders(
-      limit: limit,
-      cursor: cursor,
-      status: status,
-    );
+    return repository.getMyOrders(limit: limit, cursor: cursor, status: status);
   }
 
   Future<Either<Failure, OrderModel>> getOrder(int orderId) {

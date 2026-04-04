@@ -80,12 +80,14 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
     final colors = context.dobarColors;
     final homeState = context.watch<HomeBloc>().state;
     String? nearbyBarName;
+    dynamic closestBar; // Will hold the BarModel
 
     if (homeState is HomeLoaded) {
       for (final bar in homeState.data.nearbyBars) {
         if (bar.distanceMeters <= 5000) {
           // 5km
           nearbyBarName = bar.name;
+          closestBar = bar;
           break;
         }
       }
@@ -159,11 +161,11 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
                                 colors,
                               ),
                               const SizedBox(height: BarzSpacing.md),
-                                _buildPromotionsList(
-                                  context,
-                                  state.data.activePromotions,
-                                ),
-                                const SizedBox(height: BarzSpacing.lg),
+                              _buildPromotionsList(
+                                context,
+                                state.data.activePromotions,
+                              ),
+                              const SizedBox(height: BarzSpacing.lg),
                             ],
                           );
                         }
@@ -282,7 +284,13 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
                 top: 0,
                 left: 0,
                 right: 0,
-                child: HomeConnectedHeader(nearbyBarName: nearbyBarName),
+                child: HomeConnectedHeader(
+                  nearbyBarName: nearbyBarName,
+                  onBarTap: () {
+                    // Navigate to check-in page and pass the bar object via extra
+                    AppRoute.checkin.push(context, extra: closestBar);
+                  },
+                ),
               ),
             ],
           ),

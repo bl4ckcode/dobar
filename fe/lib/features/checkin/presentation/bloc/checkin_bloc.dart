@@ -110,7 +110,7 @@ class CheckinBloc extends Bloc<CheckinEvent, CheckinState> {
     final result = await _barUsecase.getNearbyBars(
       event.latitude,
       event.longitude,
-      0.1, // 100 meters
+      5.0, // 5km
     );
 
     result.fold(

@@ -8,6 +8,7 @@ import 'package:flutter/services.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:barz/l10n/app_localizations.dart';
 import 'package:barz/features/advertising/presentation/bloc/advertising_bloc.dart';
 import 'package:barz/features/advertising/presentation/bloc/advertising_event.dart';
 import 'package:barz/features/advertising/presentation/bloc/advertising_state.dart';
@@ -116,6 +117,16 @@ class _CreateCampaignSheetState extends State<CreateCampaignSheet> {
     }
   }
 
+  String _typeLabel(CampaignType type, AppLocalizations l10n) {
+    return switch (type) {
+      CampaignType.featured => l10n.campaign_type_featured,
+      CampaignType.search => l10n.campaign_type_search,
+      CampaignType.map => l10n.campaign_type_map,
+      CampaignType.promoBoost => l10n.campaign_type_promo_boost,
+      _ => type.name.toUpperCase(),
+    };
+  }
+
   void _submit() {
     if (_formKey.currentState!.validate()) {
       final sessionState = context.read<SessionBloc>().state;
@@ -145,6 +156,13 @@ class _CreateCampaignSheetState extends State<CreateCampaignSheet> {
     return BlocListener<AdvertisingBloc, AdvertisingState>(
       listener: (context, state) {
         if (state.successMessage == 'Campaign created successfully!') {
+          final l10n = AppLocalizations.of(context)!;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.campaign_created_success),
+              backgroundColor: barzGold,
+            ),
+          );
           Navigator.of(context).pop();
         } else if (state.error != null) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -159,6 +177,7 @@ class _CreateCampaignSheetState extends State<CreateCampaignSheet> {
         builder: (context, state) {
           final isCreating = state.isLoadingCampaign;
           final dobar = context.dobarColors;
+          final l10n = AppLocalizations.of(context)!;
 
           return Container(
             width: double.infinity,
@@ -222,7 +241,7 @@ class _CreateCampaignSheetState extends State<CreateCampaignSheet> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'Create New Campaign',
+                              l10n.campaign_create_title,
                               style: TextStyle(
                                 fontSize: 20,
                                 fontWeight: FontWeight.bold,
@@ -231,7 +250,7 @@ class _CreateCampaignSheetState extends State<CreateCampaignSheet> {
                               ),
                             ),
                             Text(
-                              'Target your ideal nightlife demographic.',
+                              l10n.campaign_create_subtitle,
                               style: TextStyle(
                                 fontSize: 14,
                                 color: dobar.labelSecondary,
@@ -262,7 +281,7 @@ class _CreateCampaignSheetState extends State<CreateCampaignSheet> {
                         children: [
                           // Campaign Name
                           Text(
-                            'Campaign Name',
+                            l10n.campaign_name_label,
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -276,7 +295,7 @@ class _CreateCampaignSheetState extends State<CreateCampaignSheet> {
                             decoration: InputDecoration(
                               filled: true,
                               fillColor: barzDark,
-                              hintText: 'e.g., Summer Kickoff Promo',
+                              hintText: l10n.campaign_name_hint,
                               hintStyle: TextStyle(
                                 color: dobar.labelSecondary.withValues(
                                   alpha: 0.5,
@@ -299,7 +318,7 @@ class _CreateCampaignSheetState extends State<CreateCampaignSheet> {
                               ),
                             ),
                             validator: (val) => val == null || val.isEmpty
-                                ? 'Please enter a name'
+                                ? l10n.campaign_name_required
                                 : null,
                           ),
 
@@ -307,7 +326,7 @@ class _CreateCampaignSheetState extends State<CreateCampaignSheet> {
 
                           // Campaign Type
                           Text(
-                            'Campaign Type',
+                            l10n.campaign_type_label,
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -345,7 +364,7 @@ class _CreateCampaignSheetState extends State<CreateCampaignSheet> {
                                     ),
                                   ),
                                   child: Text(
-                                    type.name.toUpperCase(),
+                                    _typeLabel(type, l10n),
                                     style: TextStyle(
                                       color: isSelected
                                           ? barzGold
@@ -366,7 +385,7 @@ class _CreateCampaignSheetState extends State<CreateCampaignSheet> {
 
                           // Budget
                           Text(
-                            'Total Budget',
+                            l10n.campaign_budget_label,
                             style: TextStyle(
                               fontSize: 14,
                               fontWeight: FontWeight.w600,
@@ -416,11 +435,11 @@ class _CreateCampaignSheetState extends State<CreateCampaignSheet> {
                             ),
                             validator: (val) {
                               if (val == null || val.isEmpty) {
-                                return 'Please enter a budget';
+                                return l10n.campaign_budget_required;
                               }
                               final num = double.tryParse(val);
                               if (num == null || num <= 0) {
-                                return 'Enter a valid amount';
+                                return l10n.campaign_budget_invalid;
                               }
                               return null;
                             },
@@ -436,7 +455,7 @@ class _CreateCampaignSheetState extends State<CreateCampaignSheet> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'Start Date',
+                                      l10n.campaign_start_date_label,
                                       style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,
@@ -487,7 +506,7 @@ class _CreateCampaignSheetState extends State<CreateCampaignSheet> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'End Date (Optional)',
+                                      l10n.campaign_end_date_label,
                                       style: TextStyle(
                                         fontSize: 14,
                                         fontWeight: FontWeight.w600,
@@ -517,7 +536,7 @@ class _CreateCampaignSheetState extends State<CreateCampaignSheet> {
                                                   ? DateFormat(
                                                       'MMM d, yyyy',
                                                     ).format(_endDate!)
-                                                  : 'No End Date',
+                                                  : l10n.campaign_no_end_date,
                                               style: TextStyle(
                                                 color: _endDate != null
                                                     ? dobar.labelPrimary
@@ -596,9 +615,9 @@ class _CreateCampaignSheetState extends State<CreateCampaignSheet> {
                                     color: dobar.labelPrimary,
                                   ),
                                 )
-                              : const Text(
-                                  'Launch Campaign',
-                                  style: TextStyle(
+                              : Text(
+                                  l10n.campaign_launch_button,
+                                  style: const TextStyle(
                                     color: Colors.black,
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,

@@ -17,6 +17,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:barz/core/router/app_routes.dart';
 import 'package:intl/intl.dart';
 
+import 'package:lucide_icons/lucide_icons.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:barz/features/payment/presentation/widgets/pro_subscription_modal.dart';
+
 class ProfileHomePage extends StatefulWidget {
   const ProfileHomePage({super.key});
 
@@ -157,6 +161,8 @@ class _ProfileHomePageState extends State<ProfileHomePage> {
                     user,
                     currencyFormat,
                   ).animate().fadeIn(delay: 50.ms).slideY(begin: 0.1, end: 0),
+                  const SizedBox(height: 24),
+                  _buildProUpsellCard().animate().fadeIn(delay: 75.ms).scale(begin: const Offset(0.98, 0.98)),
                   const SizedBox(height: 24),
                   _buildSectionTitle('Activity'),
                   const SizedBox(height: 12),
@@ -471,6 +477,72 @@ class _ProfileHomePageState extends State<ProfileHomePage> {
               const Icon(Icons.chevron_right, color: textTertiary),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildProUpsellCard() {
+    final l10n = AppLocalizations.of(context)!;
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: barzDark,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: const Color(0xFFFFD700).withValues(alpha: 0.2)),
+        boxShadow: [
+          BoxShadow(
+            color: const Color(0xFFFFD700).withValues(alpha: 0.1),
+            blurRadius: 20,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFD700).withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(LucideIcons.crown, color: Color(0xFFFFD700), size: 24),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.pro_title,
+                  style: GoogleFonts.spaceGrotesk(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                Text(
+                  l10n.pro_subtitle,
+                  style: const TextStyle(color: Colors.white60, fontSize: 13),
+                ),
+              ],
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => ProSubscriptionModal.show(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFFFD700),
+              foregroundColor: barzDark,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              elevation: 0,
+            ),
+            child: Text(
+              'Get Pro',
+              style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
       ),
     );
   }

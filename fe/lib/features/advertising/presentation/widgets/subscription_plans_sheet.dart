@@ -28,10 +28,10 @@ class SubscriptionPlansSheet extends StatefulWidget {
       },
       transitionBuilder: (context, animation, secondaryAnimation, child) {
         return SlideTransition(
-          position: Tween<Offset>(
-            begin: const Offset(0, 1),
-            end: Offset.zero,
-          ).animate(CurvedAnimation(parent: animation, curve: Curves.easeOutCubic)),
+          position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
+              .animate(
+                CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+              ),
           child: child,
         );
       },
@@ -51,7 +51,6 @@ class _SubscriptionPlansSheetState extends State<SubscriptionPlansSheet> {
 
   @override
   Widget build(BuildContext context) {
-
     return Center(
       child: Container(
         width: MediaQuery.of(context).size.width * 0.9,
@@ -68,10 +67,13 @@ class _SubscriptionPlansSheetState extends State<SubscriptionPlansSheet> {
           color: Colors.transparent,
           child: BlocConsumer<AdvertisingBloc, AdvertisingState>(
             listener: (context, state) {
-              if (state.successMessage == 'Subscription created successfully!') {
+              if (state.successMessage ==
+                  'Subscription created successfully!') {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
-                    content: Text('Upgrade successful! Welcome to the premium club.'),
+                    content: Text(
+                      'Upgrade successful! Welcome to the premium club.',
+                    ),
                     backgroundColor: barzGold,
                   ),
                 );
@@ -91,25 +93,35 @@ class _SubscriptionPlansSheetState extends State<SubscriptionPlansSheet> {
                   // Plans Content
                   Flexible(
                     child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 24,
+                        vertical: 16,
+                      ),
                       child: Column(
                         children: [
                           if (state.isLoadingPlans)
                             const Center(
                               child: Padding(
                                 padding: EdgeInsets.all(48.0),
-                                child: CircularProgressIndicator(color: barzGold),
+                                child: CircularProgressIndicator(
+                                  color: barzGold,
+                                ),
                               ),
                             )
                           else if (state.error != null && state.plans == null)
                             _buildErrorState(state.error!)
                           else if (state.plans != null)
-                            ...state.plans!.plans.map((plan) => _PlanCard(
-                                  plan: plan,
-                                  currency: state.plans!.currency,
-                                  isLoading: state.isLoadingSubscription,
-                                  onSelect: () => _onSelectPlan(plan, state.plans!.regionCode),
-                                )),
+                            ...state.plans!.plans.map(
+                              (plan) => _PlanCard(
+                                plan: plan,
+                                currency: state.plans!.currency,
+                                isLoading: state.isLoadingSubscription,
+                                onSelect: () => _onSelectPlan(
+                                  plan,
+                                  state.plans!.regionCode,
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),
@@ -147,10 +159,7 @@ class _SubscriptionPlansSheetState extends State<SubscriptionPlansSheet> {
               SizedBox(height: 4),
               Text(
                 'Unlock premium features and reach more customers',
-                style: TextStyle(
-                  color: Colors.white38,
-                  fontSize: 14,
-                ),
+                style: TextStyle(color: Colors.white38, fontSize: 14),
               ),
             ],
           ),
@@ -172,7 +181,9 @@ class _SubscriptionPlansSheetState extends State<SubscriptionPlansSheet> {
           Text(error, style: const TextStyle(color: Colors.white70)),
           const SizedBox(height: 24),
           ElevatedButton(
-            onPressed: () => context.read<AdvertisingBloc>().add(const AdvertisingEvent.loadPlans()),
+            onPressed: () => context.read<AdvertisingBloc>().add(
+              const AdvertisingEvent.loadPlans(),
+            ),
             child: const Text('Try Again'),
           ),
         ],
@@ -182,12 +193,12 @@ class _SubscriptionPlansSheetState extends State<SubscriptionPlansSheet> {
 
   void _onSelectPlan(SubscriptionPlan plan, String regionCode) {
     context.read<AdvertisingBloc>().add(
-          AdvertisingEvent.createSubscription(
-            barId: widget.barId,
-            tier: plan.tier,
-            regionCode: regionCode,
-          ),
-        );
+      AdvertisingEvent.createSubscription(
+        barId: widget.barId,
+        tier: plan.tier,
+        regionCode: regionCode,
+      ),
+    );
   }
 }
 
@@ -208,7 +219,9 @@ class _PlanCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isVip = plan.tier == SubscriptionTier.vip;
     final isMaster = plan.tier == SubscriptionTier.master;
-    final accentColor = isVip ? barzGold : (isMaster ? Colors.white : Colors.white38);
+    final accentColor = isVip
+        ? barzGold
+        : (isMaster ? Colors.white : Colors.white38);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 24),
@@ -225,7 +238,7 @@ class _PlanCard extends StatelessWidget {
                   color: barzGold.withValues(alpha: 0.05),
                   blurRadius: 20,
                   spreadRadius: 5,
-                )
+                ),
               ]
             : null,
       ),
@@ -262,7 +275,11 @@ class _PlanCard extends StatelessWidget {
                       Row(
                         children: [
                           Icon(
-                            isVip ? LucideIcons.crown : (isMaster ? LucideIcons.zap : LucideIcons.info),
+                            isVip
+                                ? LucideIcons.crown
+                                : (isMaster
+                                      ? LucideIcons.zap
+                                      : LucideIcons.info),
                             color: accentColor,
                             size: 20,
                           ),
@@ -279,21 +296,30 @@ class _PlanCard extends StatelessWidget {
                         ],
                       ),
                       const SizedBox(height: 16),
-                      ...plan.features.map((feature) => Padding(
-                            padding: const EdgeInsets.only(bottom: 8.0),
-                            child: Row(
-                              children: [
-                                const Icon(LucideIcons.check, color: Colors.greenAccent, size: 14),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    feature,
-                                    style: const TextStyle(color: Colors.white70, fontSize: 13),
+                      ...plan.features.map(
+                        (feature) => Padding(
+                          padding: const EdgeInsets.only(bottom: 8.0),
+                          child: Row(
+                            children: [
+                              const Icon(
+                                LucideIcons.check,
+                                color: Colors.greenAccent,
+                                size: 14,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  feature,
+                                  style: const TextStyle(
+                                    color: Colors.white70,
+                                    fontSize: 13,
                                   ),
                                 ),
-                              ],
-                            ),
-                          )),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -334,7 +360,10 @@ class _PlanCard extends StatelessWidget {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: isVip ? barzGold : Colors.white10,
                         foregroundColor: isVip ? Colors.black : Colors.white,
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 12,
+                        ),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),

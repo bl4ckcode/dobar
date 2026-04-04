@@ -5,19 +5,32 @@ import 'package:barz/features/checkin/presentation/bloc/checkin_state.dart';
 import 'package:barz/l10n/app_localizations.dart';
 import 'package:barz/shared/presentation/widget/bar_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:barz/core/router/app_routes.dart';
+import 'package:barz/core/design/tokens/dobar_colors.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:location/location.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+import 'package:barz/features/bars/domain/models/bar_model.dart';
 
-/// Main check-in page with QR scan and geo-location options
 class CheckinPage extends StatelessWidget {
-  const CheckinPage({super.key});
+  final BarModel? initialBar;
+
+  const CheckinPage({super.key, this.initialBar});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (_) =>
-          getItInjector<CheckinBloc>()..add(const LoadActiveCheckin()),
+      create: (_) {
+        final bloc = getItInjector<CheckinBloc>();
+        if (initialBar != null) {
+          bloc.add(SelectBar(initialBar!));
+        } else {
+          bloc.add(const LoadActiveCheckin());
+        }
+        return bloc;
+      },
       child: const _CheckinPageContent(),
     );
   }
@@ -29,16 +42,28 @@ class _CheckinPageContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final colors = context.dobarColors;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.checkin_title)),
+      backgroundColor: colors.background,
+      appBar: AppBar(
+        title: Text(
+          l10n.checkin_title,
+          style: GoogleFonts.spaceGrotesk(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: colors.navBackground,
+        elevation: 0,
+      ),
       body: BlocConsumer<CheckinBloc, CheckinState>(
         listener: (context, state) {
           if (state.error != null) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.error!),
-                backgroundColor: Colors.red,
+                content: Text(
+                  state.error!,
+                  style: GoogleFonts.spaceGrotesk(color: Colors.white),
+                ),
+                backgroundColor: Colors.redAccent,
                 action: SnackBarAction(
                   label: l10n.close,
                   textColor: Colors.white,
@@ -52,94 +77,230 @@ class _CheckinPageContent extends StatelessWidget {
         },
         builder: (context, state) {
           if (state.isLoading) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(
+              child: CircularProgressIndicator(color: colors.buttonPrimary),
+            );
           }
 
-          // Currently checked in - show active check-in
           if (state.isCheckedIn) {
             return _ActiveCheckinView(state: state);
           }
 
-          // Show check-in options based on current step
-          switch (state.step) {
-            case CheckinStep.scanning:
-              return _ScanningView();
-            case CheckinStep.nearbyBars:
-              return _NearbyBarsView(state: state);
-            case CheckinStep.confirmCheckin:
-              return _ConfirmCheckinView(state: state);
-            case CheckinStep.initial:
-            default:
-              return _InitialView();
-          }
+          return Animate(
+            key: ValueKey(state.step),
+            effects: const [FadeEffect(duration: Duration(milliseconds: 400))],
+            child: _buildStep(state),
+          );
         },
       ),
     );
   }
+
+  Widget _buildStep(CheckinState state) {
+    switch (state.step) {
+      case CheckinStep.scanning:
+        return const _ScanningView();
+      case CheckinStep.nearbyBars:
+        return _NearbyBarsView(state: state);
+      case CheckinStep.confirmCheckin:
+        return _ConfirmCheckinView(state: state);
+      case CheckinStep.initial:
+      default:
+        return const _InitialView();
+    }
+  }
 }
 
-/// Initial view with check-in options
-class _InitialView extends StatelessWidget {
+class _InitialView extends StatefulWidget {
+  const _InitialView();
+
+  @override
+  State<_InitialView> createState() => _InitialViewState();
+}
+
+class _InitialViewState extends State<_InitialView> {
+  @override
+  void initState() {
+    super.initState();
+    _checkPermissionAndLoad();
+  }
+
+  Future<void> _checkPermissionAndLoad() async {
+    final location = Location();
+    final hasPermission = await location.hasPermission();
+    if (hasPermission == PermissionStatus.granted) {
+      final serviceEnabled = await location.serviceEnabled();
+      if (serviceEnabled && mounted) {
+        _findNearbyBars(context);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
+    final colors = context.dobarColors;
 
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.qr_code_scanner,
-            size: 120,
-            color: theme.colorScheme.primary.withValues(alpha: 0.3),
-          ),
-          const SizedBox(height: 32),
-          Text(
-            l10n.checkin_title,
-            style: theme.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          Text(
-            l10n.checkin_scan_hint,
-            style: theme.textTheme.bodyLarge?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 48),
+    return Stack(
+      children: [
+        // Background Glow
+        Positioned(
+          top: -100,
+          left: -100,
+          child:
+              Container(
+                    width: 400,
+                    height: 400,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: colors.buttonPrimary.withValues(alpha: 0.1),
+                    ),
+                  )
+                  .animate(
+                    onPlay: (controller) => controller.repeat(reverse: true),
+                  )
+                  .blur(
+                    begin: const Offset(100, 100),
+                    end: const Offset(120, 120),
+                  )
+                  .scale(
+                    begin: const Offset(1, 1),
+                    end: const Offset(1.2, 1.2),
+                    duration: 4.seconds,
+                  ),
+        ),
+        _buildContent(context, l10n, colors),
+      ],
+    );
+  }
 
-          // QR Scan Button
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: () {
-                context.read<CheckinBloc>().add(const StartQrScan());
-              },
-              icon: const Icon(Icons.qr_code_scanner),
-              label: Text(l10n.checkin_scan_qr),
-              style: FilledButton.styleFrom(padding: const EdgeInsets.all(20)),
-            ),
-          ),
-          const SizedBox(height: 16),
+  Widget _buildContent(
+    BuildContext context,
+    AppLocalizations l10n,
+    DobarColors colors,
+  ) {
+    return SingleChildScrollView(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          minHeight: MediaQuery.of(context).size.height - 100,
+        ),
+        child: IntrinsicHeight(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(height: 48),
+                // Animated QR Icon
+                Center(
+                  child:
+                      Container(
+                            width:
+                                120, // Reduced from 160 to make room for list
+                            height: 120,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: colors.surfaceElevated,
+                              border: Border.all(
+                                color: colors.buttonPrimary.withValues(
+                                  alpha: 0.2,
+                                ),
+                                width: 1,
+                              ),
+                            ),
+                            child: Icon(
+                              LucideIcons.qrCode,
+                              size: 60,
+                              color: colors.buttonPrimary,
+                            ),
+                          )
+                          .animate(
+                            onPlay: (controller) =>
+                                controller.repeat(reverse: true),
+                          )
+                          .scale(
+                            begin: const Offset(1, 1),
+                            end: const Offset(1.05, 1.05),
+                            duration: 2.seconds,
+                          )
+                          .boxShadow(
+                            begin: BoxShadow(
+                              color: colors.buttonPrimary.withValues(alpha: 0),
+                              blurRadius: 0,
+                            ),
+                            end: BoxShadow(
+                              color: colors.buttonPrimary.withValues(
+                                alpha: 0.2,
+                              ),
+                              blurRadius: 40,
+                            ),
+                          ),
+                ),
 
-          // Nearby Bars Button
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () => _findNearbyBars(context),
-              icon: const Icon(Icons.location_on),
-              label: const Text('Find bars nearby'),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.all(20),
-              ),
+                const SizedBox(height: 32),
+
+                Text(
+                  l10n.checkin_initial_heading,
+                  style: GoogleFonts.spaceGrotesk(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: colors.labelPrimary,
+                    height: 1.2,
+                  ),
+                  textAlign: TextAlign.center,
+                ).animate().fadeIn(duration: 600.ms).slideY(begin: 0.2, end: 0),
+
+                const SizedBox(height: 12),
+
+                Text(
+                      l10n.checkin_initial_subtitle,
+                      style: GoogleFonts.spaceGrotesk(
+                        fontSize: 14,
+                        color: colors.labelSecondary,
+                      ),
+                      textAlign: TextAlign.center,
+                    )
+                    .animate()
+                    .fadeIn(delay: 200.ms, duration: 600.ms)
+                    .slideY(begin: 0.2, end: 0),
+
+                const SizedBox(height: 32),
+
+                // Action Buttons (Stacked)
+                Column(
+                      children: [
+                        _PrimaryButton(
+                          onPressed: () => context.read<CheckinBloc>().add(
+                            const StartQrScan(),
+                          ),
+                          icon: LucideIcons.scan,
+                          label: l10n.checkin_initial_scan_qr,
+                        ),
+                        const SizedBox(height: 12),
+                        _SecondaryButton(
+                          onPressed: () {
+                            // Switch straight to nearby bars view
+                            context.read<CheckinBloc>().add(
+                              const ResetCheckin(),
+                            );
+                            // And simultaneously trigger finding bars
+                            _findNearbyBars(context);
+                          },
+                          icon: LucideIcons.mapPin,
+                          label: l10n.checkin_initial_find_nearby,
+                        ),
+                      ],
+                    )
+                    .animate()
+                    .fadeIn(delay: 400.ms, duration: 600.ms)
+                    .slideY(begin: 0.2, end: 0),
+
+                const SizedBox(height: 48),
+                _RadarPing(color: colors.buttonPrimary),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }
@@ -147,7 +308,6 @@ class _InitialView extends StatelessWidget {
   Future<void> _findNearbyBars(BuildContext context) async {
     final location = Location();
 
-    // Check permissions
     var serviceEnabled = await location.serviceEnabled();
     if (!serviceEnabled) {
       serviceEnabled = await location.requestService();
@@ -160,7 +320,6 @@ class _InitialView extends StatelessWidget {
       if (permission != PermissionStatus.granted) return;
     }
 
-    // Get location
     final locationData = await location.getLocation();
     if (locationData.latitude != null && locationData.longitude != null) {
       if (context.mounted) {
@@ -175,75 +334,369 @@ class _InitialView extends StatelessWidget {
   }
 }
 
-/// QR Scanning view (placeholder - would integrate camera)
-class _ScanningView extends StatelessWidget {
+class _RadarPing extends StatelessWidget {
+  final Color color;
+  const _RadarPing({required this.color});
+
   @override
   Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
+    return Container(
+          width: 4,
+          height: 4,
+          decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+        )
+        .animate(onPlay: (controller) => controller.repeat())
+        .scale(
+          begin: const Offset(1, 1),
+          end: const Offset(20, 20),
+          duration: 2.seconds,
+        )
+        .fadeOut(duration: 2.seconds);
+  }
+}
 
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 280,
-            height: 280,
-            decoration: BoxDecoration(
-              border: Border.all(color: theme.colorScheme.primary, width: 3),
-              borderRadius: BorderRadius.circular(24),
+class _PrimaryButton extends StatelessWidget {
+  final VoidCallback onPressed;
+  final IconData icon;
+  final String label;
+
+  const _PrimaryButton({
+    required this.onPressed,
+    required this.icon,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.dobarColors;
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 18),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(100),
+          gradient: LinearGradient(
+            colors: [
+              colors.buttonPrimary,
+              colors.buttonPrimary.withValues(alpha: 0.8),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: colors.buttonPrimary.withValues(alpha: 0.3),
+              blurRadius: 20,
+              offset: const Offset(0, 8),
             ),
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.camera_alt,
-                    size: 64,
-                    color: theme.colorScheme.primary,
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Camera would appear here',
-                    style: theme.textTheme.bodyMedium,
-                  ),
-                ],
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: colors.buttonOnPrimary, size: 20),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: GoogleFonts.spaceGrotesk(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: colors.buttonOnPrimary,
               ),
             ),
-          ),
-          const SizedBox(height: 32),
-          Text(
-            l10n.checkin_scan_hint,
-            style: theme.textTheme.bodyLarge,
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 24),
-
-          // Demo: Simulate scan
-          OutlinedButton(
-            onPressed: () {
-              // Simulate scanning a bar QR code
-              context.read<CheckinBloc>().add(
-                const QrCodeScanned('barz://bar/1?table=5'),
-              );
-            },
-            child: const Text('Demo: Simulate QR Scan'),
-          ),
-          const SizedBox(height: 16),
-          TextButton(
-            onPressed: () {
-              context.read<CheckinBloc>().add(const ResetCheckin());
-            },
-            child: Text(l10n.cancel),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 }
 
-/// Nearby bars list
+class _SecondaryButton extends StatelessWidget {
+  final VoidCallback onPressed;
+  final IconData icon;
+  final String label;
+
+  const _SecondaryButton({
+    required this.onPressed,
+    required this.icon,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.dobarColors;
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 18),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(100),
+          border: Border.all(color: colors.surfaceElevated, width: 2),
+          color: colors.background,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: colors.labelPrimary, size: 20),
+            const SizedBox(width: 12),
+            Text(
+              label,
+              style: GoogleFonts.spaceGrotesk(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: colors.labelPrimary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ScanningView extends StatelessWidget {
+  const _ScanningView();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final colors = context.dobarColors;
+
+    return Container(
+      color: colors.background,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          // Scanning Frame
+          Center(
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                Container(
+                  width: 280,
+                  height: 280,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(32),
+                    border: Border.all(color: colors.surfaceElevated, width: 2),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(32),
+                    child: Stack(
+                      children: [
+                        // Scanning Beam
+                        Positioned(
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              child: Container(
+                                height: 100,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      colors.buttonPrimary.withValues(
+                                        alpha: 0.3,
+                                      ),
+                                      colors.buttonPrimary.withValues(alpha: 0),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            )
+                            .animate(
+                              onPlay: (controller) => controller.repeat(),
+                            )
+                            .moveY(
+                              begin: -100,
+                              end: 280,
+                              duration: 2.seconds,
+                              curve: Curves.easeInOut,
+                            ),
+
+                        const Center(
+                          child: Opacity(
+                            opacity: 0.5,
+                            child: Icon(
+                              LucideIcons.camera,
+                              size: 48,
+                              color: Colors.white24,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                // Corner Brackets
+                ..._buildCorners(colors.buttonPrimary),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 48),
+
+          Text(
+            l10n.checkin_scanning_instruction,
+            style: GoogleFonts.spaceGrotesk(
+              fontSize: 18,
+              fontWeight: FontWeight.w500,
+              color: colors.labelPrimary,
+            ),
+          ).animate().fadeIn(),
+
+          const SizedBox(height: 16),
+
+          Text(
+            l10n.cart_scan_qr_hint,
+            style: GoogleFonts.spaceGrotesk(
+              fontSize: 14,
+              color: colors.labelSecondary,
+            ),
+            textAlign: TextAlign.center,
+          ).animate().fadeIn(delay: 200.ms),
+
+          const SizedBox(height: 64),
+
+          // Demo/Cancel buttons
+          _GhostButton(
+            onPressed: () {
+              context.read<CheckinBloc>().add(
+                const QrCodeScanned('barz://bar/1?table=5'),
+              );
+            },
+            label: l10n.checkin_demo_scan,
+          ),
+          const SizedBox(height: 12),
+          _GhostButton(
+            onPressed: () =>
+                context.read<CheckinBloc>().add(const ResetCheckin()),
+            label: l10n.cancel,
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildCorners(Color color) {
+    const size = 30.0;
+    const thickness = 4.0;
+    return [
+      // Top Left
+      Positioned(
+        top: -2,
+        left: -2,
+        child: _CornerPart(
+          size: size,
+          thickness: thickness,
+          color: color,
+          isTop: true,
+          isLeft: true,
+        ),
+      ),
+      // Top Right
+      Positioned(
+        top: -2,
+        right: -2,
+        child: _CornerPart(
+          size: size,
+          thickness: thickness,
+          color: color,
+          isTop: true,
+          isLeft: false,
+        ),
+      ),
+      // Bottom Left
+      Positioned(
+        bottom: -2,
+        left: -2,
+        child: _CornerPart(
+          size: size,
+          thickness: thickness,
+          color: color,
+          isTop: false,
+          isLeft: true,
+        ),
+      ),
+      // Bottom Right
+      Positioned(
+        bottom: -2,
+        right: -2,
+        child: _CornerPart(
+          size: size,
+          thickness: thickness,
+          color: color,
+          isTop: false,
+          isLeft: false,
+        ),
+      ),
+    ];
+  }
+}
+
+class _CornerPart extends StatelessWidget {
+  final double size;
+  final double thickness;
+  final Color color;
+  final bool isTop;
+  final bool isLeft;
+
+  const _CornerPart({
+    required this.size,
+    required this.thickness,
+    required this.color,
+    required this.isTop,
+    required this.isLeft,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        border: Border(
+          top: isTop
+              ? BorderSide(color: color, width: thickness)
+              : BorderSide.none,
+          bottom: !isTop
+              ? BorderSide(color: color, width: thickness)
+              : BorderSide.none,
+          left: isLeft
+              ? BorderSide(color: color, width: thickness)
+              : BorderSide.none,
+          right: !isLeft
+              ? BorderSide(color: color, width: thickness)
+              : BorderSide.none,
+        ),
+      ),
+    );
+  }
+}
+
+class _GhostButton extends StatelessWidget {
+  final VoidCallback onPressed;
+  final String label;
+
+  const _GhostButton({required this.onPressed, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return TextButton(
+      onPressed: onPressed,
+      child: Text(
+        label,
+        style: GoogleFonts.spaceGrotesk(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: context.dobarColors.labelSecondary,
+        ),
+      ),
+    );
+  }
+}
+
 class _NearbyBarsView extends StatelessWidget {
   final CheckinState state;
 
@@ -252,7 +705,7 @@ class _NearbyBarsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
+    final colors = context.dobarColors;
 
     if (state.nearbyBars.isEmpty) {
       return Center(
@@ -260,25 +713,24 @@ class _NearbyBarsView extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              Icons.location_off,
+              LucideIcons.mapPinOff,
               size: 64,
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-            const SizedBox(height: 16),
-            Text('No bars found nearby', style: theme.textTheme.titleMedium),
-            const SizedBox(height: 8),
-            Text(
-              'Try scanning a QR code instead',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
+              color: colors.labelSecondary.withValues(alpha: 0.5),
             ),
             const SizedBox(height: 24),
-            OutlinedButton(
-              onPressed: () {
-                context.read<CheckinBloc>().add(const StartQrScan());
-              },
-              child: Text(l10n.checkin_scan_qr),
+            Text(
+              l10n.checkin_nearby_empty_heading,
+              style: GoogleFonts.spaceGrotesk(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: colors.labelPrimary,
+              ),
+            ),
+            const SizedBox(height: 12),
+            _GhostButton(
+              onPressed: () =>
+                  context.read<CheckinBloc>().add(const StartQrScan()),
+              label: l10n.checkin_nearby_empty_scan_instead,
             ),
           ],
         ),
@@ -289,26 +741,49 @@ class _NearbyBarsView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.all(16),
-          child: Text('Bars near you', style: theme.textTheme.titleLarge),
+          padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+          child: Row(
+            children: [
+              GestureDetector(
+                onTap: () =>
+                    context.read<CheckinBloc>().add(const ResetCheckin()),
+                child: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: colors.surfaceElevated,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    LucideIcons.arrowLeft,
+                    color: colors.labelPrimary,
+                    size: 20,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                l10n.checkin_nearby_heading,
+                style: GoogleFonts.spaceGrotesk(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: colors.labelPrimary,
+                ),
+              ),
+            ],
+          ),
         ),
         Expanded(
           child: ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
             itemCount: state.nearbyBars.length,
             itemBuilder: (context, index) {
               final bar = state.nearbyBars[index];
-              return ListTile(
-                leading: BarImageAvatar(
-                  barId: bar.id,
-                  imageUrl: bar.imageUrl,
-                  radius: 28,
-                ),
-                title: Text(bar.name),
-                subtitle: Text(bar.address),
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () {
-                  context.read<CheckinBloc>().add(SelectBar(bar));
-                },
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: _BarCard(bar: bar)
+                    .animate()
+                    .fadeIn(delay: (index * 100).ms)
+                    .slideX(begin: 0.1, end: 0),
               );
             },
           ),
@@ -318,7 +793,78 @@ class _NearbyBarsView extends StatelessWidget {
   }
 }
 
-/// Confirm check-in view
+class _BarCard extends StatelessWidget {
+  final BarModel bar;
+
+  const _BarCard({required this.bar});
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.dobarColors;
+    return GestureDetector(
+      onTap: () => context.read<CheckinBloc>().add(SelectBar(bar)),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: colors.surfaceElevated,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: colors.surface.withValues(alpha: 0.1),
+            width: 1,
+          ),
+        ),
+        child: Row(
+          children: [
+            BarImageAvatar(barId: bar.id, imageUrl: bar.imageUrl, radius: 30),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    bar.name,
+                    style: GoogleFonts.spaceGrotesk(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: colors.labelPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    bar.address,
+                    style: GoogleFonts.spaceGrotesk(
+                      fontSize: 13,
+                      color: colors.labelSecondary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: colors.buttonPrimary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                '200m', // Hardcoded for now as bar model might not have distance
+                style: GoogleFonts.spaceGrotesk(
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                  color: colors.labelPrimary,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _ConfirmCheckinView extends StatefulWidget {
   final CheckinState state;
 
@@ -346,79 +892,131 @@ class _ConfirmCheckinViewState extends State<_ConfirmCheckinView> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
+    final colors = context.dobarColors;
     final bar = widget.state.selectedBar;
 
     if (bar == null) {
-      return const Center(child: Text('No bar selected'));
+      return Center(
+        child: Text(
+          l10n.error_generic,
+          style: GoogleFonts.spaceGrotesk(color: colors.labelPrimary),
+        ),
+      );
     }
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          // Bar Image
-          ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: BarImage(
-              imageUrl: bar.imageUrl,
-              barId: bar.id,
-              width: double.infinity,
-              height: 200,
-            ),
-          ),
-          const SizedBox(height: 24),
+          // Hero Image with Gradient
+          Stack(
+            children: [
+              BarImage(
+                imageUrl: bar.imageUrl,
+                barId: bar.id,
+                width: double.infinity,
+                height: 300,
+              ),
+              Positioned.fill(
+                child: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        colors.background.withValues(alpha: 0),
+                        colors.background.withValues(alpha: 0.5),
+                        colors.background,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ).animate().fadeIn(duration: 800.ms),
 
-          // Bar Name
-          Text(
-            bar.name,
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            bar.address,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 32),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Column(
+              children: [
+                Text(
+                  bar.name,
+                  style: GoogleFonts.spaceGrotesk(
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: colors.labelPrimary,
+                  ),
+                  textAlign: TextAlign.center,
+                ).animate().slideY(begin: 0.2, end: 0, duration: 600.ms),
 
-          // Table Number Input
-          TextField(
-            controller: _tableController,
-            decoration: InputDecoration(
-              labelText: l10n.cart_table_number,
-              hintText: 'e.g., 5, A1, Terrace',
-              prefixIcon: const Icon(Icons.table_bar),
-              border: const OutlineInputBorder(),
-            ),
-            onChanged: (value) {
-              context.read<CheckinBloc>().add(SetTableNumber(value));
-            },
-          ),
-          const SizedBox(height: 32),
+                const SizedBox(height: 8),
 
-          // Confirm Button
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: () {
-                context.read<CheckinBloc>().add(const ConfirmCheckin());
-              },
-              icon: const Icon(Icons.check),
-              label: Text(l10n.checkin_confirm),
-              style: FilledButton.styleFrom(padding: const EdgeInsets.all(20)),
+                Text(
+                  bar.address,
+                  style: GoogleFonts.spaceGrotesk(
+                    fontSize: 14,
+                    color: colors.labelSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ).animate().slideY(begin: 0.2, end: 0, delay: 100.ms),
+
+                const SizedBox(height: 48),
+
+                TextField(
+                  controller: _tableController,
+                  style: GoogleFonts.spaceGrotesk(
+                    color: colors.labelPrimary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: l10n.cart_table_number,
+                    labelStyle: GoogleFonts.spaceGrotesk(
+                      color: colors.labelSecondary,
+                    ),
+                    hintText: "00",
+                    hintStyle: GoogleFonts.spaceGrotesk(
+                      color: colors.labelSecondary.withValues(alpha: 0.3),
+                    ),
+                    prefixIcon: Icon(
+                      LucideIcons.hash,
+                      color: colors.buttonPrimary,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(color: colors.surfaceElevated),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(color: colors.buttonPrimary),
+                    ),
+                    filled: true,
+                    fillColor: colors.surfaceElevated.withValues(alpha: 0.5),
+                  ),
+                  onChanged: (value) {
+                    context.read<CheckinBloc>().add(SetTableNumber(value));
+                  },
+                ).animate().fadeIn(delay: 300.ms),
+
+                const SizedBox(height: 40),
+
+                _PrimaryButton(
+                  onPressed: () =>
+                      context.read<CheckinBloc>().add(const ConfirmCheckin()),
+                  icon: LucideIcons.check,
+                  label: l10n.checkin_confirm_cta,
+                ).animate().fadeIn(delay: 400.ms).scale(),
+
+                const SizedBox(height: 16),
+
+                _GhostButton(
+                  onPressed: () =>
+                      context.read<CheckinBloc>().add(const ResetCheckin()),
+                  label: l10n.cancel,
+                ).animate().fadeIn(delay: 500.ms),
+
+                const SizedBox(height: 32),
+              ],
             ),
-          ),
-          const SizedBox(height: 16),
-          TextButton(
-            onPressed: () {
-              context.read<CheckinBloc>().add(const ResetCheckin());
-            },
-            child: Text(l10n.cancel),
           ),
         ],
       ),
@@ -426,7 +1024,6 @@ class _ConfirmCheckinViewState extends State<_ConfirmCheckinView> {
   }
 }
 
-/// Active check-in view
 class _ActiveCheckinView extends StatelessWidget {
   final CheckinState state;
 
@@ -435,148 +1032,271 @@ class _ActiveCheckinView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
+    final colors = context.dobarColors;
     final checkin = state.activeCheckin!;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        children: [
-          // Success Icon
-          Container(
-            width: 100,
-            height: 100,
-            decoration: BoxDecoration(
-              color: Colors.green.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.check_circle,
-              size: 64,
-              color: Colors.green,
-            ),
-          ),
-          const SizedBox(height: 24),
+    return Stack(
+      children: [
+        SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              const SizedBox(height: 32),
 
-          // Bar Name
-          Text(
-            l10n.checkin_at_bar(checkin.barName),
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.checkin_success,
-            style: theme.textTheme.bodyLarge?.copyWith(color: Colors.green),
-          ),
-
-          if (checkin.tableNumber != null) ...[
-            const SizedBox(height: 16),
-            Chip(
-              avatar: const Icon(Icons.table_bar, size: 18),
-              label: Text('Table ${checkin.tableNumber}'),
-            ),
-          ],
-
-          const SizedBox(height: 32),
-
-          // Duration
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.timer_outlined),
-                  const SizedBox(width: 8),
-                  StreamBuilder(
-                    stream: Stream.periodic(const Duration(seconds: 1)),
-                    builder: (context, _) {
-                      final duration = checkin.duration;
-                      final hours = duration.inHours;
-                      final minutes = duration.inMinutes % 60;
-                      final seconds = duration.inSeconds % 60;
-                      return Text(
-                        '${hours.toString().padLeft(2, '0')}:${minutes.toString().padLeft(2, '0')}:${seconds.toString().padLeft(2, '0')}',
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          fontFamily: 'monospace',
+              // Pulsing Success Badge
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.green.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(100),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.green,
+                          ),
+                        )
+                        .animate(
+                          onPlay: (controller) =>
+                              controller.repeat(reverse: true),
+                        )
+                        .scale(
+                          begin: const Offset(1, 1),
+                          end: const Offset(1.5, 1.5),
+                        )
+                        .boxShadow(
+                          begin: const BoxShadow(
+                            color: Colors.green,
+                            blurRadius: 0,
+                          ),
+                          end: const BoxShadow(
+                            color: Colors.green,
+                            blurRadius: 10,
+                          ),
                         ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-            ),
-          ),
+                    const SizedBox(width: 8),
+                    Text(
+                      l10n.checkin_active_badge.toUpperCase(),
+                      style: GoogleFonts.spaceGrotesk(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
+                  ],
+                ),
+              ).animate().fadeIn().slideY(begin: -0.2, end: 0),
 
-          const SizedBox(height: 32),
+              const SizedBox(height: 32),
 
-          // Browse Menu Button
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton.icon(
-              onPressed: () {
-                AppRoute.pushBar(context, checkin.barId);
-              },
-              icon: const Icon(Icons.restaurant_menu),
-              label: Text(l10n.checkin_browse_menu),
-              style: FilledButton.styleFrom(padding: const EdgeInsets.all(20)),
-            ),
-          ),
-          const SizedBox(height: 16),
+              Text(
+                checkin.barName,
+                style: GoogleFonts.spaceGrotesk(
+                  fontSize: 36,
+                  fontWeight: FontWeight.bold,
+                  color: colors.labelPrimary,
+                ),
+                textAlign: TextAlign.center,
+              ).animate().fadeIn(delay: 200.ms),
 
-          // View Cart Button
-          SizedBox(
-            width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: () {
-                AppRoute.cart.push(context);
-              },
-              icon: const Icon(Icons.shopping_cart),
-              label: Text(l10n.cart_title),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.all(20),
-              ),
-            ),
-          ),
-          const SizedBox(height: 32),
+              const SizedBox(height: 12),
 
-          // Checkout Button
-          TextButton.icon(
-            onPressed: () {
-              _showCheckoutDialog(context);
-            },
-            icon: const Icon(Icons.logout, color: Colors.red),
-            label: const Text('Check out', style: TextStyle(color: Colors.red)),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
+                decoration: BoxDecoration(
+                  color: colors.surfaceElevated,
+                  borderRadius: BorderRadius.circular(100),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      LucideIcons.hash,
+                      size: 16,
+                      color: colors.labelSecondary,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      l10n.checkin_active_table(checkin.tableNumber ?? "??"),
+                      style: GoogleFonts.spaceGrotesk(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: colors.labelPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+              ).animate().fadeIn(delay: 300.ms),
+
+              const SizedBox(height: 56),
+
+              // Monospace Timer
+              StreamBuilder(
+                stream: Stream.periodic(const Duration(seconds: 1)),
+                builder: (context, _) {
+                  final duration = checkin.duration;
+                  final h = duration.inHours.toString().padLeft(2, '0');
+                  final m = (duration.inMinutes % 60).toString().padLeft(
+                    2,
+                    '0',
+                  );
+                  final s = (duration.inSeconds % 60).toString().padLeft(
+                    2,
+                    '0',
+                  );
+
+                  return Text(
+                    '$h:$m:$s',
+                    style: GoogleFonts.jetBrainsMono(
+                      fontSize: 48,
+                      fontWeight: FontWeight.w300,
+                      letterSpacing: 4,
+                      color: colors.labelPrimary,
+                    ),
+                  );
+                },
+              ).animate().fadeIn(delay: 400.ms),
+
+              const SizedBox(height: 64),
+
+              // Primary Actions
+              _PrimaryButton(
+                onPressed: () => AppRoute.pushBar(context, checkin.barId),
+                icon: LucideIcons.utensilsCrossed,
+                label: l10n.checkin_active_browse_menu,
+              ).animate().fadeIn(delay: 500.ms).slideY(begin: 0.1, end: 0),
+
+              const SizedBox(height: 16),
+
+              _SecondaryButton(
+                onPressed: () => AppRoute.cart.push(context),
+                icon: LucideIcons.shoppingCart,
+                label: l10n.checkin_active_view_cart,
+              ).animate().fadeIn(delay: 600.ms).slideY(begin: 0.1, end: 0),
+
+              const SizedBox(height: 48),
+
+              // Checkout Link
+              _GhostButton(
+                onPressed: () =>
+                    _showCheckoutSheet(context, l10n, checkin.barName),
+                label: l10n.checkin_active_checkout,
+              ).animate().fadeIn(delay: 800.ms),
+            ],
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
-  void _showCheckoutDialog(BuildContext context) {
-    showDialog(
+  void _showCheckoutSheet(
+    BuildContext context,
+    AppLocalizations l10n,
+    String barName,
+  ) {
+    final colors = context.dobarColors;
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Check out?'),
-        content: const Text(
-          'Are you sure you want to check out from this bar?',
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => Container(
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 40),
+        decoration: BoxDecoration(
+          color: colors.surfaceElevated,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Cancel'),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: colors.labelSecondary.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              l10n.checkin_checkout_title(barName),
+              style: GoogleFonts.spaceGrotesk(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: colors.labelPrimary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              l10n.checkin_checkout_subtitle,
+              style: GoogleFonts.spaceGrotesk(
+                fontSize: 14,
+                color: colors.labelSecondary,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
+            _PrimaryDestructiveButton(
+              onPressed: () {
+                Navigator.pop(ctx);
+                context.read<CheckinBloc>().add(const Checkout());
+              },
+              label: l10n.checkin_checkout_confirm,
+            ),
+            const SizedBox(height: 12),
+            _GhostButton(
+              onPressed: () => Navigator.pop(ctx),
+              label: l10n.checkin_checkout_cancel,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _PrimaryDestructiveButton extends StatelessWidget {
+  final VoidCallback onPressed;
+  final String label;
+
+  const _PrimaryDestructiveButton({
+    required this.onPressed,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onPressed,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(vertical: 18),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(100),
+          color: Colors.redAccent.withValues(alpha: 0.1),
+          border: Border.all(color: Colors.redAccent.withValues(alpha: 0.2)),
+        ),
+        child: Center(
+          child: Text(
+            label,
+            style: GoogleFonts.spaceGrotesk(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.redAccent,
+            ),
           ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              context.read<CheckinBloc>().add(const Checkout());
-            },
-            child: const Text('Check out'),
-          ),
-        ],
+        ),
       ),
     );
   }

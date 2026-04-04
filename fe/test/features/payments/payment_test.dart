@@ -87,9 +87,12 @@ void main() {
 
   group('Brazil Region (Pagar.me)', () {
     test('PIX payment generates QR code successfully', () async {
-      when(() => mockRepository.initiatePixPayment(any()))
-          .thenAnswer((_) async => Right(PaymentFixtures.pixResponse()));
-      final result = await mockRepository.initiatePixPayment(PaymentFixtures.brazilPixRequest());
+      when(
+        () => mockRepository.initiatePixPayment(any()),
+      ).thenAnswer((_) async => Right(PaymentFixtures.pixResponse()));
+      final result = await mockRepository.initiatePixPayment(
+        PaymentFixtures.brazilPixRequest(),
+      );
       expect(result.isRight(), true);
       result.fold((_) => fail('Expected Right'), (pix) {
         expect(pix.qrCode, isNotEmpty);
@@ -99,9 +102,12 @@ void main() {
     });
 
     test('PIX payment failure returns error', () async {
-      when(() => mockRepository.initiatePixPayment(any()))
-          .thenAnswer((_) async => Left(ServerFailure('PIX expired', 400)));
-      final result = await mockRepository.initiatePixPayment(PaymentFixtures.brazilPixRequest());
+      when(
+        () => mockRepository.initiatePixPayment(any()),
+      ).thenAnswer((_) async => Left(ServerFailure('PIX expired', 400)));
+      final result = await mockRepository.initiatePixPayment(
+        PaymentFixtures.brazilPixRequest(),
+      );
       expect(result.isLeft(), true);
     });
 
@@ -116,21 +122,28 @@ void main() {
     });
 
     test('Brazil credit card uses Pagar.me gateway', () {
-      expect(PaymentFixtures.creditCardBrazil().gateway, PaymentGateway.pagarme);
+      expect(
+        PaymentFixtures.creditCardBrazil().gateway,
+        PaymentGateway.pagarme,
+      );
     });
   });
 
   group('Latin America Region (Stripe)', () {
     test('Credit card payment with Stripe succeeds', () async {
-      when(() => mockRepository.processPayment(any()))
-          .thenAnswer((_) async => Right(PaymentFixtures.approvedCreditTransaction()));
-      final result = await mockRepository.processPayment(PaymentFixtures.latamCreditRequest());
+      when(() => mockRepository.processPayment(any())).thenAnswer(
+        (_) async => Right(PaymentFixtures.approvedCreditTransaction()),
+      );
+      final result = await mockRepository.processPayment(
+        PaymentFixtures.latamCreditRequest(),
+      );
       expect(result.isRight(), true);
     });
 
     test('Apple Pay payment in LATAM works', () async {
-      when(() => mockRepository.getPaymentMethods())
-          .thenAnswer((_) async => Right([PaymentFixtures.applePayLatam()]));
+      when(
+        () => mockRepository.getPaymentMethods(),
+      ).thenAnswer((_) async => Right([PaymentFixtures.applePayLatam()]));
       final result = await mockRepository.getPaymentMethods();
       expect(result.isRight(), true);
     });
@@ -144,25 +157,32 @@ void main() {
     });
 
     test('Payment declined returns failure', () async {
-      when(() => mockRepository.processPayment(any()))
-          .thenAnswer((_) async => Left(ServerFailure('Card declined', 400)));
-      final result = await mockRepository.processPayment(PaymentFixtures.latamCreditRequest());
+      when(
+        () => mockRepository.processPayment(any()),
+      ).thenAnswer((_) async => Left(ServerFailure('Card declined', 400)));
+      final result = await mockRepository.processPayment(
+        PaymentFixtures.latamCreditRequest(),
+      );
       expect(result.isLeft(), true);
     });
   });
 
   group('United States Region (Stripe)', () {
     test('Credit card payment with tip succeeds', () async {
-      when(() => mockRepository.processPayment(any()))
-          .thenAnswer((_) async => Right(PaymentFixtures.approvedCreditTransaction()));
-      final result = await mockRepository.processPayment(PaymentFixtures.usCreditRequest());
+      when(() => mockRepository.processPayment(any())).thenAnswer(
+        (_) async => Right(PaymentFixtures.approvedCreditTransaction()),
+      );
+      final result = await mockRepository.processPayment(
+        PaymentFixtures.usCreditRequest(),
+      );
       expect(result.isRight(), true);
       expect(PaymentFixtures.usCreditRequest().tip, 9.20);
     });
 
     test('Google Pay payment in US works', () async {
-      when(() => mockRepository.getPaymentMethods())
-          .thenAnswer((_) async => Right([PaymentFixtures.googlePayUS()]));
+      when(
+        () => mockRepository.getPaymentMethods(),
+      ).thenAnswer((_) async => Right([PaymentFixtures.googlePayUS()]));
       final result = await mockRepository.getPaymentMethods();
       expect(result.isRight(), true);
     });
@@ -176,18 +196,24 @@ void main() {
     });
 
     test('Insufficient funds returns failure', () async {
-      when(() => mockRepository.processPayment(any()))
-          .thenAnswer((_) async => Left(ServerFailure('Insufficient funds', 400)));
-      final result = await mockRepository.processPayment(PaymentFixtures.usCreditRequest());
+      when(
+        () => mockRepository.processPayment(any()),
+      ).thenAnswer((_) async => Left(ServerFailure('Insufficient funds', 400)));
+      final result = await mockRepository.processPayment(
+        PaymentFixtures.usCreditRequest(),
+      );
       expect(result.isLeft(), true);
     });
   });
 
   group('Rest of World Region (PayPal)', () {
     test('PayPal payment succeeds', () async {
-      when(() => mockRepository.processPayment(any()))
-          .thenAnswer((_) async => Right(PaymentFixtures.approvedCreditTransaction()));
-      final result = await mockRepository.processPayment(PaymentFixtures.rowPaypalRequest());
+      when(() => mockRepository.processPayment(any())).thenAnswer(
+        (_) async => Right(PaymentFixtures.approvedCreditTransaction()),
+      );
+      final result = await mockRepository.processPayment(
+        PaymentFixtures.rowPaypalRequest(),
+      );
       expect(result.isRight(), true);
     });
 
@@ -207,11 +233,13 @@ void main() {
     });
 
     test('Transaction history returns mixed statuses', () async {
-      when(() => mockRepository.getTransactionHistory()).thenAnswer((_) async => Right([
-        PaymentFixtures.approvedCreditTransaction(),
-        PaymentFixtures.declinedTransaction(),
-        PaymentFixtures.refundedTransaction(),
-      ]));
+      when(() => mockRepository.getTransactionHistory()).thenAnswer(
+        (_) async => Right([
+          PaymentFixtures.approvedCreditTransaction(),
+          PaymentFixtures.declinedTransaction(),
+          PaymentFixtures.refundedTransaction(),
+        ]),
+      );
       final result = await mockRepository.getTransactionHistory();
       expect(result.isRight(), true);
       result.fold((_) => fail('Expected Right'), (list) {
@@ -222,8 +250,9 @@ void main() {
 
   group('Error Handling', () {
     test('Network timeout returns failure', () async {
-      when(() => mockRepository.getPaymentMethods())
-          .thenAnswer((_) async => Left(ServerFailure('Connection timed out', 504)));
+      when(() => mockRepository.getPaymentMethods()).thenAnswer(
+        (_) async => Left(ServerFailure('Connection timed out', 504)),
+      );
       final result = await mockRepository.getPaymentMethods();
       expect(result.isLeft(), true);
       result.fold((failure) {
@@ -233,17 +262,25 @@ void main() {
     });
 
     test('Session expired returns 401 failure', () async {
-      when(() => mockRepository.getPaymentMethods())
-          .thenAnswer((_) async => Left(ServerFailure('Session expired', 401)));
+      when(
+        () => mockRepository.getPaymentMethods(),
+      ).thenAnswer((_) async => Left(ServerFailure('Session expired', 401)));
       final result = await mockRepository.getPaymentMethods();
-      result.fold((failure) => expect((failure as ServerFailure).statusCode, 401), (_) => fail('Expected Left'));
+      result.fold(
+        (failure) => expect((failure as ServerFailure).statusCode, 401),
+        (_) => fail('Expected Left'),
+      );
     });
 
     test('Server error returns 500 failure', () async {
-      when(() => mockRepository.getPaymentMethods())
-          .thenAnswer((_) async => Left(ServerFailure('Internal server error', 500)));
+      when(() => mockRepository.getPaymentMethods()).thenAnswer(
+        (_) async => Left(ServerFailure('Internal server error', 500)),
+      );
       final result = await mockRepository.getPaymentMethods();
-      result.fold((failure) => expect((failure as ServerFailure).statusCode, 500), (_) => fail('Expected Left'));
+      result.fold(
+        (failure) => expect((failure as ServerFailure).statusCode, 500),
+        (_) => fail('Expected Left'),
+      );
     });
   });
 

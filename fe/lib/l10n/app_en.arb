@@ -1,5 +1,10 @@
 {
   "@@locale": "en",
+  "ok": "OK",
+  "cancel": "Cancel",
+  "remove": "Remove",
+  "delete": "Delete",
+  "save": "Save",
   "app_title": "BARZ",
   "@app_title": {
     "description": "Barz app title, your drink instantly on your table! Choose an item from your restaurants menu and enjoy it."
@@ -58,6 +63,36 @@
   "order_status_completed": "Delivered",
   "order_status_cancelled": "Cancelled",
   "order_tracking": "Track your order",
+  "pro_title": "Dobar PRO",
+  "pro_subtitle": "Unlock the ultimate nightlife experience",
+  "pro_monthly": "Monthly",
+  "pro_annual": "Annual",
+  "pro_save_percent": "SAVE {percent}%",
+  "@pro_save_percent": {
+    "placeholders": {
+      "percent": {
+        "type": "String"
+      }
+    }
+  },
+  "pro_benefit_priority_title": "Priority Ordering",
+  "pro_benefit_priority_desc": "Your orders jump the queue at peak times.",
+  "pro_benefit_cashback_title": "Cashback Boost",
+  "pro_benefit_cashback_desc": "Earn double cashback on every purchase.",
+  "pro_benefit_deals_title": "Exclusive Deals",
+  "pro_benefit_deals_desc": "Access members-only happy hours and flash promos.",
+  "pro_benefit_badge_title": "VIP Check-in Badge",
+  "pro_benefit_badge_desc": "Show your Pro status at partner bars.",
+  "pro_benefit_early_title": "Early Access",
+  "pro_benefit_early_desc": "Be first to try new partner bars and events.",
+  "pro_price_monthly_value": "R$ 14,90",
+  "pro_price_annual_value": "R$ 9,90",
+  "pro_per_month": "/mo",
+  "pro_annual_billing": "Billed R$ 118,80/year",
+  "pro_trial_cta": "Start Free Trial (14 days)",
+  "pro_cancel_anytime": "Cancel anytime. No commitment.",
+  "pro_restore": "Restore Purchase",
+  "pro_terms": "Terms & Privacy",
   "order_total": "Total",
   "order_placed_at": "Placed at {time}",
   "@order_placed_at": {
@@ -89,6 +124,7 @@
   "cart_clear_confirm": "Remove all items from cart?",
   "cart_add_notes": "Add special instructions",
   "cart_table_number": "Table number (optional)",
+  "cart_scan_qr_hint": "Point your camera at the QR code on your table",
   "cart_items": "{count, plural, =1{1 item} other{{count} items}}",
   "@cart_items": {
     "placeholders": {
@@ -98,6 +134,16 @@
     }
   },
   "cart_quantity": "Qty: {quantity}",
+  "cart_go_back": "Go back to Menu",
+  "cart_location_question": "Where are you?",
+  "cart_table_number_hint": "Table #",
+  "cart_select_location": "Select your location",
+  "cart_location_label": "Your Location",
+  "cart_location_hint": "e.g. Near the band",
+  "cart_notes_label": "Kitchen / Bar Notes",
+  "cart_notes_hint": "Allergies, extra ice...",
+  "cart_coupon_not_connected": "Coupon application logic not connected yet",
+  "cart_spot_not_available": "Spot is not available",
   "@cart_quantity": {
     "placeholders": {
       "quantity": {
@@ -131,10 +177,60 @@
   "payment_pix": "PIX",
   "payment_cash": "Cash",
   "payment_processing": "Processing payment...",
-  "payment_success": "Payment successful!",
-  "payment_failed": "Payment failed",
+  "payment_success": "Payment Successful!",
+  "payment_failed": "Payment Failed",
   "payment_retry": "Try again",
-  "payment_secure": "Secure payment powered by Stripe",
+  "payment_secure": "Secure payment with Stripe",
+  "payment_methods_title": "Payment Methods",
+  "payment_add_card": "Add Card",
+  "payment_remove_card_title": "Remove Card",
+  "payment_remove_card_confirm": "Remove {cardDetails}?",
+  "@payment_remove_card_confirm": {
+    "placeholders": {
+      "cardDetails": {
+        "type": "String"
+      }
+    }
+  },
+  "payment_no_cards": "No Saved Cards",
+  "payment_no_cards_subtitle": "Add a credit card for fast, secure checkout.",
+  "payment_add_credit_card": "Add Credit Card",
+  "payment_default_badge": "DEFAULT",
+  "payment_card_generic": "Card",
+  "payment_expires_label": "Expires {expiry}",
+  "@payment_expires_label": {
+    "placeholders": {
+      "expiry": {
+        "type": "String"
+      }
+    }
+  },
+  "payment_card_number_label": "Card Number",
+  "payment_card_number_hint": "1234 5678 9012 3456",
+  "payment_error_invalid_number": "Enter full card number",
+  "payment_error_luhn_failed": "Invalid card number",
+  "payment_expiry_label": "Expiry",
+  "payment_expiry_hint": "MM/YY",
+  "payment_cvv_label": "CVV",
+  "payment_cvv_hint": "•••",
+  "payment_set_default_label": "Set as default card",
+  "payment_save_card_button": "Save Card",
+  "payment_brand_unknown": "Unknown",
+  "payment_result_success": "🎉 Payment Confirmed!",
+  "payment_result_failed": "Payment Failed",
+  "payment_result_pending": "Payment Pending",
+  "payment_result_success_subtitle": "Your order has been placed.\nEnjoy your night! 🥂",
+  "payment_result_failed_subtitle": "Something went wrong processing your payment. Please try again.",
+  "payment_result_pending_subtitle": "Your payment is being processed. We'll notify you once it's confirmed.",
+  "payment_amount_paid": "Amount Paid",
+  "payment_back_to_home": "Back to Home",
+  "payment_return_to_menu": "Return to Menu",
+  "payment_pix_title": "Pay with PIX",
+  "payment_pix_expires": "Expires in {minutes} min",
+  "payment_pix_amount": "Total Amount",
+  "payment_pix_copy_hint": "or copy the PIX code below",
+  "payment_pix_copy_button": "Copy PIX Code",
+  "payment_pix_copied": "Pix code copied to clipboard!",
 
   "checkout_order_details": "Order Details",
   "checkout_order_type": "Order Type",
@@ -161,6 +257,22 @@
   "checkin_browse_menu": "Browse Menu",
   "checkin_scan_qr": "Scan QR Code",
   "checkin_scan_hint": "Point your camera at the table QR code",
+  "checkin_find_nearby": "Find Bars Nearby",
+  "checkin_camera_placeholder": "Camera view",
+  "checkin_demo_scan": "Demo: Simulate QR Scan",
+  "checkin_no_bars_nearby": "No bars found nearby",
+  "checkin_bars_near_you": "Bars near you",
+  "checkin_table_hint": "e.g., 5, A1, Terrace",
+  "checkin_table_label": "Table {table}",
+  "@checkin_table_label": {
+    "placeholders": {
+      "table": {
+        "type": "String"
+      }
+    }
+  },
+  "checkin_checkout": "Check out",
+  "checkin_checkout_confirm": "Are you sure you want to check out from this bar?",
 
   "notification_order_ready": "Your order is ready!",
   "notification_order_confirmed": "Your order has been confirmed",
@@ -371,5 +483,90 @@
   "home_promotions_title": "Promotions",
   "home_promotions_subtitle": "Active promotions and cashback for you",
   "home_hottest_drinks_title": "Hottest drinks",
-  "home_hottest_drinks_subtitle": "Special selection for you from Dobar team"
+  "home_hottest_drinks_subtitle": "Special selection for you from Dobar team",
+  "campaigns_title": "Campaigns",
+  "campaigns_subtitle": "Manage and monitor your marketing campaigns",
+  "campaigns_active": "Active Campaigns",
+  "campaigns_empty": "No active campaigns",
+  "campaigns_empty_subtitle": "Create your first campaign to\nboost your bar!",
+  "campaigns_create_button": "Create Campaign",
+  "campaigns_error_state": "Something went wrong loading campaigns",
+  "campaigns_select_bar_error": "Please select a bar first",
+  "campaign_create_title": "Create New Campaign",
+  "campaign_create_subtitle": "Target your ideal nightlife demographic.",
+  "campaign_name_label": "Campaign Name",
+  "campaign_name_hint": "e.g., Summer Kickoff Promo",
+  "campaign_name_required": "Please enter a name",
+  "campaign_type_label": "Campaign Type",
+  "campaign_budget_label": "Total Budget",
+  "campaign_budget_required": "Please enter a budget",
+  "campaign_budget_invalid": "Enter a valid amount",
+  "campaign_start_date_label": "Start Date",
+  "campaign_end_date_label": "End Date (Optional)",
+  "campaign_no_end_date": "No End Date",
+  "campaign_launch_button": "Launch Campaign",
+  "campaign_created_success": "Campaign created successfully!",
+  "campaign_type_featured": "FEATURED",
+  "campaign_type_search": "SEARCH",
+  "campaign_type_map": "MAP",
+  "campaign_type_promo_boost": "PROMO BOOST",
+  "campaign_status_active": "ACTIVE",
+  "campaign_status_paused": "PAUSED",
+  "campaign_status_pending": "PENDING",
+  "campaign_status_completed": "COMPLETED",
+  "campaign_status_cancelled": "CANCELLED",
+  "campaign_metric_impressions": "IMPRESSIONS",
+  "campaign_metric_clicks": "CLICKS",
+  "campaign_metric_budget": "BUDGET",
+  "campaign_spent_label": "{percent}% spent",
+  "campaign_total_label": "{total} total",
+  "checkin_initial_heading": "Where are you drinking tonight?",
+  "checkin_initial_subtitle": "Scan the table QR code or find the bar near you.",
+  "checkin_initial_scan_qr": "Scan QR Code",
+  "checkin_initial_find_nearby": "Find Bars Nearby",
+  "checkin_scanning_instruction": "Point at the table QR code",
+  "checkin_nearby_heading": "Bars near you",
+  "checkin_nearby_empty_heading": "No bars found nearby",
+  "checkin_nearby_empty_scan_instead": "Scan QR instead",
+  "checkin_confirm_cta": "Check In Now",
+  "checkin_active_badge": "Checked In",
+  "checkin_active_table": "Table {number}",
+  "checkin_active_browse_menu": "Browse Menu",
+  "checkin_active_view_cart": "View Cart",
+  "checkin_active_checkout": "Check out",
+  "checkin_checkout_title": "Leave {barName}?",
+  "@checkin_checkout_title": {
+    "placeholders": {
+      "barName": {
+        "type": "String"
+      }
+    }
+  },
+  "checkin_checkout_subtitle": "Your session will end and the cart will be cleared.",
+  "checkin_checkout_confirm": "Yes, check out",
+  "checkin_checkout_cancel": "Stay",
+  "pro_modal_title": "Dobar PRO",
+  "pro_modal_subtitle": "Unlock the ultimate nightlife experience",
+  "pro_benefit_priority_title": "Priority Ordering",
+  "pro_benefit_priority_desc": "Your orders jump the queue at peak times.",
+  "pro_benefit_cashback_title": "Cashback Boost",
+  "pro_benefit_cashback_desc": "Earn double cashback on every purchase.",
+  "pro_benefit_deals_title": "Exclusive Deals",
+  "pro_benefit_deals_desc": "Access members-only happy hours and flash promos.",
+  "pro_benefit_vip_title": "VIP Check-in Badge",
+  "pro_benefit_vip_desc": "Show your Pro status at partner bars.",
+  "pro_benefit_early_access_title": "Early Access",
+  "pro_benefit_early_access_desc": "Be first to try new partner bars and events.",
+  "pro_modal_monthly": "Monthly",
+  "pro_modal_annual": "Annual",
+  "pro_modal_save_percent": "SAVE 33%",
+  "pro_modal_price_monthly": "R$ 14,90",
+  "pro_modal_price_annual": "R$ 9,90",
+  "pro_modal_per_month": "/mês",
+  "pro_modal_billed_annually": "Cobrado R$ 118,80/year",
+  "pro_modal_cta": "Start Free Trial (14 days)",
+  "pro_modal_footer_note": "Cancel anytime. No commitment.",
+  "pro_modal_restore": "Restore Purchase",
+  "pro_modal_terms": "Terms & Privacy",
+  "pro_coming_soon": "Coming Soon"
 }

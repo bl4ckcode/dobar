@@ -82,10 +82,11 @@ class DigitalWalletsSection extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              Icons.apple,
+            Image.asset(
+              'assets/icons/apple.png',
+              width: 20,
+              height: 20,
               color: isDark ? barzDark : Colors.white,
-              size: 22,
             ),
             const SizedBox(width: 6),
             Text(
@@ -124,7 +125,11 @@ class DigitalWalletsSection extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _buildGoogleIcon(),
+            Image.asset(
+              'assets/icons/google.png',
+              width: 20,
+              height: 20,
+            ),
             const SizedBox(width: 6),
             Text(
               'Pay',
@@ -136,67 +141,6 @@ class DigitalWalletsSection extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _buildGoogleIcon() {
-    return SizedBox(
-      width: 18,
-      height: 18,
-      child: Stack(
-        children: [
-          Positioned(
-            left: 0,
-            top: 0,
-            child: Container(
-              width: 9,
-              height: 9,
-              decoration: const BoxDecoration(
-                color: Color(0xFF4285F4),
-                borderRadius: BorderRadius.only(topLeft: Radius.circular(9)),
-              ),
-            ),
-          ),
-          Positioned(
-            right: 0,
-            top: 0,
-            child: Container(
-              width: 9,
-              height: 9,
-              decoration: const BoxDecoration(
-                color: Color(0xFFEA4335),
-                borderRadius: BorderRadius.only(topRight: Radius.circular(9)),
-              ),
-            ),
-          ),
-          Positioned(
-            left: 0,
-            bottom: 0,
-            child: Container(
-              width: 9,
-              height: 9,
-              decoration: const BoxDecoration(
-                color: Color(0xFF34A853),
-                borderRadius: BorderRadius.only(bottomLeft: Radius.circular(9)),
-              ),
-            ),
-          ),
-          Positioned(
-            right: 0,
-            bottom: 0,
-            child: Container(
-              width: 9,
-              height: 9,
-              decoration: const BoxDecoration(
-                color: Color(0xFFFBBC05),
-                borderRadius: BorderRadius.only(
-                  bottomRight: Radius.circular(9),
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

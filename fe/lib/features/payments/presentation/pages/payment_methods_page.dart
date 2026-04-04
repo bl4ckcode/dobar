@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:barz/l10n/app_localizations.dart';
 
 class PaymentMethodsPage extends StatelessWidget {
   const PaymentMethodsPage({super.key});
@@ -24,13 +25,14 @@ class PaymentMethodsPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dobar = context.dobarColors;
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: dobar.background,
       appBar: AppBar(
         backgroundColor: dobar.background,
         foregroundColor: dobar.labelPrimary,
         title: Text(
-          'Payment Methods',
+          l10n.payment_methods_title,
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: dobar.labelPrimary,
@@ -85,8 +87,8 @@ class PaymentMethodsPage extends StatelessWidget {
             backgroundColor: barzGold,
             foregroundColor: Colors.black,
             icon: const Icon(LucideIcons.creditCard),
-            label: const Text(
-              'Add Card',
+            label: Text(
+              l10n.payment_add_card,
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
           );
@@ -108,21 +110,24 @@ class PaymentMethodsPage extends StatelessWidget {
 
   void _confirmDelete(BuildContext context, PaymentMethod card) {
     final bloc = context.read<PaymentBloc>();
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
         backgroundColor: barzDarkCard,
-        title: const Text('Remove Card', style: TextStyle(color: Colors.white)),
+        title: Text(l10n.payment_remove_card_title, style: const TextStyle(color: Colors.white)),
         content: Text(
-          'Remove ${card.brand ?? 'Card'} ending in ${card.lastFourDigits}?',
+          l10n.payment_remove_card_confirm(
+            '${card.brand ?? l10n.payment_card_generic} •••• ${card.lastFourDigits}',
+          ),
           style: const TextStyle(color: Colors.white70),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text(
-              'Cancel',
-              style: TextStyle(color: Colors.white54),
+            child: Text(
+              l10n.cancel,
+              style: const TextStyle(color: Colors.white54),
             ),
           ),
           TextButton(
@@ -132,9 +137,9 @@ class PaymentMethodsPage extends StatelessWidget {
                 bloc.add(PaymentEvent.deleteSavedCard(card.id!));
               }
             },
-            child: const Text(
-              'Remove',
-              style: TextStyle(color: Colors.redAccent),
+            child: Text(
+              l10n.remove,
+              style: const TextStyle(color: Colors.redAccent),
             ),
           ),
         ],
@@ -151,6 +156,7 @@ class _EmptyCardsView extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dobar = context.dobarColors;
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -169,7 +175,7 @@ class _EmptyCardsView extends StatelessWidget {
           ),
           const SizedBox(height: 24),
           Text(
-            'No Saved Cards',
+            l10n.payment_no_cards,
             style: TextStyle(
               fontSize: 22,
               fontWeight: FontWeight.bold,
@@ -178,7 +184,7 @@ class _EmptyCardsView extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Add a credit card for fast, secure checkout.',
+            l10n.payment_no_cards_subtitle,
             textAlign: TextAlign.center,
             style: TextStyle(fontSize: 14, color: dobar.labelSecondary),
           ),
@@ -194,9 +200,9 @@ class _EmptyCardsView extends StatelessWidget {
               ),
             ),
             icon: const Icon(LucideIcons.plus),
-            label: const Text(
-              'Add Credit Card',
-              style: TextStyle(fontWeight: FontWeight.bold),
+            label: Text(
+              l10n.payment_add_credit_card,
+              style: const TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
         ],
@@ -225,6 +231,7 @@ class _CreditCardTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dobar = context.dobarColors;
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -261,7 +268,7 @@ class _CreditCardTile extends StatelessWidget {
                     Icon(_brandIcon(card.brand), color: barzGold, size: 24),
                     const SizedBox(width: 12),
                     Text(
-                      card.brand ?? 'Card',
+                      card.brand ?? l10n.payment_card_generic,
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -282,9 +289,9 @@ class _CreditCardTile extends StatelessWidget {
                             color: barzGold.withValues(alpha: 0.4),
                           ),
                         ),
-                        child: const Text(
-                          'DEFAULT',
-                          style: TextStyle(
+                        child: Text(
+                          l10n.payment_default_badge,
+                          style: const TextStyle(
                             color: barzGold,
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
@@ -317,7 +324,9 @@ class _CreditCardTile extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-              'Expires ${card.expiryMonth?.toString().padLeft(2, '0') ?? '--'}/${card.expiryYear ?? '----'}',
+              l10n.payment_expires_label(
+                '${card.expiryMonth?.toString().padLeft(2, '0') ?? '--'}/${card.expiryYear ?? '----'}',
+              ),
               style: TextStyle(fontSize: 13, color: dobar.labelSecondary),
             ),
           ],
@@ -341,14 +350,14 @@ class _AddCardSheetState extends State<_AddCardSheet> {
   final _cvvController = TextEditingController();
   bool _isDefault = false;
 
-  String _detectBrand(String number) {
+  String _detectBrand(String number, AppLocalizations l10n) {
     final stripped = number.replaceAll(' ', '');
     if (stripped.startsWith('4')) return 'Visa';
     if (stripped.startsWith('5') || stripped.startsWith('2')) {
       return 'Mastercard';
     }
     if (stripped.startsWith('3')) return 'Amex';
-    return 'Unknown';
+    return l10n.payment_brand_unknown;
   }
 
   bool _luhnCheck(String number) {
@@ -368,12 +377,13 @@ class _AddCardSheetState extends State<_AddCardSheet> {
   }
 
   void _submit() {
+    final l10n = AppLocalizations.of(context)!;
     if (!_formKey.currentState!.validate()) return;
     final expParts = _expiryController.text.split('/');
     final expMonth = int.tryParse(expParts.first.trim()) ?? 1;
     final expYear = int.tryParse(expParts.last.trim()) ?? DateTime.now().year;
     final lastFour = _numberController.text.replaceAll(' ', '').substring(12);
-    final brand = _detectBrand(_numberController.text);
+    final brand = _detectBrand(_numberController.text, l10n);
 
     context.read<PaymentBloc>().add(
       PaymentEvent.addSavedCard(
@@ -400,6 +410,7 @@ class _AddCardSheetState extends State<_AddCardSheet> {
   @override
   Widget build(BuildContext context) {
     final dobar = context.dobarColors;
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       decoration: const BoxDecoration(
         color: barzDarkLight,
@@ -433,7 +444,7 @@ class _AddCardSheetState extends State<_AddCardSheet> {
                 const Icon(LucideIcons.creditCard, color: barzGold),
                 const SizedBox(width: 12),
                 Text(
-                  'Add Credit Card',
+                  l10n.payment_add_credit_card,
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -445,19 +456,19 @@ class _AddCardSheetState extends State<_AddCardSheet> {
             const SizedBox(height: 24),
             _buildField(
               controller: _numberController,
-              label: 'Card Number',
-              hint: '1234 5678 9012 3456',
+              label: l10n.payment_card_number_label,
+              hint: l10n.payment_card_number_hint,
               keyboardType: TextInputType.number,
               inputFormatters: [
                 FilteringTextInputFormatter.digitsOnly,
                 _CardNumberFormatter(),
               ],
               validator: (val) {
-                if (val == null || val.isEmpty) return 'Required';
+                if (val == null || val.isEmpty) return l10n.field_required;
                 if (val.replaceAll(' ', '').length < 16) {
-                  return 'Enter full card number';
+                  return l10n.payment_error_invalid_number;
                 }
-                if (!_luhnCheck(val)) return 'Invalid card number';
+                if (!_luhnCheck(val)) return l10n.payment_error_luhn_failed;
                 return null;
               },
             ),
@@ -467,15 +478,15 @@ class _AddCardSheetState extends State<_AddCardSheet> {
                 Expanded(
                   child: _buildField(
                     controller: _expiryController,
-                    label: 'Expiry',
-                    hint: 'MM/YY',
+                    label: l10n.payment_expiry_label,
+                    hint: l10n.payment_expiry_hint,
                     keyboardType: TextInputType.number,
                     inputFormatters: [
                       FilteringTextInputFormatter.digitsOnly,
                       _ExpiryFormatter(),
                     ],
                     validator: (val) {
-                      if (val == null || val.length < 5) return 'Required';
+                      if (val == null || val.length < 5) return l10n.field_required;
                       return null;
                     },
                   ),
@@ -484,8 +495,8 @@ class _AddCardSheetState extends State<_AddCardSheet> {
                 Expanded(
                   child: _buildField(
                     controller: _cvvController,
-                    label: 'CVV',
-                    hint: '•••',
+                    label: l10n.payment_cvv_label,
+                    hint: l10n.payment_cvv_hint,
                     keyboardType: TextInputType.number,
                     obscureText: true,
                     inputFormatters: [
@@ -493,7 +504,7 @@ class _AddCardSheetState extends State<_AddCardSheet> {
                       LengthLimitingTextInputFormatter(4),
                     ],
                     validator: (val) {
-                      if (val == null || val.length < 3) return 'Required';
+                      if (val == null || val.length < 3) return l10n.field_required;
                       return null;
                     },
                   ),
@@ -510,7 +521,7 @@ class _AddCardSheetState extends State<_AddCardSheet> {
                 ),
                 const SizedBox(width: 8),
                 Text(
-                  'Set as default card',
+                  l10n.payment_set_default_label,
                   style: TextStyle(color: dobar.labelPrimary),
                 ),
               ],
@@ -536,10 +547,10 @@ class _AddCardSheetState extends State<_AddCardSheet> {
                     ),
                   ],
                 ),
-                child: const Center(
+                child: Center(
                   child: Text(
-                    'Save Card',
-                    style: TextStyle(
+                    l10n.payment_save_card_button,
+                    style: const TextStyle(
                       color: Colors.black,
                       fontSize: 16,
                       fontWeight: FontWeight.bold,

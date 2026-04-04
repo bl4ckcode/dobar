@@ -77,9 +77,9 @@ class _BusinessSideMenuState extends State<BusinessSideMenu> {
                 _buildSidebarButton(
                   isDark: isDark,
                   icon: _isExpanded
-    ? LucideIcons.chevronsLeft
-    : LucideIcons.chevronsRight,
-label: 'Collapse',
+                      ? LucideIcons.chevronsLeft
+                      : LucideIcons.chevronsRight,
+                  label: 'Collapse',
                   onTap: () => setState(() => _isExpanded = !_isExpanded),
                   isGold: false,
                 ),
@@ -87,7 +87,7 @@ label: 'Collapse',
                 _buildSidebarButton(
                   isDark: isDark,
                   icon: LucideIcons.logOut,
-label: 'Logout',
+                  label: 'Logout',
                   onTap: () => context.read<SessionBloc>().add(
                     const SessionEvent.logout(),
                   ),
@@ -140,11 +140,7 @@ label: 'Logout',
                   ),
                 ],
               ),
-              child: const Icon(
-                LucideIcons.store,
-                color: goldColor,
-                size: 22,
-              ),
+              child: const Icon(LucideIcons.store, color: goldColor, size: 22),
             ),
             // Information Section
             Expanded(
@@ -232,10 +228,14 @@ label: 'Logout',
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: isActive ? Colors.white.withValues(alpha: 0.05) : Colors.transparent,
+              color: isActive
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.transparent,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isActive ? goldColor.withValues(alpha: 0.3) : Colors.transparent,
+                color: isActive
+                    ? goldColor.withValues(alpha: 0.3)
+                    : Colors.transparent,
               ),
             ),
             child: Row(
@@ -264,7 +264,9 @@ label: 'Logout',
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 13,
-                          fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
+                          fontWeight: isActive
+                              ? FontWeight.w800
+                              : FontWeight.w600,
                           letterSpacing: 0.5,
                         ),
                       ),
@@ -367,8 +369,12 @@ label: 'Logout',
     final textColor = isGold
         ? barzGold
         : (isDark ? Colors.white.withValues(alpha: 0.7) : textSecondary);
-    final selectedBg = isDark ? barzGold.withValues(alpha: 0.08) : barzGold.withValues(alpha: 0.1);
-    final hoverBg = isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05);
+    final selectedBg = isDark
+        ? barzGold.withValues(alpha: 0.08)
+        : barzGold.withValues(alpha: 0.1);
+    final hoverBg = isDark
+        ? Colors.white.withValues(alpha: 0.05)
+        : Colors.black.withValues(alpha: 0.05);
 
     return Material(
       color: isGold ? selectedBg : (backgroundColor ?? Colors.transparent),
@@ -427,6 +433,7 @@ label: 'Logout',
     );
   }
 }
+
 class PopupMenuSectionHeader extends PopupMenuEntry<Never> {
   final String label;
   const PopupMenuSectionHeader({super.key, required this.label});

@@ -125,7 +125,10 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     );
   }
 
-  Future<void> _onLogout(LogoutSession event, Emitter<SessionState> emit) async {
+  Future<void> _onLogout(
+    LogoutSession event,
+    Emitter<SessionState> emit,
+  ) async {
     await _loginUsecase.logout();
     await DioNetwork.clearTokens();
     emit(const SessionState.loggedOut());

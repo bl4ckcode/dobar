@@ -31,7 +31,12 @@ class CampaignAnalyticsSheet extends StatefulWidget {
               providers: [
                 BlocProvider.value(
                   value: context.read<AdvertisingBloc>()
-                    ..add(LoadAnalytics(campaignId: campaign.id, barId: campaign.barId)),
+                    ..add(
+                      LoadAnalytics(
+                        campaignId: campaign.id,
+                        barId: campaign.barId,
+                      ),
+                    ),
                 ),
               ],
               child: CampaignAnalyticsSheet(campaign: campaign),

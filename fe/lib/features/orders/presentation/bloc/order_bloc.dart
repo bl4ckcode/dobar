@@ -23,10 +23,12 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     final result = await orderUsecase.getMyOrders(status: event.status);
     result.fold(
       (failure) => emit(OrderError(message: failure.errorMessage)),
-      (paginatedOrders) => emit(OrdersLoaded(
-        paginatedOrders: paginatedOrders,
-        hasReachedMax: !paginatedOrders.hasMore,
-      )),
+      (paginatedOrders) => emit(
+        OrdersLoaded(
+          paginatedOrders: paginatedOrders,
+          hasReachedMax: !paginatedOrders.hasMore,
+        ),
+      ),
     );
   }
 
@@ -48,19 +50,21 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     result.fold(
       (failure) => emit(currentState.copyWith(isFetchingMore: false)),
       (paginatedOrders) {
-        final allOrders =
-            List<OrderModel>.from(currentState.paginatedOrders.orders)
-              ..addAll(paginatedOrders.orders);
+        final allOrders = List<OrderModel>.from(
+          currentState.paginatedOrders.orders,
+        )..addAll(paginatedOrders.orders);
 
-        emit(OrdersLoaded(
-          paginatedOrders: PaginatedOrders(
-            orders: allOrders,
-            hasMore: paginatedOrders.hasMore,
-            nextCursor: paginatedOrders.nextCursor,
+        emit(
+          OrdersLoaded(
+            paginatedOrders: PaginatedOrders(
+              orders: allOrders,
+              hasMore: paginatedOrders.hasMore,
+              nextCursor: paginatedOrders.nextCursor,
+            ),
+            hasReachedMax: !paginatedOrders.hasMore,
+            isFetchingMore: false,
           ),
-          hasReachedMax: !paginatedOrders.hasMore,
-          isFetchingMore: false,
-        ));
+        );
       },
     );
   }

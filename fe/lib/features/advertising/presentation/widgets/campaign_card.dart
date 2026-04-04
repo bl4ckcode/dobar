@@ -3,6 +3,7 @@ import 'package:barz/core/design/design_system.dart';
 import 'package:barz/features/advertising/domain/models/models.dart';
 import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:barz/l10n/app_localizations.dart';
 
 class CampaignCard extends StatefulWidget {
   final AdCampaign campaign;
@@ -51,6 +52,7 @@ class _CampaignCardState extends State<CampaignCard>
   @override
   Widget build(BuildContext context) {
     final dobar = context.dobarColors;
+    final l10n = AppLocalizations.of(context)!;
 
     final budgetTotal = widget.campaign.budgetAmount;
     final budgetSpent = widget.campaign.budgetSpent;
@@ -138,10 +140,11 @@ class _CampaignCardState extends State<CampaignCard>
                               children: [
                                 Text(
                                   widget.campaign.name,
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    color: dobar.labelPrimary,
-                                  ),
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.bold,
+                                        color: dobar.labelPrimary,
+                                      ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
@@ -178,12 +181,14 @@ class _CampaignCardState extends State<CampaignCard>
                                         const SizedBox(width: 6),
                                       ],
                                       Text(
-                                        status.substring(0, 1).toUpperCase() +
-                                            status.substring(1),
-                                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                          fontWeight: FontWeight.bold,
-                                          color: statusColor,
-                                        ),
+                                        _statusLabel(widget.campaign.status, l10n),
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .labelSmall
+                                            ?.copyWith(
+                                              fontWeight: FontWeight.bold,
+                                              color: statusColor,
+                                            ),
                                       ),
                                     ],
                                   ),
@@ -233,21 +238,21 @@ class _CampaignCardState extends State<CampaignCard>
                         spacing: 24,
                         runSpacing: 16,
                         children: [
-                          _buildMetricColumn(
+                           _buildMetricColumn(
                             icon: LucideIcons.eye,
-                            label: 'IMPRESSIONS',
+                            label: l10n.campaign_metric_impressions,
                             value: _formatNumber(widget.campaign.impressions),
                             dobar: dobar,
                           ),
-                          _buildMetricColumn(
+                           _buildMetricColumn(
                             icon: LucideIcons.mousePointerClick,
-                            label: 'CLICKS',
+                            label: l10n.campaign_metric_clicks,
                             value: _formatNumber(widget.campaign.clicks),
                             dobar: dobar,
                           ),
-                          _buildMetricColumn(
+                           _buildMetricColumn(
                             icon: LucideIcons.dollarSign,
-                            label: 'BUDGET',
+                            label: l10n.campaign_metric_budget,
                             value: currencyFormat.format(budgetTotal),
                             dobar: dobar,
                           ),
@@ -260,19 +265,23 @@ class _CampaignCardState extends State<CampaignCard>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text(
-                            '$budgetPercentText% spent',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              fontSize: 10,
-                              color: dobar.labelSecondary,
-                            ),
+                           Text(
+                            l10n.campaign_spent_label(budgetPercentText),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  fontSize: 10,
+                                  color: dobar.labelSecondary,
+                                ),
                           ),
                           Text(
-                            '${currencyFormat.format(budgetTotal)} total',
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              fontSize: 10,
-                              color: dobar.labelSecondary,
+                            l10n.campaign_total_label(
+                              currencyFormat.format(budgetTotal),
                             ),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  fontSize: 10,
+                                  color: dobar.labelSecondary,
+                                ),
                           ),
                         ],
                       ),
@@ -283,8 +292,7 @@ class _CampaignCardState extends State<CampaignCard>
                           value: budgetPercent,
                           minHeight: 4,
                           backgroundColor: dobar.navBackground,
-                          valueColor: const AlwaysStoppedAnimation(barzGold),
-                        ),
+                         ),
                       ),
                     ],
                   ),
@@ -295,6 +303,16 @@ class _CampaignCardState extends State<CampaignCard>
         );
       },
     );
+  }
+
+  String _statusLabel(CampaignStatus status, AppLocalizations l10n) {
+    return switch (status) {
+      CampaignStatus.active => l10n.campaign_status_active,
+      CampaignStatus.paused => l10n.campaign_status_paused,
+      CampaignStatus.pending => l10n.campaign_status_pending,
+      CampaignStatus.completed => l10n.campaign_status_completed,
+      CampaignStatus.cancelled => l10n.campaign_status_cancelled,
+    };
   }
 
   Widget _buildMetricColumn({

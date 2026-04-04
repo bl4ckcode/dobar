@@ -117,7 +117,9 @@ class _OrdersPageState extends State<OrdersPage> {
                 child: ListView.builder(
                   controller: _scrollController,
                   padding: const EdgeInsets.all(16),
-                  itemCount: state.hasReachedMax ? orders.length : orders.length + 1,
+                  itemCount: state.hasReachedMax
+                      ? orders.length
+                      : orders.length + 1,
                   itemBuilder: (context, index) {
                     if (index >= orders.length) {
                       return const Center(

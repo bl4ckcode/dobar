@@ -4,6 +4,7 @@ import 'package:barz/features/payments/domain/models/payment_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lucide_icons/lucide_icons.dart';
+import 'package:barz/l10n/app_localizations.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 class PixPaymentModal extends StatelessWidget {
@@ -44,14 +45,15 @@ class PixPaymentModal extends StatelessWidget {
   }
 
   void _copyBrCode(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     Clipboard.setData(ClipboardData(text: pixPayment.copyPaste));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Row(
+        content: Row(
           children: [
-            Icon(LucideIcons.checkCircle, color: Colors.green, size: 18),
-            SizedBox(width: 8),
-            Text('Pix code copied to clipboard!'),
+            const Icon(LucideIcons.checkCircle, color: Colors.green, size: 18),
+            const SizedBox(width: 8),
+            Text(l10n.payment_pix_copied),
           ],
         ),
         backgroundColor: barzDarkCard,
@@ -65,6 +67,7 @@ class PixPaymentModal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dobar = context.dobarColors;
+    final l10n = AppLocalizations.of(context)!;
     final timeLeft = pixPayment.expiresAt.difference(DateTime.now());
     final minutesLeft = timeLeft.inMinutes.clamp(0, 60);
 
@@ -115,7 +118,7 @@ class PixPaymentModal extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Pay with PIX',
+                      l10n.payment_pix_title,
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -123,7 +126,7 @@ class PixPaymentModal extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      'Expires in $minutesLeft min',
+                      l10n.payment_pix_expires(minutesLeft),
                       style: const TextStyle(
                         color: Colors.orangeAccent,
                         fontSize: 13,
@@ -155,7 +158,7 @@ class PixPaymentModal extends StatelessWidget {
               child: Column(
                 children: [
                   Text(
-                    'Total Amount',
+                    l10n.payment_pix_amount,
                     style: TextStyle(color: dobar.labelSecondary, fontSize: 13),
                   ),
                   const SizedBox(height: 6),
@@ -195,7 +198,7 @@ class PixPaymentModal extends StatelessWidget {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'or copy the PIX code below',
+                    l10n.payment_pix_copy_hint,
                     style: TextStyle(color: dobar.labelSecondary, fontSize: 13),
                   ),
                   const SizedBox(height: 12),
@@ -247,14 +250,14 @@ class PixPaymentModal extends StatelessWidget {
                     ),
                   ],
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(LucideIcons.copy, color: Colors.white, size: 18),
-                    SizedBox(width: 10),
+                    const Icon(LucideIcons.copy, color: Colors.white, size: 18),
+                    const SizedBox(width: 10),
                     Text(
-                      'Copy PIX Code',
-                      style: TextStyle(
+                      l10n.payment_pix_copy_button,
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 16,
                         fontWeight: FontWeight.bold,

@@ -27,8 +27,7 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage>
-    with TickerProviderStateMixin {
+class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   late LoginBloc _loginBloc;
   String? _phoneNumber;
   final BiometryService _biometryService = getItInjector<BiometryService>();
@@ -208,15 +207,16 @@ class _LoginPageState extends State<LoginPage>
                                     isDark: isDark,
                                   ),
                                   Text(
-                                    'Your night. Your bar.',
-                                    style: GoogleFonts.oswald(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.w500,
-                                      letterSpacing: 3.0,
-                                      color: colors.labelPrimary
-                                          .withValues(alpha: 0.8),
-                                    ),
-                                  )
+                                        'Your night. Your bar.',
+                                        style: GoogleFonts.oswald(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w500,
+                                          letterSpacing: 3.0,
+                                          color: colors.labelPrimary.withValues(
+                                            alpha: 0.8,
+                                          ),
+                                        ),
+                                      )
                                       .animate()
                                       .fadeIn(
                                         delay: 600.ms,
@@ -252,8 +252,7 @@ class _LoginPageState extends State<LoginPage>
                                         color: colors.labelSecondary,
                                         fontSize: 13,
                                         decoration: TextDecoration.underline,
-                                        decorationColor:
-                                            colors.labelSecondary,
+                                        decorationColor: colors.labelSecondary,
                                       ),
                                     ),
                                   ),
@@ -377,14 +376,8 @@ class _LogoArea extends StatelessWidget {
                   height: double.infinity,
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
-                      begin: Alignment(
-                        -1.0 + shimmerAnim.value * 2,
-                        -0.5,
-                      ),
-                      end: Alignment(
-                        shimmerAnim.value * 2,
-                        0.5,
-                      ),
+                      begin: Alignment(-1.0 + shimmerAnim.value * 2, -0.5),
+                      end: Alignment(shimmerAnim.value * 2, 0.5),
                       colors: [
                         Colors.transparent,
                         barzGold.withValues(alpha: 0.05),
@@ -458,7 +451,6 @@ class _PhoneCard extends StatelessWidget {
     );
   }
 }
-
 
 class _GoldCTAButton extends StatefulWidget {
   final bool enabled;
@@ -536,9 +528,7 @@ class _OrDivider extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: Divider(
-            color: colors.labelSecondary.withValues(alpha: 0.3),
-          ),
+          child: Divider(color: colors.labelSecondary.withValues(alpha: 0.3)),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -553,9 +543,7 @@ class _OrDivider extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: Divider(
-            color: colors.labelSecondary.withValues(alpha: 0.3),
-          ),
+          child: Divider(color: colors.labelSecondary.withValues(alpha: 0.3)),
         ),
       ],
     );

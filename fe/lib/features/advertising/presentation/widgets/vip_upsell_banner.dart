@@ -211,10 +211,11 @@ class _VipUpsellBannerState extends State<VipUpsellBanner>
                             children: [
                               Text(
                                 'Upgrade Now',
-                                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  inherit: true,
-                                ),
+                                style: Theme.of(context).textTheme.labelLarge
+                                    ?.copyWith(
+                                      fontWeight: FontWeight.bold,
+                                      inherit: true,
+                                    ),
                               ),
                               SizedBox(width: 8),
                               Icon(LucideIcons.arrowRight, size: 18),

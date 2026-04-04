@@ -89,64 +89,64 @@ class LocationBloc extends Bloc<LocationEvent, LocationState> {
       // On iOS especially, calling getLocation() without permission can fail silently
       // or return nulls, which prevents the app from loading nearby content.
       final permissionResult = await _usecase.checkLocationPermission();
-    final hasPermission = await permissionResult.fold(
-      (_) async => false,
-      (granted) async => granted,
-    );
-
-    if (!hasPermission) {
-      final requestResult = await _usecase.requestLocationPermission();
-      final granted = await requestResult.fold(
+      final hasPermission = await permissionResult.fold(
         (_) async => false,
         (granted) async => granted,
       );
 
-      emit(state.copyWith(hasPermission: granted));
-
-      if (!granted) {
-        emit(
-          state.copyWith(
-            isLoading: false,
-            error: 'Location permission is required to show nearby bars.',
-          ),
+      if (!hasPermission) {
+        final requestResult = await _usecase.requestLocationPermission();
+        final granted = await requestResult.fold(
+          (_) async => false,
+          (granted) async => granted,
         );
-        return;
+
+        emit(state.copyWith(hasPermission: granted));
+
+        if (!granted) {
+          emit(
+            state.copyWith(
+              isLoading: false,
+              error: 'Location permission is required to show nearby bars.',
+            ),
+          );
+          return;
+        }
+      } else {
+        emit(state.copyWith(hasPermission: true));
       }
-    } else {
-      emit(state.copyWith(hasPermission: true));
-    }
 
-    final result = await _usecase.getCurrentLocation();
-    result.fold(
-      (failure) {
-        // Provide fallback to Belo Horizonte coordinates for development
-        final fallbackLocation = LocationModel(
-          latitude: -19.8325619,
-          longitude: -43.9798416,
-          accuracy: 1000.0,
-          altitude: 0.0,
-          speed: 0.0,
-          timestamp: DateTime.now(),
-        );
-        emit(
-          state.copyWith(
-            isLoading: false,
-            currentLocation: fallbackLocation,
-            error:
-                'Using default Belo Horizonte location (location unavailable)',
-          ),
-        );
-      },
-      (location) {
-        emit(
-          state.copyWith(
-            isLoading: false,
-            currentLocation: location,
-            error: null,
-          ),
-        );
-      },
-    );
+      final result = await _usecase.getCurrentLocation();
+      result.fold(
+        (failure) {
+          // Provide fallback to Belo Horizonte coordinates for development
+          final fallbackLocation = LocationModel(
+            latitude: -19.8325619,
+            longitude: -43.9798416,
+            accuracy: 1000.0,
+            altitude: 0.0,
+            speed: 0.0,
+            timestamp: DateTime.now(),
+          );
+          emit(
+            state.copyWith(
+              isLoading: false,
+              currentLocation: fallbackLocation,
+              error:
+                  'Using default Belo Horizonte location (location unavailable)',
+            ),
+          );
+        },
+        (location) {
+          emit(
+            state.copyWith(
+              isLoading: false,
+              currentLocation: location,
+              error: null,
+            ),
+          );
+        },
+      );
     } catch (e) {
       emit(state.copyWith(isLoading: false, error: e.toString()));
     }

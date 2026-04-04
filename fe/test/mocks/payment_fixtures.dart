@@ -126,8 +126,10 @@ class PaymentFixtures {
 
   static PixPaymentResponse pixResponse() => PixPaymentResponse(
     transactionId: 1001,
-    qrCode: '00020126580014br.gov.bcb.pix0136a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-    copyPaste: '00020126580014br.gov.bcb.pix0136a1b2c3d4-e5f6-7890-abcd-ef12345678905204000053039865802BR5913DOBAR LTDA6014BELO HORIZONTE62070503***63041234',
+    qrCode:
+        '00020126580014br.gov.bcb.pix0136a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    copyPaste:
+        '00020126580014br.gov.bcb.pix0136a1b2c3d4-e5f6-7890-abcd-ef12345678905204000053039865802BR5913DOBAR LTDA6014BELO HORIZONTE62070503***63041234',
     expiresAt: DateTime.now().add(const Duration(minutes: 30)),
     amount: 59.90,
   );
@@ -199,9 +201,13 @@ class PaymentFixtures {
 
   static Map<String, dynamic> pixResponseJson() => {
     'transaction_id': 1001,
-    'qr_code': '00020126580014br.gov.bcb.pix0136a1b2c3d4-e5f6-7890-abcd-ef1234567890',
-    'copy_paste': '00020126580014br.gov.bcb.pix0136a1b2c3d4-e5f6-7890-abcd-ef12345678905204000053039865802BR5913DOBAR LTDA6014BELO HORIZONTE62070503***63041234',
-    'expires_at': DateTime.now().add(const Duration(minutes: 30)).toIso8601String(),
+    'qr_code':
+        '00020126580014br.gov.bcb.pix0136a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    'copy_paste':
+        '00020126580014br.gov.bcb.pix0136a1b2c3d4-e5f6-7890-abcd-ef12345678905204000053039865802BR5913DOBAR LTDA6014BELO HORIZONTE62070503***63041234',
+    'expires_at': DateTime.now()
+        .add(const Duration(minutes: 30))
+        .toIso8601String(),
     'amount': 59.90,
   };
 

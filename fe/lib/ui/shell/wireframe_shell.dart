@@ -12,6 +12,7 @@ import 'package:barz/features/cart/presentation/bloc/cart_state.dart';
 import '../screens/home_connected.dart';
 import '../screens/find_connected.dart';
 import '../screens/profile_wireframe.dart';
+import '../../features/cart/presentation/pages/cart_page.dart';
 
 class _NavBarMetrics {
   static const double barHeight = 56.0;
@@ -33,6 +34,7 @@ class _WireframeShellState extends State<WireframeShell> {
   static const List<Widget> _pages = [
     HomeConnected(),
     FindConnected(),
+    CartPage(showBackButton: false),
     ProfileWireframe(),
   ];
 
@@ -70,19 +72,6 @@ class _WireframeShellState extends State<WireframeShell> {
           body: Stack(
             children: [
               IndexedStack(index: _selectedIndex, children: _pages),
-              if (const bool.fromEnvironment('dart.vm.product') == false)
-                Positioned(
-                  top: 48,
-                  right: 16,
-                  child: FloatingActionButton.small(
-                    heroTag: 'debug_showcase_fab',
-                    onPressed: () => AppRoute.showcase.push(context),
-                    backgroundColor: barzGold.withValues(alpha: 0.9),
-                    foregroundColor: barzDark,
-                    tooltip: 'Design System Showcase (Debug)',
-                    child: const Icon(Icons.palette, size: 20),
-                  ),
-                ),
             ],
           ),
           floatingActionButton: _CenterDockedFab(
@@ -125,8 +114,8 @@ class _WireframeShellState extends State<WireframeShell> {
                           icon: Icons.shopping_cart_outlined,
                           selectedIcon: Icons.shopping_cart,
                           label: 'Cart',
-                          isSelected: false,
-                          onTap: () => AppRoute.cart.push(context),
+                          isSelected: _selectedIndex == 2,
+                          onTap: () => _onItemTapped(2),
                         ),
                         if (itemCount > 0)
                           Positioned(
@@ -169,8 +158,8 @@ class _WireframeShellState extends State<WireframeShell> {
                   icon: Icons.person_outline,
                   selectedIcon: Icons.person,
                   label: 'Profile',
-                  isSelected: _selectedIndex == 2,
-                  onTap: () => _onItemTapped(2),
+                  isSelected: _selectedIndex == 3,
+                  onTap: () => _onItemTapped(3),
                 ),
               ],
             ),

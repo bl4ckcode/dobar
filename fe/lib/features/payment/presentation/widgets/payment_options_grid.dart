@@ -41,9 +41,7 @@ class PaymentOptionsGrid extends StatelessWidget {
         children: options.map<Widget>((option) {
           return Expanded(
             child: Padding(
-              padding: EdgeInsets.only(
-                right: option == options.last ? 0 : 12,
-              ),
+              padding: EdgeInsets.only(right: option == options.last ? 0 : 12),
               child: GestureDetector(
                 onTap: option.onTap,
                 child: Container(
@@ -64,12 +62,16 @@ class PaymentOptionsGrid extends StatelessWidget {
                     children: [
                       Icon(option.icon, color: option.iconColor, size: 20),
                       const SizedBox(width: 8),
-                      Text(
-                        option.label,
-                        style: TextStyle(
-                          color: textColor,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
+                      Flexible(
+                        child: Text(
+                          option.label,
+                          style: TextStyle(
+                            color: textColor,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
                         ),
                       ),
                     ],

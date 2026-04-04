@@ -59,40 +59,40 @@ class _DashboardContent extends StatelessWidget {
 
     return BlocBuilder<DashboardBloc, DashboardState>(
       builder: (context, dashboardState) {
-        return Scaffold(
-          backgroundColor: dobar.background,
-          body: ResponsiveCenterContainer(
-            maxWidthPercentage: 0.9,
-            maxWidth: 1400,
-            padding: EdgeInsets.zero,
-            child: RefreshIndicator(
-              onRefresh: () async {
-                context.read<DashboardBloc>().add(
-                  RefreshDashboard(barId: activeBar.barId),
-                );
-              },
-              child: CustomScrollView(
-                slivers: [
-                  SliverToBoxAdapter(
-                    child: _BusinessDashboardHeader(
-                      barName: activeBar.barName,
-                      role: activeBar.role,
-                      isOpen: dashboardState is DashboardLoaded
-                          ? dashboardState.status.isOpen
-                          : true,
-                      onToggleOpen: () {
-                        if (dashboardState is DashboardLoaded) {
-                          context.read<DashboardBloc>().add(
-                            ToggleBarOpen(
-                              barId: activeBar.barId,
-                              isOpen: !dashboardState.status.isOpen,
-                            ),
-                          );
-                        }
-                      },
-                    ),
+        return Material(
+          color: dobar.background,
+          child: RefreshIndicator(
+            onRefresh: () async {
+              context.read<DashboardBloc>().add(
+                RefreshDashboard(barId: activeBar.barId),
+              );
+            },
+            child: CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: _BusinessDashboardHeader(
+                    barName: activeBar.barName,
+                    role: activeBar.role,
+                    isOpen: dashboardState is DashboardLoaded
+                        ? dashboardState.status.isOpen
+                        : true,
+                    onToggleOpen: () {
+                      if (dashboardState is DashboardLoaded) {
+                        context.read<DashboardBloc>().add(
+                          ToggleBarOpen(
+                            barId: activeBar.barId,
+                            isOpen: !dashboardState.status.isOpen,
+                          ),
+                        );
+                      }
+                    },
                   ),
-                  SliverToBoxAdapter(
+                ),
+                SliverToBoxAdapter(
+                  child: ResponsiveCenterContainer(
+                    maxWidthPercentage: 0.9,
+                    maxWidth: 1400,
+                    padding: EdgeInsets.zero,
                     child: Padding(
                       padding: const EdgeInsets.all(24),
                       child: Column(
@@ -125,8 +125,8 @@ class _DashboardContent extends StatelessWidget {
                       ),
                     ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         );
@@ -175,7 +175,13 @@ class _BusinessDashboardHeader extends StatelessWidget {
                 ),
               ],
             ),
-            BusinessStatusToggle(isOpen: isOpen, onTap: onToggleOpen),
+            Row(
+              children: [
+                BusinessStatusToggle(isOpen: isOpen, onTap: onToggleOpen),
+                const SizedBox(width: 8),
+                const ProfilePopupMenu(),
+              ],
+            ),
           ],
         ),
       );

@@ -24,6 +24,9 @@ import 'package:barz/features/checkin/presentation/pages/checkin_page.dart';
 import 'package:barz/features/cart/presentation/pages/cart_page.dart';
 import 'package:barz/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:barz/features/payment/presentation/pages/checkout_page.dart';
+import 'package:barz/features/bars/domain/models/bar_model.dart';
+import 'package:barz/features/payments/presentation/bloc/payment_bloc.dart';
+import 'package:barz/features/payments/presentation/bloc/payment_event.dart';
 import 'package:barz/features/authentication/presentation/pages/login_page.dart';
 import 'package:barz/features/authentication/presentation/pages/complete_registration_page.dart';
 import 'package:barz/features/onboarding/presentation/pages/onboarding_page.dart';
@@ -227,7 +230,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: AppRoute.checkin.path,
       name: AppRoute.checkin.name,
-      builder: (context, state) => const CheckinPage(),
+      builder: (context, state) {
+        final initialBar = state.extra as BarModel?;
+        return CheckinPage(initialBar: initialBar);
+      },
     ),
     GoRoute(
       path: AppRoute.cart.path,
@@ -242,8 +248,14 @@ final appRouter = GoRouter(
       name: AppRoute.checkout.name,
       builder: (context, state) {
         final args = state.extra as CheckoutArguments?;
-        return BlocProvider.value(
-          value: getItInjector<CartBloc>(),
+        return MultiBlocProvider(
+          providers: [
+            BlocProvider.value(value: getItInjector<CartBloc>()),
+            BlocProvider(
+              create: (_) =>
+                  getItInjector<PaymentBloc>()..add(const LoadSavedCards()),
+            ),
+          ],
           child: CheckoutPage(arguments: args),
         );
       },

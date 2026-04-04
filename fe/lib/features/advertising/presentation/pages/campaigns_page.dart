@@ -11,6 +11,7 @@ import '../bloc/advertising_event.dart';
 import '../bloc/advertising_state.dart';
 import '../../domain/models/ad_campaign.dart';
 
+import 'package:barz/l10n/app_localizations.dart';
 import '../widgets/vip_upsell_banner.dart';
 import '../widgets/campaign_card.dart';
 import '../widgets/campaign_analytics_sheet.dart';
@@ -59,6 +60,7 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
   @override
   Widget build(BuildContext context) {
     final dobar = context.dobarColors;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: dobar.background,
@@ -94,8 +96,8 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             BusinessStatusToolbar(
-                              title: 'Campaigns',
-                              subtitle: 'Manage and monitor your marketing campaigns',
+                              title: l10n.campaigns_title,
+                              subtitle: l10n.campaigns_subtitle,
                               showStatusToggle: false,
                               showAvatar: false,
                             ),
@@ -105,7 +107,9 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
                             // VIP Banner
                             VipUpsellBanner(
                               onUpgrade: () {
-                                final sessionState = context.read<SessionBloc>().state;
+                                final sessionState = context
+                                    .read<SessionBloc>()
+                                    .state;
                                 if (sessionState is SessionReady &&
                                     sessionState.session.activeBar != null) {
                                   SubscriptionPlansSheet.show(
@@ -122,7 +126,7 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
                             Row(
                               children: [
                                 Text(
-                                  'Active Campaigns',
+                                  l10n.campaigns_active,
                                   style: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.w600,
@@ -161,7 +165,10 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
                                 crossAxisSpacing: 24,
                                 mainAxisSpacing: 24,
                               ),
-                          delegate: SliverChildBuilderDelegate((context, index) {
+                          delegate: SliverChildBuilderDelegate((
+                            context,
+                            index,
+                          ) {
                             return CampaignCard(
                               campaign: state.campaigns[index],
                               onAnalytics: () => _showCampaignDetails(
@@ -190,6 +197,7 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
 
   Widget _buildErrorState(String error) {
     final dobar = context.dobarColors;
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -201,15 +209,15 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
             Text(
               error,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: dobar.labelSecondary,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: dobar.labelSecondary),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: _loadCampaigns,
               icon: const Icon(LucideIcons.refreshCw),
-              label: const Text('Tentar novamente'),
+              label: Text(l10n.retry),
             ),
           ],
         ),
@@ -219,6 +227,7 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
 
   Widget _buildEmptyState() {
     final dobar = context.dobarColors;
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -232,7 +241,7 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
             ),
             const SizedBox(height: 24),
             Text(
-              'Nenhuma campanha ativa',
+              l10n.campaigns_empty,
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: dobar.labelPrimary,
@@ -240,11 +249,11 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
             ),
             const SizedBox(height: 8),
             Text(
-              'Crie sua primeira campanha para\nimpulsionar seu bar!',
+              l10n.campaigns_empty_subtitle,
               textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: dobar.labelSecondary,
-              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: dobar.labelSecondary),
             ),
             const SizedBox(height: 32),
             ElevatedButton.icon(
@@ -258,7 +267,7 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
                 ),
               ),
               icon: const Icon(LucideIcons.plus),
-              label: const Text('Criar Campanha'),
+              label: Text(l10n.campaigns_create_button),
             ),
           ],
         ),
@@ -267,11 +276,12 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
   }
 
   void _showCreateCampaignDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final sessionState = context.read<SessionBloc>().state;
     if (sessionState is! SessionReady ||
         sessionState.session.activeBar == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecione um bar primeiro')),
+        SnackBar(content: Text(l10n.campaigns_select_bar_error)),
       );
       return;
     }
@@ -359,7 +369,11 @@ class _CreateCampaignFabState extends State<_CreateCampaignFab>
                   ),
                 ],
               ),
-              child: const Icon(LucideIcons.plus, color: Colors.black, size: 28),
+              child: const Icon(
+                LucideIcons.plus,
+                color: Colors.black,
+                size: 28,
+              ),
             ),
           ),
         ),

@@ -16,6 +16,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:barz/core/router/app_routes.dart';
+import 'package:barz/l10n/app_localizations.dart';
 import '../widgets/cart_item_card.dart';
 import '../widgets/coupon_input_section.dart';
 import '../widgets/active_promotions_section.dart';
@@ -25,8 +26,9 @@ import 'package:barz/core/theme/theme_cubit.dart';
 
 class CartPage extends StatefulWidget {
   final int? barId;
+  final bool showBackButton;
 
-  const CartPage({super.key, this.barId});
+  const CartPage({super.key, this.barId, this.showBackButton = true});
 
   @override
   State<CartPage> createState() => _CartPageState();
@@ -47,13 +49,14 @@ class _CartPageState extends State<CartPage> {
         BlocProvider.value(value: getItInjector<CartBloc>()),
         BlocProvider.value(value: getItInjector<CheckinBloc>()),
       ],
-      child: const _CartPageContent(),
+      child: _CartPageContent(showBackButton: widget.showBackButton),
     );
   }
 }
 
 class _CartPageContent extends StatefulWidget {
-  const _CartPageContent();
+  final bool showBackButton;
+  const _CartPageContent({required this.showBackButton});
 
   @override
   State<_CartPageContent> createState() => _CartPageContentState();
@@ -131,7 +134,8 @@ class _CartPageContentState extends State<_CartPageContent> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              state.spotAvailability!.message ?? 'Spot is not available',
+              state.spotAvailability!.message ?? 
+                  AppLocalizations.of(context)!.cart_spot_not_available,
             ),
             backgroundColor: errorRed,
           ),
@@ -235,6 +239,7 @@ class _CartPageContentState extends State<_CartPageContent> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: isDark ? barzDark : Colors.white,
@@ -276,7 +281,7 @@ class _CartPageContentState extends State<_CartPageContent> {
                 }
 
                 if (cart != null && items.isEmpty) {
-                  return _buildEmptyState(context, isDark);
+                  return _buildEmptyState(context, isDark, widget.showBackButton);
                 }
 
                 final bool isLoading = (state is CartLoaded)
@@ -314,7 +319,7 @@ class _CartPageContentState extends State<_CartPageContent> {
                       child: Column(
                         children: [
                           // Fixed Header
-                          _buildHeader(context, isDark, items.length),
+                          _buildHeader(context, isDark, items.length, widget.showBackButton),
 
                           // Scrollable Content
                           Expanded(
@@ -362,9 +367,9 @@ class _CartPageContentState extends State<_CartPageContent> {
                                       ScaffoldMessenger.of(
                                         context,
                                       ).showSnackBar(
-                                        const SnackBar(
+                                        SnackBar(
                                           content: Text(
-                                            'Coupon application logic not connected yet',
+                                            l10n.cart_coupon_not_connected,
                                           ),
                                         ),
                                       );
@@ -449,28 +454,31 @@ class _CartPageContentState extends State<_CartPageContent> {
     );
   }
 
-  Widget _buildHeader(BuildContext context, bool isDark, int itemCount) {
+  Widget _buildHeader(BuildContext context, bool isDark, int itemCount, bool showBack) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Row(
         children: [
-          GestureDetector(
-            onTap: () => context.pop(),
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: isDark ? barzDarkLight : surfaceWhite,
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Icon(
-                Icons.arrow_back,
-                color: isDark ? textOnDark : textPrimary,
-                size: 22,
+          if (showBack) ...[
+            GestureDetector(
+              onTap: () => context.pop(),
+              child: Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: isDark ? barzDarkLight : surfaceWhite,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: Icon(
+                  Icons.arrow_back,
+                  color: isDark ? textOnDark : textPrimary,
+                  size: 22,
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 12),
+            const SizedBox(width: 12),
+          ],
           Container(
             width: 44,
             height: 44,
@@ -497,7 +505,7 @@ class _CartPageContentState extends State<_CartPageContent> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Your Cart',
+                  l10n.cart_title,
                   style: TextStyle(
                     color: isDark ? textOnDark : textPrimary,
                     fontSize: 22,
@@ -505,7 +513,7 @@ class _CartPageContentState extends State<_CartPageContent> {
                   ),
                 ),
                 Text(
-                  '$itemCount ${itemCount == 1 ? "item" : "items"}',
+                  l10n.cart_items(itemCount),
                   style: TextStyle(
                     color: isDark ? const Color(0xFFB0B0B0) : textSecondary,
                     fontSize: 14,
@@ -544,7 +552,8 @@ class _CartPageContentState extends State<_CartPageContent> {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context, bool isDark) {
+  Widget _buildEmptyState(BuildContext context, bool isDark, bool showBack) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -558,28 +567,36 @@ class _CartPageContentState extends State<_CartPageContent> {
           ),
           const SizedBox(height: 16),
           Text(
-            'Your cart is empty',
+            l10n.cart_empty,
             style: TextStyle(
               color: isDark ? const Color(0xFFB0B0B0) : textSecondary,
               fontSize: 16,
             ),
           ),
-          const SizedBox(height: 24),
-          FilledButton.icon(
-            onPressed: () => context.pop(),
-            icon: const Icon(Icons.arrow_back),
-            label: const Text('Go back to Menu'),
-            style: FilledButton.styleFrom(
-              backgroundColor: barzGold,
-              foregroundColor: barzDark,
+          if (showBack)
+            Padding(
+              padding: const EdgeInsets.only(top: 24),
+              child: FilledButton.icon(
+                onPressed: () => context.pop(),
+                icon: const Icon(Icons.arrow_back),
+                label: Text(l10n.cart_go_back),
+                style: FilledButton.styleFrom(
+                  backgroundColor: barzGold,
+                  foregroundColor: barzDark,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
             ),
-          ),
         ],
       ),
     );
   }
 
   Widget _buildWhereAreYouSection(BuildContext context, bool isDark) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
       padding: const EdgeInsets.all(16),
@@ -606,7 +623,7 @@ class _CartPageContentState extends State<_CartPageContent> {
               ),
               const SizedBox(width: 8),
               Text(
-                'Where are you?',
+                l10n.cart_location_question,
                 style: TextStyle(
                   color: isDark ? textOnDark : textPrimary,
                   fontSize: 15,
@@ -651,7 +668,7 @@ class _CartPageContentState extends State<_CartPageContent> {
                           ),
                           decoration: InputDecoration(
                             border: InputBorder.none,
-                            hintText: 'Table #',
+                            hintText: l10n.cart_table_number_hint,
                             hintStyle: TextStyle(
                               color: isDark ? textTertiary : textSecondary,
                               fontWeight: FontWeight.normal,
@@ -704,15 +721,15 @@ class _CartPageContentState extends State<_CartPageContent> {
                       borderSide: BorderSide.none,
                     ),
                     prefixIcon: const Icon(Icons.place),
-                    hintText: 'Select your location',
+                    hintText: l10n.cart_select_location,
                   ),
                 );
               } else {
                 return TextField(
                   controller: _locationNoteController,
                   decoration: InputDecoration(
-                    labelText: 'Your Location',
-                    hintText: 'e.g. Near the band',
+                    labelText: l10n.cart_location_label,
+                    hintText: l10n.cart_location_hint,
                     filled: true,
                     fillColor: isDark ? barzDark : surfaceMuted,
                     border: OutlineInputBorder(
@@ -734,8 +751,8 @@ class _CartPageContentState extends State<_CartPageContent> {
           TextField(
             controller: _instructionsController,
             decoration: InputDecoration(
-              labelText: 'Kitchen / Bar Notes',
-              hintText: 'Allergies, extra ice...',
+              labelText: l10n.cart_notes_label,
+              hintText: l10n.cart_notes_hint,
               filled: true,
               fillColor: isDark ? barzDark : surfaceMuted,
               border: OutlineInputBorder(

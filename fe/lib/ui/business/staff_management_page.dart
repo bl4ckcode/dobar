@@ -227,7 +227,7 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
   }
 }
 
-class _StaffRow extends StatelessWidget {
+class _StaffRow extends StatefulWidget {
   final BarStaff member;
   final bool isDark;
   final void Function(BarRole) onChangeRole;
@@ -240,10 +240,17 @@ class _StaffRow extends StatelessWidget {
     required this.onRemove,
   });
 
+  @override
+  State<_StaffRow> createState() => _StaffRowState();
+}
+
+class _StaffRowState extends State<_StaffRow> {
+  bool _isHovered = false;
+
   String _getInitials(String name) {
     if (name.isEmpty) return '?';
     final parts = name.split(' ');
-    if (parts.length > 1) {
+    if (parts.length > 1 && parts[1].isNotEmpty) {
       return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
     }
     return parts[0][0].toUpperCase();
@@ -251,198 +258,269 @@ class _StaffRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final dobar = context.dobarColors;
-    final cardBg = dobar.surface;
-    final textColor = dobar.labelPrimary;
-    final mutedColor = dobar.labelSecondary;
-    final avatarBg = dobar.surfaceElevated;
+    // Reference staff-hub HSL Colors
+    // Light Mode variables:
+    // --background: 40 20% 96%;
+    // --foreground: 0 0% 12%;
+    // --card: 0 0% 100%;
+    // --secondary: 40 10% 90%;
+    // --muted: 40 10% 92%;
+    // --muted-foreground: 0 0% 45%;
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-      decoration: BoxDecoration(
-        color: cardBg,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(color: avatarBg, shape: BoxShape.circle),
-            alignment: Alignment.center,
-            child: Text(
-              _getInitials(member.name),
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.bold,
-                color: dobar.labelPrimary.withValues(alpha: 0.7),
+    // Dark Mode variables:
+    // --background: 0 0% 7%;
+    // --foreground: 0 0% 95%;
+    // --card: 0 0% 12%;
+    // --secondary: 0 0% 18%;
+    // --muted: 0 0% 15%;
+    // --muted-foreground: 0 0% 55%;
+
+    final cardBg = widget.isDark
+        ? HSLColor.fromAHSL(1.0, 0, 0, 0.12).toColor()
+        : HSLColor.fromAHSL(1.0, 0, 0, 1.0).toColor();
+
+    final hoverBg = widget.isDark
+        ? HSLColor.fromAHSL(0.5, 0, 0, 0.18)
+              .toColor() // secondary/50
+        : HSLColor.fromAHSL(0.5, 40, 0.1, 0.9).toColor();
+
+    final textColor = widget.isDark
+        ? HSLColor.fromAHSL(1.0, 0, 0, 0.95).toColor()
+        : HSLColor.fromAHSL(1.0, 0, 0, 0.12).toColor();
+
+    final mutedTextColor = widget.isDark
+        ? HSLColor.fromAHSL(1.0, 0, 0, 0.55).toColor()
+        : HSLColor.fromAHSL(1.0, 0, 0, 0.45).toColor();
+
+    final avatarBg = widget.isDark
+        ? HSLColor.fromAHSL(1.0, 0, 0, 0.18).toColor()
+        : HSLColor.fromAHSL(1.0, 40, 0.1, 0.9).toColor();
+
+    final avatarTextColor = widget.isDark
+        ? HSLColor.fromAHSL(1.0, 0, 0, 0.75).toColor()
+        : HSLColor.fromAHSL(1.0, 0, 0, 0.35).toColor();
+
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: _isHovered ? hoverBg : cardBg,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            // Avatar
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: avatarBg,
+                shape: BoxShape.circle,
+              ),
+              alignment: Alignment.center,
+              child: Text(
+                _getInitials(widget.member.name),
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: avatarTextColor,
+                ),
               ),
             ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  member.name,
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: textColor,
+            const SizedBox(width: 16),
+            // Info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.member.name,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: textColor,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  '${member.email}${member.email.isNotEmpty && member.phone.isNotEmpty ? ' · ' : ''}${member.phone}',
-                  style: TextStyle(fontSize: 12, color: mutedColor),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
-          ),
-          _RoleBadge(role: member.role),
-          const SizedBox(width: 8),
-          Theme(
-            data: theme.copyWith(
-              popupMenuTheme: PopupMenuThemeData(
-                color: dobar.surface,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '${widget.member.email}${widget.member.email.isNotEmpty && widget.member.phone.isNotEmpty ? ' · ' : ''}${widget.member.phone}',
+                    style: TextStyle(fontSize: 12, color: mutedTextColor),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
               ),
             ),
-            child: PopupMenuButton<String>(
-              icon: Icon(Icons.more_vert, size: 20, color: mutedColor),
-              tooltip: 'More actions',
-              offset: const Offset(0, 40),
-              itemBuilder: (context) => [
-                PopupMenuItem<String>(
-                  value: 'change_role',
-                  child: Row(
-                    children: [
-                      Icon(Icons.shield_outlined, size: 16, color: textColor),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Change Role',
-                        style: TextStyle(
-                          color: textColor,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const Spacer(),
-                      Icon(Icons.chevron_right, size: 16, color: mutedColor),
-                    ],
-                  ),
-                ),
-                const PopupMenuDivider(),
-                PopupMenuItem<String>(
-                  value: 'remove',
-                  height: 40,
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.delete_outline,
-                        size: 16,
-                        color: errorRed,
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Remove',
-                        style: TextStyle(color: errorRed, fontSize: 13),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-              onSelected: (value) {
-                if (value == 'change_role') {
-                  _showRoleSelector(context, dobar);
-                } else if (value == 'remove') {
-                  onRemove();
-                }
-              },
+            _RoleBadge(role: widget.member.role, isDark: widget.isDark),
+            const SizedBox(width: 8),
+            // Actions Menu
+            Opacity(
+              opacity: _isHovered ? 1.0 : 0.0,
+              child: _buildActionMenu(
+                context,
+                cardBg,
+                textColor,
+                mutedTextColor,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  void _showRoleSelector(BuildContext ctx, DobarColors dobar) {
-    final renderBox = ctx.findRenderObject() as RenderBox;
-    final offset = renderBox.localToGlobal(Offset.zero);
-    final size = renderBox.size;
-
-    showMenu<BarRole>(
-      context: ctx,
-      position: RelativeRect.fromLTRB(
-        offset.dx + size.width - 200,
-        offset.dy + size.height,
-        offset.dx + size.width,
-        offset.dy + size.height + 200,
+  Widget _buildActionMenu(
+    BuildContext context,
+    Color menuBg,
+    Color textColor,
+    Color mutedTextColor,
+  ) {
+    return MenuAnchor(
+      alignmentOffset: const Offset(-150, 0),
+      style: MenuStyle(
+        backgroundColor: WidgetStatePropertyAll(menuBg),
+        shape: WidgetStatePropertyAll(
+          RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+            side: BorderSide(
+              color: widget.isDark
+                  ? HSLColor.fromAHSL(1.0, 0, 0, 0.18).toColor()
+                  : HSLColor.fromAHSL(1.0, 40, 0.1, 0.85).toColor(),
+            ),
+          ),
+        ),
       ),
-      color: dobar.surface,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-      items: BarRole.values
-          .map(
-            (r) => PopupMenuItem<BarRole>(
-              value: r,
-              height: 40,
-              child: Text(
-                r.displayName,
-                style: TextStyle(
-                  color: member.role == r ? barzGold : dobar.labelPrimary,
-                  fontSize: 13,
-                  fontWeight: member.role == r
-                      ? FontWeight.w600
-                      : FontWeight.normal,
+      menuChildren: [
+        SubmenuButton(
+          menuStyle: MenuStyle(
+            backgroundColor: WidgetStatePropertyAll(menuBg),
+            shape: WidgetStatePropertyAll(
+              RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: BorderSide(
+                  color: widget.isDark
+                      ? HSLColor.fromAHSL(1.0, 0, 0, 0.18).toColor()
+                      : HSLColor.fromAHSL(1.0, 40, 0.1, 0.85).toColor(),
                 ),
               ),
             ),
-          )
-          .toList(),
-    ).then((selected) {
-      if (selected != null) {
-        onChangeRole(selected);
-      }
-    });
+          ),
+          leadingIcon: Icon(Icons.shield_outlined, size: 16, color: textColor),
+          menuChildren: BarRole.values.map((role) {
+            final isCurrent = widget.member.role == role;
+            final primaryColor = widget.isDark
+                ? HSLColor.fromAHSL(1.0, 50, 1.0, 0.67).toColor()
+                : HSLColor.fromAHSL(1.0, 50, 1.0, 0.50).toColor();
+            return MenuItemButton(
+              onPressed: () => widget.onChangeRole(role),
+              child: Text(
+                role.displayName,
+                style: TextStyle(
+                  color: isCurrent ? primaryColor : textColor,
+                  fontSize: 13,
+                ),
+              ),
+            );
+          }).toList(),
+          child: Text(
+            'Change Role',
+            style: TextStyle(color: textColor, fontSize: 13),
+          ),
+        ),
+        const PopupMenuDivider(),
+        MenuItemButton(
+          onPressed: widget.onRemove,
+          leadingIcon: const Icon(
+            Icons.delete_outline,
+            size: 16,
+            color: Colors.redAccent,
+          ),
+          child: const Text(
+            'Remove',
+            style: TextStyle(color: Colors.redAccent, fontSize: 13),
+          ),
+        ),
+      ],
+      builder: (context, controller, child) {
+        return IconButton(
+          icon: Icon(Icons.more_vert, size: 16, color: mutedTextColor),
+          onPressed: () {
+            if (controller.isOpen) {
+              controller.close();
+            } else {
+              controller.open();
+            }
+          },
+          hoverColor: widget.isDark
+              ? HSLColor.fromAHSL(1.0, 0, 0, 0.18).toColor()
+              : HSLColor.fromAHSL(1.0, 40, 0.1, 0.9).toColor(),
+        );
+      },
+    );
   }
 }
 
 class _RoleBadge extends StatelessWidget {
   final BarRole role;
+  final bool isDark;
 
-  const _RoleBadge({required this.role});
+  const _RoleBadge({required this.role, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
-    Color baseColor;
+    // Reference CSS:
+    // Light
+    // --role-owner: 50 100% 40%;
+    // --role-admin: 220 70% 50%;
+    // --role-manager: 160 60% 38%;
+    // --role-cashier: 280 50% 50%;
+    // --role-staff: 0 0% 50%;
+
+    // Dark
+    // --role-owner: 50 100% 67%;
+    // --role-admin: 220 70% 55%;
+    // --role-manager: 160 60% 45%;
+    // --role-cashier: 280 50% 55%;
+    // --role-staff: 0 0% 45%;
+
+    HSLColor hslColor;
     switch (role) {
       case BarRole.owner:
-        baseColor = const Color(0xFFFFD700); // Pure Gold
+        hslColor = isDark
+            ? HSLColor.fromAHSL(1.0, 50, 1.0, 0.67)
+            : HSLColor.fromAHSL(1.0, 50, 1.0, 0.40);
         break;
       case BarRole.admin:
-        baseColor = const Color(0xFFC0C0C0); // Silver
+        hslColor = isDark
+            ? HSLColor.fromAHSL(1.0, 220, 0.70, 0.55)
+            : HSLColor.fromAHSL(1.0, 220, 0.70, 0.50);
         break;
       case BarRole.manager:
-        baseColor = const Color(0xFFCD7F32); // Bronze
+        hslColor = isDark
+            ? HSLColor.fromAHSL(1.0, 160, 0.60, 0.45)
+            : HSLColor.fromAHSL(1.0, 160, 0.60, 0.38);
         break;
       case BarRole.cashier:
-        baseColor = const Color(0xFF9E9E9E); // Platinum/Gray
+        hslColor = isDark
+            ? HSLColor.fromAHSL(1.0, 280, 0.50, 0.55)
+            : HSLColor.fromAHSL(1.0, 280, 0.50, 0.50);
         break;
       case BarRole.staff:
-        baseColor = const Color(0xFF757575); // Steel
+        hslColor = isDark
+            ? HSLColor.fromAHSL(1.0, 0, 0.0, 0.45)
+            : HSLColor.fromAHSL(1.0, 0, 0.0, 0.50);
         break;
     }
 
+    final baseColor = hslColor.toColor();
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
       decoration: BoxDecoration(
         color: baseColor.withValues(alpha: 0.15),
         borderRadius: BorderRadius.circular(6),
@@ -452,8 +530,8 @@ class _RoleBadge extends StatelessWidget {
         role.displayName,
         style: TextStyle(
           color: baseColor,
-          fontSize: 11,
-          fontWeight: FontWeight.w600,
+          fontSize: 12, // text-xs
+          fontWeight: FontWeight.w500, // font-medium
         ),
       ),
     );

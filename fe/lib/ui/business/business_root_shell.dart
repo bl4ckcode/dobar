@@ -122,24 +122,29 @@ class _BusinessRootShellState extends State<BusinessRootShell> {
                 centerTitle: false,
                 leadingWidth: 48,
                 leading: IconButton(
-                  icon: const Icon(LucideIcons.menu, color: Colors.white, size: 20),
+                  icon: const Icon(
+                    LucideIcons.menu,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                   onPressed: () => _scaffoldKey.currentState?.openDrawer(),
                 ),
                 titleSpacing: 0,
                 title: _buildBarSelector(context, session.barAccess, activeBar),
                 actions: [
                   IconButton(
-                    icon: const Icon(LucideIcons.bell, color: Colors.white, size: 20),
+                    icon: const Icon(
+                      LucideIcons.bell,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                     onPressed: () {},
                   ),
                   const SizedBox(width: 8),
                 ],
                 bottom: PreferredSize(
                   preferredSize: const Size.fromHeight(1),
-                  child: Container(
-                    color: const Color(0xFF1A1A1A),
-                    height: 1,
-                  ),
+                  child: Container(color: const Color(0xFF1A1A1A), height: 1),
                 ),
               ),
               drawer: _BusinessDrawer(
@@ -165,7 +170,9 @@ class _BusinessRootShellState extends State<BusinessRootShell> {
     const cardColor = Color(0xFF121212);
 
     return InkWell(
-      onTap: bars.length > 1 ? () => _showBarSelectorMenu(bars, activeBar) : null,
+      onTap: bars.length > 1
+          ? () => _showBarSelectorMenu(bars, activeBar)
+          : null,
       borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -181,11 +188,7 @@ class _BusinessRootShellState extends State<BusinessRootShell> {
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: goldColor.withValues(alpha: 0.3)),
               ),
-              child: const Icon(
-                LucideIcons.store,
-                color: goldColor,
-                size: 16,
-              ),
+              child: const Icon(LucideIcons.store, color: goldColor, size: 16),
             ),
             const SizedBox(width: 12),
             Column(
@@ -244,10 +247,7 @@ class _BusinessRootShellState extends State<BusinessRootShell> {
     );
   }
 
-  void _showBarSelectorMenu(
-    List<BarAccess> bars,
-    BarAccess activeBar,
-  ) {
+  void _showBarSelectorMenu(List<BarAccess> bars, BarAccess activeBar) {
     const bgColor = Color(0xFF121212);
     const goldColor = Color(0xFFFFDE59);
 
@@ -273,10 +273,14 @@ class _BusinessRootShellState extends State<BusinessRootShell> {
           child: Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: isActive ? Colors.white.withValues(alpha: 0.05) : Colors.transparent,
+              color: isActive
+                  ? Colors.white.withValues(alpha: 0.05)
+                  : Colors.transparent,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: isActive ? goldColor.withValues(alpha: 0.3) : Colors.transparent,
+                color: isActive
+                    ? goldColor.withValues(alpha: 0.3)
+                    : Colors.transparent,
               ),
             ),
             child: Row(
@@ -305,7 +309,9 @@ class _BusinessRootShellState extends State<BusinessRootShell> {
                         style: TextStyle(
                           color: Colors.white,
                           fontSize: 13,
-                          fontWeight: isActive ? FontWeight.w800 : FontWeight.w600,
+                          fontWeight: isActive
+                              ? FontWeight.w800
+                              : FontWeight.w600,
                           letterSpacing: 0.5,
                         ),
                       ),
@@ -339,7 +345,6 @@ class _BusinessRootShellState extends State<BusinessRootShell> {
       }
     });
   }
-
 }
 
 class _BusinessSideNav extends StatefulWidget {
@@ -547,11 +552,7 @@ class _BusinessSideNavState extends State<_BusinessSideNav> {
                   ),
                 ],
               ),
-              child: const Icon(
-                LucideIcons.store,
-                color: goldColor,
-                size: 22,
-              ),
+              child: const Icon(LucideIcons.store, color: goldColor, size: 22),
             ),
             // Information Section
             Expanded(
@@ -734,7 +735,6 @@ class _BusinessDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-
     return Drawer(
       backgroundColor: const Color(0xFF0A0A0A),
       child: SafeArea(
@@ -770,7 +770,9 @@ class _BusinessDrawer extends StatelessWidget {
                         borderRadius: BorderRadius.circular(16),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFFFFDE59).withValues(alpha: 0.3),
+                            color: const Color(
+                              0xFFFFDE59,
+                            ).withValues(alpha: 0.3),
                             blurRadius: 12,
                             offset: const Offset(0, 4),
                           ),
@@ -805,10 +807,14 @@ class _BusinessDrawer extends StatelessWidget {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFFDE59).withValues(alpha: 0.1),
+                              color: const Color(
+                                0xFFFFDE59,
+                              ).withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(6),
                               border: Border.all(
-                                color: const Color(0xFFFFDE59).withValues(alpha: 0.2),
+                                color: const Color(
+                                  0xFFFFDE59,
+                                ).withValues(alpha: 0.2),
                               ),
                             ),
                             child: Text(
@@ -902,9 +908,7 @@ class _BusinessDrawer extends StatelessWidget {
                 isWarning: true,
                 onTap: () {
                   Navigator.pop(context);
-                  context.read<SessionBloc>().add(
-                    const SessionEvent.logout(),
-                  );
+                  context.read<SessionBloc>().add(const SessionEvent.logout());
                 },
               ),
             ),
@@ -972,8 +976,9 @@ class _DrawerTile extends StatelessWidget {
                             ? barzDark
                             : (isWarning ? Colors.redAccent : Colors.white),
                         fontSize: 16,
-                        fontWeight:
-                            isSelected ? FontWeight.bold : FontWeight.w500,
+                        fontWeight: isSelected
+                            ? FontWeight.bold
+                            : FontWeight.w500,
                         fontFamily: "Inter",
                       ),
                     ),

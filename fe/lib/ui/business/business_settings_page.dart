@@ -31,44 +31,44 @@ class BusinessSettingsPage extends StatelessWidget {
                   barName: activeBar.barName,
                   role: activeBar.role.displayName,
                 ),
-                
+
                 const _SectionHeader(label: 'General Settings'),
-                
+
                 const _SettingItem(
                   icon: LucideIcons.palette,
                   label: 'App Appearance',
                   value: 'Dark Mode',
                 ).animate().fadeIn(delay: 50.ms).slideY(begin: 0.1, end: 0),
-                
+
                 const _SettingItem(
                   icon: LucideIcons.globe,
                   label: 'Language',
                   value: 'English',
                 ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.1, end: 0),
-                
+
                 const _SettingItem(
                   icon: LucideIcons.store,
                   label: 'Business Details',
                   value: 'Edit',
                 ).animate().fadeIn(delay: 150.ms).slideY(begin: 0.1, end: 0),
-                
+
                 const _SettingItem(
                   icon: LucideIcons.settings,
                   label: 'Contact Settings',
                 ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1, end: 0),
 
                 const _SectionHeader(label: 'Legal & Compliance'),
-                
+
                 const _SettingItem(
                   icon: LucideIcons.fileText,
                   label: 'Terms of Service',
                 ).animate().fadeIn(delay: 250.ms).slideY(begin: 0.1, end: 0),
-                
+
                 const _SettingItem(
                   icon: LucideIcons.shieldCheck,
                   label: 'Privacy Policy',
                 ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1, end: 0),
-                
+
                 const _SettingItem(
                   icon: LucideIcons.scale,
                   label: 'Operational Rules',
@@ -82,10 +82,10 @@ class BusinessSettingsPage extends StatelessWidget {
                     child: Text(
                       'V2.4.1 // SESSION ACTIVE',
                       style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                            fontFamily: 'Courier',
-                            letterSpacing: 2,
-                            color: textTertiary,
-                          ),
+                        fontFamily: 'Courier',
+                        letterSpacing: 2,
+                        color: textTertiary,
+                      ),
                     ),
                   ),
                 ),
@@ -102,10 +102,7 @@ class _SettingsHeader extends StatelessWidget {
   final String barName;
   final String role;
 
-  const _SettingsHeader({
-    required this.barName,
-    required this.role,
-  });
+  const _SettingsHeader({required this.barName, required this.role});
 
   @override
   Widget build(BuildContext context) {
@@ -123,7 +120,10 @@ class _SettingsHeader extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         border: Border.all(color: barzGold),
                         borderRadius: BorderRadius.circular(2),
@@ -163,7 +163,11 @@ class _SettingsHeader extends StatelessWidget {
                 ),
               ),
               IconButton(
-                icon: const Icon(LucideIcons.store, color: textTertiary, size: 20),
+                icon: const Icon(
+                  LucideIcons.store,
+                  color: textTertiary,
+                  size: 20,
+                ),
                 onPressed: () {},
               ).animate().fadeIn().scale(),
             ],
@@ -283,9 +287,7 @@ class _SettingItem extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 24),
         decoration: const BoxDecoration(
           color: barzDark,
-          border: Border(
-            bottom: BorderSide(color: Color(0xFF1A1A1A)),
-          ),
+          border: Border(bottom: BorderSide(color: Color(0xFF1A1A1A))),
         ),
         child: Row(
           children: [
@@ -309,7 +311,9 @@ class _SettingItem extends StatelessWidget {
             const SizedBox(width: 12),
             Icon(
               LucideIcons.chevronRight,
-              color: destructive ? errorRed.withValues(alpha: 0.4) : const Color(0xFF333333),
+              color: destructive
+                  ? errorRed.withValues(alpha: 0.4)
+                  : const Color(0xFF333333),
               size: 18,
             ),
           ],
@@ -330,10 +334,7 @@ class _DangerZone extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            const Color(0xFF121212),
-            errorRed.withValues(alpha: 0.05),
-          ],
+          colors: [const Color(0xFF121212), errorRed.withValues(alpha: 0.05)],
         ),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: errorRed.withValues(alpha: 0.3)),

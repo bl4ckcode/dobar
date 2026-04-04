@@ -145,7 +145,8 @@ class _MenuManagementContentState extends State<_MenuManagementContent> {
 
         return BusinessActionToolbar(
           title: 'Menu Management',
-          subtitle: '${state.totalItems} items across ${state.menus.length} categories',
+          subtitle:
+              '${state.totalItems} items across ${state.menus.length} categories',
           icon: LucideIcons.wine,
           isNarrow: isNarrow,
           actions: [
@@ -168,9 +169,7 @@ class _MenuManagementContentState extends State<_MenuManagementContent> {
               label: const Text('Refresh'),
               style: OutlinedButton.styleFrom(
                 foregroundColor: textColor,
-                side: BorderSide(
-                  color: Theme.of(context).colorScheme.outline,
-                ),
+                side: BorderSide(color: Theme.of(context).colorScheme.outline),
                 padding: const EdgeInsets.symmetric(
                   horizontal: BarzSpacing.md,
                   vertical: BarzSpacing.md,

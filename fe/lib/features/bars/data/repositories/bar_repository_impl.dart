@@ -24,6 +24,9 @@ class BarRepositoryImpl extends AbstractBarRepository {
         lng,
         maxDistance,
       );
+      result.forEach((bar) {
+        print(bar.name);
+      });
       return Right(result);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message, e.statusCode));

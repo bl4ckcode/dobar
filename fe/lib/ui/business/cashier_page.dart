@@ -115,178 +115,181 @@ class _CashierPageState extends State<CashierPage>
     final borderColor = cs.outline;
 
     return _liveOrdersBloc == null
-        ? Scaffold(
-            backgroundColor: bgColor,
-            body: const Center(child: CircularProgressIndicator()),
+        ? Material(
+            color: bgColor,
+            child: const Center(child: CircularProgressIndicator()),
           )
         : BlocProvider<LiveOrdersBloc>.value(
             value: _liveOrdersBloc!,
-            child: Scaffold(
-              backgroundColor: bgColor,
-              appBar: PreferredSize(
-                preferredSize: const Size.fromHeight(64),
-                child: BusinessStatusToolbar(
-                  title: 'Caixa',
-                  subtitle: '$_totalOrders orders in pipeline',
-                  showStatusToggle: false,
-                  actions: [
-                    IconButton(
-                      icon: Icon(
-                        _soundOn ? LucideIcons.volume2 : LucideIcons.volumeX,
-                        size: 20,
-                        color: _soundOn ? barzGold : mutedColor,
+            child: Material(
+              color: bgColor,
+              child: Column(
+                children: [
+                  BusinessStatusToolbar(
+                    title: 'Caixa',
+                    subtitle: '$_totalOrders orders in pipeline',
+                    showStatusToggle: false,
+                    actions: [
+                      IconButton(
+                        icon: Icon(
+                          _soundOn ? LucideIcons.volume2 : LucideIcons.volumeX,
+                          size: 20,
+                          color: _soundOn ? barzGold : mutedColor,
+                        ),
+                        onPressed: () => setState(() => _soundOn = !_soundOn),
                       ),
-                      onPressed: () => setState(() => _soundOn = !_soundOn),
-                    ),
-                    const SizedBox(width: 8),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        AnimatedBuilder(
-                          animation: _pulseAnimation,
-                          builder: (context, child) => Opacity(
-                            opacity: _pulseAnimation.value,
-                            child: child,
-                          ),
-                          child: Container(
-                            width: 8,
-                            height: 8,
-                            decoration: const BoxDecoration(
-                              color: Colors.green,
-                              shape: BoxShape.circle,
+                      const SizedBox(width: 8),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          AnimatedBuilder(
+                            animation: _pulseAnimation,
+                            builder: (context, child) => Opacity(
+                              opacity: _pulseAnimation.value,
+                              child: child,
+                            ),
+                            child: Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                color: Colors.green,
+                                shape: BoxShape.circle,
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'LIVE',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                            color: mutedColor,
-                            fontFamily: 'JetBrains Mono',
+                          const SizedBox(width: 8),
+                          Text(
+                            'LIVE',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                              color: mutedColor,
+                              fontFamily: 'JetBrains Mono',
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: const Icon(LucideIcons.refreshCw, size: 18),
-                      onPressed: () {
-                        if (_activeBarId != null) {
-                          _liveOrdersBloc?.add(
+                        ],
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: const Icon(LucideIcons.refreshCw, size: 18),
+                        onPressed: () {
+                          if (_activeBarId != null) {
+                            _liveOrdersBloc?.add(
+                              LiveOrdersEvent.loadOrders(_activeBarId!),
+                            );
+                          }
+                        },
+                      ),
+                    ],
+                  ),
+                  Expanded(
+                    child: BlocBuilder<SessionBloc, SessionState>(
+                      builder: (context, sessionState) {
+                        final activeBar = sessionState.maybeMap(
+                          ready: (s) => s.session.activeBar,
+                          orElse: () => null,
+                        );
+                        if (activeBar == null) {
+                          return Center(
+                            child: Text(
+                              'Selecione um bar para gerenciar o caixa',
+                              style: TextStyle(color: mutedColor),
+                            ),
+                          );
+                        }
+
+                        if (_activeBarId != activeBar.barId) {
+                          _activeBarId = activeBar.barId;
+                          _liveOrdersBloc!.add(
                             LiveOrdersEvent.loadOrders(_activeBarId!),
                           );
                         }
-                      },
-                    ),
-                  ],
-                ),
-              ),
-              body: ResponsiveCenterContainer(
-                maxWidthPercentage: 0.9,
-                maxWidth: 1400,
-                padding: EdgeInsets.zero,
-                child: BlocBuilder<SessionBloc, SessionState>(
-                  builder: (context, sessionState) {
-                    final activeBar = sessionState.maybeMap(
-                      ready: (s) => s.session.activeBar,
-                      orElse: () => null,
-                    );
-                    if (activeBar == null) {
-                      return Center(
-                        child: Text(
-                          'Selecione um bar para gerenciar o caixa',
-                          style: TextStyle(color: mutedColor),
-                        ),
-                      );
-                    }
 
-                    if (_activeBarId != activeBar.barId) {
-                      _activeBarId = activeBar.barId;
-                      _liveOrdersBloc!.add(
-                        LiveOrdersEvent.loadOrders(_activeBarId!),
-                      );
-                    }
-
-                    return BlocConsumer<LiveOrdersBloc, LiveOrdersState>(
-                      listener: (context, state) {
-                        state.maybeMap(
-                          loaded: (s) => _checkUrgentAlerts(s.orders),
-                          error: (s) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(s.message),
-                                backgroundColor: Colors.red,
-                              ),
+                        return BlocConsumer<LiveOrdersBloc, LiveOrdersState>(
+                          listener: (context, state) {
+                            state.maybeMap(
+                              loaded: (s) => _checkUrgentAlerts(s.orders),
+                              error: (s) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(s.message),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              },
+                              orElse: () {},
                             );
                           },
-                          orElse: () {},
-                        );
-                      },
-                      builder: (context, state) {
-                        List<LiveOrderModel> currentOrders = [];
+                          builder: (context, state) {
+                            List<LiveOrderModel> currentOrders = [];
 
-                        state.maybeMap(
-                          loaded: (s) {
-                            currentOrders = s.orders;
-                          },
-                          orElse: () {},
-                        );
+                            state.maybeMap(
+                              loaded: (s) {
+                                currentOrders = s.orders;
+                              },
+                              orElse: () {},
+                            );
 
-                        if (_totalOrders != currentOrders.length) {
-                          WidgetsBinding.instance.addPostFrameCallback((_) {
-                            if (mounted) {
-                              setState(
-                                () => _totalOrders = currentOrders.length,
-                              );
+                            if (_totalOrders != currentOrders.length) {
+                              WidgetsBinding.instance.addPostFrameCallback((_) {
+                                if (mounted) {
+                                  setState(
+                                    () => _totalOrders = currentOrders.length,
+                                  );
+                                }
+                              });
                             }
-                          });
-                        }
 
-                        final filteredOrders = _activeFilter == null
-                            ? currentOrders
-                            : currentOrders
-                                  .where((o) => o.status == _activeFilter)
-                                  .toList();
+                            final filteredOrders = _activeFilter == null
+                                ? currentOrders
+                                : currentOrders
+                                      .where((o) => o.status == _activeFilter)
+                                      .toList();
 
-                        return Column(
-                          children: [
-                            _buildTabs(
-                              isDark,
-                              cardColor,
-                              borderColor,
-                              currentOrders,
-                            ),
-                            Expanded(
-                              child: state.maybeMap(
-                                loading: (_) => Center(
-                                  child: CircularProgressIndicator(
-                                    color: barzGold,
+                            return Column(
+                              children: [
+                                _buildTabs(
+                                  isDark,
+                                  cardColor,
+                                  borderColor,
+                                  currentOrders,
+                                ),
+                                Expanded(
+                                  child: ResponsiveCenterContainer(
+                                    maxWidthPercentage: 0.9,
+                                    maxWidth: 1400,
+                                    padding: EdgeInsets.zero,
+                                    child: state.maybeMap(
+                                      loading: (_) => Center(
+                                        child: CircularProgressIndicator(
+                                          color: barzGold,
+                                        ),
+                                      ),
+                                      orElse: () {
+                                        if (filteredOrders.isEmpty) {
+                                          return _buildEmptyState(mutedColor);
+                                        }
+                                        return _buildOrderGrid(
+                                          filteredOrders,
+                                          isDark,
+                                          cardColor,
+                                          borderColor,
+                                          textColor,
+                                          mutedColor,
+                                          activeBar.barId,
+                                        );
+                                      },
+                                    ),
                                   ),
                                 ),
-                                orElse: () {
-                                  if (filteredOrders.isEmpty) {
-                                    return _buildEmptyState(mutedColor);
-                                  }
-                                  return _buildOrderGrid(
-                                    filteredOrders,
-                                    isDark,
-                                    cardColor,
-                                    borderColor,
-                                    textColor,
-                                    mutedColor,
-                                    activeBar.barId,
-                                  );
-                                },
-                              ),
-                            ),
-                          ],
+                              ],
+                            );
+                          },
                         );
                       },
-                    );
-                  },
-                ),
+                    ),
+                  ),
+                ],
               ),
             ),
           );

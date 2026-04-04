@@ -4,6 +4,17 @@ import 'package:barz/features/authentication/domain/usecases/login_usecase.dart'
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:barz/core/router/app_routes.dart';
+import 'package:barz/features/cart/presentation/bloc/cart_bloc.dart';
+import 'package:barz/features/payments/presentation/bloc/payment_bloc.dart';
+import 'package:barz/features/payments/presentation/bloc/payment_event.dart';
+import 'package:barz/features/payment/presentation/pages/checkout_page.dart';
+import 'package:barz/features/payment/presentation/widgets/pro_subscription_modal.dart';
+import 'package:barz/ui/business/widgets/pro_plan_sheet.dart';
+import 'package:barz/core/design/tokens/dobar_colors.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import '../primitives/barz_app_bar.dart';
 import '../primitives/barz_card.dart';
 import '../../core/utils/constant/styles.dart';
@@ -52,18 +63,112 @@ class _ProfileWireframeState extends State<ProfileWireframe> {
 
   @override
   Widget build(BuildContext context) {
+    final dobar = context.dobarColors;
+
     return Scaffold(
-      appBar: const BarzAppBar(title: 'Profile'),
+      appBar: BarzAppBar(
+        title: 'Profile',
+        actions: [
+          if (kDebugMode)
+            IconButton(
+              icon: const Icon(LucideIcons.flaskConical),
+              tooltip: 'Sprint 6 Showcases',
+              onPressed: () {
+                showModalBottomSheet(
+                  context: context,
+                  backgroundColor: dobar.background,
+                  shape: const RoundedRectangleBorder(
+                    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                  ),
+                  builder: (context) => SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          ListTile(
+                            leading: const Icon(LucideIcons.qrCode, color: barzYellow),
+                            title: const Text('Bar Entry VIP (Check-in)'),
+                            subtitle: const Text('Redesigned Industrial Modern flow'),
+                            onTap: () {
+                              Navigator.pop(context);
+                              AppRoute.checkin.push(context);
+                            },
+                          ),
+                          ListTile(
+                            leading: const Icon(LucideIcons.crown, color: barzYellow),
+                            title: const Text('Dobar Pro Modal (Consumer)'),
+                            subtitle: const Text('Glassmorphic subscription sheet'),
+                            onTap: () {
+                              Navigator.pop(context);
+                              ProSubscriptionModal.show(context);
+                            },
+                          ),
+                          ListTile(
+                            leading: const Icon(LucideIcons.building, color: barzYellow),
+                            title: const Text('Dobar Pro Plan (Business)'),
+                            subtitle: const Text('Business tier upgrade sheet'),
+                            onTap: () {
+                              Navigator.pop(context);
+                              ProPlanSheet.show(context);
+                            },
+                          ),
+                          ListTile(
+                            leading: const Icon(LucideIcons.creditCard, color: barzYellow),
+                            title: const Text('Industrial Checkout'),
+                            subtitle: const Text('Premium success dialog & UI'),
+                            onTap: () {
+                              Navigator.pop(context);
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => MultiBlocProvider(
+                                    providers: [
+                                      BlocProvider.value(value: getItInjector<CartBloc>()),
+                                      BlocProvider(
+                                        create: (_) => getItInjector<PaymentBloc>()
+                                          ..add(const LoadSavedCards()),
+                                      ),
+                                    ],
+                                    child: CheckoutPage(
+                                      arguments: CheckoutArguments(
+                                        items: [],
+                                        subtotal: 99.9,
+                                        total: 99.9,
+                                        bundleSavings: 0,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+        ],
+      ),
       backgroundColor: design.surfacePrimary,
-      body: ListView(
-        padding: const EdgeInsets.all(BarzSpacing.lg),
-        children: [
-          // Profile Header
-          _buildProfileHeader().animate().fadeIn().scale(
-            begin: const Offset(0.95, 0.95),
-            end: const Offset(1, 1),
+      body: SafeArea(
+        bottom: true,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(
+            BarzSpacing.lg,
+            BarzSpacing.lg,
+            BarzSpacing.lg,
+            120, // Extra padding for floating nav bar
           ),
-          const SizedBox(height: 24),
+          children: [
+            // Profile Header
+            _buildProfileHeader().animate().fadeIn().scale(
+              begin: const Offset(0.95, 0.95),
+              end: const Offset(1, 1),
+            ),
+            const SizedBox(height: 24),
 
           _buildSectionTitle('Activity'),
           const SizedBox(height: 12),
@@ -135,8 +240,9 @@ class _ProfileWireframeState extends State<ProfileWireframe> {
           ).animate().fadeIn(delay: 325.ms).slideX(begin: -0.1, end: 0),
         ],
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildProfileHeader() {
     return Container(
