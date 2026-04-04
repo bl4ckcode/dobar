@@ -6,6 +6,7 @@ import 'package:barz/features/bars/domain/models/menu_model.dart';
 import 'package:barz/features/bars/domain/repositories/abstract_bar_repository.dart';
 import 'package:barz/features/cart/domain/models/cart_models.dart';
 import 'package:dartz/dartz.dart';
+import 'package:flutter/foundation.dart';
 
 class BarRepositoryImpl extends AbstractBarRepository {
   final BarNetworkDataSource networkDataSource;
@@ -24,9 +25,11 @@ class BarRepositoryImpl extends AbstractBarRepository {
         lng,
         maxDistance,
       );
-      result.forEach((bar) {
-        print(bar.name);
-      });
+      if (kDebugMode) {
+        for (var bar in result) {
+          print("${bar.name} ${bar.latitude} ${bar.longitude}");
+        }
+      }
       return Right(result);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message, e.statusCode));

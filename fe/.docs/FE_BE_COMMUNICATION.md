@@ -1332,6 +1332,12 @@ Priority: MEDIUM - Map Visual Accuracy
 - **Backend Action Required:** Ensure `latitude` and `longitude` fields in the `bars` table represent unique, accurate physical locations in the seed data/database.
 - **Impact:** Map pins cluster on top of each other, making the "Find Nearby Bars" feature visually broken despite correct descriptive addresses.
 
+flutter: [DIO]
+flutter: Bar do Zé -23.5505 -46.6333
+flutter: Boteco da Esquina -23.5505 -46.6333
+flutter: Cervejaria Artesanal -23.5505 -46.6333
+flutter: Porcão BH -23.5505 -46.6333
+
 ### 🖼️ Mock Image 404 Errors
 **Issue:** Presigned URLs for bar images (specifically mock items 12, 13, 14, 16) are returning 404 Not Found even after a manual refresh.
 - **Observed Behavior:** The application correctly identifies an expired or broken URL and calls `/bars/{id}/refresh-image`, but the new URL provided by the secondary call also returns a 404.
