@@ -140,8 +140,8 @@ async def get_trending_items(limit: int = 5) -> List[TrendingItem]:
 
 @home_router.get("/", response_model=HomeResponse)
 async def get_home_dashboard(
-    lat: Optional[float] = None,
-    lng: Optional[float] = None,
+    latitude: Optional[float] = Query(None, alias="lat"),
+    longitude: Optional[float] = Query(None, alias="lng"),
     current_user: Optional[User] = Depends(get_optional_user)
 ):
     # 1. User Status (if logged in)
@@ -166,8 +166,8 @@ async def get_home_dashboard(
     
     # 2. Nearby Bars
     nearby_bars = []
-    if lat is not None and lng is not None:
-        bar_ids = await find_bars_near_location(lat, lng, max_distance=10000) # 10km default
+    if latitude is not None and longitude is not None:
+        bar_ids = await find_bars_near_location(latitude, longitude, max_distance=10000) # 10km default
         if bar_ids:
             # Reusing get_bars_by_ids from bars.py which handles image signing and merging
             bars_data = await get_bars_by_ids(bar_ids)

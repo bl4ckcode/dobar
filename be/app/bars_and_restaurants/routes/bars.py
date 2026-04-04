@@ -201,14 +201,18 @@ async def get_bars_by_ids(bars_info: list[dict]):
         for info in bars_info
     }
     
-    # Merge extra data into the PostgreSQL data
+    # Map PostgreSQL results into a dictionary for fast lookup by ID
+    pg_bars_map = {dict(bar)["id"]: dict(bar) for bar in pg_bars}
+    
+    # Reassemble merged results in the ORIGINAL order of bar_ids (distance order)
     merged_results = []
-    for bar in pg_bars:
-        bar_dict = dict(bar)  # Convert the Record to a dictionary
-        bar_id = bar_dict["id"]
-        if bar_id in extra_data:
-            bar_dict.update(extra_data[bar_id])
-        merged_results.append(bar_dict)
+    for b_info in bars_info:
+        b_id = b_info["bar_id"]
+        if b_id in pg_bars_map:
+            bar_dict = pg_bars_map[b_id]
+            if b_id in extra_data:
+                bar_dict.update(extra_data[b_id])
+            merged_results.append(bar_dict)
     
     return merged_results
 
