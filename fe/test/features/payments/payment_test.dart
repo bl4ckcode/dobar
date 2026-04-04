@@ -56,7 +56,7 @@ void main() {
     test('PixPaymentResponse.fromJson creates correct instance', () {
       final json = PaymentFixtures.pixResponseJson();
       final response = PixPaymentResponse.fromJson(json);
-      expect(response.transactionId, 1001);
+      expect(response.paymentId, '1001');
       expect(response.amount, 59.90);
       expect(response.qrCode, isNotEmpty);
       expect(response.copyPaste, isNotEmpty);
@@ -66,10 +66,12 @@ void main() {
       final request = PaymentFixtures.brazilCreditRequest();
       final json = request.toJson();
       expect(json['order_id'], 101);
+      expect(json['bar_id'], 12);
       expect(json['amount'], 150.00);
       expect(json['currency'], 'BRL');
-      expect(json['payment_type'], 'credit');
+      expect(json['payment_method']['type'], 'credit');
       expect(json['tip'], 15.00);
+      expect(json['customer_info']['name'], 'João Silva');
     });
 
     test('PaymentMethod.displayName returns correct format', () {

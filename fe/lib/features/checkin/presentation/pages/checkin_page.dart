@@ -266,31 +266,31 @@ class _InitialViewState extends State<_InitialView> {
 
                 const SizedBox(height: 32),
 
-                // Action Buttons (Stacked)
+                // Action Buttons (Stacked vertically one after another)
                 Column(
-                      children: [
-                        _PrimaryButton(
-                          onPressed: () => context.read<CheckinBloc>().add(
+                  children: [
+                    _PrimaryButton(
+                      onPressed: () => context.read<CheckinBloc>().add(
                             const StartQrScan(),
                           ),
-                          icon: LucideIcons.scan,
-                          label: l10n.checkin_initial_scan_qr,
-                        ),
-                        const SizedBox(height: 12),
-                        _SecondaryButton(
-                          onPressed: () {
-                            // Switch straight to nearby bars view
-                            context.read<CheckinBloc>().add(
+                      icon: LucideIcons.scan,
+                      label: l10n.checkin_initial_scan_qr,
+                    ),
+                    const SizedBox(height: 16),
+                    _SecondaryButton(
+                      onPressed: () {
+                        // Switch straight to nearby bars view
+                        context.read<CheckinBloc>().add(
                               const ResetCheckin(),
                             );
-                            // And simultaneously trigger finding bars
-                            _findNearbyBars(context);
-                          },
-                          icon: LucideIcons.mapPin,
-                          label: l10n.checkin_initial_find_nearby,
-                        ),
-                      ],
-                    )
+                        // Trigger finding bars immediately
+                        _findNearbyBars(context);
+                      },
+                      icon: LucideIcons.mapPin,
+                      label: l10n.checkin_initial_find_nearby,
+                    ),
+                  ],
+                )
                     .animate()
                     .fadeIn(delay: 400.ms, duration: 600.ms)
                     .slideY(begin: 0.2, end: 0),
@@ -320,13 +320,33 @@ class _InitialViewState extends State<_InitialView> {
       if (permission != PermissionStatus.granted) return;
     }
 
-    final locationData = await location.getLocation();
+    final locationData = await location.getLocation().catchError((e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error getting location: $e'),
+            backgroundColor: Colors.redAccent,
+          ),
+        );
+      }
+      return LocationData.fromMap({});
+    });
+
     if (locationData.latitude != null && locationData.longitude != null) {
       if (context.mounted) {
         context.read<CheckinBloc>().add(
           FindNearbyBars(
             latitude: locationData.latitude!,
             longitude: locationData.longitude!,
+          ),
+        );
+      }
+    } else {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not determine your location. Please check settings.'),
+            backgroundColor: Colors.orangeAccent,
           ),
         );
       }

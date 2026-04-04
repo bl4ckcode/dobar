@@ -286,10 +286,27 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
                 right: 0,
                 child: HomeConnectedHeader(
                   nearbyBarName: nearbyBarName,
+                  unreadNotifications:
+                      homeState is HomeLoaded
+                          ? homeState.data.userStatus?.unreadNotifications ?? 0
+                          : 0,
                   onBarTap: () {
                     // Navigate to check-in page and pass the bar object via extra
-                    AppRoute.checkin.push(context, extra: closestBar);
+                    if (closestBar != null) {
+                      try {
+                        final barModel = closestBar.toBarModel();
+                        debugPrint('[Home] Navigating to check-in with bar: ${barModel.id}');
+                        AppRoute.checkin.push(context, extra: barModel);
+                      } catch (e) {
+                        debugPrint('[Home] Error converting bar to BarModel: $e');
+                        // Fallback: just go to check-in page without specific bar
+                        AppRoute.checkin.push(context);
+                      }
+                    } else {
+                      AppRoute.checkin.push(context);
+                    }
                   },
+                  onNotificationTap: () => AppRoute.notifications.push(context),
                 ),
               ),
             ],

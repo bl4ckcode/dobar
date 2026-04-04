@@ -24,14 +24,18 @@ class UserUsecase {
     String? displayName,
     String? email,
     String? phoneNumber,
-    String? profilePictureUrl,
+    String? avatarUrl,
   }) {
     return _repository.updateProfile(
       displayName: displayName,
       email: email,
       phoneNumber: phoneNumber,
-      profilePictureUrl: profilePictureUrl,
+      avatarUrl: avatarUrl,
     );
+  }
+
+  Future<Either<Failure, bool>> registerFcmToken(String token) {
+    return _repository.registerFcmToken(token);
   }
 
   Future<Either<Failure, NotificationPreferences>>

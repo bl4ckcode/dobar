@@ -11,7 +11,7 @@ sealed class UserEvent with _$UserEvent {
     String? displayName,
     String? email,
     String? phoneNumber,
-    String? profilePictureUrl,
+    String? avatarUrl,
   }) = UpdateProfile;
 
   const factory UserEvent.addDocument(UserDocument document) = AddDocument;

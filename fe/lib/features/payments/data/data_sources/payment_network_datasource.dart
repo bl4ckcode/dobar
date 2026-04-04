@@ -190,7 +190,7 @@ class PaymentNetworkDatasource implements PaymentDatasource {
     try {
       final key = idempotencyKey ?? IdempotencyKey.forPayment(request.orderId);
       final response = await dio.post(
-        '${ApiEndpoints.baseUrl}${ApiEndpoints.payments}',
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.paymentsV2Charge}',
         data: request.toJson(),
         options: Options(headers: {'X-Idempotency-Key': key}),
       );
@@ -211,7 +211,7 @@ class PaymentNetworkDatasource implements PaymentDatasource {
     try {
       final key = idempotencyKey ?? IdempotencyKey.forPayment(request.orderId);
       final response = await dio.post(
-        '${ApiEndpoints.baseUrl}${ApiEndpoints.pixPayment}',
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.paymentsV2Charge}',
         data: request.toJson(),
         options: Options(headers: {'X-Idempotency-Key': key}),
       );

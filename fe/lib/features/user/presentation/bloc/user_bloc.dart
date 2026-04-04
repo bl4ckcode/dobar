@@ -42,7 +42,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
       displayName: event.displayName,
       email: event.email,
       phoneNumber: event.phoneNumber,
-      profilePictureUrl: event.profilePictureUrl,
+      avatarUrl: event.avatarUrl,
     );
     result.fold(
       (failure) =>

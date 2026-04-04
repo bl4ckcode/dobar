@@ -49,14 +49,18 @@ class _CartPageState extends State<CartPage> {
         BlocProvider.value(value: getItInjector<CartBloc>()),
         BlocProvider.value(value: getItInjector<CheckinBloc>()),
       ],
-      child: _CartPageContent(showBackButton: widget.showBackButton),
+      child: _CartPageContent(
+        showBackButton: widget.showBackButton,
+        barId: widget.barId,
+      ),
     );
   }
 }
 
 class _CartPageContent extends StatefulWidget {
   final bool showBackButton;
-  const _CartPageContent({required this.showBackButton});
+  final int? barId;
+  const _CartPageContent({required this.showBackButton, this.barId});
 
   @override
   State<_CartPageContent> createState() => _CartPageContentState();
@@ -460,7 +464,7 @@ class _CartPageContentState extends State<_CartPageContent> {
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
       child: Row(
         children: [
-          if (showBack) ...[
+          if (showBack && context.canPop()) ...[
             GestureDetector(
               onTap: () => context.pop(),
               child: Container(
@@ -573,11 +577,17 @@ class _CartPageContentState extends State<_CartPageContent> {
               fontSize: 16,
             ),
           ),
-          if (showBack)
+          if (showBack && widget.barId != null)
             Padding(
               padding: const EdgeInsets.only(top: 24),
               child: FilledButton.icon(
-                onPressed: () => context.pop(),
+                onPressed: () {
+                  if (context.canPop()) {
+                    context.pop();
+                  } else {
+                    AppRoute.home.go(context);
+                  }
+                },
                 icon: const Icon(Icons.arrow_back),
                 label: Text(l10n.cart_go_back),
                 style: FilledButton.styleFrom(

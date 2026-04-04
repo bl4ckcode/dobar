@@ -70,6 +70,7 @@ class ApiEndpoints {
   static const String userDataExclusion = '/me/data';
   static const String onboarding = '/me/onboarding';
   static const String paymentGateway = '/me/payment-gateway';
+  static const String fcmToken = '/me/fcm-token';
 
   // Legacy user endpoints (for backwards compatibility)
   static const String users = '/users';
@@ -83,6 +84,7 @@ class ApiEndpoints {
   static const String userCashback = '/users/me/cashback';
 
   static const String payments = '/payments';
+  static const String paymentsV2Charge = '/payments/v2/charge';
   static const String pixPayment = '/payments/pix';
   static const String paymentMethods = '/payments/methods';
   static const String savedCards = '/me/cards';
@@ -142,6 +144,11 @@ class ApiEndpoints {
   static String barOrders(int barId) => '/bars/$barId/orders';
   static String barStatus(int barId) => '/bars/$barId/status';
   static String barStatusToggle(int barId) => '/bars/$barId/status/toggle';
+
+  // Notifications
+  static const String notifications = '/notifications';
+  static const String notificationsReadAll = '/notifications/read-all';
+  static String notificationRead(int id) => '/notifications/$id/read';
 
   // Legal Documents
   static String legalDocument(String type, String language) =>

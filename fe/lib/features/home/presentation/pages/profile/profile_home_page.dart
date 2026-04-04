@@ -333,7 +333,7 @@ class _ProfileHomePageState extends State<ProfileHomePage> {
             ),
           ),
           IconButton(
-            onPressed: () {},
+            onPressed: () => AppRoute.profileEdit.push(context),
             icon: const Icon(Icons.edit_outlined, color: barzGold),
           ),
         ],

@@ -39,18 +39,28 @@ class UserRepositoryImpl implements UserRepository {
     String? displayName,
     String? email,
     String? phoneNumber,
-    String? profilePictureUrl,
+    String? avatarUrl,
   }) async {
     try {
       final data = <String, dynamic>{};
       if (displayName != null) data['display_name'] = displayName;
       if (email != null) data['email'] = email;
       if (phoneNumber != null) data['phone_number'] = phoneNumber;
-      if (profilePictureUrl != null) {
-        data['profile_picture_url'] = profilePictureUrl;
+      if (avatarUrl != null) {
+        data['avatar_url'] = avatarUrl;
       }
       final result = await _datasource.updateProfile(data);
       return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message, e.statusCode));
+    }
+  }
+
+  @override
+  Future<Either<Failure, bool>> registerFcmToken(String token) async {
+    try {
+      await _datasource.registerFcmToken(token);
+      return const Right(true);
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message, e.statusCode));
     }

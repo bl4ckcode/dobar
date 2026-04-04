@@ -25,6 +25,7 @@ import 'package:barz/features/payments/payments_injection.dart';
 import 'package:barz/features/promotions/promotions_injection.dart';
 import 'package:barz/features/session/session_injection.dart';
 import 'package:barz/features/trending/trending_injection.dart';
+import 'package:barz/features/notifications/notifications_injection.dart';
 import 'package:barz/features/legal/legal_injection.dart';
 import 'package:barz/features/user/user_injection.dart';
 import 'package:barz/features/staff/staff_injection.dart';
@@ -40,6 +41,7 @@ Future<void> initInjections() async {
   await initAppInjections();
   await initDioInjections();
   await initNotificationInjections();
+  initNotificationsFeatureInjection();
   await initLoginInjections();
   registerHomeFeature(getItInjector);
   await initPartnersInjection();

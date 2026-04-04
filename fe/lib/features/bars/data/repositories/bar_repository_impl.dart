@@ -27,7 +27,7 @@ class BarRepositoryImpl extends AbstractBarRepository {
       );
       if (kDebugMode) {
         for (var bar in result) {
-          print("${bar.name} ${bar.latitude} ${bar.longitude}");
+          print("${bar.name} ${bar.latitude} ${bar.longitude} ${bar.address}");
         }
       }
       return Right(result);

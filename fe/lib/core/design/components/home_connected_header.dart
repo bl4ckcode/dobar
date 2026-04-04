@@ -1,17 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 import '../design_system.dart';
 
 class HomeConnectedHeader extends StatelessWidget {
   final VoidCallback? onNotificationTap;
   final VoidCallback? onBarTap;
   final String? nearbyBarName;
+  final int unreadNotifications;
+  final bool isProMember;
 
   const HomeConnectedHeader({
     super.key,
     this.onNotificationTap,
     this.onBarTap,
     this.nearbyBarName,
+    this.unreadNotifications = 0,
+    this.isProMember = false,
   });
 
   @override
@@ -116,9 +121,29 @@ class HomeConnectedHeader extends StatelessWidget {
                   color: colors.buttonPrimary,
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Icon(
-                  Icons.notifications_outlined,
-                  color: colors.buttonOnPrimary,
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Icon(
+                      LucideIcons.bell,
+                      color: colors.buttonOnPrimary,
+                      size: 20,
+                    ),
+                    if (unreadNotifications > 0)
+                      Positioned(
+                        right: 8,
+                        top: 8,
+                        child: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: colors.buttonPrimary, width: 2),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
             ),

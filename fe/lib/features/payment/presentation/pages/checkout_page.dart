@@ -14,6 +14,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:barz/core/router/app_routes.dart';
+import 'package:barz/features/user/presentation/bloc/user_bloc.dart';
+import 'package:barz/features/payments/domain/models/payment_model.dart';
+import 'package:barz/features/payments/domain/models/transaction.dart';
+import 'package:barz/features/user/domain/models/user_document.dart';
 
 import '../widgets/checkout_order_summary.dart';
 import '../widgets/pay_button.dart';
@@ -137,8 +141,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
     final cashback = args.total * 0.05;
 
-    return BlocListener<CartBloc, CartState>(
-      listener: _listenToCartState,
+    return MultiBlocListener(
+      listeners: [
+        BlocListener<CartBloc, CartState>(listener: _listenToCartState),
+        BlocListener<PaymentBloc, PaymentState>(listener: _listenToPaymentState),
+      ],
       child: Scaffold(
         backgroundColor: isDark ? barzDark : Colors.white,
         body: SafeArea(
@@ -333,13 +340,96 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   void _listenToCartState(BuildContext context, CartState state) {
     if (state is CheckoutSuccess) {
-      if (mounted) setState(() => _isProcessing = false);
-      _showOrderSuccessDialog(context, state.result.orderId);
+      // Order created successfully, now trigger payment
+      final userState = context.read<UserBloc>().state;
+      final user = userState.user;
+
+      if (user == null) {
+        setState(() => _isProcessing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User not found. Please log in again.')),
+        );
+        return;
+      }
+
+      final barId = (context.read<CartBloc>().state as CartLoaded).barId ?? 0;
+      
+      String? documentNumber;
+      if (user.documents.isNotEmpty) {
+        final doc = user.documents.firstWhere(
+          (d) => d.type == DocumentType.cpf,
+          orElse: () => user.documents.first,
+        );
+        documentNumber = doc.number;
+      }
+
+      if (documentNumber == null) {
+        setState(() => _isProcessing = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please add your CPF/CNPJ in profile settings before paying.')),
+        );
+        return;
+      }
+
+      final customerInfo = CustomerInfo(
+        name: user.displayName ?? '',
+        email: user.email ?? '',
+        document: documentNumber,
+        phone: user.phoneNumber,
+      );
+
+      final paymentType = _selectedCardId?.startsWith('__pix__') == true
+          ? PaymentType.pix
+          : PaymentType.credit;
+
+      final request = PaymentRequest(
+        orderId: state.result.orderId,
+        barId: barId,
+        amount: state.result.totalPrice,
+        paymentType: paymentType,
+        paymentMethodId: paymentType == PaymentType.credit && _selectedCardId != null && !_selectedCardId!.startsWith('__')
+            ? int.tryParse(_selectedCardId!)
+            : null,
+        cardToken: null, // If adding card, token is handled elsewhere
+        customerInfo: customerInfo,
+        provider: _selectedCardId?.contains('apple') == true
+            ? 'apple_pay'
+            : (_selectedCardId?.contains('google') == true ? 'google_pay' : null),
+      );
+
+      if (paymentType == PaymentType.pix) {
+        context.read<PaymentBloc>().add(InitiatePixPayment(request));
+      } else {
+        context.read<PaymentBloc>().add(ProcessPayment(request));
+      }
     }
     if (state is CartError) {
       if (mounted) setState(() => _isProcessing = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  void _listenToPaymentState(BuildContext context, PaymentState state) {
+    if (state.currentTransaction != null && state.currentTransaction!.status == TransactionStatus.approved) {
+      if (mounted) setState(() => _isProcessing = false);
+      _showOrderSuccessDialog(context, state.currentTransaction!.orderId ?? 0);
+      // Clear cart on success
+      context.read<CartBloc>().add(cart_event.ClearCart());
+    } else if (state.pixPayment != null) {
+      // For PIX, we might want to show a different dialog or navigate
+      if (mounted) setState(() => _isProcessing = false);
+      
+      // Get orderId from recent checkout success
+      final cartState = context.read<CartBloc>().state;
+      if (cartState is CheckoutSuccess) {
+        _showOrderSuccessDialog(context, cartState.result.orderId);
+      }
+    } else if (state.error != null) {
+      if (mounted) setState(() => _isProcessing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(state.error!), backgroundColor: Colors.red),
       );
     }
   }

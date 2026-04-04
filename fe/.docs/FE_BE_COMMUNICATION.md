@@ -409,6 +409,72 @@ Response 200:
 
 ---
 
+## NOTIFICATIONS (SPRINT 6 - NEW)
+
+Status: **✅ COMPLETE**
+Priority: HIGH - User Engagement & Operations
+
+### Overview
+
+Real-time notifications are now persistent and fetched from the database. This replaces the previous "dummy" notification count.
+
+### 1. Fetch Recent Notifications
+
+```
+GET /notifications/?limit=50&offset=0
+Auth: Required (Access Token)
+
+Response 200:
+[
+  {
+    "id": 1,
+    "user_id": 5,
+    "title": "🎉 Ready!",
+    "message": "Your order #2005 is ready for pickup!",
+    "notification_type": "order_update", // "order_update" | "promotion" | "system"
+    "is_read": false,
+    "reference_id": "2005", // ID of the related object (e.g., order_id)
+    "created_at": "2026-03-31T20:05:00Z",
+    "updated_at": "2026-03-31T20:05:00Z"
+  }
+]
+```
+
+### 2. Mark All as Read
+
+```
+PUT /notifications/read-all
+Auth: Required
+
+Response 200:
+{
+  "message": "All notifications marked as read.",
+  "count": 5
+}
+```
+
+### 3. Mark Specific as Read
+
+```
+PUT /notifications/{notification_id}/read
+Auth: Required
+
+Response 200:
+{
+  "id": 1,
+  "is_read": true,
+  ... (full object)
+}
+```
+
+### Integration Notes
+
+- **Polling/WebSocket**: Frontend should fetch notifications on app start and via WebSocket events (`new_notification`).
+- **Badge Count**: The `/home` endpoint now returns the `unread_notifications` count based on this database. Use this for the home icon badge.
+- **Click Action**: Use `notification_type` and `reference_id` to route the user within the app (e.g., `order_update` -> Navigate to Order Status screen for `order_id`).
+
+---
+
 ## BUNDLE PROMOTIONS
 
 Status: **✅ COMPLETE**
@@ -1345,3 +1411,22 @@ flutter: Porcão BH -23.5505 -46.6333
     1. Verify if mock image assets (e.g., `mock-12.png`) actually exist in the S3 bucket.
     2. Check the `refresh-image` logic to ensure it doesn't return stale or incorrect paths.
 - **Impact:** UI displays broken image icons or placeholders for most bars/promotions in the feed.
+
+---
+
+## KNOWN ISSUES & BUG REPORTS (SPRINT 6)
+
+### 1. Identical Bar Coordinates
+- **Issue:** Multiple bars (e.g. 'Bar do Zé', 'Boteco da Esquina', 'Bar da Vila') are returning exactly the same coordinates: 'latitude: -23.5505', 'longitude: -46.6333'.
+- **Impact:** Map pins overlap completely, making them indistinguishable without custom clustering.
+- **Request:** Update seed data or backend logic to provide unique coordinates for each bar.
+
+### 2. Mock Image 404s
+- **Issue:** Several mock images (e.g., 'mock-12.png', 'mock-13.png', 'mock-14.png', 'mock-16.png') return '404 Not Found' from S3.
+- **Impact:** Frontend displays placeholders instead of bar branding.
+- **Request:** Verify S3 bucket contents and presigned URL generation for mock bars.
+
+### 3. APNS Token Not Set
+- **Issue:** FCM registration fails on initial launch because APNS token is not yet available.
+- **Impact:** Temporary delay in push notification registration.
+- **Recommendation:** Implement a retry mechanism or wait for 'iOS' APNS token callback.

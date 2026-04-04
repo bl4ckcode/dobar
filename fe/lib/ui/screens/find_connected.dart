@@ -675,20 +675,48 @@ class _FindConnectedViewState extends State<FindConnectedView>
       builder: (context, barState) {
         final markers = <Marker>{};
         if (barState is BarsLoaded) {
+          // Group bars by location
+          final Map<LatLng, List<BarModel>> groupedBars = {};
           for (final bar in barState.bars) {
             if (bar.latitude != null && bar.longitude != null) {
+              final pos = LatLng(bar.latitude!, bar.longitude!);
+              groupedBars.putIfAbsent(pos, () => []).add(bar);
+            }
+          }
+
+          groupedBars.forEach((pos, barsAtPos) {
+            if (barsAtPos.length == 1) {
+              final bar = barsAtPos.first;
               final customIcon = _customMarkers[bar.id.toString()];
               markers.add(
                 Marker(
                   markerId: MarkerId(bar.id.toString()),
-                  position: LatLng(bar.latitude!, bar.longitude!),
+                  position: pos,
                   icon: customIcon ?? BitmapDescriptor.defaultMarker,
                   infoWindow: InfoWindow(title: bar.name),
                   onTap: () => _showBarBottomSheet(bar),
                 ),
               );
+            } else {
+              // Cluster marker
+              markers.add(
+                Marker(
+                  markerId: MarkerId('cluster_${pos.latitude}_${pos.longitude}'),
+                  position: pos,
+                  icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+                  infoWindow: InfoWindow(
+                    title: '${barsAtPos.length} Bars here',
+                    snippet: barsAtPos.map((b) => b.name).join(', '),
+                  ),
+                  onTap: () {
+                    // Show a list or just the first one? 
+                    // Best is to show the first one but maybe with a hint?
+                    _showBarBottomSheet(barsAtPos.first);
+                  },
+                ),
+              );
             }
-          }
+          });
         }
 
         return GoogleMap(

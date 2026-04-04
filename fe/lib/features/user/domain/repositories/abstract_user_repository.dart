@@ -13,8 +13,10 @@ abstract class UserRepository {
     String? displayName,
     String? email,
     String? phoneNumber,
-    String? profilePictureUrl,
+    String? avatarUrl,
   });
+
+  Future<Either<Failure, bool>> registerFcmToken(String token);
 
   Future<Either<Failure, NotificationPreferences>> getNotificationPreferences();
   Future<Either<Failure, NotificationPreferences>>

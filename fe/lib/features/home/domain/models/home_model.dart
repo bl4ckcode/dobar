@@ -1,5 +1,6 @@
 import 'package:barz/features/promotions/domain/models/promotion_model.dart';
 import 'package:barz/features/trending/domain/models/trending_drink.dart';
+import 'package:barz/features/bars/domain/models/bar_model.dart';
 
 abstract class HomeModel {
   UserStatus? get userStatus;
@@ -121,6 +122,18 @@ class NearbyBar {
       distanceMeters: (json['distance_meters'] as num?)?.toDouble() ?? 0.0,
       rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
       isOpen: json['is_open'] ?? false,
+    );
+  }
+
+  BarModel toBarModel() {
+    return BarModel(
+      id: id,
+      name: name,
+      imageUrl: imageUrl,
+      address: '', // Placeholder
+      phoneNumber: '', // Placeholder
+      email: '', // Placeholder
+      approximateLocation: distanceMeters,
     );
   }
 }

@@ -23,6 +23,7 @@ enum AppRoute {
   showcase('/showcase'),
   find('/find'),
   profile('/profile'),
+  profileEdit('/profile/edit'),
   businessDashboard('/business'),
   businessCashier('/business/cashier'),
   businessMenu('/business/menu'),
@@ -32,6 +33,7 @@ enum AppRoute {
   businessStaff('/business/staff'),
   businessSubscriptionPlans('/business/subscription-plans'),
   businessSettings('/business/settings'),
+  notifications('/notifications'),
   termsOfService('/legal/terms'),
   privacyPolicy('/legal/privacy');
 

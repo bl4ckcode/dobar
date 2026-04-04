@@ -85,22 +85,35 @@ class PaymentFixtures {
 
   static PaymentRequest brazilPixRequest() => PaymentRequest(
     orderId: 100,
+    barId: 12,
     amount: 59.90,
     currency: 'BRL',
     paymentType: PaymentType.pix,
+    customerInfo: CustomerInfo(
+      name: 'João Silva',
+      email: 'joao@example.com',
+      document: '12345678909',
+    ),
   );
 
   static PaymentRequest brazilCreditRequest() => PaymentRequest(
     orderId: 101,
+    barId: 12,
     amount: 150.00,
     currency: 'BRL',
     paymentType: PaymentType.credit,
     paymentMethodId: 1,
     tip: 15.00,
+    customerInfo: CustomerInfo(
+      name: 'João Silva',
+      email: 'joao@example.com',
+      document: '12345678909',
+    ),
   );
 
   static PaymentRequest latamCreditRequest() => PaymentRequest(
     orderId: 102,
+    barId: 15,
     amount: 25000.00,
     currency: 'CLP',
     paymentType: PaymentType.credit,
@@ -109,6 +122,7 @@ class PaymentFixtures {
 
   static PaymentRequest usCreditRequest() => PaymentRequest(
     orderId: 103,
+    barId: 20,
     amount: 45.99,
     currency: 'USD',
     paymentType: PaymentType.credit,
@@ -118,6 +132,7 @@ class PaymentFixtures {
 
   static PaymentRequest rowPaypalRequest() => PaymentRequest(
     orderId: 104,
+    barId: 25,
     amount: 35.50,
     currency: 'EUR',
     paymentType: PaymentType.credit,
@@ -125,7 +140,7 @@ class PaymentFixtures {
   );
 
   static PixPaymentResponse pixResponse() => PixPaymentResponse(
-    transactionId: 1001,
+    paymentId: 'ch_pix_1001',
     qrCode:
         '00020126580014br.gov.bcb.pix0136a1b2c3d4-e5f6-7890-abcd-ef1234567890',
     copyPaste:

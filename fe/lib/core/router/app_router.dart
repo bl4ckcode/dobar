@@ -40,6 +40,10 @@ import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/promotions/presentation/screens/promotions_gallery_screen.dart';
 import 'package:barz/features/legal/presentation/screens/legal_document_viewer.dart';
 import 'package:barz/features/legal/domain/models/legal_document.dart';
+import 'package:barz/features/notifications/presentation/pages/notifications_screen.dart';
+import 'package:barz/features/notifications/presentation/bloc/notification_bloc.dart';
+import 'package:barz/features/home/presentation/pages/profile/profile_edit_page.dart';
+import 'package:barz/features/user/presentation/bloc/user_bloc.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 final _businessShellNavigatorKey = GlobalKey<NavigatorState>();
@@ -277,6 +281,22 @@ final appRouter = GoRouter(
       name: AppRoute.privacyPolicy.name,
       builder: (context, state) => const LegalDocumentViewer(
         documentType: LegalDocumentType.privacyPolicy,
+      ),
+    ),
+    GoRoute(
+      path: AppRoute.notifications.path,
+      name: AppRoute.notifications.name,
+      builder: (context, state) => BlocProvider(
+        create: (_) => getItInjector<NotificationBloc>(),
+        child: const NotificationsScreen(),
+      ),
+    ),
+    GoRoute(
+      path: AppRoute.profileEdit.path,
+      name: AppRoute.profileEdit.name,
+      builder: (context, state) => BlocProvider.value(
+        value: getItInjector<UserBloc>(),
+        child: const ProfileEditPage(),
       ),
     ),
   ],

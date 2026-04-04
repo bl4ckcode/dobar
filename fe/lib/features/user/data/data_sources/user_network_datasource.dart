@@ -22,6 +22,7 @@ abstract class UserDatasource {
   Future<UserModel> acceptTerms();
   Future<UserModel> acceptPrivacy();
   Future<bool> deleteAccount();
+  Future<bool> registerFcmToken(String token);
   Future<double> getWalletBalance();
   Future<List<CashbackTransaction>> getCashbackHistory();
 }
@@ -215,6 +216,22 @@ class UserNetworkDatasource implements UserDatasource {
     } on DioException catch (e) {
       throw ServerException(
         e.response?.data?['detail'] ?? 'Failed to delete account',
+        e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<bool> registerFcmToken(String token) async {
+    try {
+      await dio.post(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.fcmToken}',
+        data: {'token': token},
+      );
+      return true;
+    } on DioException catch (e) {
+      throw ServerException(
+        e.response?.data?['detail'] ?? 'Failed to register FCM token',
         e.response?.statusCode,
       );
     }
