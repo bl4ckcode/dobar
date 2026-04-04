@@ -393,22 +393,40 @@ async def refresh_image_url(bar_id: int):
     # First check if bar exists in PostgreSQL
     bar = await database.fetch_one(BarModel.__table__.select().where(BarModel.id == bar_id))
     if not bar:
-        raise APIError.partner_not_found("Bar not found")
+        raise APIError.partner_not_found(f"Bar with ID {bar_id} not found in PostgreSQL")
     
     # Fetch image_url from MongoDB (where it's actually stored)
     mongo_bar = await bars_collection.find_one({"bar_id": bar_id})
     
     if not mongo_bar or not mongo_bar.get("image_url"):
-        raise APIError.not_found("No image available for this bar")
+        # Fallback: Check if there's a logo_url or image_url in PostgreSQL (some legacy items might differ)
+        # For now, we strictly follow the MongoDB source of truth for dynamic metadata
+        raise APIError.not_found(f"No image URL found in MongoDB for bar {bar_id}")
     
-    # Generate fresh presigned URL from the S3 key
-    s3_key = extract_s3_key(mongo_bar["image_url"])
-    new_url = generate_presigned_url(s3_key)
-    
-    return {
-        "image_url": new_url,
-        "image_url_expiration": int(time.time()) + 3600  # Expires in 1 hour
-    }
+    try:
+        raw_image_url = mongo_bar["image_url"]
+        
+        # Security/Sanity Check: If it's already a presigned URL or has query params, 
+        # we still want to extract the base key to get a FRESH presigned URL.
+        s3_key = extract_s3_key(raw_image_url)
+        
+        if not s3_key:
+            raise ValueError("Could not extract S3 key from URL")
+            
+        new_url = generate_presigned_url(s3_key)
+        
+        if not new_url:
+            raise APIError.server_error("Failed to generate presigned URL from S3")
+            
+        return {
+            "bar_id": bar_id,
+            "image_url": new_url,
+            "image_url_expiration": int(time.time()) + 3600  # Expires in 1 hour
+        }
+    except Exception as e:
+        import logging
+        logging.error(f"Error refreshing image for bar {bar_id}: {str(e)}")
+        raise APIError.server_error(f"Image refresh failed: {str(e)}")
 
 
 @bars_router.get("/{bar_id}/location-config")

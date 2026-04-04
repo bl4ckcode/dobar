@@ -58,15 +58,24 @@ async def seed_data():
              print("   ✅ Created Default Owner (ID 1)")
 
         for b_id, b_name in TARGET_BARS_DATA.items():
-            # Default coordinates (SP)
+            # Initial Base coordinates (São Paulo Center)
             lat, lon = -23.5505, -46.6333
             
-            # Mock Location for Bar 16 (Belo Horizonte - User Location)
-            if b_id == 16:
+            # Unique Locations to avoid clustering (SP Bars)
+            if b_id == 12:   # Bar do Carlos
+                lat, lon = -23.5505, -46.6333 # Center
+            elif b_id == 13: # Boteco SP
+                lat, lon = -23.5520, -46.6350 # Near Paulista
+            elif b_id == 14: # Cervejaria Artesanal
+                lat, lon = -23.5480, -46.6310 # Near Downtown
+            
+            # Belo Horizonte Locations (BH Bars)
+            elif b_id == 16: # Vibe Bar (BH Center)
                 lat, lon = -19.8325619, -43.9798416
-            # Mock Location for Bar 17 (BH - Savassi)
-            elif b_id == 17:
+            elif b_id == 17: # Ponto Savassi (BH Savassi)
                 lat, lon = -19.9395582, -43.9356845
+            elif b_id == 18: # Porcão BH (BH Lourdes/Raja)
+                lat, lon = -19.954020, -43.956040
 
             # 1. Postgres Insert (No lat/lon)
             bar_check = await database.fetch_one("SELECT * FROM bars WHERE id = :id", {"id": b_id})
@@ -100,12 +109,19 @@ async def seed_data():
                 print(f"   ℹ️  Bar {b_id} exists in Postgres")
 
             # 2. Mongo Upsert (Location & Logo)
-            # Only set logo_url for bars with actual uploaded images
-            logo_url = None  # Default to null to avoid 404s
+            # Ensure every bar has a valid logo_url to avoid 404s
+            # Using existing seed assets as fallback
+            logo_url = "https://barz-images.s3.amazonaws.com/seed/pontosavassilogo.jpg"
+            
             if b_id == 17:
                 logo_url = "https://barz-images.s3.amazonaws.com/seed/pontosavassilogo.jpg"
             elif b_id == 18:
                 logo_url = "https://barz-images.s3.amazonaws.com/seed/porcaobhlogo.jpg"
+            elif b_id in [12, 13, 14, 16]:
+                # Temporary fallback to existing drink images for better visual variety than just one logo
+                drink_pics = ["caipirinha.jpeg", "morrito.jpg", "moscowmule.jpeg", "pinacolada.jpeg"]
+                pic_index = (b_id % len(drink_pics))
+                logo_url = f"https://barz-images.s3.amazonaws.com/seed/{drink_pics[pic_index]}"
 
             await bars_collection.update_one(
                 {"bar_id": b_id},
