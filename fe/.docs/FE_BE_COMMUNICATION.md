@@ -346,13 +346,13 @@ Aggregates all data required for the initial Home screen load to reduce multiple
 ### API Contract
 
 ```
-GET /home?lat=X&lng=Y
+GET /home?latitude=X&longitude=Y
 
 Query Params:
 | Param | Type | Description |
 |-------|------|-------------|
-| lat | float | User latitude (optional) |
-| lng | float | User longitude (optional) |
+| latitude | float | User latitude (optional) |
+| longitude | float | User longitude (optional) |
 
 Response 200:
 {
@@ -1430,3 +1430,8 @@ flutter: Porcão BH -23.5505 -46.6333
 - **Issue:** FCM registration fails on initial launch because APNS token is not yet available.
 - **Impact:** Temporary delay in push notification registration.
 - **Recommendation:** Implement a retry mechanism or wait for 'iOS' APNS token callback.
+
+### 4. /home Endpoint Limited Results
+- **Issue:** The `/home` endpoint currently returns only ONE bar in the `nearby_bars` list, even when many more bars are available within proximity (as seen in `/bars` endpoint).
+- **Impact:** The "Meet our partners" section (horizontal carousel) only shows the single closest bar, making the Home screen feel empty.
+- **Request:** Investigate if there's a hard limit (limit=1) or a filtering bug on the backend for the `/home` result set.

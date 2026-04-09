@@ -129,4 +129,24 @@ class LocationRepositoryImpl implements LocationRepository {
       return Left(ServerFailure(e.toString(), null));
     }
   }
+
+  @override
+  Future<Either<Failure, void>> openAppSettings() async {
+    try {
+      await _datasource.openAppSettings();
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(e.toString(), null));
+    }
+  }
+
+  @override
+  Future<Either<Failure, bool>> isLocationPermissionPermanentlyDenied() async {
+    try {
+      final result = await _datasource.isLocationPermissionPermanentlyDenied();
+      return Right(result);
+    } catch (e) {
+      return Left(ServerFailure(e.toString(), null));
+    }
+  }
 }

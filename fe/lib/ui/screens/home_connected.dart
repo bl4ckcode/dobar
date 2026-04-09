@@ -9,10 +9,10 @@ import 'package:barz/core/design/components/home_connected_header.dart';
 import 'package:barz/features/home/presentation/bloc/home_bloc.dart';
 import 'package:barz/features/home/presentation/bloc/home_event.dart';
 import 'package:barz/features/home/presentation/bloc/home_state.dart';
-import 'package:barz/features/location/presentation/bloc/location_bloc.dart';
-import 'package:barz/features/location/presentation/bloc/location_event.dart';
+import 'package:barz/features/location/presentation/bloc/location_cubit.dart';
 import 'package:barz/features/location/presentation/bloc/location_state.dart';
 import 'package:barz/l10n/app_localizations.dart';
+import 'package:barz/core/design/components/location_permission_alert.dart';
 
 class HomeConnected extends StatelessWidget {
   const HomeConnected({super.key});
@@ -33,44 +33,60 @@ class HomeConnectedView extends StatefulWidget {
   State<HomeConnectedView> createState() => _HomeConnectedViewState();
 }
 
-class _HomeConnectedViewState extends State<HomeConnectedView> {
+class _HomeConnectedViewState extends State<HomeConnectedView> with WidgetsBindingObserver {
   final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     // Trigger initial load if location is already available
-    final locationState = context.read<LocationBloc>().state;
+    final locationState = context.read<LocationCubit>().state;
     if (locationState.currentLocation != null) {
+      debugPrint('[HomeView] Location already available: ${locationState.currentLocation!.latitude}, ${locationState.currentLocation!.longitude}');
       context.read<HomeBloc>().add(
         LoadHomeData(
-          lat: locationState.currentLocation!.latitude,
-          lng: locationState.currentLocation!.longitude,
+          latitude: locationState.currentLocation!.latitude,
+          longitude: locationState.currentLocation!.longitude,
         ),
       );
+    } else {
+      debugPrint('[HomeView] Location not available in initState');
     }
+    WidgetsBinding.instance.addObserver(this);
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _scrollController.dispose();
     super.dispose();
   }
 
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      debugPrint('[HomeView] App resumed, checking location state...');
+      final locationState = context.read<LocationCubit>().state;
+      if (locationState.currentLocation == null) {
+        debugPrint('[HomeView] Location still null on resume, re-triggering getCurrentLocation');
+        context.read<LocationCubit>().getCurrentLocation();
+      }
+    }
+  }
+
   void _refreshData(BuildContext context) {
-    // We don't need to ask for location again if we have it, but for refresh we can.
-    // Actually, just triggering GetCurrentLocation will update the state, which listener will catch?
-    // Or just reload home data with current location.
-    final locationState = context.read<LocationBloc>().state;
+    final locationState = context.read<LocationCubit>().state;
     if (locationState.currentLocation != null) {
+      debugPrint('[HomeView] Refreshing data with location: ${locationState.currentLocation!.latitude}');
       context.read<HomeBloc>().add(
         LoadHomeData(
-          lat: locationState.currentLocation!.latitude,
-          lng: locationState.currentLocation!.longitude,
+          latitude: locationState.currentLocation!.latitude,
+          longitude: locationState.currentLocation!.longitude,
         ),
       );
     } else {
-      context.read<LocationBloc>().add(GetCurrentLocation());
+      debugPrint('[HomeView] Refreshing location first...');
+      context.read<LocationCubit>().getCurrentLocation();
     }
   }
 
@@ -79,6 +95,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
     final theme = Theme.of(context);
     final colors = context.dobarColors;
     final homeState = context.watch<HomeBloc>().state;
+    final locationState = context.watch<LocationCubit>().state;
     String? nearbyBarName;
     dynamic closestBar; // Will hold the BarModel
 
@@ -93,20 +110,21 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
       }
     }
 
-    return BlocListener<LocationBloc, LocationState>(
+    return BlocListener<LocationCubit, LocationState>(
       listener: (context, state) {
         if (!state.isLoading && state.currentLocation != null) {
-          // Check if we need to load/reload?
-          // For now, let's just ensure we load if HomeBloc is initial
-          final homeState = context.read<HomeBloc>().state;
-          if (homeState is HomeInitial) {
+          // Trigger load if not already loaded OR if it's the first time we get location
+          if (homeState is HomeInitial || homeState is HomeError) {
+            debugPrint('[HomeView] Location obtained or improved, triggering LoadHomeData');
             context.read<HomeBloc>().add(
               LoadHomeData(
-                lat: state.currentLocation!.latitude,
-                lng: state.currentLocation!.longitude,
+                latitude: state.currentLocation!.latitude,
+                longitude: state.currentLocation!.longitude,
               ),
             );
           }
+        } else if (state.error != null) {
+          debugPrint('[HomeView] Location state has error: ${state.error}');
         }
       },
       child: Scaffold(
@@ -284,29 +302,39 @@ class _HomeConnectedViewState extends State<HomeConnectedView> {
                 top: 0,
                 left: 0,
                 right: 0,
-                child: HomeConnectedHeader(
-                  nearbyBarName: nearbyBarName,
-                  unreadNotifications:
-                      homeState is HomeLoaded
-                          ? homeState.data.userStatus?.unreadNotifications ?? 0
-                          : 0,
-                  onBarTap: () {
-                    // Navigate to check-in page and pass the bar object via extra
-                    if (closestBar != null) {
-                      try {
-                        final barModel = closestBar.toBarModel();
-                        debugPrint('[Home] Navigating to check-in with bar: ${barModel.id}');
-                        AppRoute.checkin.push(context, extra: barModel);
-                      } catch (e) {
-                        debugPrint('[Home] Error converting bar to BarModel: $e');
-                        // Fallback: just go to check-in page without specific bar
-                        AppRoute.checkin.push(context);
-                      }
-                    } else {
-                      AppRoute.checkin.push(context);
-                    }
-                  },
-                  onNotificationTap: () => AppRoute.notifications.push(context),
+                child: Column(
+                  children: [
+                    HomeConnectedHeader(
+                      nearbyBarName: nearbyBarName,
+                      unreadNotifications:
+                          homeState is HomeLoaded
+                              ? homeState.data.userStatus?.unreadNotifications ?? 0
+                              : 0,
+                      onBarTap: () {
+                        // Navigate to check-in page and pass the bar object via extra
+                        if (closestBar != null) {
+                          try {
+                            final barModel = closestBar.toBarModel();
+                            debugPrint('[Home] Navigating to check-in with bar: ${barModel.id}');
+                            AppRoute.checkin.push(context, extra: barModel);
+                          } catch (e) {
+                            debugPrint('[Home] Error converting bar to BarModel: $e');
+                            // Fallback: just go to check-in page without specific bar
+                            AppRoute.checkin.push(context);
+                          }
+                        } else {
+                          AppRoute.checkin.push(context);
+                        }
+                      },
+                      onNotificationTap: () => AppRoute.notifications.push(context),
+                    ),
+                    if (locationState.currentLocation == null)
+                      LocationPermissionAlert(
+                        error: locationState.error,
+                        isLoading: locationState.isLoading,
+                        onGrant: () => context.read<LocationCubit>().getCurrentLocation(),
+                      ),
+                  ],
                 ),
               ),
             ],

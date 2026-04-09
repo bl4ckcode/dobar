@@ -4,7 +4,7 @@ import '../../domain/models/home_model.dart';
 import 'package:barz/core/api/api_endpoints.dart';
 
 abstract class HomeDatasource {
-  Future<HomeModel> getHomeData({double? lat, double? lng});
+  Future<HomeModel> getHomeData({double? latitude, double? longitude});
 }
 
 class HomeDatasourceImpl implements HomeDatasource {
@@ -13,10 +13,10 @@ class HomeDatasourceImpl implements HomeDatasource {
   HomeDatasourceImpl({required this.dio});
 
   @override
-  Future<HomeModel> getHomeData({double? lat, double? lng}) async {
+  Future<HomeModel> getHomeData({double? latitude, double? longitude}) async {
     final queryParams = <String, dynamic>{};
-    if (lat != null) queryParams['lat'] = lat;
-    if (lng != null) queryParams['lng'] = lng;
+    if (latitude != null) queryParams['latitude'] = latitude;
+    if (longitude != null) queryParams['longitude'] = longitude;
 
     final response = await dio.get(
       ApiEndpoints.home,

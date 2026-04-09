@@ -17,7 +17,7 @@ class BarsPage extends StatelessWidget {
     return BlocProvider(
       create: (_) =>
           getItInjector<BarBloc>()
-            ..add(LoadNearbyBars(lat: latitude, lng: longitude)),
+            ..add(LoadNearbyBars(latitude: latitude, longitude: longitude)),
       child: Scaffold(
         appBar: AppBar(title: const Text('Nearby Bars')),
         body: BlocBuilder<BarBloc, BarState>(

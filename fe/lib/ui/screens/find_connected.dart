@@ -14,14 +14,13 @@ import 'package:barz/features/bars/presentation/bloc/bar_event.dart';
 import 'package:barz/features/bars/domain/models/bar_model.dart';
 import 'package:barz/features/promotions/presentation/bloc/promotions_bloc.dart';
 
-import 'package:barz/features/location/presentation/bloc/location_bloc.dart';
-import 'package:barz/features/location/presentation/bloc/location_event.dart';
+import 'package:barz/features/location/presentation/bloc/location_cubit.dart';
 import 'package:barz/features/location/presentation/bloc/location_state.dart';
 import 'package:barz/shared/presentation/widget/bar_image.dart';
 import 'package:barz/core/utils/marker_generator.dart';
+import 'package:barz/core/design/components/location_permission_alert.dart';
 
-const double _defaultLat = -23.5505;
-const double _defaultLng = -46.6333;
+
 
 const String _darkMapStyle = '''
 [
@@ -80,10 +79,7 @@ class FindConnected extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider(
-          create: (_) =>
-              getItInjector<LocationBloc>()..add(GetCurrentLocation()),
-        ),
+        // LocationCubit is provided by WireframeShell
         BlocProvider(create: (_) => getItInjector<BarBloc>()),
         BlocProvider(create: (_) => getItInjector<PromotionsBloc>()),
       ],
@@ -100,7 +96,7 @@ class FindConnectedView extends StatefulWidget {
 }
 
 class _FindConnectedViewState extends State<FindConnectedView>
-    with SingleTickerProviderStateMixin {
+    with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final TextEditingController _searchController = TextEditingController();
   final Completer<GoogleMapController> _mapController = Completer();
   bool _showListPanel = false;
@@ -133,18 +129,24 @@ class _FindConnectedViewState extends State<FindConnectedView>
     );
 
     _searchController.addListener(_onSearchChanged);
+    WidgetsBinding.instance.addObserver(this);
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        final locationState = context.read<LocationBloc>().state;
+        final locationState = context.read<LocationCubit>().state;
         final barBloc = context.read<BarBloc>();
         final barState = barBloc.state;
 
         // Ensure bars are loaded
         if (barState is! BarsLoaded && barState is! BarLoading) {
-          final lat = locationState.currentLocation?.latitude ?? _defaultLat;
-          final lng = locationState.currentLocation?.longitude ?? _defaultLng;
-          barBloc.add(LoadNearbyBars(lat: lat, lng: lng));
+          if (locationState.currentLocation != null) {
+            final lat = locationState.currentLocation!.latitude;
+            final lng = locationState.currentLocation!.longitude;
+            debugPrint('[FindView] Location available in init, loading bars');
+            barBloc.add(LoadNearbyBars(latitude: lat, longitude: lng));
+          } else {
+            debugPrint('[FindView] Location not available in init');
+          }
         }
 
         if (barState is BarsLoaded) {
@@ -157,10 +159,23 @@ class _FindConnectedViewState extends State<FindConnectedView>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
     _panelAnimController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      debugPrint('[FindView] App resumed, checking location state...');
+      final locationState = context.read<LocationCubit>().state;
+      if (locationState.currentLocation == null) {
+        debugPrint('[FindView] Location still null on resume, re-triggering getCurrentLocation');
+        context.read<LocationCubit>().getCurrentLocation();
+      }
+    }
   }
 
   void _onSearchChanged() {
@@ -232,11 +247,11 @@ class _FindConnectedViewState extends State<FindConnectedView>
   }
 
   // void _refreshData(BuildContext context) {
-  //   final locationState = context.read<LocationBloc>().state;
+  //   final locationState = context.read<LocationCubit>().state;
   //   final lat = locationState.currentLocation?.latitude ?? _defaultLat;
   //   final lng = locationState.currentLocation?.longitude ?? _defaultLng;
 
-  //   context.read<LocationBloc>().add(GetCurrentLocation());
+  //   context.read<LocationCubit>().getCurrentLocation();
   //   context.read<BarBloc>().add(LoadNearbyBars(lat: lat, lng: lng));
   //   context.read<PromotionsBloc>().add(
   //     LoadPromotions(latitude: lat, longitude: lng),
@@ -245,6 +260,122 @@ class _FindConnectedViewState extends State<FindConnectedView>
 
   Future<void> _onMapCreated(GoogleMapController controller) async {
     _mapController.complete(controller);
+  }
+
+  void _showBarsAtLocationSheet(List<BarModel> bars) {
+    final colors = context.dobarColors;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.7,
+        ),
+        padding: const EdgeInsets.all(BarzSpacing.lg),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          borderRadius: const BorderRadius.vertical(
+            top: Radius.circular(BarzRadii.xl),
+          ),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: colors.surfaceElevated,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: BarzSpacing.lg),
+            Text(
+              '${bars.length} Bars at this location',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: colors.labelPrimary,
+              ),
+            ),
+            const SizedBox(height: BarzSpacing.lg),
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                padding: EdgeInsets.zero,
+                itemCount: bars.length,
+                separatorBuilder: (ctx, idx) => Divider(
+                  color: colors.surfaceElevated.withValues(alpha: 0.3),
+                  height: 24,
+                ),
+                itemBuilder: (ctx, idx) {
+                  final bar = bars[idx];
+                  return InkWell(
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      _showBarBottomSheet(bar);
+                    },
+                    child: Row(
+                      children: [
+                        BarImage(
+                          barId: bar.id,
+                          imageUrl: bar.imageUrl,
+                          imageUrlExpiration: bar.imageUrlExpiration,
+                          width: 48,
+                          height: 48,
+                          borderRadius: BorderRadius.circular(BarzRadii.sm),
+                          errorWidget: Container(
+                            width: 48,
+                            height: 48,
+                            decoration: BoxDecoration(
+                              color: colors.surfaceElevated,
+                              borderRadius: BorderRadius.circular(BarzRadii.sm),
+                            ),
+                            child: Icon(Icons.store, color: colors.labelSecondary, size: 20),
+                          ),
+                        ),
+                        const SizedBox(width: BarzSpacing.md),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                bar.name,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                  color: colors.labelPrimary,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                bar.address,
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: colors.labelSecondary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(
+                          Icons.chevron_right,
+                          color: colors.labelSecondary,
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: BarzSpacing.md),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showBarBottomSheet(BarModel bar) {
@@ -384,7 +515,7 @@ class _FindConnectedViewState extends State<FindConnectedView>
       _selectedDestinationBar = bar;
     });
 
-    final locationState = context.read<LocationBloc>().state;
+    final locationState = context.read<LocationCubit>().state;
     final userLoc = locationState.currentLocation;
 
     if (userLoc != null && bar.latitude != null && bar.longitude != null) {
@@ -599,19 +730,30 @@ class _FindConnectedViewState extends State<FindConnectedView>
   @override
   Widget build(BuildContext context) {
     final colors = context.dobarColors;
+    final locationState = context.watch<LocationCubit>().state;
 
     return Scaffold(
       backgroundColor: colors.background,
-      body: BlocListener<LocationBloc, LocationState>(
+      body: BlocListener<LocationCubit, LocationState>(
         listener: (context, state) {
           if (state.currentLocation != null) {
             final lat = state.currentLocation!.latitude;
             final lng = state.currentLocation!.longitude;
+            debugPrint('[FindView] Location obtained: $lat, $lng');
             _mapController.future.then((controller) {
               controller.animateCamera(
                 CameraUpdate.newLatLng(LatLng(lat, lng)),
               );
             });
+
+            // Also trigger bars load if not already loading/loaded
+            final barBloc = context.read<BarBloc>();
+            if (barBloc.state is BarInitial || barBloc.state is BarError) {
+              debugPrint('[FindView] Triggering LoadNearbyBars');
+              barBloc.add(LoadNearbyBars(latitude: lat, longitude: lng));
+            }
+          } else if (state.error != null) {
+            debugPrint('[FindView] Location state has error: ${state.error}');
           }
         },
         child: Stack(
@@ -654,6 +796,19 @@ class _FindConnectedViewState extends State<FindConnectedView>
                   ).animate().fadeIn().slideY(begin: 1, end: 0),
                 ),
               ),
+
+            // Location Permission Alert
+            if (locationState.currentLocation == null)
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 16,
+                left: 16,
+                right: 16,
+                child: LocationPermissionAlert(
+                  error: locationState.error,
+                  isLoading: locationState.isLoading,
+                  onGrant: () => context.read<LocationCubit>().getCurrentLocation(),
+                ),
+              ),
           ],
         ),
       ),
@@ -661,9 +816,12 @@ class _FindConnectedViewState extends State<FindConnectedView>
   }
 
   Widget _buildMap(BuildContext context) {
-    final locationState = context.watch<LocationBloc>().state;
-    final lat = locationState.currentLocation?.latitude ?? _defaultLat;
-    final lng = locationState.currentLocation?.longitude ?? _defaultLng;
+    final locationState = context.watch<LocationCubit>().state;
+    const double defaultLat = -23.5505; // São Paulo
+    const double defaultLng = -46.6333;
+
+    final lat = locationState.currentLocation?.latitude ?? defaultLat;
+    final lng = locationState.currentLocation?.longitude ?? defaultLng;
 
     return BlocConsumer<BarBloc, BarState>(
       listener: (context, state) {
@@ -708,11 +866,7 @@ class _FindConnectedViewState extends State<FindConnectedView>
                     title: '${barsAtPos.length} Bars here',
                     snippet: barsAtPos.map((b) => b.name).join(', '),
                   ),
-                  onTap: () {
-                    // Show a list or just the first one? 
-                    // Best is to show the first one but maybe with a hint?
-                    _showBarBottomSheet(barsAtPos.first);
-                  },
+                  onTap: () => _showBarsAtLocationSheet(barsAtPos),
                 ),
               );
             }
@@ -749,9 +903,13 @@ class _FindConnectedViewState extends State<FindConnectedView>
       child: FloatingActionButton.small(
         heroTag: 'location_fab',
         onPressed: () async {
-          final locationState = context.read<LocationBloc>().state;
-          final lat = locationState.currentLocation?.latitude ?? _defaultLat;
-          final lng = locationState.currentLocation?.longitude ?? _defaultLng;
+          final locationState = context.read<LocationCubit>().state;
+          if (locationState.currentLocation == null) {
+            context.read<LocationCubit>().getCurrentLocation();
+            return;
+          }
+          final lat = locationState.currentLocation!.latitude;
+          final lng = locationState.currentLocation!.longitude;
           final controller = await _mapController.future;
           controller.animateCamera(
             CameraUpdate.newLatLngZoom(LatLng(lat, lng), 15),

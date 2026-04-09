@@ -22,4 +22,6 @@ abstract class LocationRepository {
   Future<Either<Failure, String>> getAppleMapsDeepLink(
     LocationModel destination,
   );
+  Future<Either<Failure, void>> openAppSettings(); // Added
+  Future<Either<Failure, bool>> isLocationPermissionPermanentlyDenied(); // Added
 }

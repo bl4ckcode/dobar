@@ -183,7 +183,6 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
             backgroundColor: colors.background,
             child: Stack(
               children: [
-                _NoiseOverlay(isDark: isDark),
                 _GhostCocktail(isDark: isDark),
                 SafeArea(
                   child: LayoutBuilder(
@@ -282,24 +281,6 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   }
 }
 
-class _NoiseOverlay extends StatelessWidget {
-  final bool isDark;
-  const _NoiseOverlay({required this.isDark});
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned.fill(
-      child: Opacity(
-        opacity: isDark ? 0.06 : 0.03,
-        child: Image.asset(
-          'assets/icons/noise-texture.png',
-          repeat: ImageRepeat.repeat,
-          errorBuilder: (_, e, s) => const SizedBox.shrink(),
-        ),
-      ),
-    );
-  }
-}
 
 class _GhostCocktail extends StatelessWidget {
   final bool isDark;

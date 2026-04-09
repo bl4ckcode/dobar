@@ -14,11 +14,11 @@ class HomeRepositoryImpl implements HomeRepository {
 
   @override
   Future<Either<Failure, HomeModel>> getHomeData({
-    double? lat,
-    double? lng,
+    double? latitude,
+    double? longitude,
   }) async {
     try {
-      final result = await datasource.getHomeData(lat: lat, lng: lng);
+      final result = await datasource.getHomeData(latitude: latitude, longitude: longitude);
       return Right(result);
     } on DioException catch (e) {
       return Left(

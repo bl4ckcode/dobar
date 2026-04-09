@@ -1,9 +1,12 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:barz/core/api/api_endpoints.dart';
 import 'package:barz/core/network/exceptions.dart';
 import 'package:barz/features/location/domain/models/location_model.dart';
 import 'package:barz/features/location/domain/models/partner_proximity.dart';
 import 'package:dio/dio.dart';
 import 'package:location/location.dart';
+import 'package:permission_handler/permission_handler.dart' as ph;
 
 abstract class LocationDatasource {
   Future<LocationModel> getCurrentLocation();
@@ -17,6 +20,8 @@ abstract class LocationDatasource {
   });
   Future<void> updateUserLocation(LocationModel location);
   Stream<LocationModel> getLocationStream();
+  Future<void> openAppSettings(); // Added
+  Future<bool> isLocationPermissionPermanentlyDenied(); // Added
   String getWazeDeepLink(LocationModel destination);
   String getGoogleMapsDeepLink(LocationModel destination);
   String getAppleMapsDeepLink(LocationModel destination);
@@ -32,6 +37,7 @@ class LocationDatasourceImpl implements LocationDatasource {
   Future<LocationModel> getCurrentLocation() async {
     // Check if location services are enabled first
     final serviceEnabled = await _location.serviceEnabled();
+    debugPrint('[LocationDatasource] Service enabled: $serviceEnabled');
     if (!serviceEnabled) {
       throw Exception(
         "Location services are disabled. Please enable location services in Settings.",
@@ -40,6 +46,7 @@ class LocationDatasourceImpl implements LocationDatasource {
 
     // Check permission again just to be sure
     final permissionGranted = await _location.hasPermission();
+    debugPrint('[LocationDatasource] Permission status: $permissionGranted');
     if (permissionGranted == PermissionStatus.denied ||
         permissionGranted == PermissionStatus.deniedForever) {
       throw Exception(
@@ -47,36 +54,69 @@ class LocationDatasourceImpl implements LocationDatasource {
       );
     }
 
-    // Add timeout to prevent hanging
-    final locationData = await _location.getLocation().timeout(
-      const Duration(seconds: 10),
-      onTimeout: () {
-        throw Exception(
-          "Location request timed out. Please check your location settings.",
-        );
-      },
-    );
-
-    // Validate that we got actual coordinates
-    if (locationData.latitude == null || locationData.longitude == null) {
-      throw Exception(
-        "Invalid location data received: latitude or longitude is null",
+    try {
+      final timeoutDuration = kDebugMode ? const Duration(seconds: 5) : const Duration(seconds: 15);
+      debugPrint('[LocationDatasource] Fetch started (timeout: ${timeoutDuration.inSeconds}s)...');
+      
+      // -- NEW PARALLEL FETCH --
+      // Race: Primary poll vs Stream event. First one wins.
+      final locationData = await Future.any([
+        _location.getLocation(),
+        _location.onLocationChanged.first,
+      ]).timeout(
+        timeoutDuration,
+        onTimeout: () {
+          debugPrint('[LocationDatasource] Both fetch attempts timed out');
+          throw TimeoutException("Location request timed out after ${timeoutDuration.inSeconds}s.");
+        },
       );
-    }
 
-    return LocationModel(
-      latitude: locationData.latitude!,
-      longitude: locationData.longitude!,
-      accuracy: locationData.accuracy,
-      altitude: locationData.altitude,
-      speed: locationData.speed,
-      timestamp: DateTime.now(),
-    );
+      debugPrint('[LocationDatasource] Location received: ${locationData.latitude}, ${locationData.longitude}');
+      
+      if (locationData.latitude == null || locationData.longitude == null) {
+        throw Exception("Invalid coordinates received from system");
+      }
+
+      return LocationModel(
+        latitude: locationData.latitude!,
+        longitude: locationData.longitude!,
+        accuracy: locationData.accuracy,
+        altitude: locationData.altitude,
+        speed: locationData.speed,
+        timestamp: DateTime.now(),
+      );
+    } catch (e) {
+      debugPrint('[LocationDatasource] Final location fetch attempt failed: $e');
+      
+      // -- DEBUG FALLBACK --
+      if (kDebugMode) {
+        debugPrint('[LocationDatasource] ⚠️ FALLBACK: Simulator/Device timed out. Providing mock São Paulo location for development.');
+        return LocationModel(
+          latitude: -23.5505, // São Paulo Center
+          longitude: -46.6333,
+          accuracy: 10.0,
+          altitude: 0.0,
+          speed: 0.0,
+          timestamp: DateTime.now(),
+        );
+      }
+
+      if (e is TimeoutException) {
+        throw Exception("Location request timed out. Please check your iOS Simulator > Features > Location settings.");
+      }
+      rethrow;
+    }
   }
 
   @override
   Future<bool> requestLocationPermission() async {
     final permission = await _location.requestPermission();
+    if (permission == PermissionStatus.deniedForever) {
+      // If it's denied forever, the dialog won't show.
+      // We might want to throw a specific error or just return false.
+      // The Bloc will handle it.
+      return false;
+    }
     return permission == PermissionStatus.granted ||
         permission == PermissionStatus.grantedLimited;
   }
@@ -138,6 +178,17 @@ class LocationDatasourceImpl implements LocationDatasource {
         e.response?.statusCode,
       );
     }
+  }
+
+  @override
+  Future<void> openAppSettings() async {
+    await ph.openAppSettings();
+  }
+
+  @override
+  Future<bool> isLocationPermissionPermanentlyDenied() async {
+    final status = await ph.Permission.location.status;
+    return status.isPermanentlyDenied;
   }
 
   @override

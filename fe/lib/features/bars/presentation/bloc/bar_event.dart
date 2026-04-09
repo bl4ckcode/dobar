@@ -8,18 +8,18 @@ abstract class BarEvent extends Equatable {
 }
 
 class LoadNearbyBars extends BarEvent {
-  final double lat;
-  final double lng;
+  final double latitude;
+  final double longitude;
   final double maxDistance;
 
   const LoadNearbyBars({
-    required this.lat,
-    required this.lng,
+    required this.latitude,
+    required this.longitude,
     this.maxDistance = 250000,
   });
 
   @override
-  List<Object?> get props => [lat, lng, maxDistance];
+  List<Object?> get props => [latitude, longitude, maxDistance];
 }
 
 class LoadBar extends BarEvent {

@@ -64,6 +64,14 @@ class LocationUsecase {
     return _repository.getAppleMapsDeepLink(destination);
   }
 
+  Future<Either<Failure, void>> openAppSettings() {
+    return _repository.openAppSettings();
+  }
+
+  Future<Either<Failure, bool>> isLocationPermissionPermanentlyDenied() {
+    return _repository.isLocationPermissionPermanentlyDenied();
+  }
+
   bool isWithinProximity(double distance) {
     return distance <= proximityThreshold;
   }

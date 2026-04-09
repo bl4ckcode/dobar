@@ -18,8 +18,8 @@ class BarBloc extends Bloc<BarEvent, BarState> {
   ) async {
     emit(BarLoading());
     final result = await barUsecase.getNearbyBars(
-      event.lat,
-      event.lng,
+      event.latitude,
+      event.longitude,
       event.maxDistance,
     );
     result.fold(

@@ -6,8 +6,8 @@ import 'package:dartz/dartz.dart';
 
 abstract class AbstractBarRepository {
   Future<Either<Failure, List<BarModel>>> getNearbyBars(
-    double lat,
-    double lng,
+    double latitude,
+    double longitude,
     double maxDistance,
   );
   Future<Either<Failure, BarModel>> getBar(int barId);

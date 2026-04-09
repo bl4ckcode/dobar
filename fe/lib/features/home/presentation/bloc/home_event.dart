@@ -4,6 +4,6 @@ part 'home_event.freezed.dart';
 
 @freezed
 sealed class HomeEvent with _$HomeEvent {
-  const factory HomeEvent.loadHomeData({double? lat, double? lng}) =
+  const factory HomeEvent.loadHomeData({double? latitude, double? longitude}) =
       LoadHomeData;
 }

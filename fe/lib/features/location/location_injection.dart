@@ -4,7 +4,7 @@ import 'package:barz/features/location/data/datasources/location_datasource.dart
 import 'package:barz/features/location/data/repositories/location_repository_impl.dart';
 import 'package:barz/features/location/domain/repositories/location_repository.dart';
 import 'package:barz/features/location/domain/usecases/location_usecase.dart';
-import 'package:barz/features/location/presentation/bloc/location_bloc.dart';
+import 'package:barz/features/location/presentation/bloc/location_cubit.dart';
 
 void initLocationInjection() {
   getItInjector.registerLazySingleton<LocationDatasource>(
@@ -19,7 +19,7 @@ void initLocationInjection() {
     () => LocationUsecase(getItInjector<LocationRepository>()),
   );
 
-  getItInjector.registerFactory<LocationBloc>(
-    () => LocationBloc(getItInjector<LocationUsecase>()),
+  getItInjector.registerLazySingleton<LocationCubit>(
+    () => LocationCubit(getItInjector<LocationUsecase>()),
   );
 }

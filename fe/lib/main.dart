@@ -12,6 +12,7 @@ import 'core/router/app_router.dart';
 import 'core/theme/theme_cubit.dart';
 import 'l10n/app_localizations.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:barz/features/location/presentation/bloc/location_cubit.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -63,8 +64,11 @@ class DobarAppState extends State<DobarApp> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => getItInjector<ThemeCubit>(),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => getItInjector<ThemeCubit>()),
+        BlocProvider(create: (_) => getItInjector<LocationCubit>()),
+      ],
       child: BlocBuilder<ThemeCubit, ThemeMode>(
         builder: (context, themeMode) {
           return MaterialApp.router(

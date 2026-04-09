@@ -15,14 +15,14 @@ class BarRepositoryImpl extends AbstractBarRepository {
 
   @override
   Future<Either<Failure, List<BarModel>>> getNearbyBars(
-    double lat,
-    double lng,
+    double latitude,
+    double longitude,
     double maxDistance,
   ) async {
     try {
       final result = await networkDataSource.getNearbyBars(
-        lat,
-        lng,
+        latitude,
+        longitude,
         maxDistance,
       );
       if (kDebugMode) {

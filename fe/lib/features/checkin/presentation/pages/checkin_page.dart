@@ -10,9 +10,9 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/core/design/tokens/dobar_colors.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:location/location.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:barz/features/bars/domain/models/bar_model.dart';
+import 'package:barz/features/location/presentation/bloc/location_cubit.dart';
 
 class CheckinPage extends StatelessWidget {
   final BarModel? initialBar;
@@ -126,13 +126,9 @@ class _InitialViewState extends State<_InitialView> {
   }
 
   Future<void> _checkPermissionAndLoad() async {
-    final location = Location();
-    final hasPermission = await location.hasPermission();
-    if (hasPermission == PermissionStatus.granted) {
-      final serviceEnabled = await location.serviceEnabled();
-      if (serviceEnabled && mounted) {
-        _findNearbyBars(context);
-      }
+    final locationState = context.read<LocationCubit>().state;
+    if (locationState.hasPermission && locationState.currentLocation != null) {
+      _findNearbyBars(context);
     }
   }
 
@@ -306,47 +302,26 @@ class _InitialViewState extends State<_InitialView> {
   }
 
   Future<void> _findNearbyBars(BuildContext context) async {
-    final location = Location();
+    final locationCubit = context.read<LocationCubit>();
 
-    var serviceEnabled = await location.serviceEnabled();
-    if (!serviceEnabled) {
-      serviceEnabled = await location.requestService();
-      if (!serviceEnabled) return;
-    }
-
-    var permission = await location.hasPermission();
-    if (permission == PermissionStatus.denied) {
-      permission = await location.requestPermission();
-      if (permission != PermissionStatus.granted) return;
-    }
-
-    final locationData = await location.getLocation().catchError((e) {
+    try {
+      await locationCubit.getCurrentLocation();
+      final locationData = locationCubit.state.currentLocation;
+      
+      if (locationData != null && context.mounted) {
+        context.read<CheckinBloc>().add(
+          FindNearbyBars(
+            latitude: locationData.latitude,
+            longitude: locationData.longitude,
+          ),
+        );
+      }
+    } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error getting location: $e'),
             backgroundColor: Colors.redAccent,
-          ),
-        );
-      }
-      return LocationData.fromMap({});
-    });
-
-    if (locationData.latitude != null && locationData.longitude != null) {
-      if (context.mounted) {
-        context.read<CheckinBloc>().add(
-          FindNearbyBars(
-            latitude: locationData.latitude!,
-            longitude: locationData.longitude!,
-          ),
-        );
-      }
-    } else {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Could not determine your location. Please check settings.'),
-            backgroundColor: Colors.orangeAccent,
           ),
         );
       }

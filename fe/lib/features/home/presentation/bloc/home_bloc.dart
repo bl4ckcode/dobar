@@ -15,7 +15,7 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     Emitter<HomeState> emit,
   ) async {
     emit(const HomeState.loading());
-    final result = await repository.getHomeData(lat: event.lat, lng: event.lng);
+    final result = await repository.getHomeData(latitude: event.latitude, longitude: event.longitude);
     result.fold(
       (failure) =>
           emit(HomeState.error(message: failure.message ?? 'Unknown error')),

@@ -4,9 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/core/utils/injections.dart';
-import 'package:barz/features/location/presentation/bloc/location_bloc.dart';
-import 'package:barz/features/location/presentation/bloc/location_event.dart';
-import 'package:barz/features/location/presentation/bloc/location_state.dart';
+import 'package:barz/features/location/presentation/bloc/location_cubit.dart';
 import 'package:barz/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:barz/features/cart/presentation/bloc/cart_state.dart';
 import '../screens/home_connected.dart';
@@ -44,125 +42,107 @@ class _WireframeShellState extends State<WireframeShell> {
     });
   }
 
-  void _loadDataWithLocation(
-    BuildContext context,
-    LocationState locationState,
-  ) {
-    // Legacy data loading removed in favor of HomeBloc in HomeConnected
-  }
-
   @override
   Widget build(BuildContext context) {
-    return MultiBlocProvider(
-      providers: [
-        BlocProvider(
-          create: (_) =>
-              getItInjector<LocationBloc>()..add(GetCurrentLocation()),
+    // Ensure location is being fetched if this is the first time we reach the shell
+    final locationState = context.watch<LocationCubit>().state;
+    if (locationState.currentLocation == null && !locationState.isLoading) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          context.read<LocationCubit>().getCurrentLocation();
+        }
+      });
+    }
+
+    return BlocProvider.value(
+      value: getItInjector<CartBloc>(),
+      child: Scaffold(
+        extendBody: true,
+        body: IndexedStack(index: _selectedIndex, children: _pages),
+        floatingActionButton: _CenterDockedFab(
+          onPressed: () => AppRoute.checkin.push(context),
         ),
-        BlocProvider.value(value: getItInjector<CartBloc>()),
-      ],
-      child: BlocListener<LocationBloc, LocationState>(
-        listener: (context, state) {
-          if (!state.isLoading) {
-            _loadDataWithLocation(context, state);
-          }
-        },
-        child: Scaffold(
-          extendBody: true,
-          body: Stack(
+        floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+        bottomNavigationBar: BottomAppBar(
+          height: _NavBarMetrics.barHeight,
+          color: barzDark,
+          shape: const CircularNotchedRectangle(),
+          notchMargin: _NavBarMetrics.notchMargin,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              IndexedStack(index: _selectedIndex, children: _pages),
-            ],
-          ),
-          floatingActionButton: _CenterDockedFab(
-            onPressed: () => AppRoute.checkin.push(context),
-          ),
-          floatingActionButtonLocation:
-              FloatingActionButtonLocation.centerDocked,
-          bottomNavigationBar: BottomAppBar(
-            height: _NavBarMetrics.barHeight,
-            color: barzDark,
-            shape: const CircularNotchedRectangle(),
-            notchMargin: _NavBarMetrics.notchMargin,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _NavItem(
-                  icon: Icons.home_outlined,
-                  selectedIcon: Icons.home,
-                  label: 'Home',
-                  isSelected: _selectedIndex == 0,
-                  onTap: () => _onItemTapped(0),
-                ),
-                _NavItem(
-                  icon: Icons.search_outlined,
-                  selectedIcon: Icons.search,
-                  label: 'Find',
-                  isSelected: _selectedIndex == 1,
-                  onTap: () => _onItemTapped(1),
-                ),
-                SizedBox(width: _NavBarMetrics.notchWidth),
-                BlocBuilder<CartBloc, CartState>(
-                  builder: (context, state) {
-                    final itemCount = (state is CartLoaded)
-                        ? state.cart.items.length
-                        : 0;
-                    return Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        _NavItem(
-                          icon: Icons.shopping_cart_outlined,
-                          selectedIcon: Icons.shopping_cart,
-                          label: 'Cart',
-                          isSelected: _selectedIndex == 2,
-                          onTap: () => _onItemTapped(2),
-                        ),
-                        if (itemCount > 0)
-                          Positioned(
-                            top: 4,
-                            right: 4,
-                            child:
-                                Container(
-                                      padding: const EdgeInsets.all(4),
-                                      decoration: const BoxDecoration(
-                                        color: Colors.deepOrange,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Text(
-                                        itemCount > 9
-                                            ? '9+'
-                                            : itemCount.toString(),
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    )
-                                    .animate(
-                                      onPlay: (controller) =>
-                                          controller.repeat(reverse: true),
-                                    )
-                                    .scale(
-                                      begin: const Offset(1, 1),
-                                      end: const Offset(1.2, 1.2),
-                                      duration: 1000.ms,
-                                      curve: Curves.easeInOut,
+              _NavItem(
+                icon: Icons.home_outlined,
+                selectedIcon: Icons.home,
+                label: 'Home',
+                isSelected: _selectedIndex == 0,
+                onTap: () => _onItemTapped(0),
+              ),
+              _NavItem(
+                icon: Icons.search_outlined,
+                selectedIcon: Icons.search,
+                label: 'Find',
+                isSelected: _selectedIndex == 1,
+                onTap: () => _onItemTapped(1),
+              ),
+              SizedBox(width: _NavBarMetrics.notchWidth),
+              BlocBuilder<CartBloc, CartState>(
+                builder: (context, state) {
+                  final itemCount =
+                      (state is CartLoaded) ? state.cart.items.length : 0;
+                  return Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      _NavItem(
+                        icon: Icons.shopping_cart_outlined,
+                        selectedIcon: Icons.shopping_cart,
+                        label: 'Cart',
+                        isSelected: _selectedIndex == 2,
+                        onTap: () => _onItemTapped(2),
+                      ),
+                      if (itemCount > 0)
+                        Positioned(
+                          top: 4,
+                          right: 4,
+                          child:
+                              Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.deepOrange,
+                                      shape: BoxShape.circle,
                                     ),
-                          ),
-                      ],
-                    );
-                  },
-                ),
-                _NavItem(
-                  icon: Icons.person_outline,
-                  selectedIcon: Icons.person,
-                  label: 'Profile',
-                  isSelected: _selectedIndex == 3,
-                  onTap: () => _onItemTapped(3),
-                ),
-              ],
-            ),
+                                    child: Text(
+                                      itemCount > 9 ? '9+' : itemCount.toString(),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  )
+                                  .animate(
+                                    onPlay: (controller) =>
+                                        controller.repeat(reverse: true),
+                                  )
+                                  .scale(
+                                    begin: const Offset(1, 1),
+                                    end: const Offset(1.2, 1.2),
+                                    duration: 1000.ms,
+                                    curve: Curves.easeInOut,
+                                  ),
+                        ),
+                    ],
+                  );
+                },
+              ),
+              _NavItem(
+                icon: Icons.person_outline,
+                selectedIcon: Icons.person,
+                label: 'Profile',
+                isSelected: _selectedIndex == 3,
+                onTap: () => _onItemTapped(3),
+              ),
+            ],
           ),
         ),
       ),
