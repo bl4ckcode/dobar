@@ -205,8 +205,8 @@ async def get_profile(current_user: AuthUser = Depends(get_current_user)):
         privacy_accepted=profile.get("privacy_accepted", False) or False,
         user_type=profile.get("user_type", "client") or "client",
         country_code=profile.get("country_code"),
-        subscription_tier=user.get("subscription_tier", "regular") if user else "regular",
-        is_pro=user.get("subscription_tier") == "pro" if user else False
+        subscription_tier=(dict(user).get("subscription_tier") or "regular") if user else "regular",
+        is_pro=dict(user).get("subscription_tier") == "pro" if user else False
     )
 
 
