@@ -219,8 +219,17 @@ async def get_bars_by_ids(bars_info: list[dict]):
                 bar_dict.update(extra_data[b_id])
             merged_results.append(bar_dict)
     
+    # Sort: Premium bars first (master, vip, pro), then by distance (approximateLocation)
+    tier_weights = {"master": 0, "vip": 1, "pro": 2, "regular": 3}
+    merged_results.sort(
+        key=lambda x: (
+            tier_weights.get(x.get("subscription_tier"), 3),
+            x.get("approximateLocation", 0)
+        )
+    )
+    
     # Trace for debugging
-    print(f"DEBUG: get_bars_by_ids: Matched {len(merged_results)}/{len(bars_info)} bars from Mongo into Postgres")
+    print(f"DEBUG: get_bars_by_ids: Matched {len(merged_results)}/{len(bars_info)} bars, PRO first.")
     
     return merged_results
 
@@ -280,8 +289,8 @@ async def create_bar_wizard(bar_data: BarCreate, current_user: User = Depends(ge
     
     existing_owner = await get_bar_owner_by_id(current_user.id)
     if not existing_owner:
-        user_email = current_user.email if hasattr(current_user, 'email') else current_user["email"] if "email" in dict(current_user._mapping) else None
-        user_phone = current_user.phone_number if hasattr(current_user, 'phone_number') else current_user["phone_number"] if "phone_number" in dict(current_user._mapping) else None
+        user_email = current_user.email
+        user_phone = current_user.phone_number
         owner_insert = {
             "id": current_user.id,
             "name": data.get("name", "Bar Owner"),

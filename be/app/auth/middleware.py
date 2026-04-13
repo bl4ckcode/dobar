@@ -21,113 +21,37 @@ SECRET_KEY = os.getenv("SECRET_KEY", "fallback-secret-key")
 ALGORITHM = "HS256"
 
 
+from .rbac_middleware import AuthUser, get_current_user as get_rbac_user, get_optional_user as get_rbac_optional_user
+
 async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security)
-) -> User:
-    """
-    Dependency to get the current authenticated user from JWT token.
-    
-    Args:
-        credentials: HTTP Authorization credentials containing the Bearer token
-        
-    Returns:
-        User: The authenticated user
-        
-    Raises:
-        APIError: If token is invalid, expired, or user not found
-    """
-    try:
-        token = credentials.credentials
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("sub")
-        
-        if user_id is None:
-            raise APIError.invalid_token()
-            
-    except JWTError:
-        raise APIError.invalid_token()
-    
-    # Fetch user from database
-    query = User.__table__.select().where(User.id == int(user_id))
-    user = await database.fetch_one(query)
-    
-    if user is None:
-        raise APIError.user_not_found()
-        
+    user: AuthUser = Depends(get_rbac_user)
+) -> AuthUser:
+    """Re-export rbac_middleware's get_current_user for backward compatibility."""
     return user
 
 
 async def get_current_active_user(
-    current_user: User = Depends(get_current_user)
-) -> User:
+    current_user: AuthUser = Depends(get_current_user)
+) -> AuthUser:
     """
     Dependency to get the current authenticated and active user.
-    
-    Args:
-        current_user: The current user from get_current_user dependency
-        
-    Returns:
-        User: The authenticated and active user
-        
-    Raises:
-        APIError: If user is inactive
     """
-    if not current_user["is_active"]:
+    if not current_user.is_active:
         raise APIError.forbidden("User account is inactive")
     return current_user
 
 
 async def get_optional_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(
-        HTTPBearer(auto_error=False)
-    )
-) -> Optional[User]:
-    """
-    Dependency to optionally get the current user.
-    Returns None if no valid token is provided.
-    Useful for endpoints that have different behavior for authenticated vs anonymous users.
-    
-    Args:
-        credentials: Optional HTTP Authorization credentials
-        
-    Returns:
-        Optional[User]: The authenticated user or None
-    """
-    if credentials is None:
-        return None
-    
-    try:
-        token = credentials.credentials
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: str = payload.get("sub")
-        
-        if user_id is None:
-            return None
-            
-        # Fetch user from database
-        query = User.__table__.select().where(User.id == int(user_id))
-        user = await database.fetch_one(query)
-        
-        return user
-        
-    except JWTError:
-        return None
+    current_user: Optional[AuthUser] = Depends(get_rbac_optional_user)
+) -> Optional[AuthUser]:
+    """Dependency to optionally get the current user."""
+    return current_user
 
 
-def verify_user_owns_resource(user: User, resource_user_id: int) -> bool:
+def verify_user_owns_resource(user: AuthUser, resource_user_id: int) -> bool:
     """
     Helper function to verify that a user owns a specific resource.
-    
-    Args:
-        user: The current user
-        resource_user_id: The user_id of the resource owner
-        
-    Returns:
-        bool: True if user owns the resource
-        
-    Raises:
-        APIError: If user does not own the resource
     """
-    if user["id"] != resource_user_id:
+    if user.id != resource_user_id:
         raise APIError.forbidden("Not authorized to access this resource")
     return True

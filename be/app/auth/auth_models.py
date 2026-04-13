@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime
 from sqlalchemy.orm import relationship
 from ..database import Base
+from .rbac_models import ConsumerSubscriptionTier
 from datetime import datetime, timezone
 
 class User(Base):
@@ -14,6 +15,9 @@ class User(Base):
     apple_id = Column(String, unique=True, nullable=True)  # Apple ID for OAuth
     facebook_id = Column(String, unique=True, nullable=True)  # Facebook ID for OAuth
     is_active = Column(Boolean, default=True)  # Whether the user is active
+    
+    # Dobar PRO features
+    subscription_tier = Column(String(20), default=ConsumerSubscriptionTier.REGULAR.value, index=True)
     
     # Wallet relationships
     wallet = relationship("UserWallet", back_populates="user", uselist=False, cascade="all, delete-orphan")

@@ -36,6 +36,15 @@ class UserType(str, enum.Enum):
     BUSINESS = "business"       # Bar owner/staff
 
 
+class ConsumerSubscriptionTier(str, enum.Enum):
+    """
+    Subscription tiers for regular users (Dobar PRO).
+    Used for consumer-side features like priority ordering and cashback boosts.
+    """
+    REGULAR = "regular"
+    PRO = "pro"
+
+
 class BarRole(str, enum.Enum):
     """
     Roles a user can have at a specific bar.

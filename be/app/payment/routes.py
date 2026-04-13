@@ -76,7 +76,7 @@ async def create_charge(
     x_idempotency_key: Optional[str] = Header(None, alias="X-Idempotency-Key")
 ):
     if x_idempotency_key:
-        cached = await check_idempotency(x_idempotency_key, current_user["id"], "/payments/charge")
+        cached = await check_idempotency(x_idempotency_key, current_user.id, "/payments/charge")
         if cached:
             return cached
     
@@ -97,7 +97,7 @@ async def create_charge(
         )
     
     if x_idempotency_key:
-        await save_idempotency(x_idempotency_key, current_user["id"], "/payments/charge", 200, response)
+        await save_idempotency(x_idempotency_key, current_user.id, "/payments/charge", 200, response)
 
     return response
 

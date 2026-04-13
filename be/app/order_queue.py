@@ -31,11 +31,12 @@ class OrderQueue:
             return None
     
     @staticmethod
-    async def publish_new_order(order_id: int, bar_id: int, user_id: int, total: float):
+    async def publish_new_order(order_id: int, bar_id: int, user_id: int, total: float, is_priority: bool = False):
         return await OrderQueue.publish("order.created", order_id, {
             "bar_id": bar_id,
             "user_id": user_id,
             "total_price": total,
+            "is_priority": is_priority,
         })
     
     @staticmethod

@@ -8,8 +8,8 @@ from typing import List, Optional
 from decimal import Decimal
 from datetime import datetime, timedelta
 
-from app.auth.middleware import get_current_active_user
-from app.auth.auth_models import User
+from app.auth.middleware import get_optional_user
+from app.auth.rbac_middleware import get_current_user, AuthUser
 from app.errors import APIError
 from ..models.cart_models import Cart as CartModel, CartItem as CartItemModel, OrderItem as OrderItemModel
 from ..models.relational_models import Order as OrderModel
@@ -59,10 +59,10 @@ async def calculate_cart_totals(cart_id: int) -> dict:
 
 
 @cart_router.get("/", response_model=Cart)
-async def get_cart(current_user: User = Depends(get_current_active_user)):
+async def get_cart(current_user: AuthUser = Depends(get_current_user)):
     from ..services.bundle_service import get_active_bundles_for_bar, calculate_bundles_for_cart
     
-    cart = await get_or_create_cart(current_user["id"])
+    cart = await get_or_create_cart(current_user.id)
     items = await get_cart_items(cart["id"])
     totals = await calculate_cart_totals(cart["id"])
     
@@ -89,13 +89,13 @@ async def get_cart(current_user: User = Depends(get_current_active_user)):
 @cart_router.post("/calculate", response_model=Cart)
 async def calculate_cart(
     request: CartCalculateRequest,
-    current_user: User = Depends(get_current_active_user)
+    current_user: AuthUser = Depends(get_current_user)
 ):
     from ..models.relational_models import Promotion as PromotionModel
     from ..services.wallet_service import WalletService
     from app.database import SessionLocal
     
-    cart = await get_or_create_cart(current_user["id"])
+    cart = await get_or_create_cart(current_user.id)
     items = await get_cart_items(cart["id"])
     
     if not items:
@@ -163,10 +163,10 @@ async def calculate_cart(
 @cart_router.post("/items", response_model=CartItem, status_code=status.HTTP_201_CREATED)
 async def add_item_to_cart(
     item: CartItemCreate,
-    current_user: User = Depends(get_current_active_user)
+    current_user: AuthUser = Depends(get_current_user)
 ):
     """Add an item to the cart. If item already exists, update quantity."""
-    cart = await get_or_create_cart(current_user["id"])
+    cart = await get_or_create_cart(current_user.id)
     
     # Check if item already exists in cart
     query = CartItemModel.__table__.select().where(
@@ -211,10 +211,10 @@ async def add_item_to_cart(
 async def update_cart_item(
     item_id: int,
     item_update: CartItemUpdate,
-    current_user: User = Depends(get_current_active_user)
+    current_user: AuthUser = Depends(get_current_user)
 ):
     """Update the quantity of a cart item."""
-    cart = await get_or_create_cart(current_user["id"])
+    cart = await get_or_create_cart(current_user.id)
     
     # Verify item belongs to user's cart
     query = CartItemModel.__table__.select().where(
@@ -245,10 +245,10 @@ async def update_cart_item(
 @cart_router.delete("/items/{item_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def remove_cart_item(
     item_id: int,
-    current_user: User = Depends(get_current_active_user)
+    current_user: AuthUser = Depends(get_current_user)
 ):
     """Remove an item from the cart."""
-    cart = await get_or_create_cart(current_user["id"])
+    cart = await get_or_create_cart(current_user.id)
     
     # Verify item belongs to user's cart
     query = CartItemModel.__table__.select().where(
@@ -268,9 +268,9 @@ async def remove_cart_item(
 
 
 @cart_router.delete("/", status_code=status.HTTP_204_NO_CONTENT)
-async def clear_cart(current_user: User = Depends(get_current_active_user)):
+async def clear_cart(current_user: AuthUser = Depends(get_current_user)):
     """Clear all items from the cart."""
-    cart = await get_or_create_cart(current_user["id"])
+    cart = await get_or_create_cart(current_user.id)
     
     # Delete all items
     delete_query = CartItemModel.__table__.delete().where(CartItemModel.cart_id == cart["id"])
@@ -280,7 +280,7 @@ async def clear_cart(current_user: User = Depends(get_current_active_user)):
 @cart_router.post("/checkout", response_model=CheckoutResponse, status_code=status.HTTP_201_CREATED)
 async def checkout(
     checkout_request: CheckoutRequest,
-    current_user: User = Depends(get_current_active_user),
+    current_user: AuthUser = Depends(get_current_user),
     payment_gateway: PaymentGateway = Depends(get_payment_gateway)
 ):
     from app.redis_client import WalletLock
@@ -289,9 +289,8 @@ async def checkout(
     
     idempotency_key = str(uuid.uuid4())
     
-    async with WalletLock(current_user["id"], idempotency_key):
-        user_dict = dict(current_user)
-        cart = await get_or_create_cart(user_dict["id"])
+    async with WalletLock(current_user.id, idempotency_key):
+        cart = await get_or_create_cart(current_user.id)
         cart_items = await get_cart_items(cart["id"])
         
         if not cart_items:
@@ -307,7 +306,7 @@ async def checkout(
     
         from ..services.discounts import calculate_progressive_discount
         
-        progressive_data = await calculate_progressive_discount(user_dict["id"], bar_id)
+        progressive_data = await calculate_progressive_discount(current_user.id, bar_id)
         progressive_pct = Decimal(str(progressive_data["percentage"]))
         progressive_discount_amount = subtotal * progressive_pct
         
@@ -334,10 +333,11 @@ async def checkout(
         async with database.transaction():
             try:
                 order_data = {
-                    "user_id": user_dict["id"],
+                    "user_id": current_user.id,
                     "bar_id": bar_id,
                     "status": "pending",
                     "order_type": checkout_request.order_type,
+                    "is_priority": current_user.is_pro(),
                     "subtotal": float(subtotal),
                     "tax": float(tax),
                     "tip": float(tip),
@@ -361,6 +361,7 @@ async def checkout(
                     "total_price": float(total),
                     "items_count": len(cart_items),
                     "timestamp": datetime.utcnow().isoformat(),
+                    "is_priority": current_user.is_pro(),
                     "message": "🔔 New order received! Awaiting your confirmation"
                 })
                 
@@ -385,9 +386,9 @@ async def checkout(
                         amount=payment_amount,
                         currency="usd",
                         customer={
-                            "email": user_dict.get("email"),
-                            "phone": user_dict.get("phone_number"),
-                            "name": user_dict.get("name")
+                            "email": current_user.email,
+                            "phone": current_user.phone_number,
+                            "name": current_user.display_name
                         },
                         payment_method=checkout_request.payment_details or {}
                     )
@@ -449,11 +450,11 @@ async def checkout(
             db = SessionLocal()
             try:
                 cashback_req = EarnCashbackRequest(
-                    user_id=current_user["id"],
+                    user_id=current_user.id,
                     order_id=order_id,
                     bar_id=bar_id,
                     order_total=total,
-                    cashback_percentage=Decimal("0.05"),
+                    cashback_percentage=Decimal("0.10") if current_user.is_pro() else Decimal("0.05"),
                     funded_by=FundingSource.BARZ,
                     expires_days=90
                 )
@@ -476,7 +477,7 @@ async def checkout(
 @cart_router.post("/sync", response_model=CartResponse)
 async def sync_cart(
     request: CartSyncRequest,
-    current_user: User = Depends(get_current_active_user)
+    current_user: AuthUser = Depends(get_current_user)
 ):
     """
     Sync cart state: calculates totals, verifies stock/prices, and validates location/promotions.
@@ -486,12 +487,12 @@ async def sync_cart(
     from ..models.relational_models import Menu, MenuItem
     from datetime import datetime
     
-    response = await CartService.sync_cart(current_user["id"], request)
+    response = await CartService.sync_cart(current_user.id, request)
     
     # Persist the cart state in DB if there are no hard errors
     has_errors = any(issue.severity == "error" for issue in response.validation_issues)
     if not has_errors:
-        cart = await get_or_create_cart(current_user["id"])
+        cart = await get_or_create_cart(current_user.id)
         
         # Clear existing items
         delete_query = CartItemModel.__table__.delete().where(CartItemModel.cart_id == cart["id"])

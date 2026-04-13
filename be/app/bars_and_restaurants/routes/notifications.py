@@ -17,7 +17,7 @@ async def get_notifications(
     """Get the user's recent notifications, ordered by newest first."""
     query = (
         Notification.__table__.select()
-        .where(Notification.user_id == current_user["id"])
+        .where(Notification.user_id == current_user.id)
         .order_by(Notification.created_at.desc())
         .limit(limit)
         .offset(offset)
@@ -33,7 +33,7 @@ async def mark_all_as_read(
     update_stmt = (
         Notification.__table__.update()
         .where(
-            (Notification.user_id == current_user["id"]) & 
+            (Notification.user_id == current_user.id) & 
             (Notification.is_read == False)
         )
         .values(is_read=True)
@@ -50,7 +50,7 @@ async def mark_notification_as_read(
     # First verify it exists and belongs to user
     query = Notification.__table__.select().where(
         (Notification.id == notification_id) & 
-        (Notification.user_id == current_user["id"])
+        (Notification.user_id == current_user.id)
     )
     notification = await database.fetch_one(query)
     if not notification:

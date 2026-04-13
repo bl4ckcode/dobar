@@ -32,7 +32,7 @@ async def create_bundle(
     bundle: BundlePromotionCreate,
     current_user: User = Depends(get_current_active_user)
 ):
-    if not await verify_bar_ownership(bundle.bar_id, current_user["id"]):
+    if not await verify_bar_ownership(bundle.bar_id, current_user.id):
         raise APIError.forbidden("You don't have permission to create bundles for this bar")
     
     bundle_data = bundle.model_dump()
@@ -81,7 +81,7 @@ async def update_bundle(
     if not bundle:
         raise APIError.not_found("Bundle not found")
     
-    if not await verify_bar_ownership(bundle["bar_id"], current_user["id"]):
+    if not await verify_bar_ownership(bundle["bar_id"], current_user.id):
         raise APIError.forbidden("You don't have permission to update this bundle")
     
     update_data = bundle_update.model_dump(exclude_unset=True)
@@ -111,7 +111,7 @@ async def delete_bundle(
     if not bundle:
         raise APIError.not_found("Bundle not found")
     
-    if not await verify_bar_ownership(bundle["bar_id"], current_user["id"]):
+    if not await verify_bar_ownership(bundle["bar_id"], current_user.id):
         raise APIError.forbidden("You don't have permission to delete this bundle")
     
     await database.execute(

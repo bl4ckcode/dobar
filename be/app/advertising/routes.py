@@ -395,9 +395,9 @@ async def get_invoices(
 def _get_allowed_campaign_types(tier: str) -> List[str]:
     """Get allowed campaign types for a subscription tier"""
     if tier == "vip":
-        return ["featured", "search", "map", "promo_boost", "banner"]
+        return ["featured", "search", "map", "promo_boost", "banner", "push_notification"]
     elif tier == "master":
-        return ["featured", "search"]
+        return ["featured", "search", "push_notification"]
     else:
         return []
 

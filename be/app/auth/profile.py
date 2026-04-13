@@ -134,6 +134,8 @@ class ProfileResponse(BaseModel):
     privacy_accepted: bool = False
     user_type: str = "client"
     country_code: Optional[str] = None
+    subscription_tier: str = "regular"
+    is_pro: bool = False
 
 
 class ProfileUpdate(BaseModel):
@@ -202,7 +204,9 @@ async def get_profile(current_user: AuthUser = Depends(get_current_user)):
         terms_accepted=profile.get("terms_accepted", False) or False,
         privacy_accepted=profile.get("privacy_accepted", False) or False,
         user_type=profile.get("user_type", "client") or "client",
-        country_code=profile.get("country_code")
+        country_code=profile.get("country_code"),
+        subscription_tier=user.get("subscription_tier", "regular") if user else "regular",
+        is_pro=user.get("subscription_tier") == "pro" if user else False
     )
 
 

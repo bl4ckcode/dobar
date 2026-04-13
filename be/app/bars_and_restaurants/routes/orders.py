@@ -21,8 +21,8 @@ from app.database import database
 from app.auth.middleware import get_current_active_user, get_optional_user
 from app.auth.auth_models import User
 from app.auth.admin import require_internal_or_admin
-from app.auth.rbac_middleware import BarAuthContext, require_bar_permission
-from app.auth.rbac_models import Permission
+from app.auth.rbac_models import Permission, ConsumerSubscriptionTier
+from app.auth.rbac_middleware import get_current_user as get_rbac_user, AuthUser, require_bar_permission, BarAuthContext
 
 orders_router = APIRouter(prefix="/orders", tags=["Orders"])
 bar_orders_router = APIRouter(prefix="/bars/{bar_id}/orders", tags=["Bar Orders"])
@@ -53,11 +53,25 @@ async def create_order(
     query = OrderModel.__table__.select().where(OrderModel.id == order_id)
     db_order = await database.fetch_one(query)
     
+    # Try to fetch RBAC user to check for PRO status
+    is_priority = False
+    try:
+        query_user = (
+            User.__table__.select().where(User.id == order.user_id)
+        )
+        user_row = await database.fetch_one(query_user)
+        if user_row and user_row.get("subscription_tier") == ConsumerSubscriptionTier.PRO.value:
+            is_priority = True
+            order_data["is_priority"] = True
+    except Exception:
+        pass
+
     await OrderQueue.publish_new_order(
         order_id=order_id,
         bar_id=order.bar_id,
         user_id=order.user_id,
-        total=float(order.total_price) if order.total_price else 0
+        total=float(order.total_price) if order.total_price else 0,
+        is_priority=is_priority
     )
     
     return db_order
@@ -71,7 +85,7 @@ async def get_my_orders(
 ):
     import base64
 
-    query = OrderModel.__table__.select().where(OrderModel.user_id == current_user["id"])
+    query = OrderModel.__table__.select().where(OrderModel.user_id == current_user.id)
 
     if status:
         query = query.where(OrderModel.status == status)
@@ -123,7 +137,7 @@ async def get_order(
         raise APIError.order_not_found()
     
     # Verify ownership
-    if db_order["user_id"] != current_user["id"]:
+    if db_order["user_id"] != current_user.id:
         raise APIError.forbidden("You don't have permission to view this order")
     
     return db_order
@@ -143,7 +157,7 @@ async def get_order_timeline(
         raise APIError.order_not_found()
     
     # Verify ownership
-    if db_order["user_id"] != current_user["id"]:
+    if db_order["user_id"] != current_user.id:
         raise APIError.forbidden("You don't have permission to view this order")
     
     history_query = (
@@ -174,7 +188,7 @@ async def cancel_order(
         raise APIError.order_not_found()
     
     # Verify ownership
-    if db_order["user_id"] != current_user["id"]:
+    if db_order["user_id"] != current_user.id:
         raise APIError.forbidden("You don't have permission to cancel this order")
     
     # Check if order can be cancelled
@@ -200,7 +214,7 @@ async def cancel_order(
         history_data = {
             "order_id": order_id,
             "status": "cancelled",
-            "updated_by_user_id": current_user["id"],
+            "updated_by_user_id": current_user.id,
             "notes": "Cancelled by customer"
         }
         await database.execute(
@@ -216,7 +230,7 @@ async def cancel_order(
         await OrderQueue.publish_cancellation(
             order_id=order_id,
             bar_id=db_order["bar_id"],
-            user_id=current_user["id"],
+            user_id=current_user.id,
             reason="Cancelled by customer"
         )
         
@@ -290,7 +304,7 @@ async def update_order_status(
         history_data = {
             "order_id": order_id,
             "status": status_update.status,
-            "updated_by_user_id": current_user["id"],
+            "updated_by_user_id": current_user.id,
             "notes": status_update.notes
         }
         await database.execute(
@@ -323,7 +337,7 @@ async def sync_offline_operations(
     current_user: User = Depends(get_current_active_user)
 ):
     from ..services.sync_service import sync_operations
-    result = await sync_operations(current_user["id"], [op.model_dump() for op in sync_request.operations])
+    result = await sync_operations(current_user.id, [op.model_dump() for op in sync_request.operations])
     return SyncResponse(**result)
 
 
@@ -350,7 +364,7 @@ async def get_live_orders(
                 OrderModel.status.in_(["pending", "confirmed", "preparing", "ready"])
             )
         )
-        .order_by(OrderModel.created_at.asc())
+        .order_by(desc(OrderModel.is_priority), OrderModel.created_at.asc())
     )
     
     orders = await database.fetch_all(query)

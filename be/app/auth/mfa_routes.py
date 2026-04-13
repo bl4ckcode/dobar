@@ -27,7 +27,7 @@ async def _get_mfa_record(user_id: int):
 
 @mfa_router.get("/status", response_model=MFAStatusResponse)
 async def mfa_status(current_user=Depends(get_current_user)):
-    record = await _get_mfa_record(current_user["id"])
+    record = await _get_mfa_record(current_user.id)
     if not record or not record["is_enabled"]:
         return MFAStatusResponse(is_enabled=False, phone_fallback_enabled=False)
     return MFAStatusResponse(
@@ -38,19 +38,19 @@ async def mfa_status(current_user=Depends(get_current_user)):
 
 @mfa_router.post("/setup", response_model=MFASetupResponse)
 async def mfa_setup(current_user=Depends(get_current_user)):
-    existing = await _get_mfa_record(current_user["id"])
+    existing = await _get_mfa_record(current_user.id)
     if existing and existing["is_enabled"]:
         raise APIError.conflict("MFA is already enabled")
 
     secret = mfa_service.generate_secret()
-    email = current_user.get("email", "") or ""
+    email = current_user.email or ""
     qr_uri = mfa_service.generate_qr_uri(secret, email)
     backup_codes = mfa_service.generate_backup_codes()
 
     if existing:
         await database.execute(
             MFASecret.__table__.update()
-            .where(MFASecret.user_id == current_user["id"])
+            .where(MFASecret.user_id == current_user.id)
             .values(
                 secret=secret,
                 backup_codes=mfa_service.serialize_backup_codes(backup_codes),
@@ -60,7 +60,7 @@ async def mfa_setup(current_user=Depends(get_current_user)):
     else:
         await database.execute(
             MFASecret.__table__.insert().values(
-                user_id=current_user["id"],
+                user_id=current_user.id,
                 secret=secret,
                 backup_codes=mfa_service.serialize_backup_codes(backup_codes),
                 is_enabled=False,
@@ -76,7 +76,7 @@ async def mfa_setup(current_user=Depends(get_current_user)):
 
 @mfa_router.post("/verify")
 async def mfa_verify(body: MFAVerifyRequest, current_user=Depends(get_current_user)):
-    record = await _get_mfa_record(current_user["id"])
+    record = await _get_mfa_record(current_user.id)
     if not record:
         raise APIError.not_found("MFA not set up")
 
@@ -85,7 +85,7 @@ async def mfa_verify(body: MFAVerifyRequest, current_user=Depends(get_current_us
 
     await database.execute(
         MFASecret.__table__.update()
-        .where(MFASecret.user_id == current_user["id"])
+        .where(MFASecret.user_id == current_user.id)
         .values(is_enabled=True)
     )
 
@@ -94,7 +94,7 @@ async def mfa_verify(body: MFAVerifyRequest, current_user=Depends(get_current_us
 
 @mfa_router.post("/disable")
 async def mfa_disable(body: MFAVerifyRequest, current_user=Depends(get_current_user)):
-    record = await _get_mfa_record(current_user["id"])
+    record = await _get_mfa_record(current_user.id)
     if not record or not record["is_enabled"]:
         raise APIError.not_found("MFA is not enabled")
 
@@ -102,7 +102,7 @@ async def mfa_disable(body: MFAVerifyRequest, current_user=Depends(get_current_u
         raise APIError(401, "MFA_INVALID", "Invalid TOTP code")
 
     await database.execute(
-        MFASecret.__table__.delete().where(MFASecret.user_id == current_user["id"])
+        MFASecret.__table__.delete().where(MFASecret.user_id == current_user.id)
     )
 
     return {"message": "MFA disabled successfully"}

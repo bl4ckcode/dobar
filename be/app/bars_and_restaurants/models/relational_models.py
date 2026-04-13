@@ -45,6 +45,9 @@ class Bar(Base):
     location_method = Column(String(20), default="table_number")  # table_number, spot_list, free_text
     location_spots = Column(JSON, nullable=True, default=list)  # List of {id, name} objects
     
+    # 🆕 Subscription caching for fast search weighting
+    subscription_tier = Column(String(20), default="regular", index=True)  # regular, master, vip
+    
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -120,6 +123,7 @@ class Order(Base):
     # 🆕 Location & Promotions
     location_identifier = Column(String, nullable=True)  # "5", "vip_1"
     active_promotion_ids = Column(JSON, nullable=True)  # List of promo IDs selected by user
+    is_priority = Column(Boolean, default=False, index=True)
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)

@@ -44,6 +44,7 @@ class CampaignType(str, enum.Enum):
     MAP = "map"                # Map Spotlight
     PROMO_BOOST = "promo_boost"  # Promotion Boost
     BANNER = "banner"          # Rich Media Banner
+    PUSH_NOTIFICATION = "push_notification"  # 🔔 Targeted Push Notifications
 
 
 class CampaignStatus(str, enum.Enum):

@@ -147,12 +147,12 @@ async def get_home_dashboard(
     # 1. User Status (if logged in)
     user_status = None
     if current_user:
-        active_cart = await get_active_cart_summary(current_user["id"])
+        active_cart = await get_active_cart_summary(current_user.id)
         
         # Real notification fetching
         try:
             count_query = "SELECT COUNT(id) FROM notifications WHERE user_id = :user_id AND is_read = false"
-            unread_count_val = await database.fetch_val(count_query, {"user_id": current_user["id"]})
+            unread_count_val = await database.fetch_val(count_query, {"user_id": current_user.id})
             unread_count_int = int(unread_count_val) if unread_count_val else 0
         except Exception as e:
             # Fallback to 0 if migration hasn't run yet

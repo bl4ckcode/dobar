@@ -72,6 +72,7 @@ class AuthUser:
     display_name: Optional[str] = None
     avatar_url: Optional[str] = None
     fcm_token: Optional[str] = None
+    subscription_tier: str = "regular"
     
     # Bar roles: {bar_id: BarRole}
     bar_roles: dict = None
@@ -82,6 +83,9 @@ class AuthUser:
     
     def is_business_user(self) -> bool:
         return self.user_type == UserType.BUSINESS.value
+    
+    def is_pro(self) -> bool:
+        return self.subscription_tier == "pro"
     
     def is_bar_owner(self, bar_id: int) -> bool:
         return self.bar_roles.get(bar_id) == BarRole.OWNER.value
@@ -177,6 +181,7 @@ async def get_current_user(
         display_name=profile["display_name"] if profile else None,
         avatar_url=profile["avatar_url"] if profile else None,
         fcm_token=profile["fcm_token"] if profile else None,
+        subscription_tier=dict(user).get("subscription_tier", "regular"),
         bar_roles=bar_roles
     )
 
