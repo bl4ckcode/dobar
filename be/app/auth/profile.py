@@ -488,3 +488,33 @@ async def delete_user_data(current_user: AuthUser = Depends(get_current_user)):
         "reference": f"DEL-{anon_ref}",
         "deleted_at": datetime.utcnow().isoformat(),
     }
+
+
+class LocationPoint(BaseModel):
+    latitude: float
+    longitude: float
+
+class LocationBatchRequest(BaseModel):
+    points: list[LocationPoint]
+
+@profile_router.post("/location/batch")
+async def process_location_batch(
+    payload: LocationBatchRequest,
+    current_user: AuthUser = Depends(get_current_user)
+):
+    """
+    Receives optimized batched location points from the mobile client
+    and processes proximity checks for geofenced push campaigns. (DOB-58)
+    """
+    from app.advertising.services.proximity_service import ProximityService
+    
+    # Take the latest point for proximity resolution
+    if payload.points:
+        latest = payload.points[-1]
+        await ProximityService.process_geofence(
+            user_id=current_user.id,
+            latitude=latest.latitude,
+            longitude=latest.longitude
+        )
+        
+    return {"status": "processed"}

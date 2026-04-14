@@ -45,6 +45,10 @@ class Bar(Base):
     location_method = Column(String(20), default="table_number")  # table_number, spot_list, free_text
     location_spots = Column(JSON, nullable=True, default=list)  # List of {id, name} objects
     
+    # 🆕 Geofencing (Coordinates)
+    latitude = Column(Float, nullable=True, index=True)
+    longitude = Column(Float, nullable=True, index=True)
+    
     # 🆕 Subscription caching for fast search weighting
     subscription_tier = Column(String(20), default="regular", index=True)  # regular, master, vip
     

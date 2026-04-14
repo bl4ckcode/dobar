@@ -23,6 +23,8 @@ from app.auth.auth_models import User
 from app.auth.admin import require_internal_or_admin
 from app.auth.rbac_models import Permission, ConsumerSubscriptionTier
 from app.auth.rbac_middleware import get_current_user as get_rbac_user, AuthUser, require_bar_permission, BarAuthContext
+from app.redis_client import get_redis
+from app.advertising.services.campaign_service import CampaignService
 
 orders_router = APIRouter(prefix="/orders", tags=["Orders"])
 bar_orders_router = APIRouter(prefix="/bars/{bar_id}/orders", tags=["Bar Orders"])
@@ -39,6 +41,7 @@ async def orders_websocket(websocket: WebSocket):
 @orders_router.post("/", response_model=OrderSchema)
 async def create_order(
     order: OrderCreate,
+    background_tasks: BackgroundTasks,
     _internal: bool = Depends(require_internal_or_admin)
 ):
     from datetime import datetime, timezone
@@ -63,6 +66,21 @@ async def create_order(
         if user_row and user_row.get("subscription_tier") == ConsumerSubscriptionTier.PRO.value:
             is_priority = True
             order_data["is_priority"] = True
+
+        # Attribution Conversion Check (DOB-57)
+        redis_client = await get_redis()
+        click_key = f"user:{order.user_id}:campaign_click:{order.bar_id}"
+        campaign_id_str = await redis_client.get(click_key)
+        if campaign_id_str:
+            background_tasks.add_task(
+                CampaignService.track_event,
+                campaign_id=int(campaign_id_str),
+                action="conversion",
+                placement="order_checkout",
+                user_id=order.user_id
+            )
+            await redis_client.delete(click_key)
+
     except Exception:
         pass
 

@@ -9,6 +9,7 @@ from typing import Optional, List, Dict, Any
 import hashlib
 
 from app.database import database
+from app.redis_client import redis
 from app.errors import APIError
 from sqlalchemy import func, cast, Date, select
 from app.advertising.models import (
@@ -411,6 +412,18 @@ class CampaignService:
             await CampaignService._increment_counter(campaign_id, "impressions")
         elif action_value == "click":
             await CampaignService._increment_counter(campaign_id, "clicks")
+            
+            # Cache the click for attribution (DOB-57)
+            if user_id:
+                query = "SELECT bar_id FROM advertising_campaigns WHERE id = :idx"
+                campaign_rec = await database.fetch_one(query, {"idx": campaign_id})
+                if campaign_rec:
+                    await redis.set(
+                        f"user:{user_id}:campaign_click:{campaign_rec['bar_id']}", 
+                        str(campaign_id), 
+                        ex=86400  # 24 hours
+                    )
+                    
             # For CPC campaigns, deduct from budget
             await CampaignService._process_click_billing(campaign_id)
         elif action_value == "conversion":
