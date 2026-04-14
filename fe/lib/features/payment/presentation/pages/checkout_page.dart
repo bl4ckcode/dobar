@@ -139,7 +139,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
       );
     }
 
-    final cashback = args.total * 0.05;
+    final userState = context.read<UserBloc>().state;
+    final isPro = userState.user?.isPro ?? false;
+    final cashback = args.total * (isPro ? 0.10 : 0.05);
 
     return MultiBlocListener(
       listeners: [
@@ -179,6 +181,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                                 discount: orderDiscount,
                                 cashback: cashback,
                                 total: args.total,
+                                isPro: isPro,
                               )
                               .animate()
                               .fadeIn(duration: 600.ms)

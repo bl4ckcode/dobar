@@ -17,6 +17,8 @@ class UserModel {
   final DateTime? privacyAcceptedAt;
   final bool isActive;
   final bool isPremium;
+  final bool isPro;
+  final String? subscriptionTier;
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final UserType userType;
@@ -41,6 +43,8 @@ class UserModel {
     this.privacyAcceptedAt,
     this.isActive = true,
     this.isPremium = false,
+    this.isPro = false,
+    this.subscriptionTier = 'regular',
     this.createdAt,
     this.updatedAt,
     this.userType = UserType.client,
@@ -74,6 +78,8 @@ class UserModel {
           : null,
       isActive: json['is_active'] ?? true,
       isPremium: json['is_premium'] ?? false,
+      isPro: json['is_pro'] ?? false,
+      subscriptionTier: json['subscription_tier'] as String? ?? 'regular',
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : null,
@@ -102,6 +108,8 @@ class UserModel {
       'privacy_accepted_at': privacyAcceptedAt?.toIso8601String(),
       'is_active': isActive,
       'is_premium': isPremium,
+      'is_pro': isPro,
+      'subscription_tier': subscriptionTier,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
       'user_type': userType.name,

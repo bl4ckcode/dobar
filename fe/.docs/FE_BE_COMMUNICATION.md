@@ -1,10 +1,41 @@
 # BARZ - Frontend Backend Communication
 
-Last Updated: March 20, 2026
+Last Updated: April 13, 2026
 Backend Status: Live on Fly.io
 API Base URL: https://barz-backend-bold-sun-5691.fly.dev
 
 ---
+
+## DOBAR PRO & PRO BUSINESS (SPRINT 8 - NEW)
+
+Status: **✅ COMPLETE**
+Priority: CRITICAL - Revenue & Core Business Logic
+
+### Overview
+
+Sprint 8 introduces backend capabilities for the Dobar PRO (consumer) and Dobar PRO Business subscription tiers, including priority order processing, business search ranking boosts, and segmented push notifications. Also includes a major RBAC stabilization migrating legacy user objects to the unified `AuthUser` dataclass.
+
+### 1. Consumer PRO Features
+
+**Priority Orders & Cashback:**
+- Users with `subscription_tier = "pro"` automatically receive the `is_priority = true` flag on their orders during checkout.
+- Pro users receive a 10% cashback boost compared to the standard 5%.
+- App UI must handle the new priority flag to render UI feedback for Pro users.
+
+### 2. PRO Business & Discovery
+
+**Search Ranking Boost:**
+Premium tiers (`master`, `vip`, `pro`) appear appropriately higher in search results, giving premium businesses maximum visibility regardless of strict distance sorting.
+
+**Segmented Campaigns:**
+New `PUSH_NOTIFICATION` campaign type gated exclusively for Business Master and VIP tiers. 
+
+### 3. Auth & RBAC Stabilization
+
+All middleware and protected routes now strictly implement the unified `AuthUser` dataclass. The backend is fully stable using dot-notation (`.id`) instead of legacy dictionary access.
+
+---
+
 
 ## LEGAL DOCUMENTS (NEW)
 
@@ -203,8 +234,11 @@ Response 200:
   "terms_accepted": true,
   "privacy_accepted": true,
   "user_type": "client",
-  "country_code": "BR"
+  "country_code": "BR",
+  "subscription_tier": "regular",
+  "is_pro": false
 }
+
 ```
 *Note: Editing a phone number to one that is already in use returns `409 Conflict` (`PHONE_IN_USE`).*
 
@@ -910,7 +944,31 @@ Body:
 }
 ```
 
-### 2. Campaign Analytics
+### 2. Campaign Creation
+
+**Create Campaign:**
+`POST /advertising/campaigns?bar_id={bar_id}`
+Auth: Required (ADS_MANAGE)
+
+*Note on Campaign Types:* Standard tiers support `featured`, `search_boost`, etc. The new `push_notification` type (which triggers advanced background Geofencing & Cohort targeting) is **strictly gated** to `master` and `vip` subscriptions.
+
+```json
+Body:
+{
+  "name": "Happy Hour Push",
+  "campaign_type": "push_notification", 
+  "budget": 50.00,
+  "budget_type": "daily",
+  "start_time": "2026-04-10T18:00:00Z",
+  "end_time": "2026-04-15T22:00:00Z",
+  "creative": {
+    "title": "50% off all Drafts!",
+    "tagline": "Come join us for Happy Hour"
+  }
+}
+```
+
+### 3. Campaign Analytics
 
 **Dashboard Overview:**
 `GET /advertising/dashboard/analytics?bar_id={bar_id}`

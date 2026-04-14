@@ -36,7 +36,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
       _onSyncCart,
       transformer: (events, mapper) {
         return events
-            .debounceTime(const Duration(milliseconds: 2000))
+            .debounceTime(const Duration(milliseconds: 500))
             .asyncExpand(mapper);
       },
     );
@@ -348,7 +348,21 @@ class CartBloc extends Bloc<CartEvent, CartState> {
       result.fold(
         (failure) {
           if (state is CartLoaded) {
-            emit((state as CartLoaded).copyWith(isLoading: false));
+            final st = state as CartLoaded;
+            final updatedIssues = st.cart.validationIssues
+                .where((i) => i.severity != 'sync_error')
+                .toList();
+            updatedIssues.add(
+              ValidationIssue(
+                severity: 'sync_error',
+                message: 'Offline: Unable to reliably sync cart prior to checkout.',
+              ),
+            );
+            
+            emit(st.copyWith(
+              isLoading: false, 
+              cart: st.cart.copyWith(validationIssues: updatedIssues),
+            ));
           }
         },
         (serverCart) {
@@ -397,7 +411,22 @@ class CartBloc extends Bloc<CartEvent, CartState> {
   }
 
   Future<void> _onCheckout(Checkout event, Emitter<CartState> emit) async {
-    emit(CartLoading());
+    if (state is CartLoaded) {
+      final st = state as CartLoaded;
+      if (st.isLoading) {
+        emit(const CartError(message: 'Please wait for cart to sync...'));
+        emit(st);
+        return;
+      }
+      if (st.cart.validationIssues.any((i) => i.severity == 'sync_error')) {
+        emit(const CartError(message: 'Cart sync failed. Please check your internet connection before checking out.'));
+        emit(st);
+        return;
+      }
+    }
+    
+    final currentLoadedState = state is CartLoaded ? state : null;
+    emit(const CartLoading());
     final result = await cartUsecase.checkout(
       orderType: event.orderType,
       paymentMethod: event.paymentMethod,
@@ -406,7 +435,12 @@ class CartBloc extends Bloc<CartEvent, CartState> {
       activePromotionIds: event.activePromotionIds,
     );
     result.fold(
-      (failure) => emit(CartError(message: failure.errorMessage)),
+      (failure) {
+        emit(CartError(message: failure.errorMessage));
+        if (currentLoadedState != null) {
+          emit(currentLoadedState);
+        }
+      },
       (checkoutResult) => emit(CheckoutSuccess(result: checkoutResult)),
     );
   }

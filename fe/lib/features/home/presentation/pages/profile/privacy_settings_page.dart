@@ -2,6 +2,9 @@ import 'package:barz/core/design/design_system.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/user/domain/models/privacy_settings.dart';
 import 'package:barz/features/user/domain/repositories/abstract_user_repository.dart';
+import 'package:barz/core/network/dio_network.dart';
+import 'package:barz/core/router/app_routes.dart';
+import 'package:barz/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 
 class PrivacySettingsPage extends StatefulWidget {
@@ -75,6 +78,67 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
       if (mounted) {
         setState(() => _saving = false);
       }
+    }
+  }
+
+  Future<void> _handleDeleteData() async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Account & Data', style: TextStyle(color: errorRed)),
+        content: const Text(
+          'Are you sure you want to permanently delete your account and data? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(
+              foregroundColor: errorRed,
+              backgroundColor: errorRed.withValues(alpha: 0.1),
+            ),
+            child: const Text('Delete Permanently'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      final result = await getItInjector<UserRepository>().deleteAccount();
+
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading
+
+      result.fold(
+        (failure) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to delete data: ${failure.errorMessage}'),
+            ),
+          );
+        },
+        (_) async {
+          await DioNetwork.clearTokens();
+          if (mounted) {
+            AppRoute.login.go(context);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Your data and account have been deleted.')),
+            );
+          }
+        },
+      );
     }
   }
 
@@ -152,6 +216,14 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
                       const SnackBar(content: Text('Data export requested')),
                     );
                   },
+                ),
+                _buildInfoTile(
+                  icon: Icons.delete_forever_outlined,
+                  title: 'Delete My Data',
+                  subtitle: 'Permanently remove all your data',
+                  colors: colors,
+                  isDestructive: true,
+                  onTap: _handleDeleteData,
                 ),
               ],
             ),
@@ -231,6 +303,7 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
     required String title,
     required String subtitle,
     required DobarColors colors,
+    bool isDestructive = false,
     VoidCallback? onTap,
   }) {
     return GestureDetector(
@@ -248,10 +321,10 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: barzGoldSoft,
+                color: isDestructive ? errorRed.withValues(alpha: 0.1) : barzGoldSoft,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: barzGold, size: 24),
+              child: Icon(icon, color: isDestructive ? errorRed : barzGold, size: 24),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -261,7 +334,7 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
                   Text(
                     title,
                     style: TextStyle(
-                      color: colors.labelPrimary,
+                      color: isDestructive ? errorRed : colors.labelPrimary,
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),

@@ -8,6 +8,7 @@ class CheckoutOrderSummary extends StatefulWidget {
   final OrderDiscount? discount;
   final double cashback;
   final double total;
+  final bool isPro;
 
   const CheckoutOrderSummary({
     super.key,
@@ -16,6 +17,7 @@ class CheckoutOrderSummary extends StatefulWidget {
     this.discount,
     required this.cashback,
     required this.total,
+    this.isPro = false,
   });
 
   @override
@@ -75,13 +77,35 @@ class _CheckoutOrderSummaryState extends State<CheckoutOrderSummary>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Order Summary',
-                          style: TextStyle(
-                            color: isDark ? textOnDark : textPrimary,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 15,
-                          ),
+                        Row(
+                          children: [
+                            Text(
+                              'Order Summary',
+                              style: TextStyle(
+                                color: isDark ? textOnDark : textPrimary,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 15,
+                              ),
+                            ),
+                            if (widget.isPro) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: barzGold.withValues(alpha: 0.15),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: const Text(
+                                  'Priority ⚡️',
+                                  style: TextStyle(
+                                    color: barzGold,
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                         Text(
                           '${widget.items.length} ${widget.items.length == 1 ? "item" : "items"}',
@@ -209,8 +233,8 @@ class _CheckoutOrderSummaryState extends State<CheckoutOrderSummary>
                   const Icon(Icons.paid_outlined, color: barzGold, size: 14),
                   const SizedBox(width: 4),
                   Text(
-                    'Cashback you\'ll earn',
-                    style: TextStyle(color: barzGold, fontSize: 14),
+                    widget.isPro ? 'Cashback (PRO 10%)' : 'Cashback you\'ll earn',
+                    style: const TextStyle(color: barzGold, fontSize: 14),
                   ),
                 ],
               ),
