@@ -20,7 +20,10 @@ from .schemas import (
     DPEPaymentStatusResponse,
     PixGenerateRequest, PixGenerateResponse,
     CardCreate, CardResponse,
-    DpeWebhookPayload
+    DpeWebhookPayload,
+    TrialSetupRequest, TrialSetupResponse,
+    CaptureRequest, CaptureResponse,
+    ProrationInfo,
 )
 from .models import IdempotencyKey, PaymentCard
 from . import get_payment_gateway, PaymentGateway, get_dpe_client, DPEClient
@@ -256,6 +259,7 @@ async def create_charge_v2(
         pix_expires_at=result.get("pix_expires_at"),
         card_last_four=result.get("card_last_four"),
         card_brand=result.get("card_brand"),
+        proration_credit_cents=result.get("proration_credit_cents"),
     )
 
 
@@ -315,6 +319,152 @@ async def get_payment_status(
 
 
 pix_router = APIRouter(prefix="/pix", tags=["PIX (Brazil)"])
+subscription_router = APIRouter(prefix="/subscriptions", tags=["Subscriptions"])
+
+
+@subscription_router.post("/trial/setup", response_model=TrialSetupResponse)
+async def setup_trial(
+    request: TrialSetupRequest,
+    current_user: User = Depends(get_current_user),
+    x_idempotency_key: Optional[str] = Header(None, alias="X-Idempotency-Key"),
+):
+    dpe = get_dpe_client()
+    idempotency_key = x_idempotency_key or str(uuid.uuid4())
+
+    result = await dpe.trial_setup(
+        bar_id=request.bar_id,
+        owner_id=request.owner_id,
+        plan=request.plan,
+        payment_method_id=request.payment_method_id,
+        customer_email=request.customer_email,
+        customer_name=request.customer_name,
+        trial_days=request.trial_days,
+        idempotency_key=idempotency_key,
+        metadata=request.metadata,
+    )
+
+    if result.get("status") == "error":
+        http_status = result.get("http_status", 400)
+        if http_status == 402:
+            raise APIError.payment_declined(
+                message=result.get("message", "Card validation failed"),
+                gateway_code=result.get("error_code"),
+            )
+        raise APIError.bad_request(message=result.get("message", "Trial setup failed"))
+
+    return TrialSetupResponse(
+        setup_intent_id=result["setup_intent_id"],
+        status=result["status"],
+        client_secret=result["client_secret"],
+        stripe_customer_id=result["stripe_customer_id"],
+        trial_ends_at=result["trial_ends_at"],
+        payment_method_id=result["payment_method_id"],
+    )
+
+
+@subscription_router.post("/capture", response_model=CaptureResponse)
+async def capture_subscription_payment(
+    request: CaptureRequest,
+    current_user: User = Depends(get_current_user),
+    x_idempotency_key: Optional[str] = Header(None, alias="X-Idempotency-Key"),
+):
+    dpe = get_dpe_client()
+    idempotency_key = x_idempotency_key or str(uuid.uuid4())
+
+    result = await dpe.capture(
+        payment_id=request.payment_id,
+        amount_cents=request.amount_cents,
+        idempotency_key=idempotency_key,
+    )
+
+    if result.get("status") == "error":
+        raise APIError.payment_declined(
+            message=result.get("message", "Capture failed"),
+            gateway_code=result.get("error_code"),
+        )
+
+    return CaptureResponse(
+        payment_id=result["payment_id"],
+        status=result["status"],
+        amount_cents=result["amount_cents"],
+        gateway=result["gateway"],
+        captured_at=result["captured_at"],
+    )
+
+
+@payment_router.post("/v2/charge/upgrade", response_model=DPEChargeResponse, tags=["Payments V2 (DPE)"])
+async def prorated_upgrade_charge(
+    request: DPEChargeRequest,
+    current_user: User = Depends(get_current_user),
+    x_idempotency_key: Optional[str] = Header(None, alias="X-Idempotency-Key"),
+):
+    if not request.proration_info:
+        raise APIError.validation_error(
+            message="proration_info is required for upgrade charges",
+            details={"proration_info": ["This field is required"]},
+        )
+
+    dpe = get_dpe_client()
+    idempotency_key = x_idempotency_key or str(uuid.uuid4())
+
+    payment_method = {
+        "type": request.payment_method.type.value,
+        "installments": request.payment_method.installments,
+    }
+    if request.payment_method.token:
+        payment_method["token"] = request.payment_method.token
+    if request.payment_method.provider:
+        payment_method["provider"] = request.payment_method.provider.value
+
+    proration = {
+        "previous_plan": request.proration_info.previous_plan,
+        "new_plan": request.proration_info.new_plan,
+        "credit_amount_cents": request.proration_info.credit_amount_cents,
+        "cycle_start": request.proration_info.cycle_start.isoformat(),
+        "cycle_end": request.proration_info.cycle_end.isoformat(),
+        "upgrade_date": request.proration_info.upgrade_date.isoformat(),
+    }
+
+    result = await dpe.charge(
+        order_id=request.order_id,
+        user_id=current_user.id,
+        bar_id=request.bar_id,
+        amount=request.amount,
+        currency=request.currency,
+        country=request.country,
+        payment_method=payment_method,
+        idempotency_key=idempotency_key,
+        metadata=request.metadata,
+        description=request.description,
+        proration_info=proration,
+    )
+
+    if result.get("status") == "error":
+        error_code = result.get("error_code", "PAYMENT_DECLINED")
+        http_status = result.get("http_status", 402)
+        if http_status == 402:
+            raise APIError.payment_declined(
+                message=result.get("message", "Upgrade payment declined"),
+                gateway_code=error_code,
+            )
+        raise APIError.payment_declined(
+            message=result.get("message", "Upgrade failed"),
+            gateway_code=error_code,
+        )
+
+    return DPEChargeResponse(
+        payment_id=result["payment_id"],
+        status=result["status"],
+        gateway=result["gateway"],
+        gateway_id=result["gateway_id"],
+        amount=result["amount"],
+        currency=result["currency"],
+        created_at=result["created_at"],
+        card_last_four=result.get("card_last_four"),
+        card_brand=result.get("card_brand"),
+        proration_credit_cents=result.get("proration_credit_cents"),
+    )
+
 
 
 @pix_router.post("/generate", response_model=PixGenerateResponse)

@@ -66,6 +66,15 @@ class CustomerInfo(BaseModel):
     phone: Optional[str] = None
 
 
+class ProrationInfo(BaseModel):
+    previous_plan: str
+    new_plan: str
+    credit_amount_cents: int
+    cycle_start: datetime
+    cycle_end: datetime
+    upgrade_date: datetime
+
+
 class DPEChargeRequest(BaseModel):
     order_id: int
     bar_id: int
@@ -76,6 +85,7 @@ class DPEChargeRequest(BaseModel):
     customer_info: Optional[CustomerInfo] = None
     metadata: Dict[str, Any] = Field(default_factory=dict)
     description: Optional[str] = None
+    proration_info: Optional[ProrationInfo] = None
 
 
 class DPEChargeResponse(BaseModel):
@@ -93,6 +103,7 @@ class DPEChargeResponse(BaseModel):
     card_last_four: Optional[str] = None
     card_brand: Optional[str] = None
     acquirer_message: Optional[str] = None
+    proration_credit_cents: Optional[int] = None
 
 
 class DPERefundRequest(BaseModel):
@@ -172,3 +183,36 @@ class DpeWebhookPayload(BaseModel):
     gateway: Optional[str] = None
     metadata: Optional[Dict[str, Any]] = None
     created_at: Optional[datetime] = None
+
+
+class TrialSetupRequest(BaseModel):
+    bar_id: int
+    owner_id: int
+    plan: str
+    trial_days: int = Field(default=7, ge=1, le=30)
+    payment_method_id: str
+    customer_email: str
+    customer_name: str
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class TrialSetupResponse(BaseModel):
+    setup_intent_id: str
+    status: str
+    client_secret: str
+    stripe_customer_id: str
+    trial_ends_at: datetime
+    payment_method_id: str
+
+
+class CaptureRequest(BaseModel):
+    payment_id: str
+    amount_cents: int = Field(..., gt=0)
+
+
+class CaptureResponse(BaseModel):
+    payment_id: str
+    status: str
+    amount_cents: int
+    gateway: str
+    captured_at: datetime

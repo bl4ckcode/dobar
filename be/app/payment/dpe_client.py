@@ -54,6 +54,7 @@ class DPEClient:
         metadata: Dict[str, Any] = None,
         description: str = None,
         customer_info: Dict[str, Any] = None,
+        proration_info: Dict[str, Any] = None,
     ) -> Dict[str, Any]:
         client = await self._get_client()
         
@@ -72,6 +73,8 @@ class DPEClient:
             payload["description"] = description
         if customer_info:
             payload["customer_info"] = customer_info
+        if proration_info:
+            payload["proration_info"] = proration_info
         
         response = await client.post(
             "/payments/charge",
@@ -96,6 +99,7 @@ class DPEClient:
                 "card_last_four": data.get("card_last_four"),
                 "card_brand": data.get("card_brand"),
                 "acquirer_message": data.get("acquirer_message"),
+                "proration_credit_cents": data.get("proration_credit_cents"),
             }
         
         error_data = response.json()
@@ -241,6 +245,99 @@ class DPEClient:
         if self._client:
             await self._client.aclose()
             self._client = None
+
+    async def trial_setup(
+        self,
+        bar_id: int,
+        owner_id: int,
+        plan: str,
+        payment_method_id: str,
+        customer_email: str,
+        customer_name: str,
+        trial_days: int = 7,
+        idempotency_key: str = None,
+        metadata: Dict[str, Any] = None,
+    ) -> Dict[str, Any]:
+        client = await self._get_client()
+
+        idempotency_key = idempotency_key or str(uuid.uuid4())
+
+        payload = {
+            "bar_id": str(bar_id),
+            "owner_id": str(owner_id),
+            "plan": plan,
+            "trial_days": trial_days,
+            "payment_method_id": payment_method_id,
+            "customer_email": customer_email,
+            "customer_name": customer_name,
+            "idempotency_key": idempotency_key,
+            "metadata": metadata or {},
+        }
+
+        response = await client.post(
+            "/subscriptions/trial/setup",
+            json=payload,
+            headers=self._headers(idempotency_key),
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+            return {
+                "status": data.get("status", "succeeded"),
+                "setup_intent_id": data["setup_intent_id"],
+                "client_secret": data["client_secret"],
+                "stripe_customer_id": data["stripe_customer_id"],
+                "trial_ends_at": data["trial_ends_at"],
+                "payment_method_id": data["payment_method_id"],
+            }
+
+        error_data = response.json()
+        return {
+            "status": "error",
+            "error_code": error_data.get("error_code", "TRIAL_SETUP_FAILED"),
+            "message": error_data.get("message", "Trial setup failed"),
+            "http_status": response.status_code,
+        }
+
+    async def capture(
+        self,
+        payment_id: str,
+        amount_cents: int,
+        idempotency_key: str = None,
+    ) -> Dict[str, Any]:
+        client = await self._get_client()
+
+        idempotency_key = idempotency_key or str(uuid.uuid4())
+
+        payload = {
+            "payment_id": payment_id,
+            "amount_cents": amount_cents,
+            "idempotency_key": idempotency_key,
+        }
+
+        response = await client.post(
+            "/payments/capture",
+            json=payload,
+            headers=self._headers(idempotency_key),
+        )
+
+        if response.status_code == 200:
+            data = response.json()
+            return {
+                "status": data.get("status", "captured"),
+                "payment_id": data["payment_id"],
+                "amount_cents": data["amount_cents"],
+                "gateway": data["gateway"],
+                "captured_at": data["captured_at"],
+            }
+
+        error_data = response.json()
+        return {
+            "status": "error",
+            "error_code": error_data.get("error_code", "CAPTURE_FAILED"),
+            "message": error_data.get("message", "Payment capture failed"),
+            "http_status": response.status_code,
+        }
 
 
 _dpe_client: Optional[DPEClient] = None

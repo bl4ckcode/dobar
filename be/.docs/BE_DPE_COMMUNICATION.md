@@ -221,10 +221,114 @@ Request:
 }
 ```
 
-#### Prorated Upgrades & Free Trials (Pending Integration)
-In upcoming iterations, DPE must support subscription life-cycle actions directly triggered by BE webhooks:
-1. **Free Trials:** If a subscription contains `trial_ends_at`, DPE must authorize the card for `0.00` and delay the first billing capture until the free trial expiration.
-2. **Prorated Upgrades:** If a business upgrades from `Master` to `VIP` mid-cycle, the request payload constraints must support calculating remaining `amount_cents` credit based on unspent days.
+#### Subscription Trial Setup (Stripe SetupIntents)
+DPE uses Stripe SetupIntents to validate cards for free trials. This approach:
+- Validates card authenticity (prevents fake cards)
+- Handles SCA/3DS authentication
+- Saves payment method for off-session capture after trial ends
+- Uses Stripe Radar for fraud protection
+
+Stripe is the strategic gateway for all subscription lifecycle operations regardless of country.
+
+### POST /subscriptions/trial/setup
+
+```json
+Request:
+{
+  "bar_id": "bar_123",
+  "owner_id": "owner_456",
+  "plan": "VIP",
+  "trial_days": 7,
+  "payment_method_id": "pm_card_visa",
+  "customer_email": "owner@bar.com",
+  "customer_name": "Carlos Alves",
+  "idempotency_key": "uuid-trial-xxx",
+  "metadata": {}
+}
+
+Response 200:
+{
+  "setup_intent_id": "seti_abc123",
+  "status": "succeeded",
+  "client_secret": "seti_abc123_secret_xyz",
+  "stripe_customer_id": "cus_abc123",
+  "trial_ends_at": "2026-04-21T02:00:00Z",
+  "payment_method_id": "pm_card_visa"
+}
+```
+
+BE is responsible for scheduling the capture call when `trial_ends_at` expires.
+
+### POST /payments/capture
+
+Used by BE to capture payment after a trial ends or when a pre-authorized charge needs to be finalized.
+
+```json
+Request:
+{
+  "payment_id": "seti_abc123",
+  "amount_cents": 2990,
+  "idempotency_key": "uuid-capture-xxx"
+}
+
+Response 200:
+{
+  "payment_id": "seti_abc123",
+  "status": "captured",
+  "amount_cents": 2990,
+  "gateway": "stripe",
+  "captured_at": "2026-04-21T02:00:00Z"
+}
+```
+
+#### Prorated Upgrades (Mid-Cycle)
+When a business upgrades plans mid-cycle, BE calculates the credit and sends it via `proration_info` on the standard charge endpoint. DPE deducts the credit from the charge amount. If credit fully covers the upgrade, DPE returns `status: "credit_applied"` without hitting the gateway.
+
+```json
+POST /payments/charge with proration:
+{
+  "order_id": "upgrade_master_to_vip",
+  "user_id": "owner_456",
+  "bar_id": "bar_123",
+  "amount_cents": 9990,
+  "currency": "BRL",
+  "country": "BR",
+  "payment_method": { "type": "card", "token": "tok_xxx" },
+  "idempotency_key": "uuid-proration-xxx",
+  "proration_info": {
+    "previous_plan": "Master",
+    "new_plan": "VIP",
+    "credit_amount_cents": 3330,
+    "cycle_start": "2026-04-01T00:00:00Z",
+    "cycle_end": "2026-04-30T23:59:59Z",
+    "upgrade_date": "2026-04-15T12:00:00Z"
+  }
+}
+
+Response 200 (partial credit):
+{
+  "payment_id": "pay_abc123",
+  "status": "succeeded",
+  "gateway": "stripe",
+  "gateway_id": "pi_xxx",
+  "amount_cents": 9990,
+  "currency": "BRL",
+  "proration_credit_cents": 3330,
+  "created_at": "2026-04-15T12:00:00Z"
+}
+
+Response 200 (full credit, no gateway call):
+{
+  "payment_id": "pay_abc123",
+  "status": "credit_applied",
+  "gateway": "internal",
+  "gateway_id": "proration_credit",
+  "amount_cents": 0,
+  "currency": "BRL",
+  "proration_credit_cents": 5000,
+  "created_at": "2026-04-15T12:00:00Z"
+}
+```
 
 ### POST /payments/refund
 
@@ -570,6 +674,10 @@ All payment operations logged with:
 
 | Date | Change |
 |------|--------|
+| 2026-04-14 | ✅ **Subscription Trials**: `POST /subscriptions/trial/setup` using Stripe SetupIntents (card validation + SCA/3DS) |
+| 2026-04-14 | ✅ **Capture Endpoint**: `POST /payments/capture` for post-trial and pre-authorized charge capture |
+| 2026-04-14 | ✅ **Prorated Upgrades**: `proration_info` on `POST /payments/charge` with credit deduction logic |
+| 2026-04-14 | ✅ **Test Coverage**: 214 tests passing (up from 200) |
 | 2026-03-23 | ✅ **Subscription Integration**: `barz-backend` now uses DPE for Pro plan recurring charges. |
 | 2026-03-23 | ✅ **Analytics Hardware**: Implemented time-series aggregation for campaign performance. |
 | 2026-01-18 | 📁 Moved all .md docs to ./docs folder (except README.md) for better organization |

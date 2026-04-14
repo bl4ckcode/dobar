@@ -30,7 +30,7 @@ from .auth.profile import profile_router
 from fastapi.openapi.utils import get_openapi
 from contextlib import asynccontextmanager
 from firebase_admin import initialize_app, credentials
-from .payment.routes import payment_router, pix_router, cards_router
+from .payment.routes import payment_router, pix_router, cards_router, subscription_router
 from .payment import close_dpe_client
 from .advertising.routes import advertising_router
 from .bars_and_restaurants.routes.bundles import bundles_router
@@ -212,6 +212,7 @@ app.include_router(ws_router)
 app.include_router(bar_owners_router)
 app.include_router(payment_router)
 app.include_router(pix_router)
+app.include_router(subscription_router)
 app.include_router(cards_router)
 app.include_router(wallet_router)
 app.include_router(staff_router)
