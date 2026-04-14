@@ -114,15 +114,14 @@ class _HomeConnectedViewState extends State<HomeConnectedView> with WidgetsBindi
       listener: (context, state) {
         if (!state.isLoading && state.currentLocation != null) {
           // Trigger load if not already loaded OR if it's the first time we get location
-          if (homeState is HomeInitial || homeState is HomeError) {
-            debugPrint('[HomeView] Location obtained or improved, triggering LoadHomeData');
-            context.read<HomeBloc>().add(
-              LoadHomeData(
-                latitude: state.currentLocation!.latitude,
-                longitude: state.currentLocation!.longitude,
-              ),
-            );
-          }
+          // We removed the restrictive 'homeState is HomeInitial' check to allow updates when location improves
+          debugPrint('[HomeView] Location obtained or improved, triggering LoadHomeData');
+          context.read<HomeBloc>().add(
+            LoadHomeData(
+              latitude: state.currentLocation!.latitude,
+              longitude: state.currentLocation!.longitude,
+            ),
+          );
         } else if (state.error != null) {
           debugPrint('[HomeView] Location state has error: ${state.error}');
         }
@@ -157,7 +156,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> with WidgetsBindi
                     bottom: BarzSpacing.lg,
                   ),
                   children: [
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 80),
                     _buildCategoriesSection(context),
                     const SizedBox(height: BarzSpacing.md),
 

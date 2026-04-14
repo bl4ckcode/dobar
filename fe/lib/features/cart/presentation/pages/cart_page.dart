@@ -333,33 +333,40 @@ class _CartPageContentState extends State<_CartPageContent> {
                                 children: [
                                   const SizedBox(height: 8),
                                   // Cart Items
-                                  ...uiItems.map(
-                                    (item) => CartItemCard(
-                                      item: item,
-                                      onQuantityChanged: (qty) {
-                                        final menuItemId = int.parse(item.id);
-                                        if (qty < 1) {
-                                          context.read<CartBloc>().add(
-                                            cart_event.RemoveFromCart(
-                                              menuItemId: menuItemId,
+                                  ListView.builder(
+                                    shrinkWrap: true,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    itemCount: uiItems.length,
+                                    itemBuilder: (context, index) {
+                                      final item = uiItems[index];
+                                      return CartItemCard(
+                                        key: ValueKey(item.id),
+                                        item: item,
+                                        onQuantityChanged: (qty) {
+                                          final menuItemId = int.parse(item.id);
+                                          if (qty < 1) {
+                                            context.read<CartBloc>().add(
+                                              cart_event.RemoveFromCart(
+                                                menuItemId: menuItemId,
+                                              ),
+                                            );
+                                          } else {
+                                            context.read<CartBloc>().add(
+                                              cart_event.UpdateCartItem(
+                                                menuItemId: menuItemId,
+                                                quantity: qty,
+                                              ),
+                                            );
+                                          }
+                                        },
+                                        onRemove: () =>
+                                            context.read<CartBloc>().add(
+                                              cart_event.RemoveFromCart(
+                                                menuItemId: int.parse(item.id),
+                                              ),
                                             ),
-                                          );
-                                        } else {
-                                          context.read<CartBloc>().add(
-                                            cart_event.UpdateCartItem(
-                                              menuItemId: menuItemId,
-                                              quantity: qty,
-                                            ),
-                                          );
-                                        }
-                                      },
-                                      onRemove: () =>
-                                          context.read<CartBloc>().add(
-                                            cart_event.RemoveFromCart(
-                                              menuItemId: int.parse(item.id),
-                                            ),
-                                          ),
-                                    ),
+                                      );
+                                    },
                                   ),
 
                                   const SizedBox(height: 16),
@@ -789,7 +796,7 @@ class _CartPageContentState extends State<_CartPageContent> {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: isDark ? barzDarkLight : surfaceWhite,
+          color: isDark ? barzDarkCard : surfaceWhite,
           borderRadius: BorderRadius.circular(10),
           boxShadow: [
             BoxShadow(

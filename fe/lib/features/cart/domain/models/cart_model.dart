@@ -53,15 +53,21 @@ class CartItemModel {
     };
   }
 
-  CartItemModel copyWith({int? barId, int? quantity, double? totalPrice}) {
+  CartItemModel copyWith({
+    int? id,
+    int? barId,
+    int? quantity,
+    double? unitPrice,
+    double? totalPrice,
+  }) {
     return CartItemModel(
-      id: id,
+      id: id ?? this.id,
       cartId: cartId,
       menuItemId: menuItemId,
       barId: barId ?? this.barId,
       menuItemName: menuItemName,
       quantity: quantity ?? this.quantity,
-      unitPrice: unitPrice,
+      unitPrice: unitPrice ?? this.unitPrice,
       totalPrice: totalPrice ?? this.totalPrice,
     );
   }

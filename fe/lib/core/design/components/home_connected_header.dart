@@ -42,7 +42,7 @@ class HomeConnectedHeader extends StatelessWidget {
                     GestureDetector(
                       onTap: onBarTap,
                       child: Container(
-                        padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                         decoration: BoxDecoration(
                           color: colors.surface.withValues(alpha: 0.9),
                           borderRadius: BorderRadius.circular(16),

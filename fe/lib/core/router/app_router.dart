@@ -255,6 +255,7 @@ final appRouter = GoRouter(
         return MultiBlocProvider(
           providers: [
             BlocProvider.value(value: getItInjector<CartBloc>()),
+            BlocProvider.value(value: getItInjector<UserBloc>()),
             BlocProvider(
               create: (_) =>
                   getItInjector<PaymentBloc>()..add(const LoadSavedCards()),

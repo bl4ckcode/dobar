@@ -55,7 +55,7 @@ class LocationDatasourceImpl implements LocationDatasource {
     }
 
     try {
-      final timeoutDuration = kDebugMode ? const Duration(seconds: 5) : const Duration(seconds: 15);
+      final timeoutDuration = kDebugMode ? const Duration(seconds: 15) : const Duration(seconds: 15);
       debugPrint('[LocationDatasource] Fetch started (timeout: ${timeoutDuration.inSeconds}s)...');
       
       // -- NEW PARALLEL FETCH --
@@ -90,10 +90,10 @@ class LocationDatasourceImpl implements LocationDatasource {
       
       // -- DEBUG FALLBACK --
       if (kDebugMode) {
-        debugPrint('[LocationDatasource] ⚠️ FALLBACK: Simulator/Device timed out. Providing mock São Paulo location for development.');
+        debugPrint('[LocationDatasource] ⚠️ FALLBACK: Simulator/Device timed out. Providing Belo Horizonte location for development.');
         return LocationModel(
-          latitude: -23.5505, // São Paulo Center
-          longitude: -46.6333,
+          latitude: -19.9191, // Belo Horizonte Center
+          longitude: -43.9386,
           accuracy: 10.0,
           altitude: 0.0,
           speed: 0.0,

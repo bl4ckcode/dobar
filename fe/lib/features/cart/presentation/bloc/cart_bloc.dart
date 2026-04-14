@@ -8,6 +8,7 @@ import 'package:barz/features/cart/domain/models/cart_models.dart'
 import 'package:barz/features/cart/domain/usecases/cart_usecase.dart';
 import 'package:barz/features/cart/presentation/bloc/cart_event.dart';
 import 'package:barz/features/cart/presentation/bloc/cart_state.dart';
+import 'package:collection/collection.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -355,22 +356,71 @@ class CartBloc extends Bloc<CartEvent, CartState> {
             updatedIssues.add(
               ValidationIssue(
                 severity: 'sync_error',
-                message: 'Offline: Unable to reliably sync cart prior to checkout.',
+                message:
+                    'Offline: Unable to reliably sync cart prior to checkout.',
               ),
             );
-            
-            emit(st.copyWith(
-              isLoading: false, 
-              cart: st.cart.copyWith(validationIssues: updatedIssues),
-            ));
+
+            emit(
+              st.copyWith(
+                isLoading: false,
+                cart: st.cart.copyWith(validationIssues: updatedIssues),
+              ),
+            );
           }
         },
         (serverCart) {
           final latestState = state;
           if (latestState is! CartLoaded) return;
+
+          // Scientific Merge Strategy:
+          // 1. We keep the total list of items the user expects (optimistic truth).
+          // 2. We reconcile local items with server-processed items by menuItemId.
+          // 3. We absorb server-side fields (id, unitPrice) into local items.
+          // 4. We keep local quantities to prevent UI jumps.
+          final localItems = latestState.cart.items;
+          final mergedItems = localItems.map((local) {
+            final serverItem = serverCart.items.firstWhereOrNull(
+              (s) => s.menuItemId == local.menuItemId,
+            );
+            if (serverItem != null) {
+              return local.copyWith(
+                id: serverItem.id, // Update temp ID with server ID
+                unitPrice: serverItem.unitPrice,
+                totalPrice: local.quantity * serverItem.unitPrice,
+              );
+            }
+            return local;
+          }).toList();
+
+          final localTotal = mergedItems.fold<double>(
+            0.0,
+            (sum, item) => sum + item.totalPrice,
+          );
+
+          final mergedCart = latestState.cart.copyWith(
+            items: mergedItems,
+            discount: serverCart.discount,
+            tax: serverCart.tax,
+            tip: serverCart.tip,
+            deliveryFee: serverCart.deliveryFee,
+            total:
+                localTotal -
+                serverCart.discount +
+                serverCart.tax +
+                serverCart.tip +
+                serverCart.deliveryFee,
+            subtotal: localTotal,
+            bundleSavings: serverCart.bundleSavings,
+            subtotalAfterBundles: serverCart.subtotalAfterBundles,
+            validationIssues: serverCart.validationIssues
+                .where((i) => i.severity != 'sync_error')
+                .toList(),
+            appliedBundles: serverCart.appliedBundles,
+          );
           emit(
             CartLoaded(
-              cart: serverCart,
+              cart: mergedCart,
               barId: latestState.barId,
               locationConfig: latestState.locationConfig,
               activePromotions: latestState.activePromotions,
@@ -419,12 +469,17 @@ class CartBloc extends Bloc<CartEvent, CartState> {
         return;
       }
       if (st.cart.validationIssues.any((i) => i.severity == 'sync_error')) {
-        emit(const CartError(message: 'Cart sync failed. Please check your internet connection before checking out.'));
+        emit(
+          const CartError(
+            message:
+                'Cart sync failed. Please check your internet connection before checking out.',
+          ),
+        );
         emit(st);
         return;
       }
     }
-    
+
     final currentLoadedState = state is CartLoaded ? state : null;
     emit(const CartLoading());
     final result = await cartUsecase.checkout(
@@ -434,15 +489,12 @@ class CartBloc extends Bloc<CartEvent, CartState> {
       specialInstructions: event.specialInstructions,
       activePromotionIds: event.activePromotionIds,
     );
-    result.fold(
-      (failure) {
-        emit(CartError(message: failure.errorMessage));
-        if (currentLoadedState != null) {
-          emit(currentLoadedState);
-        }
-      },
-      (checkoutResult) => emit(CheckoutSuccess(result: checkoutResult)),
-    );
+    result.fold((failure) {
+      emit(CartError(message: failure.errorMessage));
+      if (currentLoadedState != null) {
+        emit(currentLoadedState);
+      }
+    }, (checkoutResult) => emit(CheckoutSuccess(result: checkoutResult)));
   }
 
   Future<void> _onCheckSpotAvailability(
