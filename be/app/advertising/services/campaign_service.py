@@ -111,20 +111,14 @@ class CampaignService:
         
         campaign_id = await database.execute(insert_query)
         
-        # 🔔 If it's a push notification campaign, trigger the broadcast
+        # 🔔 If it's a push notification campaign, trigger the broadcast asynchronously
         if data.campaign_type.value == "push_notification":
-            from app.bars_and_restaurants.services.push_notifications import push_service
-            # In a real scenario, this would be a background task targeting specific users
-            # For now, we'll notify the topic for users near this bar
-            await push_service.send_to_topic(
-                topic=f"bar_{bar_id}_promotions",
-                title=data.name,
-                body=creative.get("tagline") or "Check out our new offer!",
-                data={
-                    "action": "campaign_push",
-                    "bar_id": str(bar_id),
-                    "campaign_id": str(campaign_id)
-                }
+            from app.push_queue import PushQueue
+            await PushQueue.publish_campaign_launch(
+                campaign_id=campaign_id,
+                bar_id=bar_id,
+                targeting=targeting,
+                creative=creative
             )
         
         return await CampaignService.get_campaign(campaign_id, bar_id)

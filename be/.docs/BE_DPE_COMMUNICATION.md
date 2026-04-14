@@ -221,6 +221,11 @@ Request:
 }
 ```
 
+#### Prorated Upgrades & Free Trials (Pending Integration)
+In upcoming iterations, DPE must support subscription life-cycle actions directly triggered by BE webhooks:
+1. **Free Trials:** If a subscription contains `trial_ends_at`, DPE must authorize the card for `0.00` and delay the first billing capture until the free trial expiration.
+2. **Prorated Upgrades:** If a business upgrades from `Master` to `VIP` mid-cycle, the request payload constraints must support calculating remaining `amount_cents` credit based on unspent days.
+
 ### POST /payments/refund
 
 ```json
