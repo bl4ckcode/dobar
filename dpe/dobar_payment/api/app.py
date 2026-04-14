@@ -15,6 +15,10 @@ from .schemas import (
     PixGenerateResponse,
     ErrorResponse,
     HealthResponse,
+    TrialSetupRequestAPI,
+    TrialSetupResponseAPI,
+    CaptureRequestAPI,
+    CaptureResponseAPI,
 )
 from .middleware import (
     RequestContext,
@@ -24,7 +28,7 @@ from .middleware import (
     create_response_headers,
     DPE_VERSION,
 )
-from .routes import PaymentRoutes, PixRoutes, HealthRoutes
+from .routes import PaymentRoutes, PixRoutes, HealthRoutes, SubscriptionRoutes
 from .dependencies import gateway_registry
 
 
@@ -217,6 +221,28 @@ def create_app(
                 raise HTTPException(status_code=status_code, detail=response)
         return response
     
+    @app.post(
+        "/subscriptions/trial/setup",
+        response_model=TrialSetupResponseAPI,
+        responses={502: {"model": ErrorResponse}, 503: {"model": ErrorResponse}},
+    )
+    async def setup_trial(request: TrialSetupRequestAPI):
+        response, status_code = await SubscriptionRoutes.setup_trial(request)
+        if status_code != 200:
+            raise HTTPException(status_code=status_code, detail=response.model_dump())
+        return response
+
+    @app.post(
+        "/payments/capture",
+        response_model=CaptureResponseAPI,
+        responses={404: {"model": ErrorResponse}, 400: {"model": ErrorResponse}},
+    )
+    async def capture_payment(request: CaptureRequestAPI):
+        response, status_code = await PaymentRoutes.capture_payment(request)
+        if status_code != 200:
+            raise HTTPException(status_code=status_code, detail=response.model_dump())
+        return response
+
     @app.get("/health", response_model=HealthResponse)
     async def health():
         response, _ = await HealthRoutes.health_check()

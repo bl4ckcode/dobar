@@ -400,3 +400,232 @@ class TestChargeRequestWithCustomer:
         assert request.customer_info is None
 
 
+class TestTrialSetupSchemas:
+
+    def test_trial_setup_request_validation(self):
+        request = schemas.TrialSetupRequestAPI(
+            bar_id="bar_123",
+            owner_id="owner_456",
+            plan="VIP",
+            trial_days=7,
+            payment_method_id="pm_card_visa",
+            customer_email="owner@bar.com",
+            customer_name="Carlos Alves",
+            idempotency_key=str(uuid.uuid4()),
+        )
+        assert request.plan == "VIP"
+        assert request.trial_days == 7
+        assert request.payment_method_id == "pm_card_visa"
+        assert request.metadata == {}
+
+    def test_trial_setup_request_default_trial_days(self):
+        request = schemas.TrialSetupRequestAPI(
+            bar_id="bar_123",
+            owner_id="owner_456",
+            plan="Master",
+            payment_method_id="pm_card_visa",
+            customer_email="owner@bar.com",
+            customer_name="Carlos Alves",
+            idempotency_key=str(uuid.uuid4()),
+        )
+        assert request.trial_days == 7
+
+    def test_trial_setup_invalid_days_fails(self):
+        from pydantic import ValidationError
+        with pytest.raises(ValidationError):
+            schemas.TrialSetupRequestAPI(
+                bar_id="bar_123",
+                owner_id="owner_456",
+                plan="VIP",
+                trial_days=0,
+                payment_method_id="pm_card_visa",
+                customer_email="owner@bar.com",
+                customer_name="Carlos Alves",
+                idempotency_key=str(uuid.uuid4()),
+            )
+
+    def test_trial_setup_invalid_email_fails(self):
+        from pydantic import ValidationError
+        with pytest.raises(ValidationError):
+            schemas.TrialSetupRequestAPI(
+                bar_id="bar_123",
+                owner_id="owner_456",
+                plan="VIP",
+                payment_method_id="pm_card_visa",
+                customer_email="not-an-email",
+                customer_name="Carlos Alves",
+                idempotency_key=str(uuid.uuid4()),
+            )
+
+    def test_trial_setup_response_model(self):
+        now = datetime.now(timezone.utc)
+        response = schemas.TrialSetupResponseAPI(
+            setup_intent_id="seti_abc123",
+            status="succeeded",
+            client_secret="seti_abc123_secret_xyz",
+            stripe_customer_id="cus_abc123",
+            trial_ends_at=now,
+            payment_method_id="pm_card_visa",
+        )
+        assert response.setup_intent_id == "seti_abc123"
+        assert response.status == "succeeded"
+        assert response.stripe_customer_id == "cus_abc123"
+
+
+class TestCaptureSchemas:
+
+    def test_capture_request_validation(self):
+        request = schemas.CaptureRequestAPI(
+            payment_id="pay_abc123",
+            amount_cents=2990,
+            idempotency_key=str(uuid.uuid4()),
+        )
+        assert request.payment_id == "pay_abc123"
+        assert request.amount_cents == 2990
+
+    def test_capture_request_zero_amount_fails(self):
+        from pydantic import ValidationError
+        with pytest.raises(ValidationError):
+            schemas.CaptureRequestAPI(
+                payment_id="pay_abc123",
+                amount_cents=0,
+                idempotency_key=str(uuid.uuid4()),
+            )
+
+    def test_capture_response_model(self):
+        now = datetime.now(timezone.utc)
+        response = schemas.CaptureResponseAPI(
+            payment_id="pay_abc123",
+            status="captured",
+            amount_cents=2990,
+            gateway="stripe",
+            captured_at=now,
+        )
+        assert response.status == "captured"
+        assert response.gateway == "stripe"
+        assert response.captured_at == now
+
+
+class TestProrationSchemas:
+
+    def test_charge_request_with_proration_info(self):
+        now = datetime.now(timezone.utc)
+        request = schemas.ChargeRequestAPI(
+            order_id="order_upgrade_001",
+            user_id="user_67890",
+            bar_id="bar_111",
+            amount_cents=9990,
+            currency="BRL",
+            country="BR",
+            payment_method=schemas.PaymentMethodAPI(
+                type=schemas.PaymentMethodTypeAPI.CARD,
+                token="tok_xxx",
+            ),
+            idempotency_key=str(uuid.uuid4()),
+            proration_info=schemas.ProrationInfo(
+                previous_plan="Master",
+                new_plan="VIP",
+                credit_amount_cents=3330,
+                cycle_start=now,
+                cycle_end=now,
+                upgrade_date=now,
+            ),
+        )
+        assert request.proration_info is not None
+        assert request.proration_info.previous_plan == "Master"
+        assert request.proration_info.new_plan == "VIP"
+        assert request.proration_info.credit_amount_cents == 3330
+
+    def test_proration_full_credit_covers_upgrade(self):
+        now = datetime.now(timezone.utc)
+        request = schemas.ChargeRequestAPI(
+            order_id="order_upgrade_002",
+            user_id="user_67890",
+            bar_id="bar_111",
+            amount_cents=5000,
+            currency="BRL",
+            payment_method=schemas.PaymentMethodAPI(
+                type=schemas.PaymentMethodTypeAPI.CARD,
+                token="tok_xxx",
+            ),
+            idempotency_key=str(uuid.uuid4()),
+            proration_info=schemas.ProrationInfo(
+                previous_plan="Master",
+                new_plan="VIP",
+                credit_amount_cents=5000,
+                cycle_start=now,
+                cycle_end=now,
+                upgrade_date=now,
+            ),
+        )
+        effective = request.amount_cents - request.proration_info.credit_amount_cents
+        assert effective == 0
+
+    def test_proration_partial_credit_reduces_amount(self):
+        now = datetime.now(timezone.utc)
+        request = schemas.ChargeRequestAPI(
+            order_id="order_upgrade_003",
+            user_id="user_67890",
+            bar_id="bar_111",
+            amount_cents=9990,
+            currency="BRL",
+            payment_method=schemas.PaymentMethodAPI(
+                type=schemas.PaymentMethodTypeAPI.CARD,
+                token="tok_xxx",
+            ),
+            idempotency_key=str(uuid.uuid4()),
+            proration_info=schemas.ProrationInfo(
+                previous_plan="Master",
+                new_plan="VIP",
+                credit_amount_cents=3330,
+                cycle_start=now,
+                cycle_end=now,
+                upgrade_date=now,
+            ),
+        )
+        effective = request.amount_cents - request.proration_info.credit_amount_cents
+        assert effective == 6660
+
+    def test_proration_negative_credit_fails(self):
+        from pydantic import ValidationError
+        now = datetime.now(timezone.utc)
+        with pytest.raises(ValidationError):
+            schemas.ProrationInfo(
+                previous_plan="Master",
+                new_plan="VIP",
+                credit_amount_cents=-100,
+                cycle_start=now,
+                cycle_end=now,
+                upgrade_date=now,
+            )
+
+    def test_charge_request_without_proration(self):
+        request = schemas.ChargeRequestAPI(
+            order_id="order_12345",
+            user_id="user_67890",
+            bar_id="bar_111",
+            amount_cents=4550,
+            currency="BRL",
+            payment_method=schemas.PaymentMethodAPI(
+                type=schemas.PaymentMethodTypeAPI.CARD,
+                token="tok_xxx",
+            ),
+            idempotency_key=str(uuid.uuid4()),
+        )
+        assert request.proration_info is None
+
+    def test_charge_response_with_proration_credit(self):
+        now = datetime.now(timezone.utc)
+        response = schemas.ChargeResponseAPI(
+            payment_id="pay_abc123",
+            status="succeeded",
+            gateway="stripe",
+            gateway_id="pi_abc123",
+            amount_cents=9990,
+            currency="BRL",
+            created_at=now,
+            proration_credit_cents=3330,
+        )
+        assert response.proration_credit_cents == 3330
+
+

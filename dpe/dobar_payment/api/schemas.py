@@ -31,6 +31,15 @@ class CustomerInfoAPI(BaseModel):
     phone: Optional[str] = None
 
 
+class ProrationInfo(BaseModel):
+    previous_plan: str = Field(..., min_length=1)
+    new_plan: str = Field(..., min_length=1)
+    credit_amount_cents: int = Field(..., ge=0)
+    cycle_start: datetime
+    cycle_end: datetime
+    upgrade_date: datetime
+
+
 class ChargeRequestAPI(BaseModel):
     order_id: str
     user_id: str
@@ -43,6 +52,7 @@ class ChargeRequestAPI(BaseModel):
     idempotency_key: str
     metadata: Dict[str, Any] = Field(default_factory=dict)
     description: Optional[str] = None
+    proration_info: Optional[ProrationInfo] = None
 
 
 class ChargeResponseAPI(BaseModel):
@@ -58,6 +68,7 @@ class ChargeResponseAPI(BaseModel):
     pix_expires_at: Optional[datetime] = None
     card_last_four: Optional[str] = None
     card_brand: Optional[str] = None
+    proration_credit_cents: Optional[int] = None
 
 
 class RefundRequestAPI(BaseModel):
@@ -135,3 +146,38 @@ class DpeBackendWebhookPayload(BaseModel):
     currency: Optional[str] = None
     gateway: Optional[str] = None
     created_at: Optional[datetime] = None
+
+
+class TrialSetupRequestAPI(BaseModel):
+    bar_id: str
+    owner_id: str
+    plan: str = Field(..., min_length=1)
+    trial_days: int = Field(default=7, ge=1, le=30)
+    payment_method_id: str
+    customer_email: str = Field(..., pattern=r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
+    customer_name: str = Field(..., min_length=1, max_length=255)
+    idempotency_key: str
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+
+
+class TrialSetupResponseAPI(BaseModel):
+    setup_intent_id: str
+    status: str
+    client_secret: Optional[str] = None
+    stripe_customer_id: str
+    trial_ends_at: datetime
+    payment_method_id: str
+
+
+class CaptureRequestAPI(BaseModel):
+    payment_id: str
+    amount_cents: int = Field(..., gt=0)
+    idempotency_key: str
+
+
+class CaptureResponseAPI(BaseModel):
+    payment_id: str
+    status: str
+    amount_cents: int
+    gateway: str
+    captured_at: datetime
