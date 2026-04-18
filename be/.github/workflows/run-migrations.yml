@@ -48,9 +48,9 @@ jobs:
           git checkout main
           git pull origin main
           
-          # Delete python files in versions folder BUT keep the 5 most recent ones
-          # to ensure the next migration has a valid parent to start from.
-          ls -t migrations/versions/*.py | tail -n +6 | xargs git rm 2>/dev/null || echo "No old migration files to delete"
+          # Delete old migration files but keep the 20 most recent ones
+          # to ensure the migration chain remains intact and the head is never deleted.
+          ls -rt migrations/versions/*.py | head -n -20 | xargs git rm 2>/dev/null || echo "No old migration files to delete"
           
           # Commit and push if there are changes
           if git diff --staged --quiet; then
