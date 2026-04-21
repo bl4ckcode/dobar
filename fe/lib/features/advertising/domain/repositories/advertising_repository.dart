@@ -57,6 +57,14 @@ abstract class AdvertisingRepository {
     required SubscriptionTier tier,
     required String regionCode,
   });
+  Future<SubscriptionTrialSetupResult> setupSubscriptionTrial({
+    required int barId,
+    required int ownerId,
+    required String plan,
+    required String paymentMethodId,
+    required String customerEmail,
+    required String customerName,
+  });
 
   /// Cancel a subscription.
   Future<void> cancelSubscription(int subscriptionId);

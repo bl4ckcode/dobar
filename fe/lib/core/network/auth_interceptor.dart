@@ -1,4 +1,5 @@
 // ignore_for_file: avoid_print
+import 'dart:async';
 import 'dart:convert';
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart' show kDebugMode;
@@ -14,7 +15,7 @@ class AuthInterceptor extends QueuedInterceptor {
   final OnAuthExpiredCallback? onAuthExpired;
   String? _accessToken;
   String? _refreshToken;
-  bool _isRefreshing = false;
+  Completer<bool>? _refreshTokenCompleter;
   final Dio _refreshDio = Dio(
     BaseOptions(
       baseUrl: ApiEndpoints.baseUrl,
@@ -44,20 +45,47 @@ class AuthInterceptor extends QueuedInterceptor {
   void onError(DioException err, ErrorInterceptorHandler handler) async {
     if (err.response?.statusCode == 401 &&
         !_isAuthEndpoint(err.requestOptions.path)) {
-      final refreshed = await _tryRefreshToken();
-      if (refreshed) {
-        try {
-          err.requestOptions.headers['Authorization'] = 'Bearer $_accessToken';
-          final response = await _refreshDio.fetch(err.requestOptions);
-          return handler.resolve(response);
-        } catch (e) {
-          if (kDebugMode) print('[AUTH] Retry after refresh failed: $e');
+      // Check if this request is already a retry to prevent infinite loops
+      if (err.requestOptions.extra['is_retry'] == true) {
+        if (kDebugMode) print('[AUTH] Request already a retry, giving up.');
+      } else {
+        // Check if a refresh is already in progress
+        bool refreshed = false;
+        if (_refreshTokenCompleter != null) {
+          if (kDebugMode) print('[AUTH] Waiting for ongoing refresh...');
+          refreshed = await _refreshTokenCompleter!.future;
+        } else {
+          refreshed = await _tryRefreshToken();
+        }
+
+        if (refreshed) {
+          try {
+            if (kDebugMode) print('[AUTH] Retrying request: ${err.requestOptions.path}');
+            
+            // Mark as retry to avoid infinite loop
+            err.requestOptions.extra['is_retry'] = true;
+            
+            // Update headers with the NEW token that was just saved
+            err.requestOptions.headers['Authorization'] = 'Bearer $_accessToken';
+            
+            // We can now safely use the main Dio for retry if we want, 
+            // but refreshDio is also fine and avoids recursion overhead.
+            final response = await _refreshDio.fetch(err.requestOptions);
+            return handler.resolve(response);
+          } catch (e) {
+            if (kDebugMode) print('[AUTH] Retry after refresh failed: $e');
+          }
         }
       }
-      await _clearTokens();
-      // Notify app that auth has expired - redirect to login
-      if (kDebugMode) print('[AUTH] Auth expired - triggering login redirect');
-      onAuthExpired?.call();
+
+      // If we reach here, we are about to clear tokens. 
+      // ONLY clear tokens if this wasn't a parallel request waiting for a refresh that MIGHT have succeeded.
+      // Or if the refresh itself failed.
+      if (_refreshTokenCompleter == null || _refreshTokenCompleter!.isCompleted) {
+        await _clearTokens();
+        if (kDebugMode) print('[AUTH] Auth expired - triggering login redirect');
+        onAuthExpired?.call();
+      }
     }
 
     final message = _extractErrorMessage(err);
@@ -87,8 +115,13 @@ class AuthInterceptor extends QueuedInterceptor {
   }
 
   Future<bool> _tryRefreshToken() async {
-    if (_isRefreshing || _refreshToken == null) return false;
-    _isRefreshing = true;
+    if (_refreshTokenCompleter != null) {
+      return _refreshTokenCompleter!.future;
+    }
+    
+    if (_refreshToken == null) return false;
+    
+    _refreshTokenCompleter = Completer<bool>();
 
     try {
       if (kDebugMode) print('[AUTH] Attempting token refresh...');
@@ -102,12 +135,16 @@ class AuthInterceptor extends QueuedInterceptor {
         final authResponse = AuthResponse.fromJson(response.data);
         await _saveTokens(authResponse.accessToken, authResponse.refreshToken);
         if (kDebugMode) print('[AUTH] Token refreshed successfully');
+        _refreshTokenCompleter!.complete(true);
         return true;
       }
     } catch (e) {
       if (kDebugMode) print('[AUTH] Token refresh failed: $e');
+      _refreshTokenCompleter!.complete(false);
     } finally {
-      _isRefreshing = false;
+      // Clear the completer after a short delay to allow pending requests 
+      // in the same tick to catch the result if needed, or simply null it out.
+      _refreshTokenCompleter = null;
     }
     return false;
   }
@@ -228,21 +265,23 @@ class AuthInterceptor extends QueuedInterceptor {
       );
     }
 
-    if (_accessToken != null) {
-      if (kDebugMode) print('[AUTH] Using cached token - authenticated: true');
+    if (_accessToken != null && _accessToken!.isNotEmpty) {
       return true;
     }
 
-    final stored = await tokenStorage?.getAccessToken();
-    final isAuth = stored != null && stored.isNotEmpty;
-
-    if (kDebugMode) {
-      print(
-        '[AUTH] Checked storage - token: ${stored != null ? "exists (${stored.length} chars)" : "null"}',
-      );
-      print('[AUTH] isAuthenticated result: $isAuth');
+    final storedAccess = await tokenStorage?.getAccessToken();
+    if (storedAccess != null && storedAccess.isNotEmpty) {
+      _accessToken = storedAccess;
+      return true;
     }
 
-    return isAuth;
+    final storedRefresh = await tokenStorage?.getRefreshToken();
+    final hasRefresh = storedRefresh != null && storedRefresh.isNotEmpty;
+
+    if (kDebugMode) {
+      print('[AUTH] Checked storage - Access: ${storedAccess != null}, Refresh: $hasRefresh');
+    }
+
+    return hasRefresh;
   }
 }

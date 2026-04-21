@@ -17,6 +17,8 @@ class AdvertisingState extends Equatable {
   final bool isLoadingPlans;
   final AdSubscription? subscription;
   final bool isLoadingSubscription;
+  final SubscriptionTrialSetupResult? trialSetup;
+  final bool isSettingUpTrial;
   final List<AdCampaign> campaigns;
   final bool isLoadingCampaigns;
   final AdCampaign? selectedCampaign;
@@ -39,6 +41,8 @@ class AdvertisingState extends Equatable {
     this.isLoadingPlans = false,
     this.subscription,
     this.isLoadingSubscription = false,
+    this.trialSetup,
+    this.isSettingUpTrial = false,
     this.campaigns = const [],
     this.isLoadingCampaigns = false,
     this.selectedCampaign,
@@ -60,6 +64,8 @@ class AdvertisingState extends Equatable {
     bool? isLoadingPlans,
     AdSubscription? subscription,
     bool? isLoadingSubscription,
+    SubscriptionTrialSetupResult? trialSetup,
+    bool? isSettingUpTrial,
     List<AdCampaign>? campaigns,
     bool? isLoadingCampaigns,
     AdCampaign? selectedCampaign,
@@ -81,6 +87,8 @@ class AdvertisingState extends Equatable {
       subscription: subscription ?? this.subscription,
       isLoadingSubscription:
           isLoadingSubscription ?? this.isLoadingSubscription,
+      trialSetup: trialSetup ?? this.trialSetup,
+      isSettingUpTrial: isSettingUpTrial ?? this.isSettingUpTrial,
       campaigns: campaigns ?? this.campaigns,
       isLoadingCampaigns: isLoadingCampaigns ?? this.isLoadingCampaigns,
       selectedCampaign: selectedCampaign ?? this.selectedCampaign,
@@ -104,6 +112,8 @@ class AdvertisingState extends Equatable {
     isLoadingPlans,
     subscription,
     isLoadingSubscription,
+    trialSetup,
+    isSettingUpTrial,
     campaigns,
     isLoadingCampaigns,
     selectedCampaign,

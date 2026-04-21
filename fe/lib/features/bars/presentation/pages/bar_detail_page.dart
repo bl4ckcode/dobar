@@ -448,6 +448,7 @@ class _MenuPageViewState extends State<_MenuPageView> {
         final quantity = _getQuantityFromState(cartState, item.id ?? 0);
 
         return TweenAnimationBuilder<double>(
+          key: ValueKey('anim_${item.id}_$_selectedCategory'),
           duration: Duration(milliseconds: 200 + (index * 30)),
           tween: Tween(begin: 0.0, end: 1.0),
           curve: Curves.easeOut,

@@ -257,6 +257,9 @@
   "notification_order_preparing": "Tu pedido está siendo preparado",
   "notification_new_promotion": "¡Nueva promoción cercana!",
   "notification_payment_complete": "Pago completado exitosamente",
+  "support_on_the_way": "Soporte en camino",
+  "directions_opening": "Abriendo mapa con direcciones...",
+  "help": "Ayuda",
 
   "loading": "Cargando...",
   "error_generic": "Algo salió mal",

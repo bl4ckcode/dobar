@@ -1,68 +1,151 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/core/utils/injections.dart';
-import 'package:barz/l10n/app_localizations.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
+import 'package:barz/l10n/app_localizations.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
+import '../../domain/models/models.dart';
 import '../bloc/advertising_bloc.dart';
 import '../bloc/advertising_event.dart';
 import '../bloc/advertising_state.dart';
-import '../../domain/models/ad_subscription.dart';
+import '../bloc/subscription_trial_cubit.dart';
 
 class SubscriptionPlansPage extends StatelessWidget {
   const SubscriptionPlansPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (ctx) => getItInjector<AdvertisingBloc>()..add(const LoadPlans()),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (_) =>
+              getItInjector<AdvertisingBloc>()..add(const LoadPlans()),
+        ),
+        BlocProvider(create: (_) => getItInjector<SubscriptionTrialCubit>()),
+      ],
       child: const _SubscriptionPlansContent(),
     );
   }
 }
 
-class _SubscriptionPlansContent extends StatelessWidget {
+class _SubscriptionPlansContent extends StatefulWidget {
   const _SubscriptionPlansContent();
+
+  @override
+  State<_SubscriptionPlansContent> createState() =>
+      _SubscriptionPlansContentState();
+}
+
+class _SubscriptionPlansContentState extends State<_SubscriptionPlansContent> {
+  final TextEditingController _paymentMethodController = TextEditingController(
+    text: 'pm_card_visa',
+  );
+  bool _hasRequestedSubscription = false;
+
+  @override
+  void dispose() {
+    _paymentMethodController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final sessionState = context.watch<SessionBloc>().state;
+    final activeBar = sessionState is SessionReady
+        ? sessionState.session.activeBar
+        : null;
+
+    if (!_hasRequestedSubscription && activeBar != null) {
+      _hasRequestedSubscription = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        context.read<AdvertisingBloc>().add(
+          LoadSubscription(barId: activeBar.barId),
+        );
+      });
+    }
 
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.subscription_plans),
         backgroundColor: barzDark,
         foregroundColor: Colors.white,
+        actions: [
+          if (activeBar != null)
+            TextButton(
+              onPressed: () => _openTrialDialog(context),
+              child: Text(
+                l10n.pro_trial_cta,
+                style: const TextStyle(color: Colors.white),
+              ),
+            ),
+        ],
       ),
       body: Container(
         color: barzGoldSoft,
-        child: BlocBuilder<AdvertisingBloc, AdvertisingState>(
-          builder: (context, state) {
-            if (state.isLoadingPlans) {
-              return const Center(
-                child: CircularProgressIndicator(color: barzGold),
+        child: MultiBlocListener(
+          listeners: [
+            BlocListener<AdvertisingBloc, AdvertisingState>(
+              listener: (context, state) {
+                if (state.error != null && state.error!.isNotEmpty) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(state.error!)));
+                } else if (state.successMessage != null &&
+                    state.successMessage!.isNotEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(state.successMessage!)),
+                  );
+                }
+              },
+            ),
+            BlocListener<SubscriptionTrialCubit, SubscriptionTrialState>(
+              listener: (context, state) {
+                if (state.error != null && state.error!.isNotEmpty) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text(state.error!)));
+                } else if (state.successMessage != null &&
+                    state.successMessage!.isNotEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(state.successMessage!)),
+                  );
+                }
+              },
+            ),
+          ],
+          child: BlocBuilder<AdvertisingBloc, AdvertisingState>(
+            builder: (context, state) {
+              final trialState = context.watch<SubscriptionTrialCubit>().state;
+              if (state.isLoadingPlans) {
+                return const Center(
+                  child: CircularProgressIndicator(color: barzGold),
+                );
+              }
+              if (state.error != null) {
+                return _errorState(context, state.error!, l10n);
+              }
+              if (state.plans == null) {
+                return _emptyState(l10n);
+              }
+              return _content(
+                context,
+                plans: state.plans!,
+                currentSubscription: state.subscription,
+                trialSetup: trialState.result,
+                l10n: l10n,
               );
-            }
-            if (state.error != null) {
-              return _buildErrorState(context, state.error!, l10n);
-            }
-            if (state.plans == null) {
-              return _buildEmptyState(l10n);
-            }
-            return _buildContent(
-              context,
-              state.plans!,
-              state.subscription,
-              l10n,
-            );
-          },
+            },
+          ),
         ),
       ),
     );
   }
 
-  Widget _buildErrorState(
+  Widget _errorState(
     BuildContext context,
     String error,
     AppLocalizations l10n,
@@ -89,7 +172,7 @@ class _SubscriptionPlansContent extends StatelessWidget {
     );
   }
 
-  Widget _buildEmptyState(AppLocalizations l10n) {
+  Widget _emptyState(AppLocalizations l10n) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -106,17 +189,22 @@ class _SubscriptionPlansContent extends StatelessWidget {
     );
   }
 
-  Widget _buildContent(
-    BuildContext context,
-    PlansResponse plans,
-    AdSubscription? currentSubscription,
-    AppLocalizations l10n,
-  ) {
+  Widget _content(
+    BuildContext context, {
+    required PlansResponse plans,
+    required AdSubscription? currentSubscription,
+    required SubscriptionTrialSetupResult? trialSetup,
+    required AppLocalizations l10n,
+  }) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if (trialSetup != null) ...[
+            _TrialStatusCard(trialSetup: trialSetup, l10n: l10n),
+            const SizedBox(height: 16),
+          ],
           if (currentSubscription != null) ...[
             _CurrentSubscriptionCard(
               subscription: currentSubscription,
@@ -143,6 +231,97 @@ class _SubscriptionPlansContent extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  void _openTrialDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final sessionState = context.read<SessionBloc>().state;
+    if (sessionState is! SessionReady ||
+        sessionState.session.activeBar == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.select_bar_first)));
+      return;
+    }
+
+    final plans =
+        context.read<AdvertisingBloc>().state.plans?.plans ?? const [];
+    SubscriptionTier selectedTier = plans.isNotEmpty
+        ? plans.first.tier
+        : SubscriptionTier.vip;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) => AlertDialog(
+          title: Text(l10n.pro_trial_cta),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              DropdownButtonFormField<SubscriptionTier>(
+                initialValue: selectedTier,
+                items: plans.isNotEmpty
+                    ? plans
+                          .map(
+                            (plan) => DropdownMenuItem(
+                              value: plan.tier,
+                              child: Text(plan.name),
+                            ),
+                          )
+                          .toList()
+                    : SubscriptionTier.values
+                          .where((tier) => tier != SubscriptionTier.regular)
+                          .map(
+                            (tier) => DropdownMenuItem(
+                              value: tier,
+                              child: Text(tier.name),
+                            ),
+                          )
+                          .toList(),
+                onChanged: (value) {
+                  if (value == null) return;
+                  setModalState(() => selectedTier = value);
+                },
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _paymentMethodController,
+                decoration: const InputDecoration(
+                  labelText: 'Payment method id',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () async {
+                final user = sessionState.session.user;
+                final paymentMethodId = _paymentMethodController.text.trim();
+                if (paymentMethodId.isEmpty || user.id == null) {
+                  return;
+                }
+                await context.read<SubscriptionTrialCubit>().setupTrial(
+                  barId: sessionState.session.activeBar!.barId,
+                  ownerId: user.id!,
+                  plan: selectedTier.name.toUpperCase(),
+                  paymentMethodId: paymentMethodId,
+                  customerEmail: user.email ?? '',
+                  customerName: user.displayName ?? '',
+                );
+                if (ctx.mounted) {
+                  Navigator.pop(ctx);
+                }
+              },
+              child: Text(l10n.confirm),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -194,6 +373,47 @@ class _SubscriptionPlansContent extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+class _TrialStatusCard extends StatelessWidget {
+  final SubscriptionTrialSetupResult trialSetup;
+  final AppLocalizations l10n;
+
+  const _TrialStatusCard({required this.trialSetup, required this.l10n});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      color: barzDark,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(BarzRadii.md),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.pro_trial_cta,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              '${l10n.valid_until}: ${_formatDate(trialSetup.trialEndsAt)}',
+              style: const TextStyle(color: Colors.white70),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 }
 

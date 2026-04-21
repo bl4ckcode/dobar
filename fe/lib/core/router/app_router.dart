@@ -28,6 +28,8 @@ import 'package:barz/features/bars/domain/models/bar_model.dart';
 import 'package:barz/features/payments/presentation/bloc/payment_bloc.dart';
 import 'package:barz/features/payments/presentation/bloc/payment_event.dart';
 import 'package:barz/features/authentication/presentation/pages/login_page.dart';
+import 'package:barz/features/authentication/presentation/pages/biometric_lock_page.dart';
+import 'package:barz/core/services/biometry_service.dart';
 import 'package:barz/features/authentication/presentation/pages/complete_registration_page.dart';
 import 'package:barz/features/onboarding/presentation/pages/onboarding_page.dart';
 import 'package:barz/features/authentication/presentation/pages/mfa_challenge_page.dart';
@@ -48,7 +50,7 @@ import 'package:barz/features/user/presentation/bloc/user_bloc.dart';
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 final _businessShellNavigatorKey = GlobalKey<NavigatorState>();
 
-const _publicRoutes = {'/login', '/auth/mfa-challenge'};
+const _publicRoutes = {'/login', '/auth/mfa-challenge', '/auth/biometry-unlock'};
 
 final appRouter = GoRouter(
   navigatorKey: rootNavigatorKey,
@@ -58,11 +60,21 @@ final appRouter = GoRouter(
     final currentPath = state.matchedLocation;
     final isPublicRoute = _publicRoutes.contains(currentPath);
 
-    if (!isAuthenticated && !isPublicRoute) {
+    if (!isAuthenticated) {
+      if (isPublicRoute) return null;
       return AppRoute.login.path;
     }
 
-    if (isAuthenticated && currentPath == AppRoute.login.path) {
+    // If authenticated, check for biometry lock
+    final biometryService = getItInjector<BiometryService>();
+    if (biometryService.isEnabled && !biometryService.authenticatedThisSession) {
+      if (currentPath != AppRoute.biometryUnlock.path) {
+        return AppRoute.biometryUnlock.path;
+      }
+      return null;
+    }
+
+    if (currentPath == AppRoute.login.path || currentPath == AppRoute.biometryUnlock.path) {
       return AppRoute.home.path;
     }
 
@@ -73,6 +85,11 @@ final appRouter = GoRouter(
       path: AppRoute.login.path,
       name: AppRoute.login.name,
       builder: (context, state) => const LoginPage(),
+    ),
+    GoRoute(
+      path: AppRoute.biometryUnlock.path,
+      name: AppRoute.biometryUnlock.name,
+      builder: (context, state) => const BiometricLockPage(),
     ),
     GoRoute(
       path: AppRoute.onboarding.path,

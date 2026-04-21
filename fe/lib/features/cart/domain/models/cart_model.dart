@@ -503,22 +503,22 @@ class SpotAvailability {
 class CheckoutResult {
   final int orderId;
   final String status;
-  final double totalPrice;
+  final double total;
   final String message;
 
   CheckoutResult({
     required this.orderId,
     required this.status,
-    required this.totalPrice,
+    required this.total,
     required this.message,
   });
 
   factory CheckoutResult.fromJson(Map<String, dynamic> json) {
     return CheckoutResult(
-      orderId: json['order_id'],
-      status: json['status'],
-      totalPrice: (json['total_price'] as num).toDouble(),
-      message: json['message'],
+      orderId: json['order_id'] ?? 0,
+      status: json['status'] ?? 'pending',
+      total: (json['total'] as num?)?.toDouble() ?? 0.0,
+      message: json['message'] ?? '',
     );
   }
 }

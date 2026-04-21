@@ -280,6 +280,9 @@
   "notification_order_preparing": "Seu pedido está sendo preparado",
   "notification_new_promotion": "Nova promoção por perto!",
   "notification_payment_complete": "Pagamento realizado com sucesso",
+  "support_on_the_way": "Suporte a caminho",
+  "directions_opening": "Abrindo mapa com direções...",
+  "help": "Ajuda",
 
   "loading": "Carregando...",
   "error_generic": "Algo deu errado",
@@ -423,9 +426,6 @@
   "location_not_set": "Localização não definida",
   "review_info": "Revise Suas Informações",
   "review_info_hint": "Certifique-se de que tudo está correto antes de criar seu bar.",
-  "back": "Voltar",
-  "next": "Próximo",
-  "cancel": "Cancelar",
   "discard": "Descartar",
   "field_required": "Este campo é obrigatório",
 

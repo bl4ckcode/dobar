@@ -12,6 +12,7 @@ class TokenStorageService {
   static const String _userIdKey = 'user_id';
   static const String _userEmailKey = 'user_email';
   static const String _userNameKey = 'user_name';
+  static const String _userProfileKey = 'user_profile';
 
   TokenStorageService() {
     // Configure storage with platform-specific options
@@ -42,15 +43,25 @@ class TokenStorageService {
     } catch (e) {
       _log('[TOKEN ERROR] Failed to write $key: $e');
 
+      // On iOS, a common error is -25300 (item not found) or -25299 (duplicate item)
+      // Instead of deleting ALL, we should try deleting just the problematic key first.
+
       // On iOS, if we get a keychain error, try to clear all and retry once
       if (!kIsWeb && !isRetry) {
-        _log('[TOKEN RECOVERY] Attempting to clear storage and retry write...');
+        _log('[TOKEN RECOVERY] Attempting to fix storage by re-creating key...');
         try {
-          await _storage!.deleteAll();
+          // Delete problematic key FIRST instead of everything
+          await _storage!.delete(key: key);
           await _storage!.write(key: key, value: value);
-          _log('[TOKEN RECOVERY] Write retry successful after clearing');
+          _log('[TOKEN RECOVERY] Write retry successful for $key');
         } catch (retryError) {
-          _log('[TOKEN RECOVERY] Write retry failed: $retryError');
+          _log('[TOKEN RECOVERY] Individual key retry failed, trying global clear...');
+          try {
+            // ONLY if individual clear failed, we try a more aggressive approach
+            // But we should be very careful here as it logs the user out
+            // await _storage!.deleteAll(); 
+            // await _storage!.write(key: key, value: value);
+          } catch (_) {}
           rethrow;
         }
       } else {
@@ -95,6 +106,7 @@ class TokenStorageService {
         await prefs.remove(_userIdKey);
         await prefs.remove(_userEmailKey);
         await prefs.remove(_userNameKey);
+        await prefs.remove(_userProfileKey);
       } else {
         await _storage!.deleteAll();
       }
@@ -145,6 +157,25 @@ class TokenStorageService {
     _log('[TOKEN] Refresh token deleted');
   }
 
+  // User Profile
+  Future<void> saveUserProfile(String userJson) async {
+    try {
+      await _write(_userProfileKey, userJson);
+      _log('[TOKEN] User profile saved');
+    } catch (e) {
+      _log('[TOKEN] Failed to save user profile: $e');
+    }
+  }
+
+  Future<String?> getUserProfile() async {
+    return await _read(_userProfileKey);
+  }
+
+  Future<void> deleteUserProfile() async {
+    await _delete(_userProfileKey);
+    _log('[TOKEN] User profile deleted');
+  }
+
   // User Info
   Future<void> saveUserInfo({
     required String userId,
@@ -177,8 +208,9 @@ class TokenStorageService {
 
   // Clear All
   Future<void> clearAll() async {
+    _log('[TOKEN] Request to clear all tokens and user info');
     await _deleteAll();
-    _log('[TOKEN] All tokens and user info cleared');
+    _log('[TOKEN] All tokens and user info cleared successfully');
   }
 
   // Debug

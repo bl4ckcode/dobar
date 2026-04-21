@@ -44,6 +44,14 @@ abstract class AdvertisingDatasource {
     required SubscriptionTier tier,
     required String regionCode,
   });
+  Future<SubscriptionTrialSetupResult> setupSubscriptionTrial({
+    required int barId,
+    required int ownerId,
+    required String plan,
+    required String paymentMethodId,
+    required String customerEmail,
+    required String customerName,
+  });
   Future<void> cancelSubscription(int subscriptionId);
   Future<List<AdCampaign>> getCampaigns(int barId);
   Future<AdCampaign> getCampaign(int campaignId);
@@ -228,6 +236,42 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
     } on DioException catch (e) {
       throw ServerException(
         e.response?.data?['detail'] ?? 'Failed to create subscription',
+        e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<SubscriptionTrialSetupResult> setupSubscriptionTrial({
+    required int barId,
+    required int ownerId,
+    required String plan,
+    required String paymentMethodId,
+    required String customerEmail,
+    required String customerName,
+  }) async {
+    try {
+      final response = await dio.post(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.subscriptionTrialSetup}',
+        data: {
+          'bar_id': barId,
+          'owner_id': ownerId,
+          'plan': plan,
+          'trial_days': 7,
+          'payment_method_id': paymentMethodId,
+          'customer_email': customerEmail,
+          'customer_name': customerName,
+          'metadata': <String, dynamic>{},
+        },
+      );
+      return SubscriptionTrialSetupResult.fromJson(
+        response.data as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      throw ServerException(
+        e.response?.data?['detail'] ??
+            e.response?.data?['error']?['message'] ??
+            'Failed to setup trial',
         e.response?.statusCode,
       );
     }

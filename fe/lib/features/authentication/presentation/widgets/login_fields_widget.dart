@@ -17,13 +17,16 @@ class _LoginFieldsWidgetState extends State<LoginFieldsWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.dobarColors;
+    final isDark = context.isDark;
+
     return Container(
       decoration: BoxDecoration(
-        color: surfaceWhite,
+        color: colors.surface.withValues(alpha: isDark ? 0.6 : 0.7),
         borderRadius: BorderRadius.circular(BarzRadii.md),
         boxShadow: [
           BoxShadow(
-            color: barzDark.withValues(alpha: 0.1),
+            color: colors.labelPrimary.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -33,7 +36,7 @@ class _LoginFieldsWidgetState extends State<LoginFieldsWidget> {
         initialValue: PhoneNumber.parse('+55'),
         decoration: InputDecoration(
           hintText: 'Enter your phone number',
-          hintStyle: TextStyle(color: barzDark.withValues(alpha: 0.5)),
+          hintStyle: TextStyle(color: colors.labelSecondary.withValues(alpha: 0.5)),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(BarzRadii.md),
             borderSide: BorderSide.none,
@@ -56,11 +59,11 @@ class _LoginFieldsWidgetState extends State<LoginFieldsWidget> {
           ),
           errorStyle: const TextStyle(height: 0, fontSize: 0),
           contentPadding: const EdgeInsets.all(InputSpacing.paddingHorizontal),
-          counterStyle: TextStyle(color: barzDark.withValues(alpha: 0.6)),
+          counterStyle: TextStyle(color: colors.labelSecondary.withValues(alpha: 0.6)),
           filled: true,
-          fillColor: surfaceWhite,
+          fillColor: Colors.transparent, // Controlled by parent container
         ),
-        style: const TextStyle(color: barzDark, fontSize: 16),
+        style: TextStyle(color: colors.labelPrimary, fontSize: 16),
         onChanged: (phone) {
           setState(() {
             completePhoneNumber = phone.international;

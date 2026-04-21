@@ -74,8 +74,14 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
     final expMonth = m.expiryMonth ?? 0;
     final expYear = m.expiryYear ?? 0;
-    final expiry =
-        '${expMonth.toString().padLeft(2, '0')}/${expYear.toString().substring(expYear.toString().length - 2)}';
+    
+    final monthStr = expMonth.toString().padLeft(2, '0');
+    final yearFullStr = expYear.toString().padLeft(2, '0');
+    final yearStr = yearFullStr.length >= 2 
+        ? yearFullStr.substring(yearFullStr.length - 2) 
+        : yearFullStr;
+        
+    final expiry = '$monthStr/$yearStr';
 
     return SavedCard(
       id: m.id?.toString() ?? '',
@@ -388,7 +394,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
       final request = PaymentRequest(
         orderId: state.result.orderId,
         barId: barId,
-        amount: state.result.totalPrice,
+        amount: state.result.total,
         paymentType: paymentType,
         paymentMethodId: paymentType == PaymentType.credit && _selectedCardId != null && !_selectedCardId!.startsWith('__')
             ? int.tryParse(_selectedCardId!)
@@ -417,17 +423,22 @@ class _CheckoutPageState extends State<CheckoutPage> {
   void _listenToPaymentState(BuildContext context, PaymentState state) {
     if (state.currentTransaction != null && state.currentTransaction!.status == TransactionStatus.approved) {
       if (mounted) setState(() => _isProcessing = false);
-      _showOrderSuccessDialog(context, state.currentTransaction!.orderId ?? 0);
-      // Clear cart on success
+      
+      // Clear cart on success FIRST
       context.read<CartBloc>().add(cart_event.ClearCart());
+      
+      // Then navigate to tracking page
+      final orderId = state.currentTransaction!.orderId ?? 0;
+      AppRoute.goOrder(context, orderId);
     } else if (state.pixPayment != null) {
-      // For PIX, we might want to show a different dialog or navigate
       if (mounted) setState(() => _isProcessing = false);
       
-      // Get orderId from recent checkout success
+      // Clear cart for PIX
+      context.read<CartBloc>().add(cart_event.ClearCart());
+
       final cartState = context.read<CartBloc>().state;
       if (cartState is CheckoutSuccess) {
-        _showOrderSuccessDialog(context, cartState.result.orderId);
+        AppRoute.goOrder(context, cartState.result.orderId);
       }
     } else if (state.error != null) {
       if (mounted) setState(() => _isProcessing = false);
@@ -437,123 +448,6 @@ class _CheckoutPageState extends State<CheckoutPage> {
     }
   }
 
-  void _showOrderSuccessDialog(BuildContext context, int orderId) {
-    final l10n = AppLocalizations.of(context)!;
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Container(
-          padding: const EdgeInsets.all(32),
-          decoration: BoxDecoration(
-            color: context.dobarColors.surfaceElevated,
-            borderRadius: BorderRadius.circular(32),
-            border: Border.all(
-              color: context.dobarColors.surface.withValues(alpha: 0.1),
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 80,
-                height: 80,
-                decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.1),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  LucideIcons.checkCircle2,
-                  color: Colors.green,
-                  size: 40,
-                ),
-              ).animate().scale(duration: 400.ms, curve: Curves.easeOutBack),
-              const SizedBox(height: 24),
-              Text(
-                l10n.checkout_success,
-                style: GoogleFonts.spaceGrotesk(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: context.dobarColors.labelPrimary,
-                ),
-                textAlign: TextAlign.center,
-              ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1, end: 0),
-              const SizedBox(height: 8),
-              Text(
-                l10n.checkout_order_placed,
-                style: GoogleFonts.spaceGrotesk(
-                  fontSize: 14,
-                  color: context.dobarColors.labelSecondary,
-                ),
-                textAlign: TextAlign.center,
-              ).animate().fadeIn(delay: 300.ms),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: context.dobarColors.background,
-                  borderRadius: BorderRadius.circular(100),
-                  border: Border.all(color: context.dobarColors.surface),
-                ),
-                child: Text(
-                  'Order #$orderId',
-                  style: GoogleFonts.jetBrainsMono(
-                    fontWeight: FontWeight.bold,
-                    color: context.dobarColors.labelPrimary,
-                  ),
-                ),
-              ).animate().fadeIn(delay: 400.ms),
-              const SizedBox(height: 32),
-              GestureDetector(
-                onTap: () {
-                  Navigator.pop(ctx);
-                  AppRoute.goOrder(context, orderId);
-                },
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(100),
-                    gradient: LinearGradient(
-                      colors: [
-                        context.dobarColors.buttonPrimary,
-                        context.dobarColors.buttonPrimary.withValues(
-                          alpha: 0.8,
-                        ),
-                      ],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: context.dobarColors.buttonPrimary.withValues(
-                          alpha: 0.3,
-                        ),
-                        blurRadius: 10,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Text(
-                      l10n.order_tracking,
-                      style: GoogleFonts.spaceGrotesk(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: context.dobarColors.buttonOnPrimary,
-                      ),
-                    ),
-                  ),
-                ),
-              ).animate().fadeIn(delay: 500.ms),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }
 
 class _CircleIconButton extends StatelessWidget {

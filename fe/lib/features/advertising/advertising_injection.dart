@@ -5,6 +5,7 @@ import 'package:barz/features/advertising/data/repositories/advertising_reposito
 import 'package:barz/features/advertising/domain/repositories/advertising_repository.dart';
 import 'package:barz/features/advertising/domain/usecases/advertising_usecase.dart';
 import 'package:barz/features/advertising/presentation/bloc/advertising_bloc.dart';
+import 'package:barz/features/advertising/presentation/bloc/subscription_trial_cubit.dart';
 
 /// Initialize advertising feature dependencies.
 void initAdvertisingInjection() {
@@ -22,5 +23,9 @@ void initAdvertisingInjection() {
 
   getItInjector.registerFactory<AdvertisingBloc>(
     () => AdvertisingBloc(getItInjector<AdvertisingUsecase>()),
+  );
+
+  getItInjector.registerFactory<SubscriptionTrialCubit>(
+    () => SubscriptionTrialCubit(getItInjector<AdvertisingUsecase>()),
   );
 }

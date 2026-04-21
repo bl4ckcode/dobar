@@ -1,21 +1,30 @@
 import 'dart:async';
+import 'package:barz/core/design/tokens/colors.dart';
+import 'package:barz/core/design/tokens/dobar_colors.dart';
 import 'package:barz/core/services/email_prompt_service.dart';
+import 'package:barz/core/services/token_storage_service.dart';
 import 'package:barz/core/services/websocket/order_tracking_service.dart';
 import 'package:barz/core/services/websocket/websocket_service.dart';
-import 'package:barz/core/services/token_storage_service.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/orders/presentation/bloc/order_bloc.dart';
 import 'package:barz/features/orders/presentation/bloc/order_event.dart';
 import 'package:barz/features/orders/presentation/bloc/order_state.dart';
+import 'package:barz/features/orders/presentation/widgets/order_summary_card.dart';
+import 'package:barz/features/orders/presentation/widgets/progress_tracker.dart';
+import 'package:barz/features/orders/presentation/widgets/venue_table_info.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
+import 'package:barz/features/session/presentation/bloc/session_state.dart';
+import 'package:barz/features/checkin/presentation/bloc/checkin_bloc.dart';
 import 'package:barz/features/user/domain/usecases/user_usecase.dart';
 import 'package:barz/l10n/app_localizations.dart';
 import 'package:barz/shared/presentation/widget/email_prompt_modal.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:lucide_icons/lucide_icons.dart';
+import 'package:confetti/confetti.dart';
 
-/// Real-time order tracking page with WebSocket connection
 class OrderTrackingPage extends StatefulWidget {
   final int orderId;
 
@@ -26,8 +35,9 @@ class OrderTrackingPage extends StatefulWidget {
 }
 
 class _OrderTrackingPageState extends State<OrderTrackingPage>
-    with SingleTickerProviderStateMixin {
+    with TickerProviderStateMixin {
   OrderTrackingService? _trackingService;
+  late ConfettiController _confettiController;
   late AnimationController _pulseController;
   StreamSubscription<OrderStatusUpdate>? _statusSubscription;
   StreamSubscription<WebSocketState>? _connectionSubscription;
@@ -35,31 +45,39 @@ class _OrderTrackingPageState extends State<OrderTrackingPage>
   OrderStatus _currentStatus = OrderStatus.pending;
   bool _isConnected = false;
   bool _isReconnecting = false;
+  bool _firedReady = false;
   bool _hasShownEmailPrompt = false;
+  final DateTime _startTime = DateTime.now();
+  Timer? _timer;
+  Duration _elapsed = Duration.zero;
 
   @override
   void initState() {
     super.initState();
+    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 1),
     )..repeat(reverse: true);
     _initTracking();
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          _elapsed = DateTime.now().difference(_startTime);
+        });
+      }
+    });
   }
 
   Future<void> _initTracking() async {
     final tokenService = getItInjector<TokenStorageService>();
     final token = await tokenService.getAccessToken();
 
-    if (token == null) {
-      // Not authenticated
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please login to track orders')),
-        );
-      }
-      return;
-    }
+    if (token == null) return;
 
     _trackingService = OrderTrackingService(
       orderId: widget.orderId,
@@ -71,7 +89,13 @@ class _OrderTrackingPageState extends State<OrderTrackingPage>
         setState(() {
           _currentStatus = update.status;
         });
+        
         _showStatusNotification(update);
+
+        if (update.status == OrderStatus.ready && !_firedReady) {
+          _firedReady = true;
+          _confettiController.play();
+        }
       }
     });
 
@@ -120,6 +144,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage>
         ),
         duration: const Duration(seconds: 3),
         behavior: SnackBarBehavior.floating,
+        backgroundColor: context.dobarColors.labelPrimary.withValues(alpha: 0.9),
       ),
     );
   }
@@ -160,6 +185,8 @@ class _OrderTrackingPageState extends State<OrderTrackingPage>
 
   @override
   void dispose() {
+    _timer?.cancel();
+    _confettiController.dispose();
     _pulseController.dispose();
     _statusSubscription?.cancel();
     _connectionSubscription?.cancel();
@@ -170,37 +197,179 @@ class _OrderTrackingPageState extends State<OrderTrackingPage>
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final theme = Theme.of(context);
+    final dobarColors = context.dobarColors;
+    final isReady = _currentStatus == OrderStatus.ready || _currentStatus == OrderStatus.completed;
 
     return BlocProvider(
-      create: (_) =>
-          getItInjector<OrderBloc>()
-            ..add(LoadOrderTimeline(orderId: widget.orderId)),
+      create: (_) => getItInjector<OrderBloc>()..add(LoadOrderTimeline(orderId: widget.orderId)),
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(l10n.order_number(widget.orderId)),
-          actions: [_buildConnectionIndicator()],
-        ),
-        body: Column(
+        body: Stack(
           children: [
-            // Status Progress
-            _buildStatusProgress(theme),
+            // Ambient gold glow
+            Positioned(
+              top: -100,
+              left: 0,
+              right: 0,
+              child: Container(
+                height: 400,
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(
+                    center: const Alignment(0, -0.5),
+                    radius: 1.2,
+                    colors: [
+                      barzGold.withValues(alpha: isReady ? 0.15 : 0.08),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
 
-            // Order Details
-            Expanded(
-              child: BlocBuilder<OrderBloc, OrderState>(
-                builder: (context, state) {
-                  if (state is OrderLoading) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (state is OrderError) {
-                    return _buildErrorView(state.message, l10n);
-                  }
-                  if (state is OrderTimelineLoaded) {
-                    return _buildOrderDetails(state, l10n, theme);
-                  }
-                  return const SizedBox.shrink();
-                },
+            SafeArea(
+              child: CustomScrollView(
+                physics: const BouncingScrollPhysics(),
+                slivers: [
+                  // Top Bar
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          _IconButton(
+                            icon: LucideIcons.arrowLeft,
+                            onPressed: () => context.pop(),
+                            colors: dobarColors,
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: dobarColors.labelPrimary.withValues(alpha: 0.05),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(LucideIcons.clock, size: 14, color: barzGold),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '${_elapsed.inMinutes.toString().padLeft(2, '0')}:${(_elapsed.inSeconds % 60).toString().padLeft(2, '0')}',
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12,
+                                    fontFeatures: [FontFeature.tabularFigures()],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          _buildConnectionIndicator(dobarColors),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Hero Header
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 8, bottom: 32),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(LucideIcons.glassWater, size: 14, color: barzGold),
+                              const SizedBox(width: 8),
+                              Text(
+                                l10n.order_number(widget.orderId).toUpperCase(),
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  letterSpacing: 3,
+                                  fontWeight: FontWeight.bold,
+                                  color: dobarColors.labelPrimary.withValues(alpha: 0.4),
+                                ),
+                              ),
+                            ],
+                          ).animate().fadeIn(duration: const Duration(milliseconds: 500)).slideY(begin: 0.1),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Lapa Lounge Bar',
+                            style: TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -0.5,
+                            ),
+                          ).animate().fadeIn(duration: const Duration(milliseconds: 600), delay: const Duration(milliseconds: 100)).scale(begin: const Offset(0.95, 0.95)),
+                          const SizedBox(height: 20),
+                          _StatusBadge(
+                            isReady: isReady,
+                            colors: dobarColors,
+                            statusText: _getLocalizedStatusText(_currentStatus, l10n),
+                            pulseController: _pulseController,
+                          ).animate().fadeIn(duration: const Duration(milliseconds: 500), delay: const Duration(milliseconds: 200)).scale(begin: const Offset(0.9, 0.9)),
+                        ],
+                      ),
+                    ),
+                  ),
+
+                  // Tracking Content
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    sliver: SliverList(
+                      delegate: SliverChildListDelegate([
+                        // Progress Tracker Card
+                        _GlassCard(
+                          colors: dobarColors,
+                          child: DobarProgressTracker(currentStatus: _currentStatus),
+                        ).animate().fadeIn(duration: const Duration(milliseconds: 600), delay: const Duration(milliseconds: 300)).slideY(begin: 0.05),
+                        
+                        const SizedBox(height: 24),
+
+                        // Order Summary Card
+                        BlocBuilder<OrderBloc, OrderState>(
+                          builder: (context, state) {
+                            if (state is OrderTimelineLoaded) {
+                              return OrderSummaryCard(order: state.order)
+                                .animate().fadeIn(duration: const Duration(milliseconds: 600), delay: const Duration(milliseconds: 400)).slideY(begin: 0.05);
+                            }
+                            return const SizedBox.shrink();
+                          },
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // Venue & Table Info
+                        BlocBuilder<SessionBloc, SessionState>(
+                          builder: (context, state) {
+                            final tableNumber = context.watch<CheckinBloc>().state.tableNumber ?? '—';
+                            return VenueTableInfo(
+                              tableNumber: tableNumber,
+                              onCallWaiter: () => _showTopSnackBar(context, l10n.support_on_the_way, LucideIcons.bellRing, context.dobarColors),
+                              onDirections: () => _showTopSnackBar(context, l10n.directions_opening, LucideIcons.mapPin, context.dobarColors),
+                            ).animate().fadeIn(duration: const Duration(milliseconds: 600), delay: const Duration(milliseconds: 500)).slideY(begin: 0.05);
+                          },
+                        ),
+
+                        const SizedBox(height: 40),
+
+                        // Footer Actions
+                        _FooterActions(colors: dobarColors, onBack: () => context.pop(), l10n: l10n),
+                        const SizedBox(height: 60),
+                      ]),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // Confetti
+            Align(
+              alignment: Alignment.topCenter,
+              child: ConfettiWidget(
+                confettiController: _confettiController,
+                blastDirectionality: BlastDirectionality.explosive,
+                shouldLoop: false,
+                colors: const [barzGold, Colors.yellow, Colors.orange],
+                gravity: 0.1,
               ),
             ),
           ],
@@ -209,309 +378,217 @@ class _OrderTrackingPageState extends State<OrderTrackingPage>
     );
   }
 
-  Widget _buildConnectionIndicator() {
+  Widget _buildConnectionIndicator(DobarColors colors) {
     if (_isReconnecting) {
-      return const Padding(
-        padding: EdgeInsets.all(8.0),
-        child: SizedBox(
-          width: 20,
-          height: 20,
-          child: CircularProgressIndicator(strokeWidth: 2),
+      return Container(
+        width: 40,
+        height: 40,
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: colors.labelPrimary.withValues(alpha: 0.05),
+          shape: BoxShape.circle,
         ),
+        child: const CircularProgressIndicator(strokeWidth: 2),
       );
     }
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Icon(
-        _isConnected ? Icons.wifi : Icons.wifi_off,
-        color: _isConnected ? Colors.green : Colors.red,
-        size: 20,
-      ),
-    );
-  }
-
-  Widget _buildStatusProgress(ThemeData theme) {
     return Container(
-      padding: const EdgeInsets.all(24),
-      color: theme.colorScheme.surfaceContainerHighest,
-      child: Column(
-        children: [
-          // Animated Status Icon
-          AnimatedBuilder(
-            animation: _pulseController,
-            builder: (context, child) {
-              final isActive =
-                  _currentStatus != OrderStatus.completed &&
-                  _currentStatus != OrderStatus.cancelled;
-              return Transform.scale(
-                scale: isActive ? 1.0 + (_pulseController.value * 0.1) : 1.0,
-                child: Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: _getStatusColor(
-                      _currentStatus,
-                    ).withValues(alpha: 0.2),
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: _getStatusColor(_currentStatus),
-                      width: 3,
-                    ),
-                  ),
-                  child: Center(
-                    child: Text(
-                      _currentStatus.emoji,
-                      style: const TextStyle(fontSize: 32),
-                    ),
-                  ),
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 16),
-
-          // Status Text
-          Text(
-            _getLocalizedStatus(_currentStatus),
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Progress Bar
-          _buildProgressBar(theme),
-        ],
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: colors.labelPrimary.withValues(alpha: 0.05),
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: Icon(
+          _isConnected ? LucideIcons.wifi : LucideIcons.wifiOff,
+          color: _isConnected ? Colors.green : Colors.red,
+          size: 16,
+        ),
       ),
     );
   }
 
-  Widget _buildProgressBar(ThemeData theme) {
-    final steps = [
-      OrderStatus.pending,
-      OrderStatus.confirmed,
-      OrderStatus.preparing,
-      OrderStatus.ready,
-      OrderStatus.completed,
-    ];
-
-    final currentIndex = steps.indexOf(_currentStatus);
-
-    return Row(
-      children: List.generate(steps.length * 2 - 1, (index) {
-        if (index.isOdd) {
-          // Connector line
-          final stepIndex = index ~/ 2;
-          final isActive = stepIndex < currentIndex;
-          return Expanded(
-            child: Container(
-              height: 4,
-              color: isActive ? theme.colorScheme.primary : Colors.grey[300],
-            ),
-          );
-        } else {
-          // Step dot
-          final stepIndex = index ~/ 2;
-          final isActive = stepIndex <= currentIndex;
-          final isCurrent = stepIndex == currentIndex;
-
-          return Container(
-            width: isCurrent ? 24 : 16,
-            height: isCurrent ? 24 : 16,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isActive ? theme.colorScheme.primary : Colors.grey[300],
-              border: isCurrent
-                  ? Border.all(color: theme.colorScheme.primary, width: 3)
-                  : null,
-            ),
-            child: isActive && !isCurrent
-                ? const Icon(Icons.check, size: 12, color: Colors.white)
-                : null,
-          );
-        }
-      }),
-    );
-  }
-
-  Widget _buildOrderDetails(
-    OrderTimelineLoaded state,
-    AppLocalizations l10n,
-    ThemeData theme,
-  ) {
-    final order = state.order;
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Items Card
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.order_items_count(order.items.length),
-                    style: theme.textTheme.titleMedium,
-                  ),
-                  const Divider(),
-                  ...order.items.map(
-                    (item) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 16,
-                            backgroundColor: theme.colorScheme.primaryContainer,
-                            child: Text('${item.quantity}x'),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(child: Text(item.menuItemName)),
-                          Text(
-                            '\$${item.totalPrice.toStringAsFixed(2)}',
-                            style: theme.textTheme.bodyLarge?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          // Total Card
-          Card(
-            color: theme.colorScheme.primaryContainer,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(l10n.order_total, style: theme.textTheme.titleLarge),
-                  Text(
-                    '\$${order.totalPrice.toStringAsFixed(2)}',
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.primary,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-
-          const SizedBox(height: 24),
-
-          // Cancel Button (only for pending orders)
-          if (_currentStatus == OrderStatus.pending)
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () => _showCancelDialog(context, l10n),
-                icon: const Icon(Icons.cancel_outlined, color: Colors.red),
-                label: Text(
-                  l10n.order_cancel,
-                  style: const TextStyle(color: Colors.red),
-                ),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Colors.red),
-                  padding: const EdgeInsets.all(16),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildErrorView(String message, AppLocalizations l10n) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline, size: 64, color: Colors.red),
-          const SizedBox(height: 16),
-          Text(message),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: () {
-              context.read<OrderBloc>().add(
-                LoadOrderTimeline(orderId: widget.orderId),
-              );
-            },
-            child: Text(l10n.error_retry),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showCancelDialog(BuildContext context, AppLocalizations l10n) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.order_cancel),
-        content: Text(l10n.order_cancel_confirm),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(l10n.cancel),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              context.read<OrderBloc>().add(
-                CancelOrder(orderId: widget.orderId),
-              );
-              context.pop();
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: Text(l10n.confirm),
-          ),
-        ],
-      ),
-    );
-  }
-
-  String _getLocalizedStatus(OrderStatus status) {
-    final l10n = AppLocalizations.of(context)!;
+  String _getLocalizedStatusText(OrderStatus status, AppLocalizations l10n) {
     switch (status) {
-      case OrderStatus.pending:
-        return l10n.order_status_pending;
-      case OrderStatus.confirmed:
-        return l10n.order_status_confirmed;
-      case OrderStatus.preparing:
-        return l10n.order_status_preparing;
       case OrderStatus.ready:
-        return l10n.order_status_ready;
+        return l10n.notification_order_ready;
       case OrderStatus.completed:
         return l10n.order_status_completed;
-      case OrderStatus.cancelled:
-        return l10n.order_status_cancelled;
+      case OrderStatus.preparing:
+        return l10n.notification_order_preparing;
+      case OrderStatus.confirmed:
+        return l10n.notification_order_confirmed;
+      default:
+        return l10n.order_status_pending;
     }
   }
 
-  Color _getStatusColor(OrderStatus status) {
-    switch (status) {
-      case OrderStatus.pending:
-        return Colors.orange;
-      case OrderStatus.confirmed:
-        return Colors.blue;
-      case OrderStatus.preparing:
-        return Colors.purple;
-      case OrderStatus.ready:
-        return Colors.green;
-      case OrderStatus.completed:
-        return Colors.teal;
-      case OrderStatus.cancelled:
-        return Colors.red;
-    }
+  void _showTopSnackBar(BuildContext context, String title, IconData icon, DobarColors colors) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Icon(icon, color: Colors.white, size: 18),
+            const SizedBox(width: 12),
+            Text(title),
+          ],
+        ),
+        backgroundColor: barzDark,
+        behavior: SnackBarBehavior.floating,
+        margin: EdgeInsets.only(
+          bottom: MediaQuery.of(context).size.height - 100,
+          left: 20,
+          right: 20,
+        ),
+      ),
+    );
+  }
+}
+
+class _IconButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onPressed;
+  final DobarColors colors;
+
+  const _IconButton({required this.icon, required this.onPressed, required this.colors});
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(20),
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: colors.labelPrimary.withValues(alpha: 0.05),
+          shape: BoxShape.circle,
+        ),
+        child: Center(child: Icon(icon, size: 18)),
+      ),
+    );
+  }
+}
+
+class _StatusBadge extends StatelessWidget {
+  final bool isReady;
+  final DobarColors colors;
+  final String statusText;
+  final AnimationController pulseController;
+
+  const _StatusBadge({
+    required this.isReady,
+    required this.colors,
+    required this.statusText,
+    required this.pulseController,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final statusColor = isReady ? Colors.green : barzGold;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: colors.labelPrimary.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: colors.labelPrimary.withValues(alpha: 0.1)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedBuilder(
+            animation: pulseController,
+            builder: (context, child) {
+              return Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: statusColor.withValues(alpha: 0.4 + (pulseController.value * 0.6)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: statusColor.withValues(alpha: 0.2),
+                      blurRadius: 4 + (pulseController.value * 8),
+                      spreadRadius: pulseController.value * 2,
+                    )
+                  ],
+                ),
+              );
+            },
+          ),
+          const SizedBox(width: 10),
+          Text(
+            statusText.toUpperCase(),
+            style: TextStyle(
+              color: statusColor,
+              fontWeight: FontWeight.w900,
+              fontSize: 10,
+              letterSpacing: 2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GlassCard extends StatelessWidget {
+  final Widget child;
+  final DobarColors colors;
+
+  const _GlassCard({required this.child, required this.colors});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: colors.labelPrimary.withValues(alpha: 0.02),
+        borderRadius: BorderRadius.circular(32),
+        border: Border.all(color: colors.labelPrimary.withValues(alpha: 0.08)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.05),
+            blurRadius: 30,
+            offset: const Offset(0, 10),
+          )
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+class _FooterActions extends StatelessWidget {
+  final DobarColors colors;
+  final VoidCallback onBack;
+  final AppLocalizations l10n;
+
+  const _FooterActions({required this.colors, required this.onBack, required this.l10n});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        TextButton.icon(
+          onPressed: onBack,
+          icon: const Icon(LucideIcons.arrowLeft, size: 16),
+          label: Text(l10n.back),
+          style: TextButton.styleFrom(
+            foregroundColor: colors.labelPrimary.withValues(alpha: 0.5),
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextButton.icon(
+          onPressed: () {},
+          icon: const Icon(LucideIcons.helpCircle, size: 16),
+          label: Text(l10n.help),
+          style: TextButton.styleFrom(
+            foregroundColor: colors.labelPrimary.withValues(alpha: 0.3),
+            textStyle: const TextStyle(fontSize: 12),
+          ),
+        ),
+      ],
+    );
   }
 }

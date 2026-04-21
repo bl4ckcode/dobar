@@ -279,6 +279,9 @@
   "notification_order_preparing": "Your order is being prepared",
   "notification_new_promotion": "New promotion nearby!",
   "notification_payment_complete": "Payment completed successfully",
+  "support_on_the_way": "Support is on the way",
+  "directions_opening": "Opening directions map...",
+  "help": "Help",
 
   "loading": "Loading...",
   "error_generic": "Something went wrong",
@@ -429,9 +432,6 @@
   "location_not_set": "Location not set",
   "review_info": "Review Your Information",
   "review_info_hint": "Make sure everything looks correct before creating your bar.",
-  "back": "Back",
-  "next": "Next",
-  "cancel": "Cancel",
   "discard": "Discard",
   "field_required": "This field is required",
 

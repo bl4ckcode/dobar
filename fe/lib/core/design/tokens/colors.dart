@@ -24,8 +24,8 @@ const Color barzGold = Color(0xFFFFDE59); // Dobar Yellow
 /// Softer gold variants for backgrounds and subtle elements
 const Color barzGoldLight = Color(0xFFFFEB85); // Lighter variant (10% lighter)
 const Color barzGoldSoft = Color(
-  0xFFFFFDE7,
-); // Very pale yellow - main backgrounds (Light Mode)
+  0xFFFFFFFF,
+); // Pure white - main backgrounds (Light Mode)
 const Color barzGoldMuted = Color(
   0xFFFFF8E1,
 ); // Muted yellow - input backgrounds

@@ -71,6 +71,7 @@ class ApiEndpoints {
   static const String onboarding = '/me/onboarding';
   static const String paymentGateway = '/me/payment-gateway';
   static const String fcmToken = '/me/fcm-token';
+  static const String subscriptionTrialSetup = '/subscriptions/trial/setup';
 
   // Legacy user endpoints (for backwards compatibility)
   static const String users = '/users';

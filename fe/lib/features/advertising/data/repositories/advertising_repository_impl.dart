@@ -103,6 +103,25 @@ class AdvertisingRepositoryImpl implements AdvertisingRepository {
   }
 
   @override
+  Future<SubscriptionTrialSetupResult> setupSubscriptionTrial({
+    required int barId,
+    required int ownerId,
+    required String plan,
+    required String paymentMethodId,
+    required String customerEmail,
+    required String customerName,
+  }) {
+    return _datasource.setupSubscriptionTrial(
+      barId: barId,
+      ownerId: ownerId,
+      plan: plan,
+      paymentMethodId: paymentMethodId,
+      customerEmail: customerEmail,
+      customerName: customerName,
+    );
+  }
+
+  @override
   Future<void> cancelSubscription(int subscriptionId) {
     return _datasource.cancelSubscription(subscriptionId);
   }

@@ -1,5 +1,5 @@
 import 'package:flutter/foundation.dart' show kDebugMode;
-import 'package:barz/core/storage/secure_storage.dart';
+import 'package:barz/core/services/token_storage_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Service to handle app version migrations and prevent logout issues during updates
@@ -20,12 +20,12 @@ class VersionMigrationService {
   static const String currentVersion = '1.0.0';
   static const int currentBuildNumber = 1;
 
-  final SecureStorage _secureStorage;
+  final TokenStorageService _tokenStorage;
   late final SharedPreferences _prefs;
   bool _initialized = false;
 
-  VersionMigrationService({required SecureStorage secureStorage})
-    : _secureStorage = secureStorage;
+  VersionMigrationService({required TokenStorageService tokenStorage})
+    : _tokenStorage = tokenStorage;
 
   void _debugLog(String message) {
     if (kDebugMode) {
@@ -155,7 +155,7 @@ class VersionMigrationService {
       _debugLog('🔍 Validating storage integrity...');
 
       // Check if tokens are accessible
-      final jwt = await _secureStorage.getJwt();
+      final jwt = await _tokenStorage.getAccessToken();
 
       // If user was logged in but token is not readable, storage is corrupted
       if (jwt != null && jwt.isEmpty) {
@@ -194,8 +194,8 @@ class VersionMigrationService {
     try {
       _debugLog('🗑️ Clearing all storage due to error...');
 
-      await _secureStorage.deleteJwt();
-      await _secureStorage.deleteUserProfile();
+      await _tokenStorage.deleteAccessToken();
+      await _tokenStorage.deleteUserProfile();
 
       // Don't clear version info - keep it for tracking
 
@@ -242,10 +242,18 @@ class VersionMigrationService {
     return _prefs.getString(_buildNumberKey);
   }
 
-  /// Check if user is authenticated (has valid token)
+  /// Check if user is authenticated (has valid tokens)
   Future<bool> isAuthenticated() async {
-    final jwt = await _secureStorage.getJwt();
-    return jwt != null && jwt.isNotEmpty && _validateTokenFormat(jwt);
+    final hasAccessToken = await _tokenStorage.hasValidTokens();
+    if (hasAccessToken) return true;
+
+    // Also consider authenticated if we have a refresh token
+    final refreshToken = await _tokenStorage.getRefreshToken();
+    final hasRefreshToken = refreshToken != null && refreshToken.isNotEmpty;
+    
+    _debugLog('🔐 Auth check - Access: $hasAccessToken, Refresh: $hasRefreshToken');
+    
+    return hasAccessToken || hasRefreshToken;
   }
 
   /// Force clear all data (useful for testing or troubleshooting)

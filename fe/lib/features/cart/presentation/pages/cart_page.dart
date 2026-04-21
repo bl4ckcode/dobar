@@ -11,7 +11,6 @@ import 'package:barz/features/checkin/presentation/bloc/checkin_bloc.dart';
 import 'package:barz/features/checkin/presentation/bloc/checkin_event.dart'
     as checkin_event;
 import 'package:barz/features/checkin/presentation/bloc/checkin_state.dart';
-import 'package:barz/features/payments/presentation/pages/payment_result_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -102,9 +101,6 @@ class _CartPageContentState extends State<_CartPageContent> {
       _lastLoadedCart = state.cart;
     }
 
-    if (state is CheckoutSuccess) {
-      _showOrderSuccessDialog(context, state.result.orderId);
-    }
     if (state is CartError) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(state.message), backgroundColor: errorRed),
@@ -138,7 +134,7 @@ class _CartPageContentState extends State<_CartPageContent> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              state.spotAvailability!.message ?? 
+              state.spotAvailability!.message ??
                   AppLocalizations.of(context)!.cart_spot_not_available,
             ),
             backgroundColor: errorRed,
@@ -146,20 +142,6 @@ class _CartPageContentState extends State<_CartPageContent> {
         );
       }
     }
-  }
-
-  void _showOrderSuccessDialog(BuildContext context, int orderId) {
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (_) => PaymentResultPage(
-          result: PaymentResultType.success,
-          orderId: orderId.toString(),
-          onContinue: () {
-            Navigator.of(context).popUntil((r) => r.isFirst);
-          },
-        ),
-      ),
-    );
   }
 
   void _handleCheckout(BuildContext context) {
@@ -285,7 +267,11 @@ class _CartPageContentState extends State<_CartPageContent> {
                 }
 
                 if (cart != null && items.isEmpty) {
-                  return _buildEmptyState(context, isDark, widget.showBackButton);
+                  return _buildEmptyState(
+                    context,
+                    isDark,
+                    widget.showBackButton,
+                  );
                 }
 
                 final bool isLoading = (state is CartLoaded)
@@ -323,7 +309,12 @@ class _CartPageContentState extends State<_CartPageContent> {
                       child: Column(
                         children: [
                           // Fixed Header
-                          _buildHeader(context, isDark, items.length, widget.showBackButton),
+                          _buildHeader(
+                            context,
+                            isDark,
+                            items.length,
+                            widget.showBackButton,
+                          ),
 
                           // Scrollable Content
                           Expanded(
@@ -335,7 +326,8 @@ class _CartPageContentState extends State<_CartPageContent> {
                                   // Cart Items
                                   ListView.builder(
                                     shrinkWrap: true,
-                                    physics: const NeverScrollableScrollPhysics(),
+                                    physics:
+                                        const NeverScrollableScrollPhysics(),
                                     itemCount: uiItems.length,
                                     itemBuilder: (context, index) {
                                       final item = uiItems[index];
@@ -465,7 +457,12 @@ class _CartPageContentState extends State<_CartPageContent> {
     );
   }
 
-  Widget _buildHeader(BuildContext context, bool isDark, int itemCount, bool showBack) {
+  Widget _buildHeader(
+    BuildContext context,
+    bool isDark,
+    int itemCount,
+    bool showBack,
+  ) {
     final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -600,7 +597,10 @@ class _CartPageContentState extends State<_CartPageContent> {
                 style: FilledButton.styleFrom(
                   backgroundColor: barzGold,
                   foregroundColor: barzDark,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),

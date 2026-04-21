@@ -9,6 +9,7 @@ import 'package:barz/features/session/presentation/bloc/session_event.dart';
 import 'package:barz/features/session/domain/models/bar_access.dart';
 import 'package:barz/l10n/app_localizations.dart';
 import 'package:barz/features/advertising/presentation/pages/campaigns_page.dart';
+import 'package:barz/features/advertising/presentation/pages/subscription_plans_page.dart';
 import 'business_dashboard_page.dart';
 import 'business_settings_page.dart';
 import 'cashier_page.dart';
@@ -345,6 +346,16 @@ class _BusinessShellState extends State<BusinessShell> {
           icon: LucideIcons.megaphone,
           label: 'Marketing',
           page: CampaignsPage(),
+        ),
+      );
+    }
+
+    if (activeBar.canViewBilling || activeBar.canManageAds) {
+      items.add(
+        const BusinessNavItem(
+          icon: LucideIcons.creditCard,
+          label: 'Subscription',
+          page: SubscriptionPlansPage(),
         ),
       );
     }

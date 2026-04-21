@@ -101,7 +101,7 @@ void main() {
     final tCheckoutResult = CheckoutResult(
       orderId: 123,
       status: 'success',
-      totalPrice: 100,
+      total: 100,
       message: 'Order created',
     );
 

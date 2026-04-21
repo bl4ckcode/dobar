@@ -5,7 +5,7 @@ import 'package:barz/core/network/exceptions.dart';
 import 'package:barz/features/location/domain/models/location_model.dart';
 import 'package:barz/features/location/domain/models/partner_proximity.dart';
 import 'package:dio/dio.dart';
-import 'package:location/location.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:permission_handler/permission_handler.dart' as ph;
 
 abstract class LocationDatasource {
@@ -20,8 +20,8 @@ abstract class LocationDatasource {
   });
   Future<void> updateUserLocation(LocationModel location);
   Stream<LocationModel> getLocationStream();
-  Future<void> openAppSettings(); // Added
-  Future<bool> isLocationPermissionPermanentlyDenied(); // Added
+  Future<void> openAppSettings();
+  Future<bool> isLocationPermissionPermanentlyDenied();
   String getWazeDeepLink(LocationModel destination);
   String getGoogleMapsDeepLink(LocationModel destination);
   String getAppleMapsDeepLink(LocationModel destination);
@@ -29,66 +29,57 @@ abstract class LocationDatasource {
 
 class LocationDatasourceImpl implements LocationDatasource {
   final Dio dio;
-  final Location _location = Location();
 
   LocationDatasourceImpl({required this.dio});
 
   @override
   Future<LocationModel> getCurrentLocation() async {
-    // Check if location services are enabled first
-    final serviceEnabled = await _location.serviceEnabled();
-    debugPrint('[LocationDatasource] Service enabled: $serviceEnabled');
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
       throw Exception(
         "Location services are disabled. Please enable location services in Settings.",
       );
     }
 
-    // Check permission again just to be sure
-    final permissionGranted = await _location.hasPermission();
-    debugPrint('[LocationDatasource] Permission status: $permissionGranted');
-    if (permissionGranted == PermissionStatus.denied ||
-        permissionGranted == PermissionStatus.deniedForever) {
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        throw Exception("Location permissions are denied.");
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
       throw Exception(
-        "Location permission denied. Please grant location permission.",
+        "Location permissions are permanently denied, we cannot request permissions.",
       );
     }
 
     try {
-      final timeoutDuration = kDebugMode ? const Duration(seconds: 15) : const Duration(seconds: 15);
-      debugPrint('[LocationDatasource] Fetch started (timeout: ${timeoutDuration.inSeconds}s)...');
+      debugPrint('[LocationDatasource] Fetching current position...');
       
-      // -- NEW PARALLEL FETCH --
-      // Race: Primary poll vs Stream event. First one wins.
-      final locationData = await Future.any([
-        _location.getLocation(),
-        _location.onLocationChanged.first,
-      ]).timeout(
-        timeoutDuration,
-        onTimeout: () {
-          debugPrint('[LocationDatasource] Both fetch attempts timed out');
-          throw TimeoutException("Location request timed out after ${timeoutDuration.inSeconds}s.");
-        },
-      );
+      final Position position = await Geolocator.getCurrentPosition(
+        locationSettings: AppleSettings(
+          accuracy: LocationAccuracy.high,
+          distanceFilter: 10,
+          pauseLocationUpdatesAutomatically: true,
+          showBackgroundLocationIndicator: false,
+        ),
+      ).timeout(const Duration(seconds: 10));
 
-      debugPrint('[LocationDatasource] Location received: ${locationData.latitude}, ${locationData.longitude}');
-      
-      if (locationData.latitude == null || locationData.longitude == null) {
-        throw Exception("Invalid coordinates received from system");
-      }
+      debugPrint('[LocationDatasource] Position received: ${position.latitude}, ${position.longitude}');
 
       return LocationModel(
-        latitude: locationData.latitude!,
-        longitude: locationData.longitude!,
-        accuracy: locationData.accuracy,
-        altitude: locationData.altitude,
-        speed: locationData.speed,
-        timestamp: DateTime.now(),
+        latitude: position.latitude,
+        longitude: position.longitude,
+        accuracy: position.accuracy,
+        altitude: position.altitude,
+        speed: position.speed,
+        timestamp: position.timestamp,
       );
     } catch (e) {
-      debugPrint('[LocationDatasource] Final location fetch attempt failed: $e');
+      debugPrint('[LocationDatasource] Error fetching location: $e');
       
-      // -- DEBUG FALLBACK --
       if (kDebugMode) {
         debugPrint('[LocationDatasource] ⚠️ FALLBACK: Simulator/Device timed out. Providing Belo Horizonte location for development.');
         return LocationModel(
@@ -102,7 +93,7 @@ class LocationDatasourceImpl implements LocationDatasource {
       }
 
       if (e is TimeoutException) {
-        throw Exception("Location request timed out. Please check your iOS Simulator > Features > Location settings.");
+        throw Exception("Location request timed out. Please check your GPS signal or simulator settings.");
       }
       rethrow;
     }
@@ -110,34 +101,35 @@ class LocationDatasourceImpl implements LocationDatasource {
 
   @override
   Future<bool> requestLocationPermission() async {
-    final permission = await _location.requestPermission();
-    if (permission == PermissionStatus.deniedForever) {
-      // If it's denied forever, the dialog won't show.
-      // We might want to throw a specific error or just return false.
-      // The Bloc will handle it.
-      return false;
-    }
-    return permission == PermissionStatus.granted ||
-        permission == PermissionStatus.grantedLimited;
+    final permission = await Geolocator.requestPermission();
+    return permission == LocationPermission.always ||
+        permission == LocationPermission.whileInUse;
   }
 
   @override
   Future<bool> checkLocationPermission() async {
-    final permission = await _location.hasPermission();
-    return permission == PermissionStatus.granted ||
-        permission == PermissionStatus.grantedLimited;
+    final permission = await Geolocator.checkPermission();
+    return permission == LocationPermission.always ||
+        permission == LocationPermission.whileInUse;
   }
 
   @override
   Future<bool> requestLocationService() async {
-    final result = await _location.requestService();
-    return result;
+    // Geolocator doesn't have a direct "requestService" like 'location' package.
+    // It usually directs user to settings. 
+    // However, some platforms show a dialog.
+    // We'll use the existing permission_handler or check status.
+    final enabled = await Geolocator.isLocationServiceEnabled();
+    if (!enabled) {
+      await Geolocator.openLocationSettings();
+      return await Geolocator.isLocationServiceEnabled();
+    }
+    return true;
   }
 
   @override
   Future<bool> checkLocationService() async {
-    final result = await _location.serviceEnabled();
-    return result;
+    return await Geolocator.isLocationServiceEnabled();
   }
 
   @override
@@ -187,20 +179,25 @@ class LocationDatasourceImpl implements LocationDatasource {
 
   @override
   Future<bool> isLocationPermissionPermanentlyDenied() async {
-    final status = await ph.Permission.location.status;
-    return status.isPermanentlyDenied;
+    final permission = await Geolocator.checkPermission();
+    return permission == LocationPermission.deniedForever;
   }
 
   @override
   Stream<LocationModel> getLocationStream() {
-    return _location.onLocationChanged.map(
-      (locationData) => LocationModel(
-        latitude: locationData.latitude ?? 0,
-        longitude: locationData.longitude ?? 0,
-        accuracy: locationData.accuracy,
-        altitude: locationData.altitude,
-        speed: locationData.speed,
-        timestamp: DateTime.now(),
+    return Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 10,
+      ),
+    ).map(
+      (position) => LocationModel(
+        latitude: position.latitude,
+        longitude: position.longitude,
+        accuracy: position.accuracy,
+        altitude: position.altitude,
+        speed: position.speed,
+        timestamp: position.timestamp,
       ),
     );
   }
