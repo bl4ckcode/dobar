@@ -10,9 +10,9 @@ import 'package:barz/features/cart/presentation/bloc/cart_event.dart';
 import 'package:barz/features/cart/presentation/bloc/cart_state.dart';
 import 'package:collection/collection.dart';
 import 'package:dartz/dartz.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:rxdart/rxdart.dart';
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 
 class CartBloc extends Bloc<CartEvent, CartState> {
   final CartUsecase cartUsecase;
@@ -32,13 +32,13 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     on<UpdateActivePromotions>(_onUpdateActivePromotions);
     on<CheckSpotAvailability>(_onCheckSpotAvailability);
 
-    // SyncCart with debounce
     on<SyncCart>(
       _onSyncCart,
       transformer: (events, mapper) {
-        return events
-            .debounceTime(const Duration(milliseconds: 500))
-            .asyncExpand(mapper);
+        return restartable<SyncCart>()(
+          events.debounceTime(const Duration(milliseconds: 500)),
+          mapper,
+        );
       },
     );
   }
@@ -73,7 +73,6 @@ class CartBloc extends Bloc<CartEvent, CartState> {
       );
     }
 
-    // Clear last sync request to ensure fresh sync
     _lastSyncRequest = null;
 
     emit(currentState.copyWith(isLoading: true, barId: barId));
@@ -209,10 +208,24 @@ class CartBloc extends Bloc<CartEvent, CartState> {
         0.0,
         (sum, item) => sum + item.totalPrice,
       ),
+      total:
+          updatedItems.fold<double>(0.0, (sum, item) => sum + item.totalPrice) -
+          currentState.cart.discount +
+          currentState.cart.tax +
+          currentState.cart.tip +
+          currentState.cart.deliveryFee,
     );
 
-    emit(currentState.copyWith(cart: updatedCart, barId: event.barId));
-    add(SyncCart());
+    final newTimestamp = DateTime.now().millisecondsSinceEpoch;
+    emit(
+      currentState.copyWith(
+        cart: updatedCart,
+        barId: event.barId,
+        lastSyncTimestamp: newTimestamp,
+        version: currentState.version + 1,
+      ),
+    );
+    add(const SyncCart());
   }
 
   void _onUpdateCartItem(UpdateCartItem event, Emitter<CartState> emit) {
@@ -241,10 +254,26 @@ class CartBloc extends Bloc<CartEvent, CartState> {
           0.0,
           (sum, item) => sum + item.totalPrice,
         ),
+        total:
+            currentItems.fold<double>(
+              0.0,
+              (sum, item) => sum + item.totalPrice,
+            ) -
+            currentState.cart.discount +
+            currentState.cart.tax +
+            currentState.cart.tip +
+            currentState.cart.deliveryFee,
       );
 
-      emit(currentState.copyWith(cart: updatedCart));
-      add(SyncCart());
+      final newTimestamp = DateTime.now().millisecondsSinceEpoch;
+      emit(
+        currentState.copyWith(
+          cart: updatedCart,
+          lastSyncTimestamp: newTimestamp,
+          version: currentState.version + 1,
+        ),
+      );
+      add(const SyncCart());
     }
   }
 
@@ -262,10 +291,23 @@ class CartBloc extends Bloc<CartEvent, CartState> {
         0.0,
         (sum, item) => sum + item.totalPrice,
       ),
+      total:
+          currentItems.fold<double>(0.0, (sum, item) => sum + item.totalPrice) -
+          currentState.cart.discount +
+          currentState.cart.tax +
+          currentState.cart.tip +
+          currentState.cart.deliveryFee,
     );
 
-    emit(currentState.copyWith(cart: updatedCart));
-    add(SyncCart());
+    final newTimestamp = DateTime.now().millisecondsSinceEpoch;
+    emit(
+      currentState.copyWith(
+        cart: updatedCart,
+        lastSyncTimestamp: newTimestamp,
+        version: currentState.version + 1,
+      ),
+    );
+    add(const SyncCart());
   }
 
   void _onDecreaseCartItem(DecreaseCartItem event, Emitter<CartState> emit) {
@@ -295,10 +337,23 @@ class CartBloc extends Bloc<CartEvent, CartState> {
         0.0,
         (sum, item) => sum + item.totalPrice,
       ),
+      total:
+          currentItems.fold<double>(0.0, (sum, item) => sum + item.totalPrice) -
+          currentState.cart.discount +
+          currentState.cart.tax +
+          currentState.cart.tip +
+          currentState.cart.deliveryFee,
     );
 
-    emit(currentState.copyWith(cart: updatedCart));
-    add(SyncCart());
+    final newTimestamp = DateTime.now().millisecondsSinceEpoch;
+    emit(
+      currentState.copyWith(
+        cart: updatedCart,
+        lastSyncTimestamp: newTimestamp,
+        version: currentState.version + 1,
+      ),
+    );
+    add(const SyncCart());
   }
 
   void _onUpdateActivePromotions(
@@ -308,16 +363,20 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     if (state is! CartLoaded) return;
     final currentState = state as CartLoaded;
 
+    final newTimestamp = DateTime.now().millisecondsSinceEpoch;
     emit(
       currentState.copyWith(
         selectedPromotionIds: event.activePromotionIds,
         isLoading: true,
+        lastSyncTimestamp: newTimestamp,
+        version: currentState.version + 1,
       ),
     );
-    add(SyncCart());
+    add(const SyncCart());
   }
 
   Future<void> _onSyncCart(SyncCart event, Emitter<CartState> emit) async {
+    final syncStartTime = DateTime.now().millisecondsSinceEpoch;
     try {
       if (state is! CartLoaded) return;
       final currentState = state as CartLoaded;
@@ -337,9 +396,6 @@ class CartBloc extends Bloc<CartEvent, CartState> {
       );
 
       if (_lastSyncRequest == request) {
-        if (kDebugMode) {
-          print('[CartBloc] _onSyncCart: Skipping redundant sync request');
-        }
         return;
       }
       _lastSyncRequest = request;
@@ -373,11 +429,10 @@ class CartBloc extends Bloc<CartEvent, CartState> {
           final latestState = state;
           if (latestState is! CartLoaded) return;
 
-          // Scientific Merge Strategy:
-          // 1. We keep the total list of items the user expects (optimistic truth).
-          // 2. We reconcile local items with server-processed items by menuItemId.
-          // 3. We absorb server-side fields (id, unitPrice) into local items.
-          // 4. We keep local quantities to prevent UI jumps.
+          if (latestState.lastSyncTimestamp > syncStartTime) {
+            return;
+          }
+
           final localItems = latestState.cart.items;
           final mergedItems = localItems.map((local) {
             final serverItem = serverCart.items.firstWhereOrNull(
@@ -418,22 +473,10 @@ class CartBloc extends Bloc<CartEvent, CartState> {
                 .toList(),
             appliedBundles: serverCart.appliedBundles,
           );
-          emit(
-            CartLoaded(
-              cart: mergedCart,
-              barId: latestState.barId,
-              locationConfig: latestState.locationConfig,
-              activePromotions: latestState.activePromotions,
-              selectedPromotionIds: latestState.selectedPromotionIds,
-              spotAvailability: latestState.spotAvailability,
-            ),
-          );
+          emit(latestState.copyWith(cart: mergedCart, isLoading: false));
         },
       );
-    } catch (e, stackTrace) {
-      if (kDebugMode) {
-        print('Error in _onSyncCart: $e\n$stackTrace');
-      }
+    } catch (e) {
       if (state is CartLoaded) {
         emit((state as CartLoaded).copyWith(isLoading: false));
       }
@@ -441,10 +484,25 @@ class CartBloc extends Bloc<CartEvent, CartState> {
   }
 
   Future<void> _onClearCart(ClearCart event, Emitter<CartState> emit) async {
-    if (state is! CartLoaded) return;
-    final currentState = state as CartLoaded;
+    CartLoaded currentState;
+    
+    if (state is CartLoaded) {
+      currentState = state as CartLoaded;
+    } else {
+      // Create a default CartLoaded state if we are in CheckoutSuccess or CartError
+      currentState = CartLoaded(
+        cart: CartModel(
+          id: 0,
+          userId: 0,
+          items: [],
+          totalItems: 0,
+          subtotal: 0.0,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      );
+    }
 
-    // specific logic for clear cart: set items to empty and sync
     final updatedCart = currentState.cart.copyWith(
       items: [],
       totalItems: 0,
@@ -456,8 +514,17 @@ class CartBloc extends Bloc<CartEvent, CartState> {
       validationIssues: [],
     );
 
-    emit(currentState.copyWith(cart: updatedCart, isLoading: true));
-    add(SyncCart());
+    final newTimestamp = DateTime.now().millisecondsSinceEpoch;
+    emit(
+      currentState.copyWith(
+        cart: updatedCart,
+        isLoading: true,
+        lastSyncTimestamp: newTimestamp,
+        version: currentState.version + 1,
+      ),
+    );
+
+    add(const SyncCart());
   }
 
   Future<void> _onCheckout(Checkout event, Emitter<CartState> emit) async {

@@ -23,7 +23,7 @@ import 'package:barz/features/orders/presentation/pages/orders_page.dart';
 import 'package:barz/features/checkin/presentation/pages/checkin_page.dart';
 import 'package:barz/features/cart/presentation/pages/cart_page.dart';
 import 'package:barz/features/cart/presentation/bloc/cart_bloc.dart';
-import 'package:barz/features/payment/presentation/pages/checkout_page.dart';
+import 'package:barz/features/payments/presentation/pages/checkout_page.dart';
 import 'package:barz/features/bars/domain/models/bar_model.dart';
 import 'package:barz/features/payments/presentation/bloc/payment_bloc.dart';
 import 'package:barz/features/payments/presentation/bloc/payment_event.dart';

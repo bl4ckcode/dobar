@@ -17,6 +17,7 @@ sealed class CartState with _$CartState {
     SpotAvailability? spotAvailability,
     @Default(false) bool isLoading,
     @Default(0) int version,
+    @Default(0) int lastSyncTimestamp,
   }) = CartLoaded;
   const factory CartState.itemAdded({required CartItemModel item}) =
       CartItemAdded;

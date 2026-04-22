@@ -35,6 +35,7 @@ class HomeConnectedHeader extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           if (nearbyBarName != null)
             Expanded(
@@ -109,7 +110,7 @@ class HomeConnectedHeader extends StatelessWidget {
                       ),
             )
           else
-            const Spacer(),
+            const SizedBox.shrink(),
           if (onNotificationTap != null)
             GestureDetector(
               onTap: onNotificationTap,

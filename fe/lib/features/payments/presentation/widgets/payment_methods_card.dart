@@ -2,7 +2,7 @@ import 'package:barz/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:barz/core/design/tokens/colors.dart';
 
-import '../../domain/models/payment_models.dart';
+import '../../domain/models/checkout_models.dart';
 import 'add_new_card_workflow.dart';
 import 'saved_cards_list.dart';
 import 'payment_options_grid.dart';

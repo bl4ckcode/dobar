@@ -19,7 +19,7 @@ import 'package:intl/intl.dart';
 
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:barz/features/payment/presentation/widgets/pro_subscription_modal.dart';
+import 'package:barz/features/payments/presentation/widgets/pro_subscription_modal.dart';
 
 class ProfileHomePage extends StatefulWidget {
   const ProfileHomePage({super.key});

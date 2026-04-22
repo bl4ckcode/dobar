@@ -6,7 +6,7 @@ import 'package:barz/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:barz/features/cart/presentation/bloc/cart_event.dart'
     as cart_event;
 import 'package:barz/features/cart/presentation/bloc/cart_state.dart';
-import 'package:barz/features/payment/presentation/pages/checkout_page.dart'; // For CheckoutArguments
+import 'package:barz/features/payments/presentation/pages/checkout_page.dart'; // For CheckoutArguments
 import 'package:barz/features/checkin/presentation/bloc/checkin_bloc.dart';
 import 'package:barz/features/checkin/presentation/bloc/checkin_event.dart'
     as checkin_event;
@@ -67,17 +67,14 @@ class _CartPageContent extends StatefulWidget {
 
 class _CartPageContentState extends State<_CartPageContent> {
   final _tableController = TextEditingController();
-  final _locationNoteController =
-      TextEditingController(); // For free text location
+  final _locationNoteController = TextEditingController();
   final _instructionsController = TextEditingController();
 
-  // Configuration is loaded from backend via CartBloc
   String? _selectedSpotId;
   int _tableNumber = 0;
-
   int? _lastLoadedBarId;
   bool _isCheckoutPending = false;
-  bool _isSummaryExpanded = false;
+  CartModel? _lastLoadedCart;
 
   @override
   void dispose() {
@@ -94,8 +91,6 @@ class _CartPageContentState extends State<_CartPageContent> {
     });
   }
 
-  CartModel? _lastLoadedCart;
-
   void _listenToCartState(BuildContext context, CartState state) {
     if (state is CartLoaded) {
       _lastLoadedCart = state.cart;
@@ -107,7 +102,6 @@ class _CartPageContentState extends State<_CartPageContent> {
       );
     }
 
-    // Load config if needed
     if (state is CartLoaded &&
         state.cart.items.isNotEmpty &&
         state.barId != null &&
@@ -117,18 +111,16 @@ class _CartPageContentState extends State<_CartPageContent> {
       context.read<CartBloc>().add(cart_event.LoadCheckoutConfig(barId: barId));
     }
 
-    // Handle Spot Availability Check
     if (state is CartLoaded &&
         state.spotAvailability != null &&
         _isCheckoutPending) {
       if (state.spotAvailability!.isAvailable) {
         _isCheckoutPending = false;
-        // Proceed to checkout
         _proceedToCheckout(
           context,
           state.cart,
           _selectedSpotId,
-        ); // Use selected spot ID
+        );
       } else {
         _isCheckoutPending = false;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -151,21 +143,18 @@ class _CartPageContentState extends State<_CartPageContent> {
     final locationConfig = state.locationConfig;
     final method = locationConfig?.method ?? LocationMethod.tableNumber;
 
-    // Determine location identifier based on method
     String? locationIdentifier;
     if (method == LocationMethod.tableNumber) {
       locationIdentifier = _tableController.text;
     } else if (method == LocationMethod.spotList) {
       locationIdentifier = _selectedSpotId;
-
-      // Check availability for spot
       if (locationIdentifier != null) {
         context.read<CartBloc>().add(
-          cart_event.CheckSpotAvailability(
-            barId: state.barId ?? 0,
-            spotId: locationIdentifier,
-          ),
-        );
+              cart_event.CheckSpotAvailability(
+                barId: state.barId ?? 0,
+                spotId: locationIdentifier,
+              ),
+            );
         _isCheckoutPending = true;
         return;
       }
@@ -196,7 +185,6 @@ class _CartPageContentState extends State<_CartPageContent> {
     Coupon? coupon;
     if (cart.appliedBundles.isNotEmpty) {
       coupon = Coupon(
-        // Assumes Coupon is available from imports
         code: cart.appliedBundles.first.bundleName,
         discount: cart.appliedBundles.first.discountAmount,
         type: CouponType.fixed,
@@ -233,7 +221,6 @@ class _CartPageContentState extends State<_CartPageContent> {
         listener: _listenToCartState,
         child: BlocBuilder<CheckinBloc, CheckinState>(
           builder: (context, checkinState) {
-            // Auto-fill table number (logic omitted for brevity, keeping existing)
             if (checkinState.isCheckedIn &&
                 checkinState.activeCheckin?.tableNumber != null &&
                 _tableController.text.isEmpty &&
@@ -242,7 +229,7 @@ class _CartPageContentState extends State<_CartPageContent> {
                 if (mounted && _tableNumber == 0) {
                   final tVal =
                       int.tryParse(checkinState.activeCheckin!.tableNumber!) ??
-                      0;
+                          0;
                   if (tVal > 0) {
                     setState(() {
                       _tableNumber = tVal;
@@ -255,205 +242,128 @@ class _CartPageContentState extends State<_CartPageContent> {
 
             return BlocBuilder<CartBloc, CartState>(
               builder: (context, state) {
-                if (state is CartLoaded) {
-                  _lastLoadedCart = state.cart;
-                }
-
-                final cart = _lastLoadedCart;
-                final items = cart?.items ?? [];
-
-                if (state is CartLoading && cart == null) {
-                  return const BarzLoadingWidget();
-                }
-
-                if (cart != null && items.isEmpty) {
-                  return _buildEmptyState(
-                    context,
-                    isDark,
-                    widget.showBackButton,
-                  );
-                }
-
-                final bool isLoading = (state is CartLoaded)
-                    ? state.isLoading
-                    : false;
-
-                // Map legacy items to new UI items
-                final uiItems = items
-                    .map(
-                      (item) => CartItem(
-                        id: item.menuItemId.toString(),
-                        name: item.menuItemName,
-                        description: 'Delicious item',
-                        price: item.unitPrice,
-                        quantity: item.quantity,
-                        imageUrl: null,
-                      ),
-                    )
-                    .toList();
-
-                // Map Bundle/Coupon
-                Coupon? displayedCoupon;
-                if (cart != null && cart.appliedBundles.isNotEmpty) {
-                  final bundle = cart.appliedBundles.first;
-                  displayedCoupon = Coupon(
-                    code: bundle.bundleName,
-                    discount: bundle.discountAmount,
-                    type: CouponType.fixed,
-                  );
-                }
-
-                return Stack(
-                  children: [
-                    SafeArea(
-                      child: Column(
-                        children: [
-                          // Fixed Header
-                          _buildHeader(
-                            context,
-                            isDark,
-                            items.length,
-                            widget.showBackButton,
-                          ),
-
-                          // Scrollable Content
-                          Expanded(
-                            child: SingleChildScrollView(
-                              padding: const EdgeInsets.only(bottom: 140),
-                              child: Column(
-                                children: [
-                                  const SizedBox(height: 8),
-                                  // Cart Items
-                                  ListView.builder(
-                                    shrinkWrap: true,
-                                    physics:
-                                        const NeverScrollableScrollPhysics(),
-                                    itemCount: uiItems.length,
-                                    itemBuilder: (context, index) {
-                                      final item = uiItems[index];
-                                      return CartItemCard(
-                                        key: ValueKey(item.id),
-                                        item: item,
-                                        onQuantityChanged: (qty) {
-                                          final menuItemId = int.parse(item.id);
-                                          if (qty < 1) {
-                                            context.read<CartBloc>().add(
-                                              cart_event.RemoveFromCart(
-                                                menuItemId: menuItemId,
-                                              ),
-                                            );
-                                          } else {
-                                            context.read<CartBloc>().add(
-                                              cart_event.UpdateCartItem(
-                                                menuItemId: menuItemId,
-                                                quantity: qty,
-                                              ),
-                                            );
-                                          }
-                                        },
-                                        onRemove: () =>
-                                            context.read<CartBloc>().add(
-                                              cart_event.RemoveFromCart(
-                                                menuItemId: int.parse(item.id),
-                                              ),
-                                            ),
-                                      );
-                                    },
-                                  ),
-
-                                  const SizedBox(height: 16),
-
-                                  // Coupon Section
-                                  CouponInputSection(
-                                    appliedCoupon: displayedCoupon,
-                                    onApplyCoupon: (code) {
-                                      ScaffoldMessenger.of(
-                                        context,
-                                      ).showSnackBar(
-                                        SnackBar(
-                                          content: Text(
-                                            l10n.cart_coupon_not_connected,
-                                          ),
-                                        ),
-                                      );
-                                      return false;
-                                    },
-                                    onRemoveCoupon: () {},
-                                  ),
-
-                                  const SizedBox(height: 16),
-
-                                  // Active Promotions Section
-                                  if (state is CartLoaded &&
-                                      state.activePromotions.isNotEmpty) ...[
-                                    ActivePromotionsSection(
-                                      promotions: state.activePromotions,
-                                      selectedIds: state.selectedPromotionIds
-                                          .toSet(),
-                                      onToggle: (id, isActive) {
-                                        final currentIds = state
-                                            .selectedPromotionIds
-                                            .toSet();
-                                        if (isActive) {
-                                          currentIds.add(id);
-                                        } else {
-                                          currentIds.remove(id);
-                                        }
-                                        context.read<CartBloc>().add(
-                                          cart_event.UpdateActivePromotions(
-                                            activePromotionIds: currentIds
-                                                .toList(),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                    const SizedBox(height: 16),
-                                  ],
-
-                                  const SizedBox(height: 16),
-
-                                  // Where Are You Section
-                                  _buildWhereAreYouSection(context, isDark),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // Sticky Bottom Sheet for Order Summary
-                    Positioned(
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      child: OrderSummarySection(
-                        items: uiItems,
-                        coupon: displayedCoupon,
-                        promotions: (state is CartLoaded)
-                            ? state.activePromotions
-                            : const [],
-                        overrideTotal: cart?.total,
-                        overrideDiscount: (cart != null && cart.discount > 0)
-                            ? cart.discount
-                            : null,
-                        onCheckout: () => _handleCheckout(context),
-                        isLoading: isLoading,
-                        isExpanded: _isSummaryExpanded,
-                        onToggle: () {
-                          setState(() {
-                            _isSummaryExpanded = !_isSummaryExpanded;
-                          });
-                        },
-                      ),
-                    ),
-                  ],
+                return state.maybeWhen(
+                  loading: () => (_lastLoadedCart == null)
+                      ? const BarzLoadingWidget()
+                      : _buildCartStack(context, state, isDark, l10n),
+                  loaded: (cart,
+                      barId,
+                      locationConfig,
+                      activePromotions,
+                      selectedPromotionIds,
+                      spotAvailability,
+                      isLoading,
+                      version,
+                      lastSyncTimestamp) {
+                    _lastLoadedCart = cart;
+                    if (cart.items.isEmpty) {
+                      return _buildEmptyState(
+                        context,
+                        isDark,
+                        widget.showBackButton,
+                      );
+                    }
+                    return _buildCartStack(context, state, isDark, l10n);
+                  },
+                  checkoutSuccess: (_) {
+                    _lastLoadedCart = null;
+                    return _buildEmptyState(
+                      context,
+                      isDark,
+                      widget.showBackButton,
+                    );
+                  },
+                  orElse: () => (_lastLoadedCart != null &&
+                          _lastLoadedCart!.items.isNotEmpty)
+                      ? _buildCartStack(context, state, isDark, l10n)
+                      : _buildEmptyState(
+                          context,
+                          isDark,
+                          widget.showBackButton,
+                        ),
                 );
               },
             );
           },
         ),
       ),
+    );
+  }
+
+  Widget _buildCartStack(
+    BuildContext context,
+    CartState state,
+    bool isDark,
+    AppLocalizations l10n,
+  ) {
+    final cart = _lastLoadedCart!;
+
+    Coupon? displayedCoupon;
+    if (cart.appliedBundles.isNotEmpty) {
+      final bundle = cart.appliedBundles.first;
+      displayedCoupon = Coupon(
+        code: bundle.bundleName,
+        discount: bundle.discountAmount,
+        type: CouponType.fixed,
+      );
+    }
+
+    return Stack(
+      children: [
+        SafeArea(
+          child: Column(
+            children: [
+              BlocSelector<CartBloc, CartState, int>(
+                selector: (state) => state.maybeWhen(
+                  loaded: (cart, barId, locationConfig, activePromotions,
+                          selectedPromotionIds, spotAvailability, isLoading,
+                          version, lastSyncTimestamp) =>
+                      cart.items.length,
+                  orElse: () => _lastLoadedCart?.items.length ?? 0,
+                ),
+                builder: (context, itemCount) {
+                  return _buildHeader(
+                    context,
+                    isDark,
+                    itemCount,
+                    widget.showBackButton,
+                  );
+                },
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.only(bottom: 320),
+                  child: Column(
+                    children: [
+                      const SizedBox(height: 8),
+                      const _CartItemsList(),
+                      const SizedBox(height: 16),
+                      CouponInputSection(
+                        appliedCoupon: displayedCoupon,
+                        onApplyCoupon: (code) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(l10n.cart_coupon_not_connected),
+                            ),
+                          );
+                          return false;
+                        },
+                        onRemoveCoupon: () {},
+                      ),
+                      const SizedBox(height: 16),
+                      const _ActivePromotions(),
+                      const SizedBox(height: 16),
+                      _buildWhereAreYouSection(context, isDark),
+                      const SizedBox(height: 48),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const _CartSummary(),
+      ],
     );
   }
 
@@ -650,13 +560,9 @@ class _CartPageContentState extends State<_CartPageContent> {
             ],
           ),
           const SizedBox(height: 16),
-
-          // Location Logic driven by Bloc State
           BlocBuilder<CartBloc, CartState>(
             builder: (context, state) {
-              final config = (state is CartLoaded)
-                  ? state.locationConfig
-                  : null;
+              final config = (state is CartLoaded) ? state.locationConfig : null;
               final method = config?.method ?? LocationMethod.tableNumber;
 
               if (method == LocationMethod.tableNumber) {
@@ -708,16 +614,8 @@ class _CartPageContentState extends State<_CartPageContent> {
                 );
               } else if (method == LocationMethod.spotList) {
                 final spots = config?.spots ?? [];
-                // Ensure selected spot is valid
-                if (_selectedSpotId != null &&
-                    !spots.any((s) => s.id == _selectedSpotId)) {
-                  // reset if invalid, but wrapped in microtask to avoid build error?
-                  // actually let's just ignore for now or handle in onChanged
-                }
-
                 return DropdownButtonFormField<String>(
-                  // ignore: deprecated_member_use
-                  value: _selectedSpotId,
+                  initialValue: _selectedSpotId,
                   items: spots
                       .map(
                         (spot) => DropdownMenuItem(
@@ -759,12 +657,9 @@ class _CartPageContentState extends State<_CartPageContent> {
               }
             },
           ),
-
           const SizedBox(height: 16),
           Divider(color: isDark ? barzDarkMuted : surfaceDim),
           const SizedBox(height: 16),
-
-          // Special Instructions
           TextField(
             controller: _instructionsController,
             decoration: InputDecoration(
@@ -808,6 +703,185 @@ class _CartPageContentState extends State<_CartPageContent> {
         ),
         child: Icon(icon, color: isDark ? textOnDark : textPrimary),
       ),
+    );
+  }
+}
+
+class _CartItemsList extends StatelessWidget {
+  const _CartItemsList();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocSelector<CartBloc, CartState, List<CartItemModel>>(
+      selector: (state) => state.maybeWhen(
+        loaded: (cart, barId, locationConfig, activePromotions,
+                selectedPromotionIds, spotAvailability, isLoading, version,
+                lastSyncTimestamp) =>
+            cart.items,
+        orElse: () => [],
+      ),
+      builder: (context, items) {
+        return ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: items.length,
+          itemBuilder: (context, index) {
+            final item = items[index];
+            final uiItem = CartItem(
+              id: item.menuItemId.toString(),
+              name: item.menuItemName,
+              description: '',
+              price: item.unitPrice,
+              quantity: item.quantity,
+              imageUrl: null,
+            );
+            return CartItemCard(
+              key: ValueKey(uiItem.id),
+              item: uiItem,
+              onQuantityChanged: (qty) {
+                final menuItemId = int.parse(uiItem.id);
+                if (qty < 1) {
+                  context.read<CartBloc>().add(
+                        cart_event.RemoveFromCart(menuItemId: menuItemId),
+                      );
+                } else {
+                  context.read<CartBloc>().add(
+                        cart_event.UpdateCartItem(
+                          menuItemId: menuItemId,
+                          quantity: qty,
+                        ),
+                      );
+                }
+              },
+              onRemove: () => context.read<CartBloc>().add(
+                    cart_event.RemoveFromCart(
+                      menuItemId: int.parse(uiItem.id),
+                    ),
+                  ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _ActivePromotions extends StatelessWidget {
+  const _ActivePromotions();
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocSelector<CartBloc, CartState,
+        ({List<Promotion> list, List<String> selected})>(
+      selector: (state) => state.maybeWhen(
+        loaded: (cart, barId, locationConfig, activePromotions,
+                selectedPromotionIds, spotAvailability, isLoading, version,
+                lastSyncTimestamp) =>
+            (list: activePromotions, selected: selectedPromotionIds),
+        orElse: () => (list: [], selected: []),
+      ),
+      builder: (context, data) {
+        if (data.list.isEmpty) return const SizedBox.shrink();
+
+        return Column(
+          children: [
+            ActivePromotionsSection(
+              promotions: data.list,
+              selectedIds: data.selected.toSet(),
+              onToggle: (id, isActive) {
+                final currentIds = data.selected.toSet();
+                if (isActive) {
+                  currentIds.add(id);
+                } else {
+                  currentIds.remove(id);
+                }
+                context.read<CartBloc>().add(
+                      cart_event.UpdateActivePromotions(
+                        activePromotionIds: currentIds.toList(),
+                      ),
+                    );
+              },
+            ),
+            const SizedBox(height: 16),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _CartSummary extends StatefulWidget {
+  const _CartSummary();
+
+  @override
+  State<_CartSummary> createState() => _CartSummaryState();
+}
+
+class _CartSummaryState extends State<_CartSummary> {
+  bool _isExpanded = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<CartBloc, CartState>(
+      buildWhen: (prev, curr) {
+        if (prev is! CartLoaded || curr is! CartLoaded) return true;
+        return prev.cart.total != curr.cart.total ||
+            prev.cart.discount != curr.cart.discount ||
+            prev.isLoading != curr.isLoading ||
+            prev.cart.items.length != curr.cart.items.length;
+      },
+      builder: (context, state) {
+        if (state is! CartLoaded) return const SizedBox.shrink();
+
+        final cart = state.cart;
+        final items = cart.items;
+        final uiItems = items
+            .map(
+              (item) => CartItem(
+                id: item.menuItemId.toString(),
+                name: item.menuItemName,
+                description: '',
+                price: item.unitPrice,
+                quantity: item.quantity,
+                imageUrl: null,
+              ),
+            )
+            .toList();
+
+        Coupon? displayedCoupon;
+        if (cart.appliedBundles.isNotEmpty) {
+          final bundle = cart.appliedBundles.first;
+          displayedCoupon = Coupon(
+            code: bundle.bundleName,
+            discount: bundle.discountAmount,
+            type: CouponType.fixed,
+          );
+        }
+
+        return Positioned(
+          bottom: 0,
+          left: 0,
+          right: 0,
+          child: OrderSummarySection(
+            items: uiItems,
+            coupon: displayedCoupon,
+            promotions: state.activePromotions,
+            overrideTotal: cart.total,
+            overrideDiscount: cart.discount > 0 ? cart.discount : null,
+            onCheckout: () {
+              final state = context.findAncestorStateOfType<_CartPageContentState>();
+              state?._handleCheckout(context);
+            },
+            isLoading: state.isLoading,
+            isExpanded: _isExpanded,
+            onToggle: () {
+              setState(() {
+                _isExpanded = !_isExpanded;
+              });
+            },
+          ),
+        );
+      },
     );
   }
 }

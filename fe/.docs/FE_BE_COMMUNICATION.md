@@ -1,8 +1,227 @@
 # BARZ - Frontend Backend Communication
 
-Last Updated: April 13, 2026
+Last Updated: April 14, 2026
 Backend Status: Live on Fly.io
 API Base URL: https://barz-backend-bold-sun-5691.fly.dev
+
+---
+
+## SUBSCRIPTION LIFECYCLE (SPRINT 8 - NEW)
+
+Status: **✅ COMPLETE**
+Priority: CRITICAL - Revenue & Subscription UX
+
+### Overview
+
+Full subscription lifecycle support for Dobar PRO plans. Covers free trial setup with card validation (Stripe SetupIntents), deferred payment capture after trial expiry, and prorated mid-cycle plan upgrades with automatic credit calculation.
+
+### 1. Start Free Trial
+
+Validates the owner's card via Stripe SetupIntent ($0 auth) and starts a 7-day trial. No charge is made until `trial_ends_at` expires.
+
+```
+POST /subscriptions/trial/setup
+Auth: Required (Access Token)
+Headers:
+  X-Idempotency-Key: "uuid-v4-string" (Recommended)
+
+Body:
+{
+  "bar_id": 123,
+  "owner_id": 456,
+  "plan": "VIP",
+  "trial_days": 7,
+  "payment_method_id": "pm_card_visa",
+  "customer_email": "owner@bar.com",
+  "customer_name": "Carlos Alves",
+  "metadata": {}
+}
+
+Response 200:
+{
+  "setup_intent_id": "seti_abc123",
+  "status": "succeeded",
+  "client_secret": "seti_abc123_secret_xyz",
+  "stripe_customer_id": "cus_abc123",
+  "trial_ends_at": "2026-04-21T02:00:00Z",
+  "payment_method_id": "pm_card_visa"
+}
+
+Errors:
+402 Payment Required: {"error": {"code": "PAYMENT_DECLINED", "message": "Card validation failed"}}
+400 Bad Request: {"error": {"code": "BAD_REQUEST", "message": "Trial setup failed"}}
+```
+
+### 2. Capture Payment After Trial
+
+Called by the backend scheduler when `trial_ends_at` expires. Can also be triggered manually by the frontend for immediate billing.
+
+```
+POST /subscriptions/capture
+Auth: Required (Access Token)
+Headers:
+  X-Idempotency-Key: "uuid-v4-string" (Recommended)
+
+Body:
+{
+  "payment_id": "seti_abc123",
+  "amount_cents": 2990
+}
+
+Response 200:
+{
+  "payment_id": "seti_abc123",
+  "status": "captured",
+  "amount_cents": 2990,
+  "gateway": "stripe",
+  "captured_at": "2026-04-21T02:00:00Z"
+}
+
+Errors:
+402 Payment Required: {"error": {"code": "PAYMENT_DECLINED", "message": "Capture failed"}}
+```
+
+### 3. Prorated Plan Upgrade
+
+When a bar upgrades mid-cycle (e.g., Master → VIP on Day 15), the frontend calculates the remaining credit for unused days and sends it as `proration_info`. DPE automatically deducts the credit from the charge.
+
+```
+POST /payments/v2/charge/upgrade
+Auth: Required (Access Token)
+Headers:
+  X-Idempotency-Key: "uuid-v4-string" (Required)
+
+Body:
+{
+  "order_id": 0,
+  "bar_id": 123,
+  "amount": 99.90,
+  "currency": "BRL",
+  "country": "BR",
+  "payment_method": {
+    "type": "card",
+    "token": "tok_xxx",
+    "provider": "saved"
+  },
+  "proration_info": {
+    "previous_plan": "Master",
+    "new_plan": "VIP",
+    "credit_amount_cents": 3330,
+    "cycle_start": "2026-04-01T00:00:00Z",
+    "cycle_end": "2026-04-30T23:59:59Z",
+    "upgrade_date": "2026-04-15T12:00:00Z"
+  }
+}
+
+Response 200 (Partial credit applied):
+{
+  "payment_id": "pay_abc123",
+  "status": "succeeded",
+  "gateway": "stripe",
+  "gateway_id": "pi_xxx",
+  "amount": 99.90,
+  "currency": "BRL",
+  "created_at": "2026-04-15T12:00:00Z",
+  "proration_credit_cents": 3330
+}
+
+Response 200 (Full credit, no gateway charge):
+{
+  "payment_id": "pay_abc123",
+  "status": "credit_applied",
+  "gateway": "internal",
+  "gateway_id": "proration_credit",
+  "amount": 0.0,
+  "currency": "BRL",
+  "created_at": "2026-04-15T12:00:00Z",
+  "proration_credit_cents": 5000
+}
+
+Errors:
+422 Validation Error: proration_info is required for upgrade charges
+402 Payment Required: {"error": {"code": "PAYMENT_DECLINED", "message": "Upgrade payment declined"}}
+```
+
+### FE Implementation
+
+```dart
+class SubscriptionRepository {
+  final Dio _dio;
+
+  Future<TrialSetupResult> startFreeTrial({
+    required int barId,
+    required int ownerId,
+    required String plan,
+    required String paymentMethodId,
+    required String email,
+    required String name,
+  }) async {
+    final res = await _dio.post('/subscriptions/trial/setup', data: {
+      'bar_id': barId,
+      'owner_id': ownerId,
+      'plan': plan,
+      'trial_days': 7,
+      'payment_method_id': paymentMethodId,
+      'customer_email': email,
+      'customer_name': name,
+    });
+    return TrialSetupResult.fromJson(res.data);
+  }
+
+  Future<CaptureResult> capturePayment({
+    required String paymentId,
+    required int amountCents,
+  }) async {
+    final res = await _dio.post('/subscriptions/capture', data: {
+      'payment_id': paymentId,
+      'amount_cents': amountCents,
+    });
+    return CaptureResult.fromJson(res.data);
+  }
+
+  Future<ChargeResult> upgradePlan({
+    required int barId,
+    required double amount,
+    required String currency,
+    required String country,
+    required String cardToken,
+    required ProrationInfo proration,
+  }) async {
+    final res = await _dio.post('/payments/v2/charge/upgrade',
+      data: {
+        'order_id': 0,
+        'bar_id': barId,
+        'amount': amount,
+        'currency': currency,
+        'country': country,
+        'payment_method': {
+          'type': 'card',
+          'token': cardToken,
+          'provider': 'saved',
+        },
+        'proration_info': proration.toJson(),
+      },
+    );
+    return ChargeResult.fromJson(res.data);
+  }
+}
+```
+
+### Proration Credit Calculation (FE Helper)
+
+```dart
+int calculateProrationCredit({
+  required int planPriceCents,
+  required DateTime cycleStart,
+  required DateTime cycleEnd,
+  required DateTime upgradeDate,
+}) {
+  final totalDays = cycleEnd.difference(cycleStart).inDays;
+  final usedDays = upgradeDate.difference(cycleStart).inDays;
+  final remainingDays = totalDays - usedDays;
+  return ((planPriceCents / totalDays) * remainingDays).round();
+}
+```
 
 ---
 
@@ -908,7 +1127,10 @@ The frontend relies on WebSocket events to trigger notification sounds (`new_ord
 - GET /me/profile
 - PUT /me/profile (Now accepts `phone_number` and `avatar_url`)
 
----
+### Subscriptions
+- POST /subscriptions/trial/setup (Free trial with card validation)
+- POST /subscriptions/capture (Capture after trial ends)
+- POST /payments/v2/charge/upgrade (Prorated mid-cycle upgrade)
 
 ## ADVERTISING & SUBSCRIPTIONS (SPRING 5 - NEW)
 
@@ -1224,6 +1446,9 @@ Errors:
 | Staff Management | ✅ | ✅ |
 | Order History (Cursor) | ✅ | ✅ |
 | Push Notifications (FCM) | ✅ | ✅ |
+| Subscription Trial Setup | ✅ | 🔲 |
+| Subscription Capture | ✅ | 🔲 |
+| Prorated Plan Upgrade | ✅ | 🔲 |
 
 ---
 

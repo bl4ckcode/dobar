@@ -13,6 +13,7 @@ import 'package:barz/features/location/presentation/bloc/location_cubit.dart';
 import 'package:barz/features/location/presentation/bloc/location_state.dart';
 import 'package:barz/l10n/app_localizations.dart';
 import 'package:barz/core/design/components/location_permission_alert.dart';
+import 'package:barz/features/promotions/domain/models/promotion_model.dart';
 
 class HomeConnected extends StatelessWidget {
   const HomeConnected({super.key});
@@ -33,7 +34,8 @@ class HomeConnectedView extends StatefulWidget {
   State<HomeConnectedView> createState() => _HomeConnectedViewState();
 }
 
-class _HomeConnectedViewState extends State<HomeConnectedView> with WidgetsBindingObserver {
+class _HomeConnectedViewState extends State<HomeConnectedView>
+    with WidgetsBindingObserver {
   final ScrollController _scrollController = ScrollController();
 
   @override
@@ -42,7 +44,9 @@ class _HomeConnectedViewState extends State<HomeConnectedView> with WidgetsBindi
     // Trigger initial load if location is already available
     final locationState = context.read<LocationCubit>().state;
     if (locationState.currentLocation != null) {
-      debugPrint('[HomeView] Location already available: ${locationState.currentLocation!.latitude}, ${locationState.currentLocation!.longitude}');
+      debugPrint(
+        '[HomeView] Location already available: ${locationState.currentLocation!.latitude}, ${locationState.currentLocation!.longitude}',
+      );
       context.read<HomeBloc>().add(
         LoadHomeData(
           latitude: locationState.currentLocation!.latitude,
@@ -68,7 +72,9 @@ class _HomeConnectedViewState extends State<HomeConnectedView> with WidgetsBindi
       debugPrint('[HomeView] App resumed, checking location state...');
       final locationState = context.read<LocationCubit>().state;
       if (locationState.currentLocation == null) {
-        debugPrint('[HomeView] Location still null on resume, re-triggering getCurrentLocation');
+        debugPrint(
+          '[HomeView] Location still null on resume, re-triggering getCurrentLocation',
+        );
         context.read<LocationCubit>().getCurrentLocation();
       }
     }
@@ -77,7 +83,9 @@ class _HomeConnectedViewState extends State<HomeConnectedView> with WidgetsBindi
   void _refreshData(BuildContext context) {
     final locationState = context.read<LocationCubit>().state;
     if (locationState.currentLocation != null) {
-      debugPrint('[HomeView] Refreshing data with location: ${locationState.currentLocation!.latitude}');
+      debugPrint(
+        '[HomeView] Refreshing data with location: ${locationState.currentLocation!.latitude}',
+      );
       context.read<HomeBloc>().add(
         LoadHomeData(
           latitude: locationState.currentLocation!.latitude,
@@ -101,8 +109,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> with WidgetsBindi
 
     if (homeState is HomeLoaded) {
       for (final bar in homeState.data.nearbyBars) {
-        if (bar.distanceMeters <= 5000) {
-          // 5km
+        if (bar.distanceMeters <= 500) {
           nearbyBarName = bar.name;
           closestBar = bar;
           break;
@@ -115,7 +122,9 @@ class _HomeConnectedViewState extends State<HomeConnectedView> with WidgetsBindi
         if (!state.isLoading && state.currentLocation != null) {
           // Trigger load if not already loaded OR if it's the first time we get location
           // We removed the restrictive 'homeState is HomeInitial' check to allow updates when location improves
-          debugPrint('[HomeView] Location obtained or improved, triggering LoadHomeData');
+          debugPrint(
+            '[HomeView] Location obtained or improved, triggering LoadHomeData',
+          );
           context.read<HomeBloc>().add(
             LoadHomeData(
               latitude: state.currentLocation!.latitude,
@@ -156,39 +165,9 @@ class _HomeConnectedViewState extends State<HomeConnectedView> with WidgetsBindi
                     bottom: BarzSpacing.lg,
                   ),
                   children: [
-                    const SizedBox(height: 80),
+                    SizedBox(height: nearbyBarName != null ? 100 : 64),
                     _buildCategoriesSection(context),
                     const SizedBox(height: BarzSpacing.md),
-
-                    // Promotions Section
-                    BlocBuilder<HomeBloc, HomeState>(
-                      builder: (context, state) {
-                        if (state is HomeLoaded &&
-                            state.data.activePromotions.isNotEmpty) {
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildSectionTitleWithSubtitle(
-                                AppLocalizations.of(
-                                  context,
-                                )!.home_promotions_title,
-                                AppLocalizations.of(
-                                  context,
-                                )!.home_promotions_subtitle,
-                                colors,
-                              ),
-                              const SizedBox(height: BarzSpacing.md),
-                              _buildPromotionsList(
-                                context,
-                                state.data.activePromotions,
-                              ),
-                              const SizedBox(height: BarzSpacing.lg),
-                            ],
-                          );
-                        }
-                        return const SizedBox.shrink();
-                      },
-                    ),
 
                     // Nearby Bars Section
                     _buildSectionTitleWithSubtitle(
@@ -220,6 +199,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> with WidgetsBindi
                           return _buildBarsCarousel(
                             context,
                             state.data.nearbyBars,
+                            promotions: state.data.activePromotions,
                           );
                         }
                         // Initial state or other
@@ -305,19 +285,22 @@ class _HomeConnectedViewState extends State<HomeConnectedView> with WidgetsBindi
                   children: [
                     HomeConnectedHeader(
                       nearbyBarName: nearbyBarName,
-                      unreadNotifications:
-                          homeState is HomeLoaded
-                              ? homeState.data.userStatus?.unreadNotifications ?? 0
-                              : 0,
+                      unreadNotifications: homeState is HomeLoaded
+                          ? homeState.data.userStatus?.unreadNotifications ?? 0
+                          : 0,
                       onBarTap: () {
                         // Navigate to check-in page and pass the bar object via extra
                         if (closestBar != null) {
                           try {
                             final barModel = closestBar.toBarModel();
-                            debugPrint('[Home] Navigating to check-in with bar: ${barModel.id}');
+                            debugPrint(
+                              '[Home] Navigating to check-in with bar: ${barModel.id}',
+                            );
                             AppRoute.checkin.push(context, extra: barModel);
                           } catch (e) {
-                            debugPrint('[Home] Error converting bar to BarModel: $e');
+                            debugPrint(
+                              '[Home] Error converting bar to BarModel: $e',
+                            );
                             // Fallback: just go to check-in page without specific bar
                             AppRoute.checkin.push(context);
                           }
@@ -325,13 +308,15 @@ class _HomeConnectedViewState extends State<HomeConnectedView> with WidgetsBindi
                           AppRoute.checkin.push(context);
                         }
                       },
-                      onNotificationTap: () => AppRoute.notifications.push(context),
+                      onNotificationTap: () =>
+                          AppRoute.notifications.push(context),
                     ),
                     if (locationState.currentLocation == null)
                       LocationPermissionAlert(
                         error: locationState.error,
                         isLoading: locationState.isLoading,
-                        onGrant: () => context.read<LocationCubit>().getCurrentLocation(),
+                        onGrant: () =>
+                            context.read<LocationCubit>().getCurrentLocation(),
                       ),
                   ],
                 ),
@@ -468,163 +453,11 @@ class _HomeConnectedViewState extends State<HomeConnectedView> with WidgetsBindi
     );
   }
 
-  Widget _buildPromotionsList(BuildContext context, List<dynamic> promotions) {
-    return SizedBox(
-      height: 112,
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: BarzSpacing.lg),
-        scrollDirection: Axis.horizontal,
-        itemCount: promotions.length > 10 ? 10 : promotions.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 12),
-        itemBuilder: (context, index) {
-          final promo = promotions[index];
-          return _buildPromotionCard(context, promo, index);
-        },
-      ),
-    );
-  }
-
-  Widget _buildPromotionCard(BuildContext context, dynamic promo, int index) {
-    // Logic for discount display
-    String discountLabel;
-    // Assuming promo has discountType, discountValue similar to existing code
-    // Ideally this logic should be in a helper or view model
-    if (promo.discountType == 'percentage') {
-      discountLabel = '${promo.discountValue?.toInt() ?? 0}% OFF';
-    } else if (promo.discountType == 'fixed') {
-      discountLabel =
-          'R\$ ${promo.discountValue?.toStringAsFixed(0) ?? '0'} OFF';
-    } else if (promo.discountType == 'bogo') {
-      discountLabel = AppLocalizations.of(context)!.promo_label_bogo;
-    } else {
-      discountLabel = AppLocalizations.of(context)!.promo_label_deal;
-    }
-
-    return GestureDetector(
-      onTap: () => AppRoute.pushPromotion(context, promo.id),
-      child: Container(
-        width: 160,
-        height: 224,
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(BarzRadii.lg),
-          border: Border.all(color: barzDarkMuted, width: 1),
-          boxShadow: Theme.of(context).brightness == Brightness.light
-              ? [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.12),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
-                  ),
-                ]
-              : null,
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(BarzRadii.lg),
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: Theme.of(context).brightness == Brightness.light
-                          ? [
-                              const Color(0xFFFFF9E6),
-                              const Color(0xFFFFFBF0),
-                              const Color(0xFFFFF4D6),
-                            ]
-                          : [
-                              const Color(0xFFFFDE59),
-                              const Color(0xFFFFEB85).withValues(alpha: 0.9),
-                              const Color(0xFFFFDE59).withValues(alpha: 0.8),
-                            ],
-                      stops: const [0.0, 0.5, 1.0],
-                    ),
-                  ),
-                ),
-              ),
-              // Discount Tag
-              Positioned(
-                top: 12,
-                left: 12,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).brightness == Brightness.light
-                        ? const Color(0xFFD4EDDA)
-                        : Colors.lightGreen[400],
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    discountLabel,
-                    style: const TextStyle(
-                      color: barzDark,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 11,
-                    ),
-                  ),
-                ),
-              ),
-              // Details
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        promo.title ??
-                            AppLocalizations.of(context)!.promo_default_title,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.bold,
-                          color: barzDark,
-                        ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 8),
-                      // Time range
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.access_time,
-                            size: 12,
-                            color: barzDark.withValues(alpha: 0.7),
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              '${promo.startTime ?? '00:00'} - ${promo.endTime ?? '23:59'}',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: barzDark.withValues(alpha: 0.7),
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ).animate().fadeIn(delay: (50 * (index % 5)).ms).slideX(begin: 0.1, end: 0),
-    );
-  }
-
-  Widget _buildBarsCarousel(BuildContext context, List<dynamic> bars) {
+  Widget _buildBarsCarousel(
+    BuildContext context,
+    List<dynamic> bars, {
+    List<dynamic> promotions = const [],
+  }) {
     final displayBars = bars.length > 10 ? bars.sublist(0, 10) : bars;
     return SizedBox(
       height: 200,
@@ -635,6 +468,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> with WidgetsBindi
         separatorBuilder: (_, _) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
           final bar = displayBars[index];
+          final barBadges = _computeBadges(bar.id, promotions);
           return SizedBox(
             width: 160,
             child:
@@ -642,10 +476,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> with WidgetsBindi
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(BarzRadii.lg),
                         border: Theme.of(context).brightness == Brightness.light
-                            ? Border.all(
-                                color: barzDarkMuted,
-                                width: 1,
-                              ) // Using barzDarkMuted directly
+                            ? Border.all(color: barzDarkMuted, width: 1)
                             : null,
                       ),
                       child: BarCard(
@@ -654,6 +485,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView> with WidgetsBindi
                         distance: _formatDistance(bar.distanceMeters),
                         rating: bar.rating,
                         imageUrl: bar.imageUrl,
+                        badges: barBadges,
                         onTap: () => AppRoute.pushBar(context, bar.id),
                       ),
                     )
@@ -670,6 +502,36 @@ class _HomeConnectedViewState extends State<HomeConnectedView> with WidgetsBindi
         },
       ),
     );
+  }
+
+  List<BarBadge> _computeBadges(int barId, List<dynamic> promotions) {
+    if (promotions.isEmpty) return [];
+    
+    final badges = <BarBadge>{};
+    // Cast to List<PromotionModel> for safe property access
+    final typedPromos = promotions.whereType<PromotionModel>().toList();
+    
+    for (final promo in typedPromos) {
+      // Safely compare IDs as strings just in case
+      if (promo.barId?.toString() != barId.toString()) continue;
+      
+      final title = promo.title.toLowerCase();
+      final description = (promo.description ?? '').toLowerCase();
+      final isBogo = promo.discountType == PromoDiscountType.bogo;
+      
+      if (title.contains('happy hour') || title.contains('happy h') || 
+          description.contains('happy hour') || description.contains('happy h') ||
+          title.contains('dobro') || description.contains('dobro') ||
+          title.contains('2 por 1') || description.contains('2 por 1') ||
+          isBogo) {
+        badges.add(BarBadge.happyHour);
+      } else if (title.contains('cashback') || description.contains('cashback')) {
+        badges.add(BarBadge.cashback);
+      } else {
+        badges.add(BarBadge.promo);
+      }
+    }
+    return badges.toList();
   }
 
   String _formatDistance(double? distanceMeters) {

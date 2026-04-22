@@ -7,10 +7,13 @@ class PayButton extends StatelessWidget {
   final bool disabled;
   final VoidCallback onPressed;
 
+  final String? loadingLabel;
+
   const PayButton({
     super.key,
     required this.total,
     this.isLoading = false,
+    this.loadingLabel,
     this.disabled = false,
     required this.onPressed,
   });
@@ -60,7 +63,7 @@ class PayButton extends StatelessWidget {
                       ),
                       const SizedBox(width: 12),
                       Text(
-                        'Processing...',
+                        loadingLabel ?? 'Processing...',
                         style: TextStyle(
                           color: barzDark,
                           fontSize: 17,

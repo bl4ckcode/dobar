@@ -4,7 +4,7 @@ import 'package:barz/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:barz/features/cart/presentation/bloc/cart_event.dart'
     as cart_event;
 import 'package:barz/features/cart/presentation/bloc/cart_state.dart';
-import 'package:barz/features/payment/domain/models/payment_models.dart';
+import 'package:barz/features/payments/domain/models/checkout_models.dart';
 import 'package:barz/features/payments/domain/models/payment_method.dart';
 import 'package:barz/features/payments/presentation/bloc/payment_bloc.dart';
 import 'package:barz/features/payments/presentation/bloc/payment_event.dart';
@@ -15,9 +15,12 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/features/user/presentation/bloc/user_bloc.dart';
+import 'package:barz/features/user/presentation/bloc/user_event.dart';
 import 'package:barz/features/payments/domain/models/payment_model.dart';
 import 'package:barz/features/payments/domain/models/transaction.dart';
 import 'package:barz/features/user/domain/models/user_document.dart';
+import 'package:barz/features/user/domain/models/user_model.dart';
+import 'package:barz/features/user/presentation/bloc/user_state.dart';
 
 import '../widgets/checkout_order_summary.dart';
 import '../widgets/pay_button.dart';
@@ -64,6 +67,8 @@ class CheckoutPage extends StatefulWidget {
 class _CheckoutPageState extends State<CheckoutPage> {
   String? _selectedCardId;
   bool _isProcessing = false;
+  bool _isWaitingForProfile = false;
+  int? _cachedBarId;
 
   SavedCard _fromPaymentMethod(PaymentMethod m) {
     CardBrand brand = CardBrand.visa;
@@ -153,6 +158,16 @@ class _CheckoutPageState extends State<CheckoutPage> {
       listeners: [
         BlocListener<CartBloc, CartState>(listener: _listenToCartState),
         BlocListener<PaymentBloc, PaymentState>(listener: _listenToPaymentState),
+        BlocListener<UserBloc, UserState>(
+          listener: (context, state) {
+            if (_isWaitingForProfile && state.user != null) {
+              setState(() {
+                _isWaitingForProfile = false;
+              });
+              _handlePayment(context, widget.arguments!);
+            }
+          },
+        ),
       ],
       child: Scaffold(
         backgroundColor: isDark ? barzDark : Colors.white,
@@ -275,9 +290,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
             ],
           ),
           child: PayButton(
-            total: args.total,
-            isLoading: _isProcessing,
-            onPressed: () => _handlePayment(context, args),
+            total: widget.arguments?.total ?? 0,
+            isLoading: _isProcessing || _isWaitingForProfile,
+            loadingLabel: _isWaitingForProfile ? 'Loading profile...' : null,
+            onPressed: () => _handlePayment(context, widget.arguments!),
           ),
         ),
       ),
@@ -334,7 +350,22 @@ class _CheckoutPageState extends State<CheckoutPage> {
   }
 
   void _handlePayment(BuildContext context, CheckoutArguments args) {
+    if (_isProcessing || _isWaitingForProfile) return;
+
+    final userState = context.read<UserBloc>().state;
+    if (userState.user == null) {
+      setState(() => _isWaitingForProfile = true);
+      // Trigger a reload just in case
+      context.read<UserBloc>().add(const UserEvent.loadCurrentUser());
+      return;
+    }
+
     setState(() => _isProcessing = true);
+
+    final cartState = context.read<CartBloc>().state;
+    if (cartState is CartLoaded) {
+      _cachedBarId = cartState.barId;
+    }
 
     context.read<CartBloc>().add(
       cart_event.Checkout(
@@ -354,14 +385,15 @@ class _CheckoutPageState extends State<CheckoutPage> {
       final user = userState.user;
 
       if (user == null) {
+        // If we still don't have a user, it's a critical auth issue
         setState(() => _isProcessing = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('User not found. Please log in again.')),
+          const SnackBar(content: Text('User session lost. Please log in again.')),
         );
         return;
       }
 
-      final barId = (context.read<CartBloc>().state as CartLoaded).barId ?? 0;
+      final barId = _cachedBarId ?? 0;
       
       String? documentNumber;
       if (user.documents.isNotEmpty) {
@@ -374,9 +406,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
       if (documentNumber == null) {
         setState(() => _isProcessing = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Please add your CPF/CNPJ in profile settings before paying.')),
-        );
+        _showCpfPrompt(context, user);
         return;
       }
 
@@ -448,6 +478,108 @@ class _CheckoutPageState extends State<CheckoutPage> {
     }
   }
 
+  void _showCpfPrompt(BuildContext context, UserModel user) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final controller = TextEditingController();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalContext) => Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(modalContext).viewInsets.bottom,
+        ),
+        child: Container(
+          decoration: BoxDecoration(
+            color: isDark ? barzDark : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          ),
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Complete your Profile',
+                style: GoogleFonts.spaceGrotesk(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'A CPF/CNPJ is required for fiscal reasons.',
+                style: GoogleFonts.spaceGrotesk(
+                  fontSize: 16,
+                  color: isDark ? Colors.grey[400] : Colors.grey[600],
+                ),
+              ),
+              const SizedBox(height: 32),
+              TextField(
+                controller: controller,
+                keyboardType: TextInputType.number,
+                autofocus: true,
+                style: GoogleFonts.spaceGrotesk(
+                  color: isDark ? Colors.white : Colors.black,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+                decoration: InputDecoration(
+                  labelText: 'CPF or CNPJ',
+                  hintText: '000.000.000-00',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                height: 56,
+                child: ElevatedButton(
+                  onPressed: () {
+                    final number = controller.text.trim();
+                    if (number.isNotEmpty) {
+                      context.read<UserBloc>().add(
+                            UserEvent.addDocument(
+                              UserDocument(
+                                type: DocumentType.cpf,
+                                number: number,
+                              ),
+                            ),
+                          );
+                      Navigator.pop(modalContext);
+                      // After saving, we trigger payment again
+                      setState(() => _isProcessing = true);
+                      _handlePayment(context, widget.arguments!);
+                    }
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: barzGold,
+                    foregroundColor: barzDark,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: Text(
+                    'Save & Continue',
+                    style: GoogleFonts.spaceGrotesk(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _CircleIconButton extends StatelessWidget {

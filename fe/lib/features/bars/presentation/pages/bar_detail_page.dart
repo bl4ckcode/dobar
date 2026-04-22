@@ -213,74 +213,113 @@ class _MenuPageViewState extends State<_MenuPageView> {
     return widget.categories[_selectedCategory] ?? [];
   }
 
-  int _getQuantityFromState(CartState state, int menuItemId) {
-    if (state is! CartLoaded) return 0;
-    final item = state.cart.items
-        .where((i) => i.menuItemId == menuItemId)
-        .firstOrNull;
-    return item?.quantity ?? 0;
-  }
-
-  int _getTotalItemsFromState(CartState state) {
-    if (state is! CartLoaded) return 0;
-    return state.cart.items.fold<int>(0, (sum, item) => sum + item.quantity);
-  }
-
-  double _getTotalPriceFromState(CartState state) {
-    if (state is! CartLoaded) return 0;
-    return state.cart.items.fold<double>(
-      0.0,
-      (sum, item) => sum + item.totalPrice,
-    );
-  }
-
-  void _addToCart(MenuItemModel item) {
-    context.read<CartBloc>().add(
-      AddToCart(
-        menuItemId: item.id ?? 0,
-        barId: widget.barId,
-        menuItemName: item.itemName,
-        quantity: 1,
-        unitPrice: item.price,
-      ),
-    );
-  }
-
-  void _decreaseFromCart(MenuItemModel item) {
-    context.read<CartBloc>().add(DecreaseCartItem(menuItemId: item.id ?? 0));
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-    return BlocBuilder<CartBloc, CartState>(
-      builder: (context, cartState) {
-        final totalItems = _getTotalItemsFromState(cartState);
-        final totalPrice = _getTotalPriceFromState(cartState);
 
-        return Scaffold(
-          backgroundColor: isDark ? barzDark : Colors.white,
-          body: SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildHeader(totalItems),
-                const SizedBox(height: 16),
-                _buildCategoryTabs(),
-                const SizedBox(height: 8),
-                Expanded(child: _buildMenuList(cartState)),
-                _buildViewTabButton(totalItems, totalPrice),
-              ],
+    return Scaffold(
+      backgroundColor: isDark ? barzDark : Colors.white,
+      body: SafeArea(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _BarDetailHeader(
+              barId: widget.barId,
+              barName: widget.barName,
+              isDark: isDark,
             ),
-          ),
+            const SizedBox(height: 16),
+            _buildCategoryTabs(),
+            const SizedBox(height: 8),
+            Expanded(
+              child: _buildMenuList(),
+            ),
+            _ViewTabButton(barId: widget.barId),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryTabs() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Row(
+        children: _categoryList.map((category) {
+          final isSelected = _selectedCategory == category;
+          return Padding(
+            padding: const EdgeInsets.only(right: 10),
+            child: CategoryPill(
+              icon: _getCategoryIcon(category),
+              label: category,
+              isSelected: isSelected,
+              onTap: () => setState(() => _selectedCategory = category),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildMenuList() {
+    if (_filteredItems.isEmpty) {
+      final isDark = Theme.of(context).brightness == Brightness.dark;
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.search_off,
+              size: 64,
+              color: isDark
+                  ? Colors.white.withValues(alpha: 0.3)
+                  : barzDark.withValues(alpha: 0.3),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              AppLocalizations.of(context)!.no_results,
+              style: TextStyle(
+                color: isDark
+                    ? Colors.white.withValues(alpha: 0.6)
+                    : barzDark.withValues(alpha: 0.6),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return ListView.builder(
+      padding: EdgeInsets.zero,
+      itemCount: _filteredItems.length,
+      itemBuilder: (context, index) {
+        final item = _filteredItems[index];
+        return _MenuItem(
+          key: ValueKey('item_${item.id}_$_selectedCategory'),
+          item: item,
+          barId: widget.barId,
+          index: index,
         );
       },
     );
   }
+}
 
-  Widget _buildHeader(int totalItems) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+class _BarDetailHeader extends StatelessWidget {
+  final int barId;
+  final String barName;
+  final bool isDark;
+
+  const _BarDetailHeader({
+    required this.barId,
+    required this.barName,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Row(
@@ -316,7 +355,7 @@ class _MenuPageViewState extends State<_MenuPageView> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  widget.barName,
+                  barName,
                   style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
@@ -335,120 +374,113 @@ class _MenuPageViewState extends State<_MenuPageView> {
               ],
             ),
           ),
-          GestureDetector(
-            onTap: () => AppRoute.cart.push(context, extra: widget.barId),
-            child: Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                color: isDark ? barzDarkLight : surfaceWhite,
-                borderRadius: BorderRadius.circular(14),
-                boxShadow: isDark
-                    ? null
-                    : [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          blurRadius: 8,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
-              ),
-              child: Stack(
-                children: [
-                  Center(
-                    child: Icon(
-                      Icons.shopping_cart_outlined,
-                      color: isDark ? Colors.white : barzDark,
-                      size: 22,
-                    ),
-                  ),
-                  if (totalItems > 0)
-                    Positioned(
-                      right: 8,
-                      top: 8,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: barzGold,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Text(
-                          '$totalItems',
-                          style: const TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: barzDark,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
+          _HeaderCartBadge(barId: barId, isDark: isDark),
         ],
       ),
     );
   }
+}
 
-  Widget _buildCategoryTabs() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: _categoryList.map((category) {
-          final isSelected = _selectedCategory == category;
-          return Padding(
-            padding: const EdgeInsets.only(right: 10),
-            child: CategoryPill(
-              icon: _getCategoryIcon(category),
-              label: category,
-              isSelected: isSelected,
-              onTap: () => setState(() => _selectedCategory = category),
-            ),
-          );
-        }).toList(),
+class _HeaderCartBadge extends StatelessWidget {
+  final int barId;
+  final bool isDark;
+
+  const _HeaderCartBadge({required this.barId, required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocSelector<CartBloc, CartState, int>(
+      selector: (state) => state.maybeWhen(
+        loaded: (cart, barId, locationConfig, activePromotions,
+                selectedPromotionIds, spotAvailability, isLoading, version,
+                lastSyncTimestamp) =>
+            cart.items.fold<int>(
+          0,
+          (sum, item) => sum + item.quantity,
+        ),
+        orElse: () => 0,
       ),
+      builder: (context, totalItems) {
+        return GestureDetector(
+          onTap: () => AppRoute.cart.push(context, extra: barId),
+          child: Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: isDark ? barzDarkLight : surfaceWhite,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: isDark
+                  ? null
+                  : [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+            ),
+            child: Stack(
+              children: [
+                Center(
+                  child: Icon(
+                    Icons.shopping_cart_outlined,
+                    color: isDark ? Colors.white : barzDark,
+                    size: 22,
+                  ),
+                ),
+                if (totalItems > 0)
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: const BoxDecoration(
+                        color: barzGold,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        '$totalItems',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: barzDark,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
+}
 
-  Widget _buildMenuList(CartState cartState) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    if (_filteredItems.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.search_off,
-              size: 64,
-              color: isDark
-                  ? Colors.white.withValues(alpha: 0.3)
-                  : barzDark.withValues(alpha: 0.3),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              AppLocalizations.of(context)!.no_results,
-              style: TextStyle(
-                color: isDark
-                    ? Colors.white.withValues(alpha: 0.6)
-                    : barzDark.withValues(alpha: 0.6),
-              ),
-            ),
-          ],
-        ),
-      );
-    }
+class _MenuItem extends StatelessWidget {
+  final MenuItemModel item;
+  final int barId;
+  final int index;
 
-    return ListView.builder(
-      padding: EdgeInsets.zero,
-      itemCount: _filteredItems.length,
-      itemBuilder: (context, index) {
-        final item = _filteredItems[index];
-        final quantity = _getQuantityFromState(cartState, item.id ?? 0);
+  const _MenuItem({
+    super.key,
+    required this.item,
+    required this.barId,
+    required this.index,
+  });
 
+  @override
+  Widget build(BuildContext context) {
+    return BlocSelector<CartBloc, CartState, int>(
+      selector: (state) {
+        if (state is! CartLoaded) return 0;
+        final cartItem = state.cart.items
+            .where((i) => i.menuItemId == item.id)
+            .firstOrNull;
+        return cartItem?.quantity ?? 0;
+      },
+      builder: (context, quantity) {
         return TweenAnimationBuilder<double>(
-          key: ValueKey('anim_${item.id}_$_selectedCategory'),
           duration: Duration(milliseconds: 200 + (index * 30)),
           tween: Tween(begin: 0.0, end: 1.0),
           curve: Curves.easeOut,
@@ -466,40 +498,75 @@ class _MenuPageViewState extends State<_MenuPageView> {
             description: item.description,
             price: item.price,
             quantity: quantity,
-            onAdd: () => _addToCart(item),
-            onRemove: () => _decreaseFromCart(item),
+            onAdd: () {
+              context.read<CartBloc>().add(
+                    AddToCart(
+                      menuItemId: item.id ?? 0,
+                      barId: barId,
+                      menuItemName: item.itemName,
+                      quantity: 1,
+                      unitPrice: item.price,
+                    ),
+                  );
+            },
+            onRemove: () {
+              context.read<CartBloc>().add(
+                    DecreaseCartItem(menuItemId: item.id ?? 0),
+                  );
+            },
           ),
         );
       },
     );
   }
+}
 
-  Widget _buildViewTabButton(int totalItems, double totalPrice) {
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      padding: const EdgeInsets.all(16),
-      child: totalItems > 0
-          ? GlowButton(
-              label: 'View Tab',
-              badgeCount: totalItems,
-              trailing: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    '\$${totalPrice.toStringAsFixed(2)}',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: barzDark,
-                    ),
+class _ViewTabButton extends StatelessWidget {
+  final int barId;
+
+  const _ViewTabButton({required this.barId});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocSelector<CartBloc, CartState, ({int count, double total})>(
+      selector: (state) => state.maybeWhen(
+        loaded: (cart, barId, locationConfig, activePromotions,
+                selectedPromotionIds, spotAvailability, isLoading, version,
+                lastSyncTimestamp) =>
+            (
+          count: cart.items.fold<int>(0, (sum, item) => sum + item.quantity),
+          total: cart.total,
+        ),
+        orElse: () => (count: 0, total: 0.0),
+      ),
+      builder: (context, data) {
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.all(16),
+          child: data.count > 0
+              ? GlowButton(
+                  label: 'View Tab',
+                  badgeCount: data.count,
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '\$${data.total.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: barzDark,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(Icons.chevron_right, color: barzDark, size: 20),
+                    ],
                   ),
-                  const SizedBox(width: 4),
-                  const Icon(Icons.chevron_right, color: barzDark, size: 20),
-                ],
-              ),
-              onPressed: () => AppRoute.cart.push(context, extra: widget.barId),
-            )
-          : const SizedBox.shrink(),
+                  onPressed: () => AppRoute.cart.push(context, extra: barId),
+                )
+              : const SizedBox.shrink(),
+        );
+      },
     );
   }
 }

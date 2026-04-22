@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:barz/core/design/tokens/colors.dart';
-import '../../domain/models/payment_models.dart';
+import '../../domain/models/checkout_models.dart';
 
 class CheckoutOrderSummary extends StatefulWidget {
   final List<OrderItem> items;
