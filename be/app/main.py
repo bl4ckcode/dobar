@@ -39,6 +39,7 @@ from .auth.mfa_routes import mfa_router
 from .auth.recovery_routes import recovery_router
 from .bars_and_restaurants.routes.home import home_router
 from .bars_and_restaurants.routes.notifications import notifications_router
+from .auth.user_documents import user_documents_router
 
 IS_PRODUCTION = os.getenv("FLY_APP_NAME") is not None or os.getenv("ENVIRONMENT", "development") == "production"
 ENABLE_DOCS = os.getenv("ENABLE_DOCS", "false").lower() == "true" if IS_PRODUCTION else True
@@ -225,6 +226,7 @@ app.include_router(advertising_router)
 app.include_router(bundles_router)
 app.include_router(home_router)
 app.include_router(notifications_router)
+app.include_router(user_documents_router)
 
 def custom_openapi():
     if not ENABLE_DOCS:

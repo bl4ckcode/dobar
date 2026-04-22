@@ -8,13 +8,12 @@ from app.bars_and_restaurants.schemas.notifications import NotificationResponse
 
 notifications_router = APIRouter(prefix="/notifications", tags=["Notifications"])
 
-@notifications_router.get("/", response_model=List[NotificationResponse])
+@notifications_router.get("", response_model=List[NotificationResponse])
 async def get_notifications(
     current_user: User = Depends(get_current_active_user),
     limit: int = 50,
     offset: int = 0
 ):
-    """Get the user's recent notifications, ordered by newest first."""
     query = (
         Notification.__table__.select()
         .where(Notification.user_id == current_user.id)
@@ -29,7 +28,6 @@ async def get_notifications(
 async def mark_all_as_read(
     current_user: User = Depends(get_current_active_user)
 ):
-    """Mark all unread notifications for the user as read."""
     update_stmt = (
         Notification.__table__.update()
         .where(
@@ -46,8 +44,6 @@ async def mark_notification_as_read(
     notification_id: int,
     current_user: User = Depends(get_current_active_user)
 ):
-    """Mark a specific notification as read."""
-    # First verify it exists and belongs to user
     query = Notification.__table__.select().where(
         (Notification.id == notification_id) & 
         (Notification.user_id == current_user.id)
@@ -66,6 +62,5 @@ async def mark_notification_as_read(
     )
     await database.execute(update_stmt)
     
-    # Return updated notification
     updated = await database.fetch_one(query)
     return updated

@@ -73,6 +73,7 @@ with patch("firebase_admin.initialize_app", return_value=mock_firebase_app), \
     from app.auth.mfa_models import MFASecret
     from app.auth.recovery_models import RecoveryToken
     from app.payment.models import PaymentCard
+    from app.bars_and_restaurants.models.relational_models import UserDocument
     from app.advertising.models import (
         AdvertisingSubscription, AdvertisingCampaign, AdvertisingImpression,
         RegionPricing, AdvertisingInvoice
@@ -194,6 +195,12 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
     import app.bars_and_restaurants.services.discounts as discounts_service
     discounts_service.database = test_database
     
+    import app.auth.user_documents as user_documents_routes
+    user_documents_routes.database = test_database
+    
+    import app.bars_and_restaurants.routes.notifications as notifications_routes
+    notifications_routes.database = test_database
+    
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
@@ -211,6 +218,8 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
     cart_routes.database = original_db
     wallet_routes.database = original_db
     discounts_service.database = original_db
+    user_documents_routes.database = original_db
+    notifications_routes.database = original_db
 
 
 @pytest.fixture

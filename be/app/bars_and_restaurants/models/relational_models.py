@@ -214,3 +214,18 @@ class Notification(Base):
     
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class UserDocument(Base):
+    __tablename__ = "user_documents"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True, nullable=False)
+    type = Column(String(20), nullable=False, index=True)
+    number = Column(String(50), nullable=False)
+    issuing_authority = Column(String(100), nullable=True)
+    issue_date = Column(DateTime, nullable=True)
+    expiry_date = Column(DateTime, nullable=True)
+    verified = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
