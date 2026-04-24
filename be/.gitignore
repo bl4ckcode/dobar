@@ -49,6 +49,5 @@ scripts/seed_via_curl.sh
 barz777-50d7fa551c8a.json
 
 # Ignore documentation directory
-.docs/*
+.docs/business/*
 test.db
-.docs/BE_DPE_COMMUNICATION.md
