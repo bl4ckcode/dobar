@@ -1,5 +1,6 @@
 import 'package:barz/core/design/tokens/colors.dart';
 import 'package:barz/features/cart/domain/models/cart_models.dart';
+import 'package:barz/features/cart/domain/models/cart_model.dart';
 import 'package:barz/features/cart/presentation/bloc/cart_bloc.dart';
 import 'package:barz/features/cart/presentation/bloc/cart_event.dart'
     as cart_event;
@@ -68,6 +69,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
   String? _selectedCardId;
   bool _isProcessing = false;
   bool _isWaitingForProfile = false;
+  bool _isWaitingForDocument = false;
   int? _cachedBarId;
 
   SavedCard _fromPaymentMethod(PaymentMethod m) {
@@ -161,10 +163,15 @@ class _CheckoutPageState extends State<CheckoutPage> {
         BlocListener<UserBloc, UserState>(
           listener: (context, state) {
             if (_isWaitingForProfile && state.user != null) {
-              setState(() {
-                _isWaitingForProfile = false;
-              });
+              setState(() => _isWaitingForProfile = false);
               _handlePayment(context, widget.arguments!);
+            } else if (_isWaitingForDocument && state.user != null) {
+              final user = state.user!;
+              final hasCpf = user.documents.any((d) => d.type == DocumentType.cpf);
+              if (hasCpf && !state.isUpdating) {
+                setState(() => _isWaitingForDocument = false);
+                _handlePayment(context, widget.arguments!);
+              }
             }
           },
         ),
@@ -355,14 +362,20 @@ class _CheckoutPageState extends State<CheckoutPage> {
     final userState = context.read<UserBloc>().state;
     if (userState.user == null) {
       setState(() => _isWaitingForProfile = true);
-      // Trigger a reload just in case
       context.read<UserBloc>().add(const UserEvent.loadCurrentUser());
+      return;
+    }
+
+    final cartState = context.read<CartBloc>().state;
+    if (cartState is CheckoutSuccess) {
+      // If we already have a successful checkout, just re-trigger payment process
+      // (e.g. after adding a document)
+      _initiatePaymentProcess(context, cartState.result);
       return;
     }
 
     setState(() => _isProcessing = true);
 
-    final cartState = context.read<CartBloc>().state;
     if (cartState is CartLoaded) {
       _cachedBarId = cartState.barId;
     }
@@ -378,69 +391,80 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
+  void _initiatePaymentProcess(BuildContext context, CheckoutResult result) {
+    if (result.paymentStatus == 'completed') {
+      if (mounted) setState(() => _isProcessing = false);
+      context.read<CartBloc>().add(cart_event.ClearCart());
+      AppRoute.goOrder(context, result.orderId);
+      return;
+    }
+
+    final userState = context.read<UserBloc>().state;
+    final user = userState.user;
+
+    if (user == null) {
+      if (mounted) setState(() => _isProcessing = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('User session lost. Please log in again.')),
+      );
+      return;
+    }
+
+    final barId = _cachedBarId ?? 0;
+    
+    String? documentNumber;
+    if (user.documents.isNotEmpty) {
+      final doc = user.documents.firstWhere(
+        (d) => d.type == DocumentType.cpf,
+        orElse: () => user.documents.first,
+      );
+      documentNumber = doc.number;
+    }
+
+    if (documentNumber == null) {
+      if (mounted) setState(() => _isProcessing = false);
+      _showCpfPrompt(context, user);
+      return;
+    }
+
+    if (mounted) setState(() => _isProcessing = true);
+
+    final customerInfo = CustomerInfo(
+      name: user.displayName ?? '',
+      email: user.email ?? '',
+      document: documentNumber,
+      phone: user.phoneNumber,
+    );
+
+    final paymentType = _selectedCardId?.startsWith('__pix__') == true
+        ? PaymentType.pix
+        : PaymentType.credit;
+
+    final request = PaymentRequest(
+      orderId: result.orderId,
+      barId: barId,
+      amount: result.total,
+      paymentType: paymentType,
+      paymentMethodId: paymentType == PaymentType.credit && _selectedCardId != null && !_selectedCardId!.startsWith('__')
+          ? int.tryParse(_selectedCardId!)
+          : null,
+      cardToken: null,
+      customerInfo: customerInfo,
+      provider: _selectedCardId?.contains('apple') == true
+          ? 'apple_pay'
+          : (_selectedCardId?.contains('google') == true ? 'google_pay' : null),
+    );
+
+    if (paymentType == PaymentType.pix) {
+      context.read<PaymentBloc>().add(InitiatePixPayment(request));
+    } else {
+      context.read<PaymentBloc>().add(ProcessPayment(request));
+    }
+  }
+
   void _listenToCartState(BuildContext context, CartState state) {
     if (state is CheckoutSuccess) {
-      // Order created successfully, now trigger payment
-      final userState = context.read<UserBloc>().state;
-      final user = userState.user;
-
-      if (user == null) {
-        // If we still don't have a user, it's a critical auth issue
-        setState(() => _isProcessing = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('User session lost. Please log in again.')),
-        );
-        return;
-      }
-
-      final barId = _cachedBarId ?? 0;
-      
-      String? documentNumber;
-      if (user.documents.isNotEmpty) {
-        final doc = user.documents.firstWhere(
-          (d) => d.type == DocumentType.cpf,
-          orElse: () => user.documents.first,
-        );
-        documentNumber = doc.number;
-      }
-
-      if (documentNumber == null) {
-        setState(() => _isProcessing = false);
-        _showCpfPrompt(context, user);
-        return;
-      }
-
-      final customerInfo = CustomerInfo(
-        name: user.displayName ?? '',
-        email: user.email ?? '',
-        document: documentNumber,
-        phone: user.phoneNumber,
-      );
-
-      final paymentType = _selectedCardId?.startsWith('__pix__') == true
-          ? PaymentType.pix
-          : PaymentType.credit;
-
-      final request = PaymentRequest(
-        orderId: state.result.orderId,
-        barId: barId,
-        amount: state.result.total,
-        paymentType: paymentType,
-        paymentMethodId: paymentType == PaymentType.credit && _selectedCardId != null && !_selectedCardId!.startsWith('__')
-            ? int.tryParse(_selectedCardId!)
-            : null,
-        cardToken: null, // If adding card, token is handled elsewhere
-        customerInfo: customerInfo,
-        provider: _selectedCardId?.contains('apple') == true
-            ? 'apple_pay'
-            : (_selectedCardId?.contains('google') == true ? 'google_pay' : null),
-      );
-
-      if (paymentType == PaymentType.pix) {
-        context.read<PaymentBloc>().add(InitiatePixPayment(request));
-      } else {
-        context.read<PaymentBloc>().add(ProcessPayment(request));
-      }
+      _initiatePaymentProcess(context, state.result);
     }
     if (state is CartError) {
       if (mounted) setState(() => _isProcessing = false);
@@ -551,9 +575,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
                             ),
                           );
                       Navigator.pop(modalContext);
-                      // After saving, we trigger payment again
-                      setState(() => _isProcessing = true);
-                      _handlePayment(context, widget.arguments!);
+                      // After saving, we wait for the update in the listener
+                      setState(() => _isWaitingForDocument = true);
                     }
                   },
                   style: ElevatedButton.styleFrom(

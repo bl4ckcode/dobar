@@ -42,10 +42,10 @@ class PaymentMethod {
         orElse: () => PaymentType.credit,
       ),
       brand: json['brand'],
-      lastFourDigits: json['last_four_digits'],
+      lastFourDigits: json['last_four'],
       holderName: json['holder_name'],
-      expiryMonth: json['expiry_month'],
-      expiryYear: json['expiry_year'],
+      expiryMonth: json['exp_month'],
+      expiryYear: json['exp_year'],
       isDefault: json['is_default'] ?? false,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
@@ -60,10 +60,10 @@ class PaymentMethod {
       'gateway': gateway.name,
       'type': type.name,
       'brand': brand,
-      'last_four_digits': lastFourDigits,
+      'last_four': lastFourDigits,
       'holder_name': holderName,
-      'expiry_month': expiryMonth,
-      'expiry_year': expiryYear,
+      'exp_month': expiryMonth,
+      'exp_year': expiryYear,
       'is_default': isDefault,
       'created_at': createdAt?.toIso8601String(),
     };

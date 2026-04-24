@@ -1,6 +1,6 @@
 # BARZ - Frontend Backend Communication
 
-Last Updated: April 14, 2026
+Last Updated: April 22, 2026
 Backend Status: Live on Fly.io
 API Base URL: https://barz-backend-bold-sun-5691.fly.dev
 
@@ -201,6 +201,9 @@ class SubscriptionRepository {
         },
         'proration_info': proration.toJson(),
       },
+      options: Options(headers: {
+        'X-Idempotency-Key': const Uuid().v4(),
+      }),
     );
     return ChargeResult.fromJson(res.data);
   }
@@ -1275,8 +1278,11 @@ Returns history of subscription payments and ad spend invoices.
 - DELETE /bars/{bar_id}/staff/{staff_id}
 
 ### WebSocket
-- wss://.../ws/orders/{order_id}/status?token=jwt
-- wss://.../ws/bar/{bar_id}/orders?token=jwt
+- wss://.../ws/orders/{order_id}/status?token=jwt (Optional - See Note)
+- wss://.../ws/bar/{bar_id}/orders?token=jwt (Required for Cashier/Live Dashboard)
+
+> [!NOTE]
+> **Order Tracking Strategy**: For users tracking their own orders, it is recommended to use **Periodic Polling** (e.g., every 30s) of `GET /orders/{order_id}` as the primary synchronization method. WebSockets are preferred for Cashier/Kitchen dashboards where real-time latency is critical. User-side WebSockets are subject to aggressive timeouts and should be considered "best-effort" fallback.
 
 ---
 
@@ -1694,6 +1700,108 @@ flutter: Porcão BH -23.5505 -46.6333
     1. Verify if mock image assets (e.g., `mock-12.png`) actually exist in the S3 bucket.
     2. Check the `refresh-image` logic to ensure it doesn't return stale or incorrect paths.
 - **Impact:** UI displays broken image icons or placeholders for most bars/promotions in the feed.
+
+---
+
+## USER DOCUMENTS (SPRINT 9 - NEW)
+
+Status: **✅ COMPLETE**
+Priority: HIGH - Required for payment flow (CPF)
+
+### Overview
+
+Allows users to store and manage identity documents (CPF, RG, CNH, passport) required for payment processing in Brazil. The frontend must collect the user's CPF before initiating a payment if no CPF document exists.
+
+### 1. Create/Update Document
+
+Upserts a document by type — if a document of the same type already exists for the user, it updates it instead of creating a duplicate.
+
+```
+POST /users/me/documents
+Auth: Required (Access Token)
+
+Body:
+{
+  "type": "cpf",          // cpf | rg | cnh | passport
+  "number": "93095135270",
+  "issuing_authority": "SSP-SP",   // optional
+  "issue_date": null,              // optional, ISO-8601
+  "expiry_date": null,             // optional, ISO-8601
+  "verified": false                // optional, default false
+}
+
+Response 201:
+{
+  "id": 1,
+  "user_id": 42,
+  "type": "cpf",
+  "number": "93095135270",
+  "issuing_authority": null,
+  "issue_date": null,
+  "expiry_date": null,
+  "verified": false,
+  "created_at": "2026-04-22T09:30:00Z",
+  "updated_at": "2026-04-22T09:30:00Z"
+}
+
+Errors:
+- 401 UNAUTHORIZED → Not authenticated
+- 422 INVALID_CPF → CPF number failed modulo-11 validation
+- 422 VALIDATION_ERROR → Invalid type or missing required fields
+```
+
+### 2. List Documents
+
+Returns all documents for the currently authenticated user.
+
+```
+GET /users/me/documents
+Auth: Required (Access Token)
+
+Response 200:
+[
+  {
+    "id": 1,
+    "user_id": 42,
+    "type": "cpf",
+    "number": "93095135270",
+    "issuing_authority": null,
+    "issue_date": null,
+    "expiry_date": null,
+    "verified": false,
+    "created_at": "2026-04-22T09:30:00Z",
+    "updated_at": "2026-04-22T09:30:00Z"
+  }
+]
+
+Errors:
+- 401 UNAUTHORIZED → Not authenticated
+```
+
+### Frontend Integration Notes
+
+- Before payment, check `GET /users/me/documents` for a CPF document
+- If none exists, prompt the user to enter their CPF and call `POST /users/me/documents`
+- CPF is validated server-side using the modulo-11 algorithm
+- The endpoint is idempotent per type — calling POST with the same type updates the existing document
+
+---
+
+## NOTIFICATIONS FIX (SPRINT 9)
+
+Status: **✅ FIXED**
+
+### Issue
+
+`GET /notifications?limit=50&offset=0` was returning 307 → 401 due to FastAPI's trailing slash redirect stripping the Authorization header on the client side.
+
+### Fix
+
+The backend notifications route no longer uses a trailing slash, so `GET /notifications?limit=50&offset=0` is served directly with no redirect.
+
+### Frontend Action Required
+
+**None** — the fix is backend-only. The frontend should continue calling `GET /notifications?limit=50&offset=0` as before.
 
 ---
 

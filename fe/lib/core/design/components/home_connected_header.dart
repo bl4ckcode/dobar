@@ -22,12 +22,9 @@ class HomeConnectedHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.dobarColors;
-    return SafeArea(
-      bottom: false,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [_buildAppBarRow(context, colors)],
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [_buildAppBarRow(context, colors)],
     );
   }
 
@@ -40,64 +37,66 @@ class HomeConnectedHeader extends StatelessWidget {
           if (nearbyBarName != null)
             Expanded(
               child:
-                    GestureDetector(
-                      onTap: onBarTap,
-                      child: Container(
-                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                        decoration: BoxDecoration(
-                          color: colors.surface.withValues(alpha: 0.9),
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(
-                            color: colors.buttonPrimary,
-                            width: 1,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.1),
-                              blurRadius: 10,
-                              offset: const Offset(0, 4),
-                            ),
-                          ],
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.place,
+                  GestureDetector(
+                        onTap: onBarTap,
+                        child: Container(
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                          decoration: BoxDecoration(
+                            color: colors.surface.withValues(alpha: 0.9),
+                            borderRadius: BorderRadius.circular(16),
+                            border: Border.all(
                               color: colors.buttonPrimary,
-                              size: 20,
+                              width: 1,
                             ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: RichText(
-                                text: TextSpan(
-                                  style: TextStyle(
-                                    color: colors.labelPrimary,
-                                    fontFamily: 'Inter',
-                                    fontSize: 14,
-                                  ),
-                                  children: [
-                                    const TextSpan(text: 'Are you here: '),
-                                    TextSpan(
-                                      text: nearbyBarName,
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.1),
+                                blurRadius: 10,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.place,
+                                color: colors.buttonPrimary,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: RichText(
+                                  text: TextSpan(
+                                    style: TextStyle(
+                                      color: colors.labelPrimary,
+                                      fontFamily: 'Inter',
+                                      fontSize: 14,
                                     ),
-                                    const TextSpan(text: '? Make a check-in!'),
-                                  ],
+                                    children: [
+                                      const TextSpan(text: 'Are you here: '),
+                                      TextSpan(
+                                        text: nearbyBarName,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const TextSpan(
+                                        text: '? Make a check-in!',
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 8),
-                            Icon(
-                              Icons.arrow_forward_ios,
-                              color: colors.labelSecondary,
-                              size: 14,
-                            ),
-                          ],
+                              const SizedBox(width: 8),
+                              Icon(
+                                Icons.arrow_forward_ios,
+                                color: colors.labelSecondary,
+                                size: 14,
+                              ),
+                            ],
+                          ),
                         ),
-                      ),
-                    )
+                      )
                       .animate(
                         onPlay: (controller) =>
                             controller.repeat(reverse: true),
@@ -111,7 +110,7 @@ class HomeConnectedHeader extends StatelessWidget {
             )
           else
             const SizedBox.shrink(),
-          if (onNotificationTap != null)
+          if (onNotificationTap != null && unreadNotifications > 0)
             GestureDetector(
               onTap: onNotificationTap,
               child: Container(
@@ -140,7 +139,10 @@ class HomeConnectedHeader extends StatelessWidget {
                           decoration: BoxDecoration(
                             color: Colors.red,
                             shape: BoxShape.circle,
-                            border: Border.all(color: colors.buttonPrimary, width: 2),
+                            border: Border.all(
+                              color: colors.buttonPrimary,
+                              width: 2,
+                            ),
                           ),
                         ),
                       ),

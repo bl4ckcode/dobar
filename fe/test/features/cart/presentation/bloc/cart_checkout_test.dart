@@ -103,6 +103,7 @@ void main() {
       status: 'success',
       total: 100,
       message: 'Order created',
+      paymentStatus: 'pending',
     );
 
     when(

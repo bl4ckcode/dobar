@@ -2,9 +2,7 @@ import 'dart:async';
 import 'package:barz/core/design/tokens/colors.dart';
 import 'package:barz/core/design/tokens/dobar_colors.dart';
 import 'package:barz/core/services/email_prompt_service.dart';
-import 'package:barz/core/services/token_storage_service.dart';
 import 'package:barz/core/services/websocket/order_tracking_service.dart';
-import 'package:barz/core/services/websocket/websocket_service.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/orders/presentation/bloc/order_bloc.dart';
 import 'package:barz/features/orders/presentation/bloc/order_event.dart';
@@ -36,15 +34,11 @@ class OrderTrackingPage extends StatefulWidget {
 
 class _OrderTrackingPageState extends State<OrderTrackingPage>
     with TickerProviderStateMixin {
-  OrderTrackingService? _trackingService;
+  Timer? _pollingTimer;
   late ConfettiController _confettiController;
   late AnimationController _pulseController;
-  StreamSubscription<OrderStatusUpdate>? _statusSubscription;
-  StreamSubscription<WebSocketState>? _connectionSubscription;
 
   OrderStatus _currentStatus = OrderStatus.pending;
-  bool _isConnected = false;
-  bool _isReconnecting = false;
   bool _firedReady = false;
   bool _hasShownEmailPrompt = false;
   final DateTime _startTime = DateTime.now();
@@ -54,13 +48,26 @@ class _OrderTrackingPageState extends State<OrderTrackingPage>
   @override
   void initState() {
     super.initState();
-    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
+    _confettiController = ConfettiController(
+      duration: const Duration(seconds: 3),
+    );
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 1),
     )..repeat(reverse: true);
-    _initTracking();
     _startTimer();
+    _startPolling();
+  }
+
+  void _startPolling() {
+    // Initial fetch handled by BlocProvider
+    _pollingTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      if (mounted) {
+        context.read<OrderBloc>().add(
+          LoadOrderTimeline(orderId: widget.orderId),
+        );
+      }
+    });
   }
 
   void _startTimer() {
@@ -73,49 +80,35 @@ class _OrderTrackingPageState extends State<OrderTrackingPage>
     });
   }
 
-  Future<void> _initTracking() async {
-    final tokenService = getItInjector<TokenStorageService>();
-    final token = await tokenService.getAccessToken();
-
-    if (token == null) return;
-
-    _trackingService = OrderTrackingService(
-      orderId: widget.orderId,
-      token: token,
-    );
-
-    _statusSubscription = _trackingService!.statusUpdates.listen((update) {
-      if (mounted) {
-        setState(() {
-          _currentStatus = update.status;
-        });
-        
-        _showStatusNotification(update);
-
-        if (update.status == OrderStatus.ready && !_firedReady) {
-          _firedReady = true;
-          _confettiController.play();
-        }
-      }
-    });
-
-    _connectionSubscription = _trackingService!.connectionState.listen((state) {
-      if (mounted) {
-        setState(() {
-          _isConnected = state == WebSocketState.connected;
-          _isReconnecting = state == WebSocketState.reconnecting;
-        });
-      }
-    });
-
-    await _trackingService!.startTracking();
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    _timer?.cancel();
+    _confettiController.dispose();
+    _pulseController.dispose();
+    super.dispose();
   }
 
-  void _showStatusNotification(OrderStatusUpdate update) {
+  void _handleStatusChange(OrderStatus newStatus) {
+    if (newStatus == _currentStatus) return;
+
+    setState(() {
+      _currentStatus = newStatus;
+    });
+
+    _showStatusNotification(newStatus);
+
+    if (newStatus == OrderStatus.ready && !_firedReady) {
+      _firedReady = true;
+      _confettiController.play();
+    }
+  }
+
+  void _showStatusNotification(OrderStatus status) {
     final l10n = AppLocalizations.of(context)!;
     String message;
 
-    switch (update.status) {
+    switch (status) {
       case OrderStatus.confirmed:
         message = l10n.notification_order_confirmed;
         break;
@@ -130,21 +123,299 @@ class _OrderTrackingPageState extends State<OrderTrackingPage>
         _maybeShowEmailPrompt();
         break;
       default:
-        message = update.message ?? update.status.displayName;
+        message = _getLocalizedStatusText(status, l10n);
     }
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
           children: [
-            Text(update.status.emoji, style: const TextStyle(fontSize: 24)),
+            Text(status.emoji, style: const TextStyle(fontSize: 24)),
             const SizedBox(width: 12),
             Expanded(child: Text(message)),
           ],
         ),
         duration: const Duration(seconds: 3),
         behavior: SnackBarBehavior.floating,
-        backgroundColor: context.dobarColors.labelPrimary.withValues(alpha: 0.9),
+        backgroundColor: context.dobarColors.labelPrimary.withValues(
+          alpha: 0.9,
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final dobarColors = context.dobarColors;
+    final isReady =
+        _currentStatus == OrderStatus.ready ||
+        _currentStatus == OrderStatus.completed;
+
+    return BlocProvider(
+      create: (_) =>
+          getItInjector<OrderBloc>()
+            ..add(LoadOrderTimeline(orderId: widget.orderId)),
+      child: BlocListener<OrderBloc, OrderState>(
+        listener: (context, state) {
+          if (state is OrderTimelineLoaded) {
+            _handleStatusChange(OrderStatus.fromString(state.order.status));
+          }
+        },
+        child: Scaffold(
+          body: Stack(
+            children: [
+              // Ambient gold glow
+              Positioned(
+                top: -100,
+                left: 0,
+                right: 0,
+                child: Container(
+                  height: 400,
+                  decoration: BoxDecoration(
+                    gradient: RadialGradient(
+                      center: const Alignment(0, -0.5),
+                      radius: 1.2,
+                      colors: [
+                        barzGold.withValues(alpha: isReady ? 0.15 : 0.08),
+                        Colors.transparent,
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              SafeArea(
+                child: CustomScrollView(
+                  physics: const BouncingScrollPhysics(),
+                  slivers: [
+                    // Top Bar
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 20,
+                          vertical: 12,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            _IconButton(
+                              icon: LucideIcons.arrowLeft,
+                              onPressed: () => context.pop(),
+                              colors: dobarColors,
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: dobarColors.labelPrimary.withValues(
+                                  alpha: 0.05,
+                                ),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    LucideIcons.clock,
+                                    size: 14,
+                                    color: barzGold,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '${_elapsed.inMinutes.toString().padLeft(2, '0')}:${(_elapsed.inSeconds % 60).toString().padLeft(2, '0')}',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                      fontFeatures: [
+                                        FontFeature.tabularFigures(),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            _buildConnectionIndicator(dobarColors),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Hero Header
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 8, bottom: 32),
+                        child: Column(
+                          children: [
+                            Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      LucideIcons.glassWater,
+                                      size: 14,
+                                      color: barzGold,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      l10n
+                                          .order_number(widget.orderId)
+                                          .toUpperCase(),
+                                      style: TextStyle(
+                                        fontSize: 10,
+                                        letterSpacing: 3,
+                                        fontWeight: FontWeight.bold,
+                                        color: dobarColors.labelPrimary
+                                            .withValues(alpha: 0.4),
+                                      ),
+                                    ),
+                                  ],
+                                )
+                                .animate()
+                                .fadeIn(
+                                  duration: const Duration(milliseconds: 500),
+                                )
+                                .slideY(begin: 0.1),
+                            const SizedBox(height: 12),
+                            const Text(
+                                  'Lapa Lounge Bar',
+                                  style: TextStyle(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.w900,
+                                    letterSpacing: -0.5,
+                                  ),
+                                )
+                                .animate()
+                                .fadeIn(
+                                  duration: const Duration(milliseconds: 600),
+                                  delay: const Duration(milliseconds: 100),
+                                )
+                                .scale(begin: const Offset(0.95, 0.95)),
+                            const SizedBox(height: 20),
+                            _StatusBadge(
+                                  isReady: isReady,
+                                  colors: dobarColors,
+                                  statusText: _getLocalizedStatusText(
+                                    _currentStatus,
+                                    l10n,
+                                  ),
+                                  pulseController: _pulseController,
+                                )
+                                .animate()
+                                .fadeIn(
+                                  duration: const Duration(milliseconds: 500),
+                                  delay: const Duration(milliseconds: 200),
+                                )
+                                .scale(begin: const Offset(0.9, 0.9)),
+                          ],
+                        ),
+                      ),
+                    ),
+
+                    // Tracking Content
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      sliver: SliverList(
+                        delegate: SliverChildListDelegate([
+                          // Progress Tracker Card
+                          _GlassCard(
+                                colors: dobarColors,
+                                child: DobarProgressTracker(
+                                  currentStatus: _currentStatus,
+                                ),
+                              )
+                              .animate()
+                              .fadeIn(
+                                duration: const Duration(milliseconds: 600),
+                                delay: const Duration(milliseconds: 300),
+                              )
+                              .slideY(begin: 0.05),
+
+                          const SizedBox(height: 24),
+
+                          // Order Summary Card
+                          BlocBuilder<OrderBloc, OrderState>(
+                            builder: (context, state) {
+                              if (state is OrderTimelineLoaded) {
+                                return OrderSummaryCard(order: state.order)
+                                    .animate()
+                                    .fadeIn(
+                                      duration: const Duration(
+                                        milliseconds: 600,
+                                      ),
+                                      delay: const Duration(milliseconds: 400),
+                                    )
+                                    .slideY(begin: 0.05);
+                              }
+                              return const SizedBox.shrink();
+                            },
+                          ),
+
+                          const SizedBox(height: 24),
+
+                          // Venue & Table Info
+                          BlocBuilder<SessionBloc, SessionState>(
+                            builder: (context, state) {
+                              final tableNumber =
+                                  context
+                                      .watch<CheckinBloc>()
+                                      .state
+                                      .tableNumber ??
+                                  '—';
+                              return VenueTableInfo(
+                                    tableNumber: tableNumber,
+                                    onCallWaiter: () => _showTopSnackBar(
+                                      context,
+                                      l10n.support_on_the_way,
+                                      LucideIcons.bellRing,
+                                      context.dobarColors,
+                                    ),
+                                    onDirections: () => _showTopSnackBar(
+                                      context,
+                                      l10n.directions_opening,
+                                      LucideIcons.mapPin,
+                                      context.dobarColors,
+                                    ),
+                                  )
+                                  .animate()
+                                  .fadeIn(
+                                    duration: const Duration(milliseconds: 600),
+                                    delay: const Duration(milliseconds: 500),
+                                  )
+                                  .slideY(begin: 0.05);
+                            },
+                          ),
+
+                          const SizedBox(height: 40),
+
+                          // Footer Actions
+                          _FooterActions(
+                            colors: dobarColors,
+                            onBack: () => context.pop(),
+                            l10n: l10n,
+                          ),
+                          const SizedBox(height: 60),
+                        ]),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Confetti
+              Align(
+                alignment: Alignment.topCenter,
+                child: ConfettiWidget(
+                  confettiController: _confettiController,
+                  blastDirectionality: BlastDirectionality.explosive,
+                  shouldLoop: false,
+                  colors: const [barzGold, Colors.yellow, Colors.orange],
+                  gravity: 0.1,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -183,214 +454,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage>
     );
   }
 
-  @override
-  void dispose() {
-    _timer?.cancel();
-    _confettiController.dispose();
-    _pulseController.dispose();
-    _statusSubscription?.cancel();
-    _connectionSubscription?.cancel();
-    _trackingService?.stopTracking();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final dobarColors = context.dobarColors;
-    final isReady = _currentStatus == OrderStatus.ready || _currentStatus == OrderStatus.completed;
-
-    return BlocProvider(
-      create: (_) => getItInjector<OrderBloc>()..add(LoadOrderTimeline(orderId: widget.orderId)),
-      child: Scaffold(
-        body: Stack(
-          children: [
-            // Ambient gold glow
-            Positioned(
-              top: -100,
-              left: 0,
-              right: 0,
-              child: Container(
-                height: 400,
-                decoration: BoxDecoration(
-                  gradient: RadialGradient(
-                    center: const Alignment(0, -0.5),
-                    radius: 1.2,
-                    colors: [
-                      barzGold.withValues(alpha: isReady ? 0.15 : 0.08),
-                      Colors.transparent,
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-            SafeArea(
-              child: CustomScrollView(
-                physics: const BouncingScrollPhysics(),
-                slivers: [
-                  // Top Bar
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          _IconButton(
-                            icon: LucideIcons.arrowLeft,
-                            onPressed: () => context.pop(),
-                            colors: dobarColors,
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: dobarColors.labelPrimary.withValues(alpha: 0.05),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(LucideIcons.clock, size: 14, color: barzGold),
-                                const SizedBox(width: 6),
-                                Text(
-                                  '${_elapsed.inMinutes.toString().padLeft(2, '0')}:${(_elapsed.inSeconds % 60).toString().padLeft(2, '0')}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12,
-                                    fontFeatures: [FontFeature.tabularFigures()],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          _buildConnectionIndicator(dobarColors),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  // Hero Header
-                  SliverToBoxAdapter(
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 8, bottom: 32),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(LucideIcons.glassWater, size: 14, color: barzGold),
-                              const SizedBox(width: 8),
-                              Text(
-                                l10n.order_number(widget.orderId).toUpperCase(),
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  letterSpacing: 3,
-                                  fontWeight: FontWeight.bold,
-                                  color: dobarColors.labelPrimary.withValues(alpha: 0.4),
-                                ),
-                              ),
-                            ],
-                          ).animate().fadeIn(duration: const Duration(milliseconds: 500)).slideY(begin: 0.1),
-                          const SizedBox(height: 12),
-                          const Text(
-                            'Lapa Lounge Bar',
-                            style: TextStyle(
-                              fontSize: 32,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -0.5,
-                            ),
-                          ).animate().fadeIn(duration: const Duration(milliseconds: 600), delay: const Duration(milliseconds: 100)).scale(begin: const Offset(0.95, 0.95)),
-                          const SizedBox(height: 20),
-                          _StatusBadge(
-                            isReady: isReady,
-                            colors: dobarColors,
-                            statusText: _getLocalizedStatusText(_currentStatus, l10n),
-                            pulseController: _pulseController,
-                          ).animate().fadeIn(duration: const Duration(milliseconds: 500), delay: const Duration(milliseconds: 200)).scale(begin: const Offset(0.9, 0.9)),
-                        ],
-                      ),
-                    ),
-                  ),
-
-                  // Tracking Content
-                  SliverPadding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    sliver: SliverList(
-                      delegate: SliverChildListDelegate([
-                        // Progress Tracker Card
-                        _GlassCard(
-                          colors: dobarColors,
-                          child: DobarProgressTracker(currentStatus: _currentStatus),
-                        ).animate().fadeIn(duration: const Duration(milliseconds: 600), delay: const Duration(milliseconds: 300)).slideY(begin: 0.05),
-                        
-                        const SizedBox(height: 24),
-
-                        // Order Summary Card
-                        BlocBuilder<OrderBloc, OrderState>(
-                          builder: (context, state) {
-                            if (state is OrderTimelineLoaded) {
-                              return OrderSummaryCard(order: state.order)
-                                .animate().fadeIn(duration: const Duration(milliseconds: 600), delay: const Duration(milliseconds: 400)).slideY(begin: 0.05);
-                            }
-                            return const SizedBox.shrink();
-                          },
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // Venue & Table Info
-                        BlocBuilder<SessionBloc, SessionState>(
-                          builder: (context, state) {
-                            final tableNumber = context.watch<CheckinBloc>().state.tableNumber ?? '—';
-                            return VenueTableInfo(
-                              tableNumber: tableNumber,
-                              onCallWaiter: () => _showTopSnackBar(context, l10n.support_on_the_way, LucideIcons.bellRing, context.dobarColors),
-                              onDirections: () => _showTopSnackBar(context, l10n.directions_opening, LucideIcons.mapPin, context.dobarColors),
-                            ).animate().fadeIn(duration: const Duration(milliseconds: 600), delay: const Duration(milliseconds: 500)).slideY(begin: 0.05);
-                          },
-                        ),
-
-                        const SizedBox(height: 40),
-
-                        // Footer Actions
-                        _FooterActions(colors: dobarColors, onBack: () => context.pop(), l10n: l10n),
-                        const SizedBox(height: 60),
-                      ]),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            // Confetti
-            Align(
-              alignment: Alignment.topCenter,
-              child: ConfettiWidget(
-                confettiController: _confettiController,
-                blastDirectionality: BlastDirectionality.explosive,
-                shouldLoop: false,
-                colors: const [barzGold, Colors.yellow, Colors.orange],
-                gravity: 0.1,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildConnectionIndicator(DobarColors colors) {
-    if (_isReconnecting) {
-      return Container(
-        width: 40,
-        height: 40,
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: colors.labelPrimary.withValues(alpha: 0.05),
-          shape: BoxShape.circle,
-        ),
-        child: const CircularProgressIndicator(strokeWidth: 2),
-      );
-    }
     return Container(
       width: 40,
       height: 40,
@@ -399,10 +463,13 @@ class _OrderTrackingPageState extends State<OrderTrackingPage>
         shape: BoxShape.circle,
       ),
       child: Center(
-        child: Icon(
-          _isConnected ? LucideIcons.wifi : LucideIcons.wifiOff,
-          color: _isConnected ? Colors.green : Colors.red,
-          size: 16,
+        child: Container(
+          width: 8,
+          height: 8,
+          decoration: const BoxDecoration(
+            color: Colors.green,
+            shape: BoxShape.circle,
+          ),
         ),
       ),
     );
@@ -423,7 +490,12 @@ class _OrderTrackingPageState extends State<OrderTrackingPage>
     }
   }
 
-  void _showTopSnackBar(BuildContext context, String title, IconData icon, DobarColors colors) {
+  void _showTopSnackBar(
+    BuildContext context,
+    String title,
+    IconData icon,
+    DobarColors colors,
+  ) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -450,7 +522,11 @@ class _IconButton extends StatelessWidget {
   final VoidCallback onPressed;
   final DobarColors colors;
 
-  const _IconButton({required this.icon, required this.onPressed, required this.colors});
+  const _IconButton({
+    required this.icon,
+    required this.onPressed,
+    required this.colors,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -504,13 +580,15 @@ class _StatusBadge extends StatelessWidget {
                 height: 8,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: statusColor.withValues(alpha: 0.4 + (pulseController.value * 0.6)),
+                  color: statusColor.withValues(
+                    alpha: 0.4 + (pulseController.value * 0.6),
+                  ),
                   boxShadow: [
                     BoxShadow(
                       color: statusColor.withValues(alpha: 0.2),
                       blurRadius: 4 + (pulseController.value * 8),
                       spreadRadius: pulseController.value * 2,
-                    )
+                    ),
                   ],
                 ),
               );
@@ -551,7 +629,7 @@ class _GlassCard extends StatelessWidget {
             color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 30,
             offset: const Offset(0, 10),
-          )
+          ),
         ],
       ),
       child: child,
@@ -564,7 +642,11 @@ class _FooterActions extends StatelessWidget {
   final VoidCallback onBack;
   final AppLocalizations l10n;
 
-  const _FooterActions({required this.colors, required this.onBack, required this.l10n});
+  const _FooterActions({
+    required this.colors,
+    required this.onBack,
+    required this.l10n,
+  });
 
   @override
   Widget build(BuildContext context) {

@@ -503,12 +503,14 @@ class SpotAvailability {
 class CheckoutResult {
   final int orderId;
   final String status;
+  final String paymentStatus;
   final double total;
   final String message;
 
   CheckoutResult({
     required this.orderId,
     required this.status,
+    required this.paymentStatus,
     required this.total,
     required this.message,
   });
@@ -517,6 +519,7 @@ class CheckoutResult {
     return CheckoutResult(
       orderId: json['order_id'] ?? 0,
       status: json['status'] ?? 'pending',
+      paymentStatus: json['payment_status'] ?? 'pending',
       total: (json['total'] as num?)?.toDouble() ?? 0.0,
       message: json['message'] ?? '',
     );

@@ -161,11 +161,11 @@ class _HomeConnectedViewState extends State<HomeConnectedView>
                 child: ListView(
                   controller: _scrollController,
                   padding: const EdgeInsets.only(
-                    top: 16,
+                    top: 8,
                     bottom: BarzSpacing.lg,
                   ),
                   children: [
-                    SizedBox(height: nearbyBarName != null ? 100 : 64),
+                    SizedBox(height: nearbyBarName != null ? 70 : 36),
                     _buildCategoriesSection(context),
                     const SizedBox(height: BarzSpacing.md),
 
@@ -506,32 +506,47 @@ class _HomeConnectedViewState extends State<HomeConnectedView>
 
   List<BarBadge> _computeBadges(int barId, List<dynamic> promotions) {
     if (promotions.isEmpty) return [];
-    
+
     final badges = <BarBadge>{};
     // Cast to List<PromotionModel> for safe property access
     final typedPromos = promotions.whereType<PromotionModel>().toList();
-    
+
     for (final promo in typedPromos) {
-      // Safely compare IDs as strings just in case
-      if (promo.barId?.toString() != barId.toString()) continue;
-      
+      // Robust ID comparison
+      final promoBarId = promo.barId;
+      if (promoBarId == null || promoBarId.toString() != barId.toString()) {
+        continue;
+      }
+
       final title = promo.title.toLowerCase();
       final description = (promo.description ?? '').toLowerCase();
       final isBogo = promo.discountType == PromoDiscountType.bogo;
-      
-      if (title.contains('happy hour') || title.contains('happy h') || 
-          description.contains('happy hour') || description.contains('happy h') ||
-          title.contains('dobro') || description.contains('dobro') ||
-          title.contains('2 por 1') || description.contains('2 por 1') ||
+
+      // Categorize and add to set for uniqueness
+      if (title.contains('happy hour') ||
+          title.contains('happy h') ||
+          description.contains('happy hour') ||
+          description.contains('happy h') ||
+          title.contains('dobro') ||
+          description.contains('dobro') ||
+          title.contains('2 por 1') ||
+          description.contains('2 por 1') ||
           isBogo) {
         badges.add(BarBadge.happyHour);
-      } else if (title.contains('cashback') || description.contains('cashback')) {
+      } else if (title.contains('cashback') ||
+          description.contains('cashback')) {
         badges.add(BarBadge.cashback);
       } else {
         badges.add(BarBadge.promo);
       }
     }
-    return badges.toList();
+
+    // Priority-based unique badge selection: Happy Hour > Cashback > Promo
+    if (badges.contains(BarBadge.happyHour)) return [BarBadge.happyHour];
+    if (badges.contains(BarBadge.cashback)) return [BarBadge.cashback];
+    if (badges.contains(BarBadge.promo)) return [BarBadge.promo];
+
+    return [];
   }
 
   String _formatDistance(double? distanceMeters) {

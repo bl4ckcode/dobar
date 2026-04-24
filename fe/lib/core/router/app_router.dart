@@ -1,3 +1,7 @@
+import 'package:barz/features/checkin/presentation/bloc/checkin_bloc.dart';
+import 'package:barz/features/checkin/presentation/bloc/checkin_event.dart';
+import 'package:barz/features/orders/presentation/bloc/order_bloc.dart';
+import 'package:barz/features/orders/presentation/bloc/order_event.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -50,7 +54,11 @@ import 'package:barz/features/user/presentation/bloc/user_bloc.dart';
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 final _businessShellNavigatorKey = GlobalKey<NavigatorState>();
 
-const _publicRoutes = {'/login', '/auth/mfa-challenge', '/auth/biometry-unlock'};
+const _publicRoutes = {
+  '/login',
+  '/auth/mfa-challenge',
+  '/auth/biometry-unlock',
+};
 
 final appRouter = GoRouter(
   navigatorKey: rootNavigatorKey,
@@ -67,14 +75,16 @@ final appRouter = GoRouter(
 
     // If authenticated, check for biometry lock
     final biometryService = getItInjector<BiometryService>();
-    if (biometryService.isEnabled && !biometryService.authenticatedThisSession) {
+    if (biometryService.isEnabled &&
+        !biometryService.authenticatedThisSession) {
       if (currentPath != AppRoute.biometryUnlock.path) {
         return AppRoute.biometryUnlock.path;
       }
       return null;
     }
 
-    if (currentPath == AppRoute.login.path || currentPath == AppRoute.biometryUnlock.path) {
+    if (currentPath == AppRoute.login.path ||
+        currentPath == AppRoute.biometryUnlock.path) {
       return AppRoute.home.path;
     }
 
@@ -232,7 +242,21 @@ final appRouter = GoRouter(
       name: AppRoute.order.name,
       builder: (context, state) {
         final orderId = int.parse(state.pathParameters['orderId']!);
-        return OrderTrackingPage(orderId: orderId);
+        return MultiBlocProvider(
+          providers: [
+            BlocProvider.value(value: getItInjector<SessionBloc>()),
+            BlocProvider.value(
+              value: getItInjector<CheckinBloc>()
+                ..add(const LoadActiveCheckin()),
+            ),
+            BlocProvider(
+              create: (context) =>
+                  getItInjector<OrderBloc>()
+                    ..add(LoadOrderTimeline(orderId: orderId)),
+            ),
+          ],
+          child: OrderTrackingPage(orderId: orderId),
+        );
       },
     ),
     GoRoute(

@@ -17,6 +17,7 @@ import 'package:barz/features/authentication/presentation/bloc/login_bloc.dart';
 import 'package:barz/features/authentication/presentation/bloc/login_event.dart';
 import 'package:barz/features/authentication/presentation/bloc/login_state.dart';
 import 'package:barz/features/authentication/domain/usecases/login_usecase.dart';
+import 'package:lucide_icons/lucide_icons.dart';
 
 import 'login_sms_validation_page.dart';
 
@@ -129,7 +130,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     final isDark = context.isDark;
 
     return Scaffold(
-      backgroundColor: colors.background,
+      backgroundColor: Colors.white,
       body: PopScope(
         onPopInvokedWithResult: (left, right) {},
         child: BlocListener<LoginBloc, LoginState>(
@@ -180,14 +181,16 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
             }
           },
           child: ResponsiveCenterContainer(
-            backgroundColor: colors.background,
+            backgroundColor: Colors.white,
             child: Stack(
               children: [
+                const _AtmosphericBackground(),
                 _GhostCocktail(isDark: isDark),
                 SafeArea(
                   child: LayoutBuilder(
                     builder: (context, constraints) {
                       return SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
                         child: ConstrainedBox(
                           constraints: BoxConstraints(
                             minHeight: constraints.maxHeight,
@@ -196,51 +199,50 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                             child: Padding(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 24,
-                                vertical: 0,
+                                vertical: 20,
                               ),
                               child: Column(
                                 children: [
+                                  const SizedBox(height: 10),
                                   _LogoArea(
                                     glowAnim: _glowAnim,
                                     shimmerAnim: _shimmerAnim,
                                     isDark: isDark,
-                                  ),
+                                  ).animate().fadeIn(duration: 600.ms).scale(
+                                        begin: const Offset(0.9, 0.9),
+                                        curve: Curves.easeOutBack,
+                                      ),
+                                  const SizedBox(height: 20),
                                   Text(
                                         'Your night. Your bar.',
                                         style: GoogleFonts.oswald(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.w500,
-                                          letterSpacing: 3.0,
-                                          color: colors.labelPrimary.withValues(
-                                            alpha: 0.8,
-                                          ),
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w400,
+                                          letterSpacing: 4.0,
+                                          color: Colors.black.withOpacity(0.8),
                                         ),
                                       )
                                       .animate()
-                                      .fadeIn(
-                                        delay: 600.ms,
-                                        duration: 700.ms,
-                                        curve: Curves.easeOut,
-                                      )
-                                      .slideY(
-                                        begin: 0.4,
-                                        end: 0,
-                                        delay: 600.ms,
-                                        duration: 700.ms,
-                                        curve: Curves.easeOut,
-                                      ),
-                                  const SizedBox(height: 28),
+                                      .fadeIn(delay: 200.ms, duration: 600.ms)
+                                      .slideY(begin: 0.3, end: 0),
+                                  const SizedBox(height: 32),
                                   _PhoneCard(
                                     colors: colors,
                                     isDark: isDark,
                                     onLoginPressed: (phone) =>
                                         setState(() => _phoneNumber = phone),
-                                  ),
+                                  )
+                                      .animate()
+                                      .fadeIn(delay: 400.ms, duration: 600.ms)
+                                      .slideY(begin: 0.2, end: 0),
                                   const SizedBox(height: 16),
                                   _GoldCTAButton(
                                     enabled: _phoneNumber != null,
                                     onPressed: _handleLogin,
-                                  ),
+                                  )
+                                      .animate()
+                                      .fadeIn(delay: 500.ms, duration: 600.ms)
+                                      .slideY(begin: 0.2, end: 0),
                                   const SizedBox(height: 12),
                                   TextButton(
                                     onPressed: () =>
@@ -248,21 +250,24 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                     child: Text(
                                       'Trouble logging in?',
                                       style: TextStyle(
-                                        color: colors.labelSecondary,
-                                        fontSize: 13,
+                                        color: Colors.black54,
+                                        fontSize: 12,
                                         decoration: TextDecoration.underline,
-                                        decorationColor: colors.labelSecondary,
+                                        decorationColor: Colors.black26,
                                       ),
                                     ),
                                   ),
-                                  const SizedBox(height: 8),
+                                  const SizedBox(height: 16),
                                   _OrDivider(colors: colors),
-                                  const SizedBox(height: 12),
-                                  LoginButtonsWidget(loginBloc: _loginBloc),
-                                  const SizedBox(height: 8),
+                                  const SizedBox(height: 20),
+                                  LoginButtonsWidget(loginBloc: _loginBloc)
+                                      .animate()
+                                      .fadeIn(delay: 700.ms, duration: 600.ms)
+                                      .slideY(begin: 0.2, end: 0),
+                                  const SizedBox(height: 16),
                                   _LegalText(colors: colors),
                                   const Spacer(),
-                                  const SizedBox(height: 16),
+                                  const SizedBox(height: 140),
                                 ],
                               ),
                             ),
@@ -281,6 +286,28 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   }
 }
 
+class _AtmosphericBackground extends StatelessWidget {
+  const _AtmosphericBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned.fill(
+      child: Container(
+        decoration: BoxDecoration(
+          gradient: RadialGradient(
+            center: const Alignment(0, -0.2),
+            radius: 0.8,
+            colors: [
+              barzGold.withOpacity(0.12),
+              Colors.white.withOpacity(0),
+            ],
+            stops: const [0.0, 1.0],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _GhostCocktail extends StatelessWidget {
   final bool isDark;
@@ -294,15 +321,12 @@ class _GhostCocktail extends StatelessWidget {
       right: 0,
       child: Align(
         alignment: Alignment.bottomCenter,
-        child: FractionalTranslation(
-          translation: const Offset(0, 0.15),
-          child: Opacity(
-            opacity: isDark ? 0.10 : 0.15,
-            child: Image.asset(
-              'assets/icons/cocktail-ghost.png',
-              width: 320,
-              fit: BoxFit.contain,
-            ),
+        child: Opacity(
+          opacity: 0.12,
+          child: Image.asset(
+            'assets/icons/cocktail-ghost.png',
+            width: 320,
+            fit: BoxFit.contain,
           ),
         ),
       ),
@@ -324,58 +348,35 @@ class _LogoArea extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: MediaQuery.of(context).size.height * 0.32,
+      height: 140,
+      width: 140,
       child: Stack(
         alignment: Alignment.center,
         children: [
           AnimatedBuilder(
             animation: glowAnim,
             builder: (_, child) => Container(
-              width: 320,
-              height: 320,
+              width: 140,
+              height: 140,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    barzGold.withValues(
-                      alpha: glowAnim.value * (isDark ? 0.35 : 0.2),
-                    ),
+                    barzGold.withOpacity(glowAnim.value * 0.4),
                     Colors.transparent,
                   ],
-                  stops: const [0.0, 0.7],
+                  stops: const [0.0, 0.8],
                 ),
               ),
             ),
-          ),
-          AnimatedBuilder(
-            animation: shimmerAnim,
-            builder: (_, child) {
-              return ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: Container(
-                  width: double.infinity,
-                  height: double.infinity,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment(-1.0 + shimmerAnim.value * 2, -0.5),
-                      end: Alignment(shimmerAnim.value * 2, 0.5),
-                      colors: [
-                        Colors.transparent,
-                        barzGold.withValues(alpha: 0.05),
-                        Colors.transparent,
-                      ],
-                      stops: const [0.3, 0.5, 0.7],
-                    ),
-                  ),
-                ),
-              );
-            },
           ),
           Hero(
             tag: 'logo',
             child: Image.asset(
               'assets/icons/dobar-logo-animated-transparent.gif',
-              height: 120,
+              height: 110,
+              width: 110,
+              fit: BoxFit.contain,
             ),
           ),
         ],
@@ -398,32 +399,39 @@ class _PhoneCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(20),
       child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+        filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: colors.surface.withValues(alpha: isDark ? 0.6 : 0.7),
-            borderRadius: BorderRadius.circular(16),
+            color: Colors.white.withOpacity(0.7),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: colors.surfaceElevated.withValues(alpha: 0.5),
+              color: Colors.white.withOpacity(0.4),
               width: 1,
             ),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.04),
+                blurRadius: 32,
+                offset: const Offset(0, 16),
+              ),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'PHONE NUMBER',
-                style: TextStyle(
+                style: GoogleFonts.oswald(
                   fontSize: 11,
-                  letterSpacing: 2.0,
-                  fontWeight: FontWeight.w600,
-                  color: colors.labelSecondary,
+                  letterSpacing: 2.5,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black54,
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               LoginFieldsWidget(onLoginPressed: onLoginPressed),
             ],
           ),
@@ -461,7 +469,7 @@ class _GoldCTAButtonState extends State<_GoldCTAButton> {
             duration: const Duration(milliseconds: 200),
             child: Container(
               width: double.infinity,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
               decoration: BoxDecoration(
                 gradient: const LinearGradient(
                   colors: [barzGoldGradientStart, barzGoldGradientEnd],
@@ -471,25 +479,26 @@ class _GoldCTAButtonState extends State<_GoldCTAButton> {
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
-                    color: barzGold.withValues(alpha: 0.25),
-                    blurRadius: 24,
+                    color: barzGold.withOpacity(0.3),
+                    blurRadius: 20,
                     offset: const Offset(0, 8),
                   ),
                 ],
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'Continue',
+                    'CONTINUE',
                     style: GoogleFonts.oswald(
                       fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 2.0,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 3.0,
                       color: barzDark,
                     ),
                   ),
-                  const Icon(Icons.arrow_forward, color: barzDark, size: 20),
+                  const SizedBox(width: 8),
+                  const Icon(LucideIcons.arrowRight, color: barzDark, size: 20),
                 ],
               ),
             ),
@@ -509,22 +518,22 @@ class _OrDivider extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: Divider(color: colors.labelSecondary.withValues(alpha: 0.3)),
+          child: Container(height: 1, color: Colors.black.withOpacity(0.08)),
         ),
         Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
             'OR CONTINUE WITH',
-            style: TextStyle(
+            style: GoogleFonts.oswald(
               fontSize: 10,
-              letterSpacing: 1.5,
-              fontWeight: FontWeight.w500,
-              color: colors.labelSecondary,
+              letterSpacing: 2.5,
+              fontWeight: FontWeight.w400,
+              color: Colors.black38,
             ),
           ),
         ),
         Expanded(
-          child: Divider(color: colors.labelSecondary.withValues(alpha: 0.3)),
+          child: Container(height: 1, color: Colors.black.withOpacity(0.08)),
         ),
       ],
     );
@@ -544,7 +553,7 @@ class _LegalText extends StatelessWidget {
         text: TextSpan(
           text: 'By continuing, you agree to our ',
           style: TextStyle(
-            color: colors.labelSecondary,
+            color: Colors.black45,
             fontSize: 11,
             height: 1.5,
           ),
@@ -552,9 +561,9 @@ class _LegalText extends StatelessWidget {
             TextSpan(
               text: 'Terms of Service',
               style: TextStyle(
-                color: colors.labelSelected,
+                color: barzGoldDark,
+                fontWeight: FontWeight.w500,
                 decoration: TextDecoration.underline,
-                decorationColor: colors.labelSelected.withValues(alpha: 0.5),
               ),
               recognizer: TapGestureRecognizer()..onTap = () {},
             ),
@@ -562,9 +571,9 @@ class _LegalText extends StatelessWidget {
             TextSpan(
               text: 'Privacy Policy',
               style: TextStyle(
-                color: colors.labelSelected,
+                color: barzGoldDark,
+                fontWeight: FontWeight.w500,
                 decoration: TextDecoration.underline,
-                decorationColor: colors.labelSelected.withValues(alpha: 0.5),
               ),
               recognizer: TapGestureRecognizer()..onTap = () {},
             ),
