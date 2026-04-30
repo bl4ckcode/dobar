@@ -10,7 +10,7 @@ from app.errors import APIError, map_gateway_error
 from app.auth.dependencies import get_current_user
 from app.auth.auth_models import User
 from app.database import database
-from app.bars_and_restaurants.models.relational_models import Order as OrderModel
+from app.bars_and_restaurants.models.relational_models import Order as OrderModel, Payout as PayoutModel, Dispute as DisputeModel
 from app.bars_and_restaurants.models.cart_models import OrderStatusHistory as OrderStatusHistoryModel
 from app.order_queue import OrderQueue
 from .schemas import (
@@ -529,8 +529,98 @@ async def dpe_webhook(
             except Exception as e:
                 raise HTTPException(status_code=500, detail=f"Subscription activation failed: {str(e)}")
         return {"status": "processed", "type": "subscription_failed"}
+    
+    # 2. Handle Payout Events
+    if payload.event.startswith("payout."):
+        payout_id_ext = payload.payout_id or payload.payment_id
+        if not payout_id_ext:
+            return {"status": "ignored", "reason": "missing_payout_id"}
+            
+        bar_id = int(metadata.get("bar_id", 0))
+        if not bar_id:
+            return {"status": "ignored", "reason": "missing_bar_id_in_metadata"}
+            
+        # Update or Create Payout record
+        query = PayoutModel.__table__.select().where(PayoutModel.gateway_payout_id == payout_id_ext)
+        existing_payout = await database.fetch_one(query)
+        
+        if existing_payout:
+            update_query = (
+                PayoutModel.__table__
+                .update()
+                .where(PayoutModel.id == existing_payout["id"])
+                .values(
+                    status=payload.status,
+                    updated_at=datetime.utcnow()
+                )
+            )
+            await database.execute(update_query)
+        else:
+            insert_query = (
+                PayoutModel.__table__
+                .insert()
+                .values(
+                    bar_id=bar_id,
+                    amount=(payload.amount_cents or 0) / 100.0,
+                    currency=payload.currency or "BRL",
+                    status=payload.status,
+                    gateway_payout_id=payout_id_ext,
+                    gateway_name=payload.gateway,
+                    created_at=datetime.utcnow(),
+                    updated_at=datetime.utcnow()
+                )
+            )
+            await database.execute(insert_query)
+        return {"status": "processed", "type": "payout_updated"}
 
-    # 2. Handle Order Payments (Default)
+    # 3. Handle Dispute Events
+    if payload.event.startswith("dispute."):
+        dispute_id_ext = payload.dispute_id or payload.payment_id
+        if not dispute_id_ext:
+            return {"status": "ignored", "reason": "missing_dispute_id"}
+            
+        bar_id = int(metadata.get("bar_id", 0))
+        order_id = int(metadata.get("order_id", 0)) or None
+        
+        query = DisputeModel.__table__.select().where(DisputeModel.gateway_dispute_id == dispute_id_ext)
+        existing_dispute = await database.fetch_one(query)
+        
+        if existing_dispute:
+            update_query = (
+                DisputeModel.__table__
+                .update()
+                .where(DisputeModel.id == existing_dispute["id"])
+                .values(
+                    status=payload.status,
+                    updated_at=datetime.utcnow()
+                )
+            )
+            await database.execute(update_query)
+        else:
+            insert_query = (
+                DisputeModel.__table__
+                .insert()
+                .values(
+                    bar_id=bar_id,
+                    order_id=order_id,
+                    amount=(payload.amount_cents or 0) / 100.0,
+                    currency=payload.currency or "BRL",
+                    gateway_dispute_id=dispute_id_ext,
+                    gateway_transaction_id=payload.payment_id, # Original payment
+                    gateway_name=payload.gateway,
+                    status=payload.status,
+                    reason=metadata.get("reason"),
+                    created_at=datetime.utcnow(),
+                    updated_at=datetime.utcnow()
+                )
+            )
+            await database.execute(insert_query)
+        return {"status": "processed", "type": "dispute_updated"}
+
+    # 4. Handle Order Payments (Default)
+    if not payload.order_id:
+        return {"status": "ignored", "reason": "missing_order_id"}
+        
     order_id_str = payload.order_id
     if order_id_str.startswith("ord_"):
         order_id_str = order_id_str[4:]

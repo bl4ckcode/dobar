@@ -664,7 +664,7 @@ All payment operations logged with:
 ## PAYMENT STRATEGY DECISIONS
 
 1. **Settlement Frequency**: Defaulting to **Daily (T+1)** for Brazil to maximize bar liquidity. International markets start with **Weekly**.
-2. **Cross-Border**: Supported. The user's bank handles the conversion; the bar receives local currency (BRL in Brazil).
+2. **Cross-Border**: Users only see bars in their active country. Travelers are prompted to update their location to the current country (via GPS) to unlock local bars.
 3. **Disputes**: DPE standardizes `dispute.created` webhooks; Barz Backend notifies the bar to provide evidence.
 4. **PCI Compliance**: Confirmed **SAQ-A** status. We only handle tokens from Apple/Google Pay or Gateways.
 

@@ -229,3 +229,5 @@ class UserDocument(Base):
     verified = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+# Financial Models (Imported for Alembic discovery)
+from .financial_models import Payout, Dispute

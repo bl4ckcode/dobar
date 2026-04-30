@@ -175,8 +175,10 @@ class CardResponse(BaseModel):
 
 class DpeWebhookPayload(BaseModel):
     event: str
-    payment_id: str
-    order_id: str
+    payment_id: Optional[str] = None
+    order_id: Optional[str] = None
+    payout_id: Optional[str] = None
+    dispute_id: Optional[str] = None
     status: str
     amount_cents: Optional[int] = None
     currency: Optional[str] = None

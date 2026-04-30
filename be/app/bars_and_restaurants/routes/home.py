@@ -4,10 +4,10 @@ from pydantic import BaseModel
 import time
 
 from app.database import database
-from app.auth.middleware import get_current_active_user, get_optional_user
+from app.auth.middleware import get_current_active_user, get_optional_user, AuthUser
 from app.auth.auth_models import User
 from app.bars_and_restaurants.services.cart_service import CartService
-from app.bars_and_restaurants.services.places_service import find_bars_near_location
+from app.bars_and_restaurants.services.places_service import find_bars_near_location, reverse_geocode
 from app.bars_and_restaurants.routes.bars import get_bars_by_ids
 from app.bars_and_restaurants.models.relational_models import Promotion as PromotionModel
 from app.bars_and_restaurants.services.image_upload import generate_presigned_url, extract_s3_key
@@ -61,6 +61,8 @@ class HomeResponse(BaseModel):
     nearby_bars: List[NearbyBarSummary] = []
     trending_drinks: TrendingDrinksResponse
     active_promotions: List[ActivePromotion] = []
+    location_mismatch: bool = False
+    detected_country: Optional[str] = None
 
 
 # --- Helpes ---
@@ -142,7 +144,7 @@ async def get_trending_items(limit: int = 5) -> List[TrendingItem]:
 async def get_home_dashboard(
     latitude: Optional[float] = Query(None, description="Latitude for nearby discovery"),
     longitude: Optional[float] = Query(None, description="Longitude for nearby discovery"),
-    current_user: Optional[User] = Depends(get_optional_user)
+    current_user: Optional[AuthUser] = Depends(get_optional_user)
 ):
     # 1. User Status (if logged in)
     user_status = None
@@ -164,6 +166,16 @@ async def get_home_dashboard(
             unread_notifications=unread_count_int 
         )
     
+    # 1.1 Location Mismatch Detection
+    location_mismatch = False
+    detected_country = None
+    if current_user and latitude is not None and longitude is not None:
+        detected_country = await reverse_geocode(latitude, longitude)
+        user_country = current_user.country_code or "BR"
+        
+        if detected_country and detected_country != user_country:
+            location_mismatch = True
+    
     # 2. Nearby Bars
     nearby_bars = []
     if latitude is not None and longitude is not None:
@@ -172,8 +184,12 @@ async def get_home_dashboard(
             # Reusing get_bars_by_ids from bars.py which handles image signing and merging
             bars_data = await get_bars_by_ids(bar_ids)
             
+            # Filter by user country to prevent cross-border discovery without explicit update
+            user_country = current_user.country_code if current_user else "BR"
+            bars_data = [b for b in bars_data if (b.get("country_code") or "BR") == user_country]
+            
             # Trace for debugging
-            print(f"DEBUG: get_home_dashboard: Found {len(bar_ids)} bars in Mongo, matched {len(bars_data)} in Postgres")
+            print(f"DEBUG: get_home_dashboard: Found {len(bar_ids)} bars in Mongo, matched {len(bars_data)} in Postgres for country {user_country}")
             
             # Map to response model
             for b in bars_data[:10]: # Limit to 10
@@ -251,5 +267,7 @@ async def get_home_dashboard(
             most_wanted=most_wanted,
             hottest=hottest
         ),
-        active_promotions=active_promotions
+        active_promotions=active_promotions,
+        location_mismatch=location_mismatch,
+        detected_country=detected_country
     )

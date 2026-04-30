@@ -73,6 +73,7 @@ class AuthUser:
     avatar_url: Optional[str] = None
     fcm_token: Optional[str] = None
     subscription_tier: str = "regular"
+    country_code: Optional[str] = None
     
     # Bar roles: {bar_id: BarRole}
     bar_roles: dict = None
@@ -182,6 +183,7 @@ async def get_current_user(
         avatar_url=profile["avatar_url"] if profile else None,
         fcm_token=profile["fcm_token"] if profile else None,
         subscription_tier=dict(user).get("subscription_tier", "regular"),
+        country_code=user["country_code"] or (profile["country_code"] if profile else None) or "BR",
         bar_roles=bar_roles
     )
 

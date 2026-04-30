@@ -145,6 +145,19 @@ class ProfileUpdate(BaseModel):
     avatar_url: Optional[str] = None
 
 
+class CountryUpdate(BaseModel):
+    country_code: str  # ISO 3166-1 alpha-2
+
+    @field_validator("country_code")
+    @classmethod
+    def validate_country_code(cls, v: str) -> str:
+        v = v.upper()
+        if not is_country_enabled(v):
+            enabled_list = ", ".join(sorted(ENABLED_COUNTRIES))
+            raise ValueError(f"Country not yet enabled. Currently available: {enabled_list}")
+        return v
+
+
 class NotificationPreferences(BaseModel):
     push_notifications_enabled: bool = True
     order_updates_enabled: bool = True
@@ -204,7 +217,7 @@ async def get_profile(current_user: AuthUser = Depends(get_current_user)):
         terms_accepted=profile.get("terms_accepted", False) or False,
         privacy_accepted=profile.get("privacy_accepted", False) or False,
         user_type=profile.get("user_type", "client") or "client",
-        country_code=profile.get("country_code"),
+        country_code=(user["country_code"] if user and user["country_code"] else profile.get("country_code")) or "BR",
         subscription_tier=(dict(user).get("subscription_tier") or "regular") if user else "regular",
         is_pro=dict(user).get("subscription_tier") == "pro" if user else False
     )
@@ -257,6 +270,33 @@ async def update_profile(
             .where(User.id == current_user.id)
             .values(phone_number=data.phone_number)
         )
+    
+    return await get_profile(current_user)
+
+
+@profile_router.post("/update-country", response_model=ProfileResponse)
+async def update_country(
+    data: CountryUpdate,
+    current_user: AuthUser = Depends(get_current_user)
+):
+    """
+    Update user's registered country. 
+    Used when a traveler confirms location update to unlock local bars.
+    """
+    from .auth_models import User
+    
+    # Update both User and UserProfile for consistency during transition
+    await database.execute(
+        User.__table__.update()
+        .where(User.id == current_user.id)
+        .values(country_code=data.country_code)
+    )
+    
+    await database.execute(
+        UserProfile.__table__.update()
+        .where(UserProfile.user_id == current_user.id)
+        .values(country_code=data.country_code, updated_at=datetime.utcnow())
+    )
     
     return await get_profile(current_user)
 

@@ -19,6 +19,10 @@ class User(Base):
     # Dobar PRO features
     subscription_tier = Column(String(20), default=ConsumerSubscriptionTier.REGULAR.value, index=True)
     
+    # Regional settings
+    country_code = Column(String(2), index=True, default="BR")  # ISO 3166-1 alpha-2
+
+    
     # Wallet relationships
     wallet = relationship("UserWallet", back_populates="user", uselist=False, cascade="all, delete-orphan")
     cashback_transactions = relationship("CashbackLedger", back_populates="user", cascade="all, delete-orphan")

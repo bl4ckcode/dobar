@@ -182,6 +182,34 @@ def parse_place_for_bar_creation(place_details: dict) -> dict:
         "google_types": google_types,
     }
 
+
+async def reverse_geocode(latitude: float, longitude: float) -> Optional[str]:
+    """Get the country code for a given lat/lng using Google Geocoding API."""
+    if not GOOGLE_PLACES_API_KEY:
+        return None
+    
+    params = {
+        "latlng": f"{latitude},{longitude}",
+        "key": GOOGLE_PLACES_API_KEY,
+    }
+    
+    async with httpx.AsyncClient() as client:
+        response = await client.get(
+            "https://maps.googleapis.com/maps/api/geocode/json",
+            params=params,
+            timeout=10.0,
+        )
+        data = response.json()
+    
+    if data.get("status") == "OK":
+        results = data.get("results", [])
+        if results:
+            # Check the first result's address components for country
+            for component in results[0].get("address_components", []):
+                if "country" in component.get("types", []):
+                    return component.get("short_name") # BR, AR, US, etc.
+    return None
+
 # =============================================================================
 # GEOSPATIAL UTILS
 # =============================================================================
