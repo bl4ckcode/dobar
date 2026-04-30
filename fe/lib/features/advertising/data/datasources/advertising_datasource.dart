@@ -1,5 +1,6 @@
 import 'package:barz/core/api/api_endpoints.dart';
-import 'package:barz/core/network/exceptions.dart';
+import 'package:barz/core/error/exceptions.dart';
+import 'package:barz/core/utils/idempotency.dart';
 import 'package:barz/features/advertising/domain/models/models.dart';
 import 'package:dio/dio.dart';
 
@@ -53,6 +54,18 @@ abstract class AdvertisingDatasource {
     required String customerName,
   });
   Future<void> cancelSubscription(int subscriptionId);
+  Future<SubscriptionCaptureResult> capturePayment({
+    required String paymentId,
+    required int amountCents,
+  });
+  Future<SubscriptionUpgradeResult> upgradeSubscription({
+    required int barId,
+    required int amountCents,
+    required String currency,
+    required String country,
+    required String cardToken,
+    required ProrationInfo proration,
+  });
   Future<List<AdCampaign>> getCampaigns(int barId);
   Future<AdCampaign> getCampaign(int campaignId);
   Future<AdCampaign> createCampaign(CreateCampaignRequest request);
@@ -92,10 +105,7 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
           .map((json) => FeaturedAd.fromJson(json))
           .toList();
     } on DioException catch (e) {
-      throw ServerException(
-        e.response?.data?['detail'] ?? 'Failed to get featured ads',
-        e.response?.statusCode,
-      );
+      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
     }
   }
 
@@ -122,10 +132,7 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
           .map((json) => SearchAd.fromJson(json))
           .toList();
     } on DioException catch (e) {
-      throw ServerException(
-        e.response?.data?['detail'] ?? 'Failed to get search ads',
-        e.response?.statusCode,
-      );
+      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
     }
   }
 
@@ -150,10 +157,7 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
           .map((json) => MapAd.fromJson(json))
           .toList();
     } on DioException catch (e) {
-      throw ServerException(
-        e.response?.data?['detail'] ?? 'Failed to get map ads',
-        e.response?.statusCode,
-      );
+      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
     }
   }
 
@@ -192,10 +196,7 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
       );
       return PlansResponse.fromJson(response.data);
     } on DioException catch (e) {
-      throw ServerException(
-        e.response?.data?['detail'] ?? 'Failed to get plans',
-        e.response?.statusCode,
-      );
+      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
     }
   }
 
@@ -214,10 +215,7 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
       if (e.response?.statusCode == 404) {
         return null; // No subscription
       }
-      throw ServerException(
-        e.response?.data?['detail'] ?? 'Failed to get subscription',
-        e.response?.statusCode,
-      );
+      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
     }
   }
 
@@ -234,10 +232,7 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
       );
       return AdSubscription.fromJson(response.data);
     } on DioException catch (e) {
-      throw ServerException(
-        e.response?.data?['detail'] ?? 'Failed to create subscription',
-        e.response?.statusCode,
-      );
+      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
     }
   }
 
@@ -268,12 +263,7 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
         response.data as Map<String, dynamic>,
       );
     } on DioException catch (e) {
-      throw ServerException(
-        e.response?.data?['detail'] ??
-            e.response?.data?['error']?['message'] ??
-            'Failed to setup trial',
-        e.response?.statusCode,
-      );
+      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
     }
   }
 
@@ -284,8 +274,71 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
         '${ApiEndpoints.baseUrl}${ApiEndpoints.cancelSubscription(subscriptionId)}',
       );
     } on DioException catch (e) {
-      throw ServerException(
-        e.response?.data?['detail'] ?? 'Failed to cancel subscription',
+      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
+    }
+  }
+
+  @override
+  Future<SubscriptionCaptureResult> capturePayment({
+    required String paymentId,
+    required int amountCents,
+  }) async {
+    try {
+      final response = await dio.post(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.subscriptionCapture}',
+        data: {
+          'payment_id': paymentId,
+          'amount_cents': amountCents,
+        },
+      );
+      return SubscriptionCaptureResult.fromJson(
+        response.data as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      throw ServerException.fromResponse(
+        e.response?.data as Map<String, dynamic>?,
+        e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<SubscriptionUpgradeResult> upgradeSubscription({
+    required int barId,
+    required int amountCents,
+    required String currency,
+    required String country,
+    required String cardToken,
+    required ProrationInfo proration,
+  }) async {
+    try {
+      final response = await dio.post(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.subscriptionUpgrade}',
+        data: {
+          'order_id': 0,
+          'bar_id': barId,
+          'amount': amountCents,
+          'currency': currency,
+          'country': country,
+          'payment_method': {
+            'type': 'card',
+            'token': cardToken,
+            'provider': 'saved',
+          },
+          'proration_info': proration.toJson(),
+        },
+        options: Options(
+          headers: {
+            'X-Idempotency-Key': IdempotencyKey.generate(),
+          },
+        ),
+      );
+      return SubscriptionUpgradeResult.fromJson(
+        response.data as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      throw ServerException.fromResponse(
+        e.response?.data as Map<String, dynamic>?,
         e.response?.statusCode,
       );
     }
@@ -301,10 +354,7 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
       final campaignsList = response.data['campaigns'] as List? ?? [];
       return campaignsList.map((json) => AdCampaign.fromJson(json)).toList();
     } on DioException catch (e) {
-      throw ServerException(
-        e.response?.data?['detail'] ?? 'Failed to get campaigns',
-        e.response?.statusCode,
-      );
+      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
     }
   }
 
@@ -316,10 +366,7 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
       );
       return AdCampaign.fromJson(response.data);
     } on DioException catch (e) {
-      throw ServerException(
-        e.response?.data?['detail'] ?? 'Failed to get campaign',
-        e.response?.statusCode,
-      );
+      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
     }
   }
 
@@ -355,10 +402,7 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
       );
       return AdCampaign.fromJson(response.data);
     } on DioException catch (e) {
-      throw ServerException(
-        e.response?.data?['detail'] ?? 'Failed to create campaign',
-        e.response?.statusCode,
-      );
+      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
     }
   }
 
@@ -370,10 +414,7 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
       );
       return AdCampaign.fromJson(response.data);
     } on DioException catch (e) {
-      throw ServerException(
-        e.response?.data?['detail'] ?? 'Failed to pause campaign',
-        e.response?.statusCode,
-      );
+      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
     }
   }
 
@@ -385,10 +426,7 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
       );
       return AdCampaign.fromJson(response.data);
     } on DioException catch (e) {
-      throw ServerException(
-        e.response?.data?['detail'] ?? 'Failed to resume campaign',
-        e.response?.statusCode,
-      );
+      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
     }
   }
 
@@ -404,10 +442,7 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
       );
       return CampaignAnalytics.fromJson(response.data);
     } on DioException catch (e) {
-      throw ServerException(
-        e.response?.data?['detail'] ?? 'Failed to get campaign analytics',
-        e.response?.statusCode,
-      );
+      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
     }
   }
 }

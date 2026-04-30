@@ -69,6 +69,22 @@ abstract class AdvertisingRepository {
   /// Cancel a subscription.
   Future<void> cancelSubscription(int subscriptionId);
 
+  /// Capture a payment after trial.
+  Future<SubscriptionCaptureResult> capturePayment({
+    required String paymentId,
+    required int amountCents,
+  });
+
+  /// Upgrade a subscription with proration.
+  Future<SubscriptionUpgradeResult> upgradeSubscription({
+    required int barId,
+    required int amountCents,
+    required String currency,
+    required String country,
+    required String cardToken,
+    required ProrationInfo proration,
+  });
+
   /// List campaigns for a bar.
   Future<List<AdCampaign>> getCampaigns(int barId);
 

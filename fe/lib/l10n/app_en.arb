@@ -568,5 +568,16 @@
   "pro_modal_footer_note": "Cancel anytime. No commitment.",
   "pro_modal_restore": "Restore Purchase",
   "pro_modal_terms": "Terms & Privacy",
-  "pro_coming_soon": "Coming Soon"
+  "pro_coming_soon": "Coming Soon",
+  "subscription_upgrade_title": "Upgrade Plan",
+  "subscription_upgrade_confirm": "Confirm Upgrade",
+  "subscription_upgrade_proration_credit": "Proration Credit",
+  "subscription_upgrade_final_amount": "Final Amount to Pay",
+  "subscription_capture_payment": "Capture Payment",
+  "subscription_payment_required_title": "Payment Required",
+  "subscription_payment_required_message": "Your payment was declined or is required to continue. Please capture it manually or update your card.",
+  "subscription_upgrade_success": "Plan upgraded successfully!",
+  "subscription_capture_success": "Payment captured successfully!",
+  "pro_sheet_title": "Unlock Dobar Pro",
+  "pro_sheet_description": "Take your business to the next level with advanced analytics, targeted push campaigns, and priority placement."
 }

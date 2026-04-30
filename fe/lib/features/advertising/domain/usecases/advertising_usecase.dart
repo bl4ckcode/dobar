@@ -155,6 +155,36 @@ class AdvertisingUsecase {
     return _repository.cancelSubscription(subscriptionId);
   }
 
+  /// Capture payment after trial.
+  Future<SubscriptionCaptureResult> capturePayment({
+    required String paymentId,
+    required int amountCents,
+  }) {
+    return _repository.capturePayment(
+      paymentId: paymentId,
+      amountCents: amountCents,
+    );
+  }
+
+  /// Upgrade subscription with proration.
+  Future<SubscriptionUpgradeResult> upgradeSubscription({
+    required int barId,
+    required int amountCents,
+    required String currency,
+    required String country,
+    required String cardToken,
+    required ProrationInfo proration,
+  }) {
+    return _repository.upgradeSubscription(
+      barId: barId,
+      amountCents: amountCents,
+      currency: currency,
+      country: country,
+      cardToken: cardToken,
+      proration: proration,
+    );
+  }
+
   /// List campaigns for a bar.
   Future<List<AdCampaign>> getCampaigns(int barId) {
     return _repository.getCampaigns(barId);

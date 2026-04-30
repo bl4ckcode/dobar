@@ -127,6 +127,36 @@ class AdvertisingRepositoryImpl implements AdvertisingRepository {
   }
 
   @override
+  Future<SubscriptionCaptureResult> capturePayment({
+    required String paymentId,
+    required int amountCents,
+  }) {
+    return _datasource.capturePayment(
+      paymentId: paymentId,
+      amountCents: amountCents,
+    );
+  }
+
+  @override
+  Future<SubscriptionUpgradeResult> upgradeSubscription({
+    required int barId,
+    required int amountCents,
+    required String currency,
+    required String country,
+    required String cardToken,
+    required ProrationInfo proration,
+  }) {
+    return _datasource.upgradeSubscription(
+      barId: barId,
+      amountCents: amountCents,
+      currency: currency,
+      country: country,
+      cardToken: cardToken,
+      proration: proration,
+    );
+  }
+
+  @override
   Future<List<AdCampaign>> getCampaigns(int barId) {
     return _datasource.getCampaigns(barId);
   }

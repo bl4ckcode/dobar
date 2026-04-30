@@ -1,16 +1,16 @@
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/core/utils/injections.dart';
+import 'package:barz/features/advertising/domain/models/models.dart';
+import 'package:barz/features/advertising/domain/utils/subscription_utils.dart';
+import 'package:barz/features/advertising/presentation/bloc/advertising_bloc.dart';
+import 'package:barz/features/advertising/presentation/bloc/advertising_event.dart';
+import 'package:barz/features/advertising/presentation/bloc/advertising_state.dart';
+import 'package:barz/features/advertising/presentation/bloc/subscription_trial_cubit.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
 import 'package:barz/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-
-import '../../domain/models/models.dart';
-import '../bloc/advertising_bloc.dart';
-import '../bloc/advertising_event.dart';
-import '../bloc/advertising_state.dart';
-import '../bloc/subscription_trial_cubit.dart';
 
 class SubscriptionPlansPage extends StatelessWidget {
   const SubscriptionPlansPage({super.key});
@@ -90,14 +90,23 @@ class _SubscriptionPlansContentState extends State<_SubscriptionPlansContent> {
           listeners: [
             BlocListener<AdvertisingBloc, AdvertisingState>(
               listener: (context, state) {
+                final l10n = AppLocalizations.of(context)!;
                 if (state.error != null && state.error!.isNotEmpty) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text(state.error!)));
+                  if (state.error == l10n.subscription_payment_required_message ||
+                      state.error!.contains('PAYMENT_REQUIRED')) {
+                    _showPaymentRequiredDialog(context, l10n);
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(state.error!)),
+                    );
+                  }
                 } else if (state.successMessage != null &&
                     state.successMessage!.isNotEmpty) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(state.successMessage!)),
+                    SnackBar(
+                      content: Text(state.successMessage!),
+                      backgroundColor: Colors.green,
+                    ),
                   );
                 }
               },
@@ -227,7 +236,7 @@ class _SubscriptionPlansContentState extends State<_SubscriptionPlansContent> {
               plan: plan,
               currency: plans.currency,
               isCurrentPlan: currentSubscription?.tier == plan.tier,
-              onSelect: () => _selectPlan(context, plan, l10n),
+              onSelect: () => _selectPlan(context, plan, l10n, currentSubscription, plans.plans),
             ),
           ),
         ],
@@ -330,6 +339,8 @@ class _SubscriptionPlansContentState extends State<_SubscriptionPlansContent> {
     BuildContext context,
     SubscriptionPlan plan,
     AppLocalizations l10n,
+    AdSubscription? currentSubscription,
+    List<SubscriptionPlan> allPlans,
   ) {
     final sessionState = context.read<SessionBloc>().state;
     if (sessionState is! SessionReady ||
@@ -340,35 +351,138 @@ class _SubscriptionPlansContentState extends State<_SubscriptionPlansContent> {
       return;
     }
 
+    final barId = sessionState.session.activeBar!.barId;
+    final isUpgrade = currentSubscription != null &&
+        plan.tier.index > currentSubscription.tier.index;
+
+    if (!isUpgrade) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text(l10n.subscribe_to),
+          content: Text('${l10n.confirm_subscription_message} ${plan.name}?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(l10n.cancel),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                context.read<AdvertisingBloc>().add(
+                      CreateSubscription(
+                        barId: barId,
+                        tier: plan.tier,
+                        regionCode: 'BR',
+                      ),
+                    );
+              },
+              child: Text(l10n.confirm),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    // Upgrade with proration
+    final currentPlan =
+        allPlans.firstWhere((p) => p.tier == currentSubscription.tier);
+    final prorationCredit = calculateProrationCredit(
+      planPriceCents: (currentPlan.price * 100).round(),
+      cycleStart: currentSubscription.currentPeriodStart,
+      cycleEnd: currentSubscription.currentPeriodEnd,
+      upgradeDate: DateTime.now(),
+    );
+
+    final finalAmountCents = (plan.price * 100).round() - prorationCredit;
+
     showDialog(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text('${l10n.subscribe_to} ${plan.name}'),
-        content: Text('${l10n.confirm_subscription_message} ${plan.name}?'),
+      builder: (context) => AlertDialog(
+        title: Text(l10n.subscription_upgrade_title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('${l10n.subscribe_to} ${plan.name}?'),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(l10n.subscription_upgrade_proration_credit),
+                Text(
+                  '- R\$ ${(prorationCredit / 100).toStringAsFixed(2)}',
+                  style: const TextStyle(color: Colors.green),
+                ),
+              ],
+            ),
+            const Divider(),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  l10n.subscription_upgrade_final_amount,
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                Text(
+                  'R\$ ${(finalAmountCents / 100).toStringAsFixed(2)}',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ],
+        ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () => Navigator.pop(context),
             child: Text(l10n.cancel),
           ),
-          FilledButton(
+          ElevatedButton(
             onPressed: () {
+              Navigator.pop(context);
               context.read<AdvertisingBloc>().add(
-                CreateSubscription(
-                  barId: sessionState.session.activeBar!.barId,
-                  tier: plan.tier,
-                  regionCode: 'BR',
-                ),
-              );
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(l10n.subscription_created)),
-              );
+                    UpgradeSubscription(
+                      barId: barId,
+                      amountCents: finalAmountCents,
+                      currency: 'brl',
+                      country: 'BR',
+                      cardToken: 'saved', // Use existing card for upgrade
+                      proration: ProrationInfo(
+                        previousPlan:
+                            currentSubscription.tier.name.toUpperCase(),
+                        newPlan: plan.tier.name.toUpperCase(),
+                        creditAmountCents: prorationCredit,
+                        cycleStart: currentSubscription.currentPeriodStart,
+                        cycleEnd: currentSubscription.currentPeriodEnd,
+                        upgradeDate: DateTime.now(),
+                      ),
+                    ),
+                  );
             },
-            style: FilledButton.styleFrom(
-              backgroundColor: barzGold,
-              foregroundColor: barzDark,
-            ),
             child: Text(l10n.confirm),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showPaymentRequiredDialog(BuildContext context, AppLocalizations l10n) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.subscription_payment_required_title),
+        content: Text(l10n.subscription_payment_required_message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.close),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: Text(l10n.retry),
           ),
         ],
       ),
@@ -405,6 +519,28 @@ class _TrialStatusCard extends StatelessWidget {
             Text(
               '${l10n.valid_until}: ${_formatDate(trialSetup.trialEndsAt)}',
               style: const TextStyle(color: Colors.white70),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  context.read<AdvertisingBloc>().add(
+                        CaptureSubscriptionPayment(
+                          paymentId: trialSetup.setupIntentId,
+                          amountCents: 2990, // Dobar PRO monthly price
+                        ),
+                      );
+                },
+                icon: const Icon(Icons.payment, color: barzGold),
+                label: Text(
+                  l10n.subscription_capture_payment,
+                  style: const TextStyle(color: barzGold),
+                ),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: barzGold),
+                ),
+              ),
             ),
           ],
         ),

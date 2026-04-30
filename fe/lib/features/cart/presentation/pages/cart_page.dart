@@ -22,6 +22,10 @@ import '../widgets/active_promotions_section.dart';
 import '../widgets/order_summary_section.dart';
 import 'package:barz/core/presentation/widgets/barz_loading_widget.dart';
 import 'package:barz/core/theme/theme_cubit.dart';
+import 'package:barz/features/advertising/presentation/bloc/advertising_bloc.dart';
+import 'package:barz/features/advertising/presentation/bloc/advertising_event.dart';
+import 'package:barz/features/advertising/presentation/bloc/advertising_state.dart';
+import 'package:barz/features/advertising/domain/models/ad_subscription.dart';
 
 class CartPage extends StatefulWidget {
   final int? barId;
@@ -39,6 +43,9 @@ class _CartPageState extends State<CartPage> {
     super.initState();
     getItInjector<CartBloc>().add(cart_event.LoadCart(barId: widget.barId));
     getItInjector<CheckinBloc>().add(const checkin_event.LoadActiveCheckin());
+    if (widget.barId != null) {
+      getItInjector<AdvertisingBloc>().add(LoadSubscription(barId: widget.barId!));
+    }
   }
 
   @override
@@ -47,6 +54,7 @@ class _CartPageState extends State<CartPage> {
       providers: [
         BlocProvider.value(value: getItInjector<CartBloc>()),
         BlocProvider.value(value: getItInjector<CheckinBloc>()),
+        BlocProvider.value(value: getItInjector<AdvertisingBloc>()),
       ],
       child: _CartPageContent(
         showBackButton: widget.showBackButton,
@@ -858,28 +866,35 @@ class _CartSummaryState extends State<_CartSummary> {
           );
         }
 
-        return Positioned(
-          bottom: 0,
-          left: 0,
-          right: 0,
-          child: OrderSummarySection(
-            items: uiItems,
-            coupon: displayedCoupon,
-            promotions: state.activePromotions,
-            overrideTotal: cart.total,
-            overrideDiscount: cart.discount > 0 ? cart.discount : null,
-            onCheckout: () {
-              final state = context.findAncestorStateOfType<_CartPageContentState>();
-              state?._handleCheckout(context);
-            },
-            isLoading: state.isLoading,
-            isExpanded: _isExpanded,
-            onToggle: () {
-              setState(() {
-                _isExpanded = !_isExpanded;
-              });
-            },
-          ),
+        return BlocBuilder<AdvertisingBloc, AdvertisingState>(
+          builder: (context, adState) {
+            final isPro = adState.subscription?.tier == SubscriptionTier.vip;
+            
+            return Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: OrderSummarySection(
+                items: uiItems,
+                coupon: displayedCoupon,
+                promotions: state.activePromotions,
+                overrideTotal: cart.total,
+                overrideDiscount: cart.discount > 0 ? cart.discount : null,
+                isPro: isPro,
+                onCheckout: () {
+                  final state = context.findAncestorStateOfType<_CartPageContentState>();
+                  state?._handleCheckout(context);
+                },
+                isLoading: state.isLoading,
+                isExpanded: _isExpanded,
+                onToggle: () {
+                  setState(() {
+                    _isExpanded = !_isExpanded;
+                  });
+                },
+              ),
+            );
+          },
         );
       },
     );

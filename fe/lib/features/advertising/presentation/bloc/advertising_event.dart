@@ -69,6 +69,22 @@ sealed class AdvertisingEvent with _$AdvertisingEvent {
     required int subscriptionId,
   }) = CancelSubscription;
 
+  /// Capture subscription payment after trial.
+  const factory AdvertisingEvent.captureSubscriptionPayment({
+    required String paymentId,
+    required int amountCents,
+  }) = CaptureSubscriptionPayment;
+
+  /// Upgrade subscription with proration.
+  const factory AdvertisingEvent.upgradeSubscription({
+    required int barId,
+    required int amountCents,
+    required String currency,
+    required String country,
+    required String cardToken,
+    required ProrationInfo proration,
+  }) = UpgradeSubscription;
+
   /// Load campaigns for a bar.
   const factory AdvertisingEvent.loadCampaigns({required int barId}) =
       LoadCampaigns;

@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:barz/l10n/app_localizations.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:barz/core/design/design_system.dart';
+import 'package:barz/features/advertising/presentation/bloc/subscription_trial_cubit.dart';
+import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
+import 'package:barz/features/session/presentation/bloc/session_state.dart';
 
 class ProPlanSheet extends StatelessWidget {
   const ProPlanSheet({super.key});
@@ -24,6 +29,8 @@ class ProPlanSheet extends StatelessWidget {
     final bg = isDark ? const Color(0xFF141414) : surfaceWhite;
     final textColor = dobar.labelPrimary;
     final mutedTextColor = dobar.labelSecondary;
+
+    final l10n = AppLocalizations.of(context)!;
 
     return Container(
       padding: const EdgeInsets.only(top: 24),
@@ -64,7 +71,7 @@ class ProPlanSheet extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Text(
-                'Unlock Dobar Pro',
+                l10n.pro_sheet_title,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 28,
@@ -79,7 +86,7 @@ class ProPlanSheet extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Text(
-                'Take your business to the next level with advanced analytics, targeted push campaigns, and priority placement.',
+                l10n.pro_sheet_description,
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 15,
@@ -165,44 +172,80 @@ class ProPlanSheet extends StatelessWidget {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 4),
                   Text(
-                    'Try it free for 14 days. Cancel anytime.',
+                    l10n.pro_modal_footer_note,
                     style: TextStyle(fontSize: 13, color: mutedTextColor),
                   ),
                   const SizedBox(height: 20),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 56,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: barzGold,
-                        foregroundColor: barzDark,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      onPressed: () {
-                        // For now we just close and notify it's in progress
+                  BlocConsumer<SubscriptionTrialCubit, SubscriptionTrialState>(
+                    listener: (context, state) {
+                      if (state.error != null && state.error!.isNotEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                              content: Text(state.error!),
+                              backgroundColor: errorRed),
+                        );
+                      } else if (state.result != null) {
                         Navigator.of(context).pop();
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: const Text(
-                              'Contacting Support... Integration coming soon.',
-                            ),
-                            backgroundColor: barzGold,
-                          ),
+                              content: Text(l10n.subscription_upgrade_success),
+                              backgroundColor: successGreen),
                         );
-                      },
-                      child: const Text(
-                        'Start Free Trial',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                      }
+                    },
+                    builder: (context, state) {
+                      return SizedBox(
+                        width: double.infinity,
+                        height: 56,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: barzGold,
+                            foregroundColor: barzDark,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          onPressed: state.isLoading
+                              ? null
+                              : () {
+                                  final sessionState =
+                                      context.read<SessionBloc>().state;
+                                  if (sessionState is SessionReady &&
+                                      sessionState.session.activeBar != null) {
+                                    final user = sessionState.session.user;
+                                    context.read<SubscriptionTrialCubit>().setupTrial(
+                                          barId: sessionState
+                                              .session.activeBar!.barId,
+                                          ownerId: user.id ?? 0,
+                                          plan: 'MASTER', // Default to Master for trial
+                                          paymentMethodId:
+                                              'pm_card_visa', // Placeholder or real ID
+                                          customerEmail: user.email ?? '',
+                                          customerName: user.displayName ?? '',
+                                        );
+                                  }
+                                },
+                          child: state.isLoading
+                              ? const SizedBox(
+                                  height: 24,
+                                  width: 24,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: barzDark,
+                                  ),
+                                )
+                              : Text(
+                                  l10n.pro_modal_cta,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                         ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
                 ],
               ),

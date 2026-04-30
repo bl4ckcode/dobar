@@ -474,8 +474,19 @@
   "promo_label_bogo": "LEVE 2",
   "promo_default_title": "Promoção",
   "badge_hot": "QUENTE",
-  "home_promotions_title": "Promoções",
+  "home_promotions_title": "Promoções",
   "home_promotions_subtitle": "Promoções ativas e cashback para você",
   "home_hottest_drinks_title": "Bebidas em Alta",
-  "home_hottest_drinks_subtitle": "Seleção especial para você da equipe Dobar"
+  "home_hottest_drinks_subtitle": "Seleção especial para você da equipe Dobar",
+  "subscription_upgrade_title": "Fazer Upgrade",
+  "subscription_upgrade_confirm": "Confirmar Upgrade",
+  "subscription_upgrade_proration_credit": "Crédito Proporcional",
+  "subscription_upgrade_final_amount": "Valor Final a Pagar",
+  "subscription_capture_payment": "Capturar Pagamento",
+  "subscription_payment_required_title": "Pagamento Necessário",
+  "subscription_payment_required_message": "Seu pagamento foi recusado ou é necessário para continuar. Por favor, capture manualmente ou atualize seu cartão.",
+  "subscription_upgrade_success": "Upgrade realizado com sucesso!",
+  "subscription_capture_success": "Pagamento capturado com sucesso!",
+  "pro_sheet_title": "Desbloqueie o Dobar Pro",
+  "pro_sheet_description": "Leve seu negócio para o próximo nível com análises avançadas, campanhas de push direcionadas e posicionamento prioritário."
 }

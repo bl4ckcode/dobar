@@ -10,6 +10,7 @@ class OrderSummarySection extends StatefulWidget {
   final double? overrideTotal;
   final double? overrideDiscount;
   final bool isLoading;
+  final bool isPro;
   final bool isExpanded;
   final VoidCallback onToggle;
 
@@ -21,6 +22,7 @@ class OrderSummarySection extends StatefulWidget {
     required this.onCheckout,
     required this.isExpanded,
     required this.onToggle,
+    this.isPro = false,
     this.overrideTotal,
     this.overrideDiscount,
     this.isLoading = false,
@@ -127,7 +129,7 @@ class _OrderSummarySectionState extends State<OrderSummarySection> {
                       if (cashbackAmount > 0) ...[
                         const SizedBox(height: 10),
                         _SummaryRow(
-                          label: 'Cashback (${cashbackPercentage.toInt()}%)',
+                          label: widget.isPro ? 'Cashback (PRO 10%)' : 'Cashback (${cashbackPercentage.toInt()}%)',
                           value: '+\$${cashbackAmount.toStringAsFixed(2)}',
                           isDark: isDark,
                           isHighlight: true,
@@ -150,13 +152,35 @@ class _OrderSummarySectionState extends State<OrderSummarySection> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(
-                'Total',
-                style: TextStyle(
-                  color: isDark ? textOnDark : textPrimary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
+              Row(
+                children: [
+                  Text(
+                    'Total',
+                    style: TextStyle(
+                      color: isDark ? textOnDark : textPrimary,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (widget.isPro) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: barzGold.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'Priority ⚡️',
+                        style: TextStyle(
+                          color: barzGold,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,

@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:barz/core/error/exceptions.dart';
 import 'package:barz/features/advertising/domain/usecases/advertising_usecase.dart';
 import 'advertising_event.dart';
 import 'advertising_state.dart';
@@ -21,6 +22,8 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
     on<LoadSubscription>(_onLoadSubscription);
     on<CreateSubscription>(_onCreateSubscription);
     on<CancelSubscription>(_onCancelSubscription);
+    on<CaptureSubscriptionPayment>(_onCaptureSubscriptionPayment);
+    on<UpgradeSubscription>(_onUpgradeSubscription);
     on<LoadCampaigns>(_onLoadCampaigns);
     on<LoadCampaign>(_onLoadCampaign);
     on<CreateCampaignEvent>(_onCreateCampaign);
@@ -144,7 +147,8 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
         ),
       );
     } catch (e) {
-      emit(state.copyWith(isLoadingSubscription: false, error: e.toString()));
+      final message = e is AppException ? e.displayMessage : e.toString();
+      emit(state.copyWith(isLoadingSubscription: false, error: message));
     }
   }
 
@@ -167,7 +171,8 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
         ),
       );
     } catch (e) {
-      emit(state.copyWith(isLoadingSubscription: false, error: e.toString()));
+      final message = e is AppException ? e.displayMessage : e.toString();
+      emit(state.copyWith(isLoadingSubscription: false, error: message));
     }
   }
 
@@ -186,7 +191,58 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
         ),
       );
     } catch (e) {
-      emit(state.copyWith(isLoadingSubscription: false, error: e.toString()));
+      final message = e is AppException ? e.displayMessage : e.toString();
+      emit(state.copyWith(isLoadingSubscription: false, error: message));
+    }
+  }
+
+  Future<void> _onCaptureSubscriptionPayment(
+    CaptureSubscriptionPayment event,
+    Emitter<AdvertisingState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingSubscription: true, error: null));
+    try {
+      final result = await _usecase.capturePayment(
+        paymentId: event.paymentId,
+        amountCents: event.amountCents,
+      );
+      emit(
+        state.copyWith(
+          isLoadingSubscription: false,
+          successMessage: 'Payment captured: ${result.status}',
+        ),
+      );
+    } catch (e) {
+      final message = e is AppException ? e.displayMessage : e.toString();
+      emit(state.copyWith(isLoadingSubscription: false, error: message));
+    }
+  }
+
+  Future<void> _onUpgradeSubscription(
+    UpgradeSubscription event,
+    Emitter<AdvertisingState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingSubscription: true, error: null));
+    try {
+      final result = await _usecase.upgradeSubscription(
+        barId: event.barId,
+        amountCents: event.amountCents,
+        currency: event.currency,
+        country: event.country,
+        cardToken: event.cardToken,
+        proration: event.proration,
+      );
+      emit(
+        state.copyWith(
+          isLoadingSubscription: false,
+          successMessage: 'Upgrade successful: ${result.status}',
+        ),
+      );
+      // Reload subscription after upgrade
+      add(LoadSubscription(barId: event.barId));
+    } catch (e) {
+      final message = e is AppException ? e.displayMessage : e.toString();
+      emit(state.copyWith(isLoadingSubscription: false, error: message));
     }
   }
 

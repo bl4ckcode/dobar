@@ -17,6 +17,7 @@ enum ErrorCode {
   badRequest('BAD_REQUEST', 'Invalid request'),
 
   paymentDeclined('PAYMENT_DECLINED', 'Payment was declined'),
+  paymentRequired('PAYMENT_REQUIRED', 'Payment required to continue'),
   paymentExpired('PAYMENT_EXPIRED', 'Payment has expired'),
   insufficientFunds('INSUFFICIENT_FUNDS', 'Insufficient funds'),
   invalidCard('INVALID_CARD', 'Invalid card details'),
@@ -88,6 +89,8 @@ enum ErrorCode {
         return ErrorCode.badRequest;
       case 401:
         return ErrorCode.unauthorized;
+      case 402:
+        return ErrorCode.paymentRequired;
       case 403:
         return ErrorCode.forbidden;
       case 404:
