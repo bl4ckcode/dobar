@@ -661,12 +661,15 @@ All payment operations logged with:
 
 ---
 
-## OPEN QUESTIONS
+## PAYMENT STRATEGY DECISIONS
 
-1. Settlement frequency: Daily or weekly payouts to bars?
-2. Cross-border payments: User in Argentina paying at Brazilian bar?
-3. Dispute handling: Who handles chargebacks?
-4. PCI compliance: SAQ-A with tokenization (Apple Pay / Google Pay)
+1. **Settlement Frequency**: Defaulting to **Daily (T+1)** for Brazil to maximize bar liquidity. International markets start with **Weekly**.
+2. **Cross-Border**: Supported. The user's bank handles the conversion; the bar receives local currency (BRL in Brazil).
+3. **Disputes**: DPE standardizes `dispute.created` webhooks; Barz Backend notifies the bar to provide evidence.
+4. **PCI Compliance**: Confirmed **SAQ-A** status. We only handle tokens from Apple/Google Pay or Gateways.
+
+See [Implementation Plan](file:///Users/carlosalves/.gemini/antigravity/brain/f0ca5291-2026-4b27-9aab-b0402470465e/implementation_plan.md) for the roadmap.
+
 
 ---
 
