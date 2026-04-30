@@ -34,7 +34,7 @@ class OrderBase(BaseModel):
     user_id: int
     bar_id: int
     status: str
-    total_price: float
+    total_price: Optional[float] = None
 
 
 class OrderCreate(BaseModel):
@@ -48,7 +48,7 @@ class OrderCreate(BaseModel):
     tip: float = 0.0
     delivery_fee: float = 0.0
     discount: float = 0.0
-    total_price: float
+    total_price: Optional[float] = None
 
 
 class Order(BaseModel):
@@ -57,7 +57,7 @@ class Order(BaseModel):
     user_id: int
     bar_id: int
     status: str
-    total_price: float
+    total_price: Optional[float] = None
     subtotal: Optional[float] = None
     tax: Optional[float] = None
     tip: Optional[float] = None
