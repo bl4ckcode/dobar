@@ -1250,6 +1250,7 @@ Returns history of subscription payments and ad spend invoices.
 ### Orders
 - GET/POST /orders/
 - GET /orders/{order_id}
+- GET /orders/{order_id}/timeline
 - POST /orders/{order_id}/cancel
 - PUT /orders/{order_id}/status
 
@@ -1282,7 +1283,7 @@ Returns history of subscription payments and ad spend invoices.
 - wss://.../ws/bar/{bar_id}/orders?token=jwt (Required for Cashier/Live Dashboard)
 
 > [!NOTE]
-> **Order Tracking Strategy**: For users tracking their own orders, it is recommended to use **Periodic Polling** (e.g., every 30s) of `GET /orders/{order_id}` as the primary synchronization method. WebSockets are preferred for Cashier/Kitchen dashboards where real-time latency is critical. User-side WebSockets are subject to aggressive timeouts and should be considered "best-effort" fallback.
+> **Order Tracking Strategy**: For users tracking their own orders, it is recommended to use **Periodic Polling** (e.g., every 30s) of `GET /orders/{order_id}/timeline` as the primary synchronization method. The timeline route returns the full history of status changes needed for the UI tracking view. WebSockets are preferred for Cashier/Kitchen dashboards where real-time latency is critical. User-side WebSockets are subject to aggressive timeouts and should be considered "best-effort" fallback.
 
 ---
 

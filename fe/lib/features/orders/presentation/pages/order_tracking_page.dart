@@ -467,7 +467,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage>
           width: 8,
           height: 8,
           decoration: const BoxDecoration(
-            color: Colors.green,
+            color: pixGreen,
             shape: BoxShape.circle,
           ),
         ),
@@ -561,7 +561,7 @@ class _StatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = isReady ? Colors.green : barzGold;
+    final statusColor = isReady ? pixGreen : barzGold;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
@@ -626,7 +626,7 @@ class _GlassCard extends StatelessWidget {
         border: Border.all(color: colors.labelPrimary.withValues(alpha: 0.08)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
+            color: colors.labelPrimary.withValues(alpha: 0.05),
             blurRadius: 30,
             offset: const Offset(0, 10),
           ),

@@ -22,6 +22,11 @@ class HomeConnectedHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.dobarColors;
+
+    if (nearbyBarName == null && unreadNotifications <= 0) {
+      return const SizedBox.shrink();
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [_buildAppBarRow(context, colors)],

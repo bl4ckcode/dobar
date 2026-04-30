@@ -94,7 +94,7 @@ class OrderModel {
       tip: (json['tip'] as num?)?.toDouble() ?? 0.0,
       deliveryFee: (json['delivery_fee'] as num?)?.toDouble() ?? 0.0,
       discount: (json['discount'] as num?)?.toDouble() ?? 0.0,
-      totalPrice: (json['total_price'] as num).toDouble(),
+      totalPrice: (json['total_price'] as num?)?.toDouble() ?? 0.0,
       items:
           (json['items'] as List<dynamic>?)
               ?.map((e) => OrderItemModel.fromJson(e))

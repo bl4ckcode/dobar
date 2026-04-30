@@ -242,7 +242,7 @@ class DobarProgressTracker extends StatelessWidget {
                               child: Text(
                                 'NOW',
                                 style: TextStyle(
-                                  color: currentStatus == OrderStatus.ready ? Colors.green : barzGold,
+                                color: currentStatus == OrderStatus.ready ? pixGreen : barzGold,
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 1,
@@ -287,32 +287,72 @@ class _StageDot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: completed || active 
-          ? (active && isReady ? Colors.green : barzGold)
-          : colors.labelPrimary.withValues(alpha: 0.05),
-        boxShadow: active 
-          ? [
-              BoxShadow(
-                color: (isReady ? Colors.green : barzGold).withValues(alpha: 0.4),
-                blurRadius: 15,
-                spreadRadius: 2,
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        if (active)
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: isReady ? pixGreen : barzGold,
+            ),
+          )
+              .animate(onPlay: (c) => c.repeat())
+              .scale(
+                begin: const Offset(1, 1),
+                end: const Offset(1.6, 1.6),
+                duration: const Duration(milliseconds: 1500),
+                curve: Curves.easeOutCubic,
               )
-            ]
-          : null,
-      ),
-      child: Center(
-        child: Icon(
-          completed ? Icons.check : icon,
-          size: 20,
-          color: completed || active ? barzDark : colors.labelPrimary.withValues(alpha: 0.3),
+              .fadeOut(
+                duration: const Duration(milliseconds: 1500),
+                curve: Curves.easeOutCubic,
+              ),
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: completed || active
+                ? (active && isReady ? pixGreen : barzGold)
+                : colors.labelPrimary.withValues(alpha: 0.05),
+            border: Border.all(
+              color: completed || active
+                  ? Colors.transparent
+                  : colors.labelPrimary.withValues(alpha: 0.2),
+            ),
+            boxShadow: active
+                ? [
+                    BoxShadow(
+                      color: (isReady ? pixGreen : barzGold)
+                          .withValues(alpha: 0.6),
+                      blurRadius: 20,
+                      spreadRadius: 2,
+                    )
+                  ]
+                : completed
+                    ? [
+                        BoxShadow(
+                          color: barzGold.withValues(alpha: 0.3),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        )
+                      ]
+                    : null,
+          ),
+          child: Center(
+            child: Icon(
+              completed ? Icons.check : icon,
+              size: 20,
+              color: completed || active
+                  ? barzDark
+                  : colors.labelPrimary.withValues(alpha: 0.3),
+            ),
+          ),
         ),
-      ),
-    ).animate(target: active ? 1 : 0, onPlay: (c) => c.repeat(reverse: true))
-     .scale(begin: const Offset(0.95, 0.95), end: const Offset(1.05, 1.05), duration: const Duration(seconds: 1));
+      ],
+    );
   }
 }

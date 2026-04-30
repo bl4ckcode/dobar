@@ -11,6 +11,20 @@ class OrderSummaryCard extends StatelessWidget {
 
   const OrderSummaryCard({super.key, required this.order});
 
+  String _getPaymentMethodDisplay(String method) {
+    final lower = method.toLowerCase();
+    final orderIdStr = order.id.toString();
+    final last4 = orderIdStr.length >= 4
+        ? orderIdStr.substring(orderIdStr.length - 4)
+        : orderIdStr.padLeft(4, '0');
+
+    if (lower == 'pix') return 'Paid via PIX • ••$last4';
+    if (lower == 'credit_card' || lower == 'credit' || lower == 'card') {
+      return 'Paid via CARD • ••$last4';
+    }
+    return 'Paid via ${method.toUpperCase()} • ••$last4';
+  }
+
   @override
   Widget build(BuildContext context) {
     final dobarColors = context.dobarColors;
@@ -136,7 +150,7 @@ class OrderSummaryCard extends StatelessWidget {
                       Icon(LucideIcons.receipt, size: 14, color: dobarColors.labelPrimary.withValues(alpha: 0.4)),
                       const SizedBox(width: 8),
                       Text(
-                        'Paid via ${order.paymentMethod.toUpperCase()}',
+                        _getPaymentMethodDisplay(order.paymentMethod),
                         style: TextStyle(
                           fontSize: 12,
                           color: dobarColors.labelPrimary.withValues(alpha: 0.4),

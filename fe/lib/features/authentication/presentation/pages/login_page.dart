@@ -219,7 +219,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                           fontSize: 15,
                                           fontWeight: FontWeight.w400,
                                           letterSpacing: 4.0,
-                                          color: Colors.black.withOpacity(0.8),
+                                          color: Colors.black.withValues(alpha: 0.8),
                                         ),
                                       )
                                       .animate()
@@ -298,8 +298,8 @@ class _AtmosphericBackground extends StatelessWidget {
             center: const Alignment(0, -0.2),
             radius: 0.8,
             colors: [
-              barzGold.withOpacity(0.12),
-              Colors.white.withOpacity(0),
+              barzGold.withValues(alpha: 0.12),
+              Colors.white.withValues(alpha: 0),
             ],
             stops: const [0.0, 1.0],
           ),
@@ -362,7 +362,7 @@ class _LogoArea extends StatelessWidget {
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
-                    barzGold.withOpacity(glowAnim.value * 0.4),
+                    barzGold.withValues(alpha: glowAnim.value * 0.4),
                     Colors.transparent,
                   ],
                   stops: const [0.0, 0.8],
@@ -405,15 +405,15 @@ class _PhoneCard extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.7),
+            color: Colors.white.withValues(alpha: 0.7),
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
-              color: Colors.white.withOpacity(0.4),
+              color: Colors.white.withValues(alpha: 0.4),
               width: 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.04),
+                color: Colors.black.withValues(alpha: 0.04),
                 blurRadius: 32,
                 offset: const Offset(0, 16),
               ),
@@ -479,7 +479,7 @@ class _GoldCTAButtonState extends State<_GoldCTAButton> {
                 borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
-                    color: barzGold.withOpacity(0.3),
+                    color: barzGold.withValues(alpha: 0.3),
                     blurRadius: 20,
                     offset: const Offset(0, 8),
                   ),
@@ -518,7 +518,7 @@ class _OrDivider extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: Container(height: 1, color: Colors.black.withOpacity(0.08)),
+          child: Container(height: 1, color: Colors.black.withValues(alpha: 0.08)),
         ),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -533,7 +533,7 @@ class _OrDivider extends StatelessWidget {
           ),
         ),
         Expanded(
-          child: Container(height: 1, color: Colors.black.withOpacity(0.08)),
+          child: Container(height: 1, color: Colors.black.withValues(alpha: 0.08)),
         ),
       ],
     );

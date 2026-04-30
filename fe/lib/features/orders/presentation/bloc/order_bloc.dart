@@ -82,10 +82,18 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     LoadOrderTimeline event,
     Emitter<OrderState> emit,
   ) async {
-    emit(OrderLoading());
+    final isAlreadyLoaded = state is OrderTimelineLoaded;
+    if (!isAlreadyLoaded) {
+      emit(OrderLoading());
+    }
+    
     final result = await orderUsecase.getOrderTimeline(event.orderId);
     result.fold(
-      (failure) => emit(OrderError(message: failure.errorMessage)),
+      (failure) {
+        if (!isAlreadyLoaded) {
+          emit(OrderError(message: failure.errorMessage));
+        }
+      },
       (order) => emit(OrderTimelineLoaded(order: order)),
     );
   }

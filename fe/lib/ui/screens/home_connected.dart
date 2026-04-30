@@ -165,7 +165,16 @@ class _HomeConnectedViewState extends State<HomeConnectedView>
                     bottom: BarzSpacing.lg,
                   ),
                   children: [
-                    SizedBox(height: nearbyBarName != null ? 70 : 36),
+                    SizedBox(
+                      height: (nearbyBarName != null ||
+                              (homeState is HomeLoaded &&
+                                  (homeState.data.userStatus
+                                          ?.unreadNotifications ??
+                                      0) >
+                                  0))
+                          ? 70
+                          : 0,
+                    ),
                     _buildCategoriesSection(context),
                     const SizedBox(height: BarzSpacing.md),
 
