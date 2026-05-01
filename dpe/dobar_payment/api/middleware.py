@@ -4,6 +4,10 @@ import uuid
 import os
 import logging
 from functools import wraps
+import json
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.requests import Request
+from starlette.responses import Response
 
 logger = logging.getLogger("dobar.payment.api")
 
@@ -95,3 +99,39 @@ ERROR_CODE_TO_HTTP = {
 
 def error_code_to_http_status(error_code: str) -> int:
     return ERROR_CODE_TO_HTTP.get(error_code, 500)
+
+
+class LogMaskingMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app, masked_fields: Optional[list] = None):
+        super().__init__(app)
+        self.masked_fields = set(masked_fields or ["token", "cvv", "number", "card", "password"])
+
+    def _mask_sensitive_data(self, data: Any) -> Any:
+        if isinstance(data, dict):
+            return {
+                k: "***MASKED***" if k.lower() in self.masked_fields else self._mask_sensitive_data(v)
+                for k, v in data.items()
+            }
+        elif isinstance(data, list):
+            return [self._mask_sensitive_data(item) for item in data]
+        return data
+
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        try:
+            body = await request.body()
+            if body:
+                try:
+                    json_body = json.loads(body)
+                    masked_body = self._mask_sensitive_data(json_body)
+                    logger.debug(f"Request body: {json.dumps(masked_body)}")
+                except json.JSONDecodeError:
+                    pass
+        except Exception:
+            pass
+
+        async def receive():
+            return {"type": "http.request", "body": body}
+        
+        request._receive = receive
+        return await call_next(request)
+

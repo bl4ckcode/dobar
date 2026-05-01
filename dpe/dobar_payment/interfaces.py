@@ -32,6 +32,11 @@ class PaymentGateway(ABC):
     def __init__(self, config: Dict[str, Any]):
         self._config = config
         self._healthy = True
+        self._settlement_delay_days = config.get("SETTLEMENT_DELAY_DAYS", 7)
+
+    @property
+    def settlement_delay_days(self) -> int:
+        return self._settlement_delay_days
 
     @abstractmethod
     async def create_charge(

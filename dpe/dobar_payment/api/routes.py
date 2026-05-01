@@ -628,6 +628,8 @@ class WebhookRoutes:
                 normalized_status = "failed"
             elif webhook_payload.event_type in ["charge.refunded"]:
                 normalized_status = "refunded"
+            elif webhook_payload.event_type in ["charge.dispute.created", "dispute.created"]:
+                normalized_status = "disputed"
             else:
                 return {"status": "ignored", "reason": f"unhandled_event: {webhook_payload.event_type}"}, 200
 

@@ -27,6 +27,7 @@ from .middleware import (
     verify_service_auth,
     create_response_headers,
     DPE_VERSION,
+    LogMaskingMiddleware,
 )
 from .routes import PaymentRoutes, PixRoutes, HealthRoutes, SubscriptionRoutes
 from .dependencies import gateway_registry
@@ -41,6 +42,7 @@ def _load_gateways_from_env() -> dict:
             config = {
                 "PAGARME_USERNAME": os.getenv("PAGARME_USERNAME") or os.getenv("PAGARME_API_KEY"),
                 "PAGARME_PASSWORD": os.getenv("PAGARME_PASSWORD", ""),
+                "SETTLEMENT_DELAY_DAYS": int(os.getenv("STONE_SETTLEMENT_DELAY_DAYS", "1")),
             }
             gateway = StonePaymentGateway(config)
             if gateway.is_configured:
@@ -52,7 +54,10 @@ def _load_gateways_from_env() -> dict:
     if os.getenv("STRIPE_API_KEY"):
         try:
             from dobar_payment.gateways.stripe import StripePaymentGateway
-            config = {"STRIPE_API_KEY": os.getenv("STRIPE_API_KEY")}
+            config = {
+                "STRIPE_API_KEY": os.getenv("STRIPE_API_KEY"),
+                "SETTLEMENT_DELAY_DAYS": int(os.getenv("STRIPE_SETTLEMENT_DELAY_DAYS", "7")),
+            }
             gateway = StripePaymentGateway(config)
             if gateway.is_configured:
                 gateways["stripe"] = gateway
@@ -108,6 +113,7 @@ def create_app(
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.add_middleware(LogMaskingMiddleware)
     
     if gateways is None:
         gateways = _load_gateways_from_env()
