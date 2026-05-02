@@ -348,7 +348,9 @@ async def checkout(
                     "payment_status": "pending",
                     "estimated_ready_time": estimated_ready_time,
                     "delivery_address": checkout_request.delivery_address,
-                    "special_instructions": checkout_request.special_instructions
+                    "special_instructions": checkout_request.special_instructions,
+                    "created_at": datetime.utcnow(),
+                    "updated_at": datetime.utcnow()
                 }
                 
                 order_id = await database.execute(OrderModel.__table__.insert().values(**order_data))
@@ -397,12 +399,14 @@ async def checkout(
                         update_data = {
                             "payment_status": "completed",
                             "payment_id": payment_result.get("id"),
-                            "status": "confirmed"
+                            "status": "confirmed",
+                            "updated_at": datetime.utcnow()
                         }
                     else:
                         update_data = {
                             "payment_status": "failed",
-                            "payment_id": payment_result.get("id")
+                            "payment_id": payment_result.get("id"),
+                            "updated_at": datetime.utcnow()
                         }
                         payment_error = payment_result.get("message", "Payment failed")
                     
@@ -418,7 +422,7 @@ async def checkout(
                         OrderModel.__table__
                         .update()
                         .where(OrderModel.id == order_id)
-                        .values(payment_status="failed")
+                        .values(payment_status="failed", updated_at=datetime.utcnow())
                     )
                     payment_error = str(e)
                 
