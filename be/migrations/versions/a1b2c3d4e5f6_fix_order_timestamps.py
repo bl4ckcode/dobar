@@ -1,7 +1,7 @@
 """Fix order timestamps
 
-Revision ID: fix_order_timestamps
-Revises: 
+Revision ID: a1b2c3d4e5f6
+Revises: 2de27a110c1e
 Create Date: 2026-05-02 16:40:00.000000
 
 """
@@ -10,8 +10,8 @@ import sqlalchemy as sa
 from sqlalchemy.sql import text
 
 # revision identifiers, used by Alembic.
-revision = 'fix_order_timestamps'
-down_revision = 'fcf6c6a011db'  # Latest migration
+revision: str = 'a1b2c3d4e5f6'
+down_revision: str | None = '2de27a110c1e'
 branch_labels = None
 depends_on = None
 
