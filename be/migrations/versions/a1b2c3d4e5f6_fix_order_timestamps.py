@@ -1,7 +1,7 @@
 """Fix order timestamps
 
 Revision ID: a1b2c3d4e5f6
-Revises: 2de27a110c1e
+Revises: e5826fa432e0
 Create Date: 2026-05-02 16:40:00.000000
 
 """
@@ -11,7 +11,7 @@ from sqlalchemy.sql import text
 
 # revision identifiers, used by Alembic.
 revision: str = 'a1b2c3d4e5f6'
-down_revision: str | None = '2de27a110c1e'
+down_revision: str | None = 'e5826fa432e0'
 branch_labels = None
 depends_on = None
 
