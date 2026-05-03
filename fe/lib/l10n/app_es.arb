@@ -479,5 +479,9 @@
   "business_settings": "Ajustes",
   "business_client_mode": "Modo Cliente",
   "business_select_bar": "Seleccionar bar",
-  "business_no_bar_selected": "Ningún bar seleccionado"
+  "business_no_bar_selected": "Ningún bar seleccionado",
+  "location_mismatch_title": "Notamos que estás en un país diferente.",
+  "location_mismatch_subtitle": "¿Te gustaría actualizar tu ubicación para ver bares y restaurantes locales?",
+  "location_mismatch_update_button": "Actualizar Ubicación",
+  "location_mismatch_not_now_button": "Ahora no"
 }

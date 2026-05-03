@@ -17,6 +17,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     on<DeleteAccount>(_onDeleteAccount);
     on<LoadWalletBalance>(_onLoadWalletBalance);
     on<LoadCashbackHistory>(_onLoadCashbackHistory);
+    on<UpdateCountry>(_onUpdateCountry);
     on<ClearUserError>(_onClearError);
   }
 
@@ -24,7 +25,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     LoadCurrentUser event,
     Emitter<UserState> emit,
   ) async {
-    emit(state.copyWith(isLoading: true, error: null));
+    emit(state.copyWith(isLoading: true, error: null, isCountryUpdated: false));
     final result = await _usecase.getCurrentUser();
     result.fold(
       (failure) =>
@@ -37,7 +38,7 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     UpdateProfile event,
     Emitter<UserState> emit,
   ) async {
-    emit(state.copyWith(isUpdating: true, error: null));
+    emit(state.copyWith(isUpdating: true, error: null, isCountryUpdated: false));
     final result = await _usecase.updateProfile(
       displayName: event.displayName,
       email: event.email,
@@ -135,6 +136,26 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     result.fold(
       (failure) => emit(state.copyWith(error: failure.errorMessage)),
       (history) => emit(state.copyWith(cashbackHistory: history)),
+    );
+  }
+
+  Future<void> _onUpdateCountry(
+    UpdateCountry event,
+    Emitter<UserState> emit,
+  ) async {
+    emit(state.copyWith(isUpdating: true, error: null));
+    final result = await _usecase.updateCountry(
+      event.latitude,
+      event.longitude,
+    );
+    result.fold(
+      (failure) =>
+          emit(state.copyWith(isUpdating: false, error: failure.errorMessage)),
+      (data) {
+        emit(state.copyWith(isUpdating: false, isCountryUpdated: true));
+        // After updating country, we should reload the user to get the new countryCode
+        add(const UserEvent.loadCurrentUser());
+      },
     );
   }
 

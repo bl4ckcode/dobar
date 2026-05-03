@@ -1,6 +1,6 @@
 # BARZ - Frontend Backend Communication
 
-Last Updated: April 22, 2026
+Last Updated: April 30, 2026
 Backend Status: Live on Fly.io
 API Base URL: https://barz-backend-bold-sun-5691.fly.dev
 
@@ -458,11 +458,34 @@ Response 200:
   "user_type": "client",
   "country_code": "BR",
   "subscription_tier": "regular",
-  "is_pro": false
+  "is_pro": false,
+  "location_mismatch": false
 }
 
 ```
 *Note: Editing a phone number to one that is already in use returns `409 Conflict` (`PHONE_IN_USE`).*
+
+### Update User Country (CROSS-BORDER) [NEW]
+
+Syncs the user's registered `country_code` with their current physical location.
+
+```
+POST /me/update-country
+Auth: Required (Access Token)
+
+Body:
+{
+  "latitude": -19.921,
+  "longitude": -43.933
+}
+
+Response 200:
+{
+  "old_country": "US",
+  "new_country": "BR",
+  "status": "updated"
+}
+```
 
 ### Notification Preferences
 
@@ -648,19 +671,38 @@ Response 200:
       }
     ]
   },
-  "active_promotions": [
-    {
-      "id": 5,
-      "title": "Happy Hour",
-      "description": "50% off on drafts",
-      "discount_type": "percentage",
-      "discount_value": 50.0,
-      "start_time": "17:00",
-      "end_time": "20:00",
-      "image_url": "https://..."
-    }
-  ]
+  "active_promotions": [ ... ],
+  "location_mismatch": true  // IMPORTANT: If true, FE must prompt user to update location via POST /me/update-country
 }
+```
+
+### Nearby Bars (Filtering) & Location Mismatch
+
+Both `/home` and `/bars` now strictly filter by the user's `country_code`. If a user is physically in a different country than their registered one, the `nearby_bars` list will be empty and `location_mismatch` will be `true`.
+
+#### 📱 Frontend UI Flow (Cross-Border Prompt)
+When `location_mismatch` is `true`, the frontend **MUST** display a prompt (e.g., a modal or banner) to the user:
+1. **Detects Travel**: "We noticed you are in a different country."
+2. **Action**: "Would you like to update your location to see local bars and restaurants?"
+3. **Confirm**: If the user clicks "Yes/Update", the app calls `POST /me/update-country` with their current coordinates.
+4. **Refresh**: After a successful `200 OK` from the update endpoint, the frontend should re-fetch the `/home` dashboard, which will now return bars for the new country.
+If the user declines, they simply see an empty list of local bars until they choose to update.
+---
+
+## FINANCIAL OPERATIONS (SPRINT 9 - NEW)
+
+Status: **✅ COMPLETE**
+Priority: HIGH - Revenue & Payout Tracking
+
+### Overview
+
+Support for tracking Payouts and Disputes via DPE Webhooks.
+
+### 1. Payout Tracking
+Payouts are automatically recorded when DPE notifies the backend of successful transfers to the bar's bank account.
+
+### 2. Dispute Management
+Disputes (chargebacks) are recorded and linked to the original `order_id` for administrative review.
 ```
 
 ---

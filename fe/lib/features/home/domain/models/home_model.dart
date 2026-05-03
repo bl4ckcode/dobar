@@ -4,12 +4,14 @@ import 'package:barz/features/bars/domain/models/bar_model.dart';
 
 abstract class HomeModel {
   UserStatus? get userStatus;
+  bool get locationMismatch;
   List<NearbyBar> get nearbyBars;
   TrendingSection get trendingDrinks;
   List<PromotionModel> get activePromotions;
 
   factory HomeModel({
     UserStatus? userStatus,
+    required bool locationMismatch,
     required List<NearbyBar> nearbyBars,
     required TrendingSection trendingDrinks,
     required List<PromotionModel> activePromotions,
@@ -23,6 +25,8 @@ class _HomeModelImpl implements HomeModel {
   @override
   final UserStatus? userStatus;
   @override
+  final bool locationMismatch;
+  @override
   final List<NearbyBar> nearbyBars;
   @override
   final TrendingSection trendingDrinks;
@@ -31,6 +35,7 @@ class _HomeModelImpl implements HomeModel {
 
   _HomeModelImpl({
     this.userStatus,
+    required this.locationMismatch,
     required this.nearbyBars,
     required this.trendingDrinks,
     required this.activePromotions,
@@ -38,17 +43,20 @@ class _HomeModelImpl implements HomeModel {
 
   factory _HomeModelImpl.fromJson(Map<String, dynamic> json) {
     return _HomeModelImpl(
-      userStatus: json['user_status'] != null
-          ? UserStatus.fromJson(json['user_status'])
-          : null,
+      userStatus:
+          json['user_status'] != null
+              ? UserStatus.fromJson(json['user_status'])
+              : null,
+      locationMismatch: json['location_mismatch'] ?? false,
       nearbyBars:
           (json['nearby_bars'] as List?)
               ?.map((e) => NearbyBar.fromJson(e))
               .toList() ??
           [],
-      trendingDrinks: json['trending_drinks'] != null
-          ? TrendingSection.fromJson(json['trending_drinks'])
-          : TrendingSection(mostWanted: [], hottest: []),
+      trendingDrinks:
+          json['trending_drinks'] != null
+              ? TrendingSection.fromJson(json['trending_drinks'])
+              : TrendingSection(mostWanted: [], hottest: []),
       activePromotions:
           (json['active_promotions'] as List?)
               ?.map((e) => PromotionModel.fromJson(e))

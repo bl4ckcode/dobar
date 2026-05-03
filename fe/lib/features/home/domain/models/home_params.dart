@@ -1,15 +1,23 @@
 class HomeParams {
-  HomeParams({required this.identification});
+  final double? latitude;
+  final double? longitude;
 
-  late final String identification;
+  HomeParams({
+    this.latitude,
+    this.longitude,
+  });
 
-  HomeParams.fromJson(Map<String, dynamic> json) {
-    identification = json['period'];
+  factory HomeParams.fromJson(Map<String, dynamic> json) {
+    return HomeParams(
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
+    );
   }
 
   Map<String, dynamic> toJson() {
-    final data = <String, dynamic>{};
-    data['period'] = identification;
-    return data;
+    return {
+      'latitude': latitude,
+      'longitude': longitude,
+    };
   }
 }

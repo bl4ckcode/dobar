@@ -11,6 +11,7 @@ abstract class UserState with _$UserState {
     @Default(false) bool isLoading,
     @Default(false) bool isUpdating,
     String? error,
+    @Default(false) bool isCountryUpdated,
     @Default([]) List<CashbackTransaction> cashbackHistory,
     double? walletBalance,
   }) = _UserState;

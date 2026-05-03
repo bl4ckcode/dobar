@@ -10,6 +10,7 @@ abstract class TrendingDrink with _$TrendingDrink {
     required String name,
     @JsonKey(name: 'price_avg') double? priceAvg,
     double? price,
+    @JsonKey(name: 'promotional_price') double? promotionalPrice,
     String? description,
     String? category,
     @JsonKey(name: 'bar_name') String? barName,

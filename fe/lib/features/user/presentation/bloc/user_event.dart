@@ -21,5 +21,9 @@ sealed class UserEvent with _$UserEvent {
   const factory UserEvent.deleteAccount() = DeleteAccount;
   const factory UserEvent.loadWalletBalance() = LoadWalletBalance;
   const factory UserEvent.loadCashbackHistory() = LoadCashbackHistory;
+  const factory UserEvent.updateCountry({
+    required double latitude,
+    required double longitude,
+  }) = UpdateCountry;
   const factory UserEvent.clearError() = ClearUserError;
 }

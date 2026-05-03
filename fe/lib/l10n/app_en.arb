@@ -579,5 +579,9 @@
   "subscription_upgrade_success": "Plan upgraded successfully!",
   "subscription_capture_success": "Payment captured successfully!",
   "pro_sheet_title": "Unlock Dobar Pro",
-  "pro_sheet_description": "Take your business to the next level with advanced analytics, targeted push campaigns, and priority placement."
+  "pro_sheet_description": "Take your business to the next level with advanced analytics, targeted push campaigns, and priority placement.",
+  "location_mismatch_title": "We noticed you are in a different country.",
+  "location_mismatch_subtitle": "Would you like to update your location to see local bars and restaurants?",
+  "location_mismatch_update_button": "Update Location",
+  "location_mismatch_not_now_button": "Not now"
 }

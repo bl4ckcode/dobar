@@ -243,20 +243,6 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                       .animate()
                                       .fadeIn(delay: 500.ms, duration: 600.ms)
                                       .slideY(begin: 0.2, end: 0),
-                                  const SizedBox(height: 12),
-                                  TextButton(
-                                    onPressed: () =>
-                                        AppRoute.recoveryInitiate.push(context),
-                                    child: Text(
-                                      'Trouble logging in?',
-                                      style: TextStyle(
-                                        color: Colors.black54,
-                                        fontSize: 12,
-                                        decoration: TextDecoration.underline,
-                                        decorationColor: Colors.black26,
-                                      ),
-                                    ),
-                                  ),
                                   const SizedBox(height: 16),
                                   _OrDivider(colors: colors),
                                   const SizedBox(height: 20),
@@ -363,7 +349,7 @@ class _LogoArea extends StatelessWidget {
                 gradient: RadialGradient(
                   colors: [
                     barzGold.withValues(alpha: glowAnim.value * 0.4),
-                    Colors.transparent,
+                    Colors.white,
                   ],
                   stops: const [0.0, 0.8],
                 ),
@@ -374,8 +360,8 @@ class _LogoArea extends StatelessWidget {
             tag: 'logo',
             child: Image.asset(
               'assets/icons/dobar-logo-animated-transparent.gif',
-              height: 110,
-              width: 110,
+              height: 140,
+              width: 140,
               fit: BoxFit.contain,
             ),
           ),
@@ -403,7 +389,7 @@ class _PhoneCard extends StatelessWidget {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
         child: Container(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
             color: Colors.white.withValues(alpha: 0.7),
             borderRadius: BorderRadius.circular(20),

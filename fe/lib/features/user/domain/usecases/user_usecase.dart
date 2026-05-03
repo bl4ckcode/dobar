@@ -85,4 +85,11 @@ class UserUsecase {
   Future<Either<Failure, List<CashbackTransaction>>> getCashbackHistory() {
     return _repository.getCashbackHistory();
   }
+  
+  Future<Either<Failure, Map<String, dynamic>>> updateCountry(
+    double latitude,
+    double longitude,
+  ) {
+    return _repository.updateCountry(latitude, longitude);
+  }
 }

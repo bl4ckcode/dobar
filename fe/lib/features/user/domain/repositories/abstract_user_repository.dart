@@ -34,4 +34,8 @@ abstract class UserRepository {
   Future<Either<Failure, bool>> deleteAccount();
   Future<Either<Failure, double>> getWalletBalance();
   Future<Either<Failure, List<CashbackTransaction>>> getCashbackHistory();
+  Future<Either<Failure, Map<String, dynamic>>> updateCountry(
+    double latitude,
+    double longitude,
+  );
 }

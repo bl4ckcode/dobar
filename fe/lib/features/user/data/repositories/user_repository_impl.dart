@@ -182,4 +182,17 @@ class UserRepositoryImpl implements UserRepository {
       return Left(ServerFailure(e.message, e.statusCode));
     }
   }
+
+  @override
+  Future<Either<Failure, Map<String, dynamic>>> updateCountry(
+    double latitude,
+    double longitude,
+  ) async {
+    try {
+      final result = await _datasource.updateCountry(latitude, longitude);
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message, e.statusCode));
+    }
+  }
 }

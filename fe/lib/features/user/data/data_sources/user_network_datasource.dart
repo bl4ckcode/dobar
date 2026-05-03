@@ -25,6 +25,7 @@ abstract class UserDatasource {
   Future<bool> registerFcmToken(String token);
   Future<double> getWalletBalance();
   Future<List<CashbackTransaction>> getCashbackHistory();
+  Future<Map<String, dynamic>> updateCountry(double latitude, double longitude);
 }
 
 class UserNetworkDatasource implements UserDatasource {
@@ -264,6 +265,25 @@ class UserNetworkDatasource implements UserDatasource {
     } on DioException catch (e) {
       throw ServerException(
         e.response?.data?['detail'] ?? 'Failed to get cashback history',
+        e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> updateCountry(
+    double latitude,
+    double longitude,
+  ) async {
+    try {
+      final response = await dio.post(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.updateCountry}',
+        data: {'latitude': latitude, 'longitude': longitude},
+      );
+      return response.data as Map<String, dynamic>;
+    } on DioException catch (e) {
+      throw ServerException(
+        e.response?.data?['detail'] ?? 'Failed to update country',
         e.response?.statusCode,
       );
     }

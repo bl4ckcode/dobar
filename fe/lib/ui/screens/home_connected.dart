@@ -14,14 +14,21 @@ import 'package:barz/features/location/presentation/bloc/location_state.dart';
 import 'package:barz/l10n/app_localizations.dart';
 import 'package:barz/core/design/components/location_permission_alert.dart';
 import 'package:barz/features/promotions/domain/models/promotion_model.dart';
+import 'package:barz/features/home/presentation/widgets/location_mismatch_dialog.dart';
+import 'package:barz/features/user/presentation/bloc/user_bloc.dart';
+import 'package:barz/features/user/presentation/bloc/user_event.dart';
+import 'package:barz/features/user/presentation/bloc/user_state.dart';
 
 class HomeConnected extends StatelessWidget {
   const HomeConnected({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (_) => getItInjector<HomeBloc>(),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(create: (_) => getItInjector<HomeBloc>()),
+        BlocProvider(create: (_) => getItInjector<UserBloc>()),
+      ],
       child: const HomeConnectedView(),
     );
   }
@@ -135,7 +142,27 @@ class _HomeConnectedViewState extends State<HomeConnectedView>
           debugPrint('[HomeView] Location state has error: ${state.error}');
         }
       },
-      child: Scaffold(
+      child: MultiBlocListener(
+        listeners: [
+          BlocListener<HomeBloc, HomeState>(
+            listener: (context, state) {
+              if (state is HomeLoaded && state.data.locationMismatch) {
+                _showLocationMismatchDialog(context);
+              }
+            },
+          ),
+          BlocListener<UserBloc, UserState>(
+            listenWhen: (prev, curr) =>
+                prev.isCountryUpdated != curr.isCountryUpdated,
+            listener: (context, state) {
+              if (state.isCountryUpdated) {
+                debugPrint('[HomeView] Country updated successfully, refreshing data...');
+                _refreshData(context);
+              }
+            },
+          ),
+        ],
+        child: Scaffold(
         backgroundColor: theme.brightness == Brightness.light
             ? Colors.white
             : colors.background,
@@ -334,7 +361,8 @@ class _HomeConnectedViewState extends State<HomeConnectedView>
           ),
         ),
       ),
-    );
+    ),
+  );
   }
 
   Widget _buildSectionTitleWithSubtitle(
@@ -720,6 +748,28 @@ class _HomeConnectedViewState extends State<HomeConnectedView>
           ),
         ),
       ).animate().fadeIn(delay: (40 * index).ms).slideX(begin: 0.1, end: 0),
+    );
+  }
+
+  void _showLocationMismatchDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => LocationMismatchDialog(
+        onConfirm: () {
+          final locationState = context.read<LocationCubit>().state;
+          if (locationState.currentLocation != null) {
+            context.read<UserBloc>().add(
+              UserEvent.updateCountry(
+                latitude: locationState.currentLocation!.latitude,
+                longitude: locationState.currentLocation!.longitude,
+              ),
+            );
+          }
+          Navigator.of(dialogContext).pop();
+        },
+        onCancel: () => Navigator.of(dialogContext).pop(),
+      ),
     );
   }
 

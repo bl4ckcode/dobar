@@ -488,5 +488,9 @@
   "subscription_upgrade_success": "Upgrade realizado com sucesso!",
   "subscription_capture_success": "Pagamento capturado com sucesso!",
   "pro_sheet_title": "Desbloqueie o Dobar Pro",
-  "pro_sheet_description": "Leve seu negócio para o próximo nível com análises avançadas, campanhas de push direcionadas e posicionamento prioritário."
+  "pro_sheet_description": "Leve seu negócio para o próximo nível com análises avançadas, campanhas de push direcionadas e posicionamento prioritário.",
+  "location_mismatch_title": "Notamos que você está em um país diferente.",
+  "location_mismatch_subtitle": "Gostaria de atualizar sua localização para ver bares e restaurantes locais?",
+  "location_mismatch_update_button": "Atualizar Localização",
+  "location_mismatch_not_now_button": "Agora não"
 }

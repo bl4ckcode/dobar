@@ -1,3 +1,4 @@
+import 'package:barz/core/api/api_endpoints.dart';
 import 'package:barz/core/network/api_response.dart';
 import 'package:barz/core/network/exceptions.dart';
 import 'package:barz/features/home/data/data_sources/abstract_home_api.dart';
@@ -13,7 +14,14 @@ class HomeImplApi extends AbstractHomeApi {
   @override
   Future<ApiResponse<HomeModel>> getHome(HomeParams params) async {
     try {
-      final result = (await dio.get(" getArticlePath(params.identification)"));
+      final queryParams = <String, dynamic>{};
+      if (params.latitude != null) queryParams['latitude'] = params.latitude;
+      if (params.longitude != null) queryParams['longitude'] = params.longitude;
+
+      final result = await dio.get(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.home}',
+        queryParameters: queryParams,
+      );
       if (result.data == null) {
         throw ServerException("Unknown Error", result.statusCode);
       }
