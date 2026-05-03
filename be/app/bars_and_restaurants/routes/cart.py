@@ -12,7 +12,7 @@ from app.auth.middleware import get_optional_user
 from app.auth.rbac_middleware import get_current_user, AuthUser
 from app.errors import APIError
 from ..models.cart_models import Cart as CartModel, CartItem as CartItemModel, OrderItem as OrderItemModel
-from ..models.relational_models import Order as OrderModel
+from ..models.relational_models import Order as OrderModel, Promotion as PromotionModel
 from ..schemas.cart import Cart, CartItem, CartItemCreate, CartItemUpdate, CheckoutRequest, CheckoutResponse, CartCalculateRequest, CartSyncRequest, CartResponse
 from app.database import database
 from app.payment import get_payment_gateway, PaymentGateway
@@ -310,11 +310,36 @@ async def checkout(
         progressive_pct = Decimal(str(progressive_data["percentage"]))
         progressive_discount_amount = subtotal * progressive_pct
         
+        # Calculate promotion discounts from active_promotion_ids
+        promotion_discount = Decimal("0.00")
+        active_promo_ids = []
+        if checkout_request.active_promotion_ids:
+            promo_query = PromotionModel.__table__.select().where(
+                PromotionModel.id.in_(checkout_request.active_promotion_ids)
+            )
+            promos = await database.fetch_all(promo_query)
+            
+            for promo in promos:
+                promo_dict = dict(promo)
+                if not promo_dict.get("is_active"):
+                    continue
+                    
+                if promo_dict["discount_type"] == "percentage":
+                    promo_discount = subtotal * (Decimal(str(promo_dict["discount_value"])) / 100)
+                elif promo_dict["discount_type"] == "fixed":
+                    promo_discount = Decimal(str(promo_dict["discount_value"]))
+                else:
+                    continue
+                    
+                promotion_discount += promo_discount
+            
+            active_promo_ids = checkout_request.active_promotion_ids
+        
         coupon_discount = Decimal("0.00")
         if checkout_request.coupon_code:
             pass
             
-        discount = max(coupon_discount, progressive_discount_amount)
+        discount = max(coupon_discount, progressive_discount_amount) + promotion_discount
         
         tax_rate = Decimal("0.10")
         tax = subtotal * tax_rate
@@ -349,6 +374,7 @@ async def checkout(
                     "estimated_ready_time": estimated_ready_time,
                     "delivery_address": checkout_request.delivery_address,
                     "special_instructions": checkout_request.special_instructions,
+                    "active_promotion_ids": active_promo_ids,
                     "created_at": datetime.utcnow(),
                     "updated_at": datetime.utcnow()
                 }

@@ -367,7 +367,7 @@ async def read_bar(bar_id: int):
 async def get_bars(
     latitude: float = Query(..., description="Latitude of the location"),
     longitude: float = Query(..., description="Longitude of the location"),
-    max_distance: float = Query(5000, description="Max distance in meters (default: 5000m)"),
+    max_distance: float = Query(50000, description="Max distance in meters (default: 50000m)"),
     current_user: AuthUser = Depends(get_current_user),
     category: Optional[str] = Query(None, description="Filter by category: bar, night_club, restaurant_bar, cafe_bar, hotel_bar, casino")
 ):
