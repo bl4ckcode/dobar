@@ -8,7 +8,9 @@ Admin endpoints (protected):
 - GET /api/v1/admin/waitlist - List all signups with stats
 - PATCH /api/v1/admin/waitlist/{id} - Update signup status/notes
 """
+import json
 from fastapi import APIRouter, Request, Depends, Query
+from fastapi.exceptions import RequestValidationError
 from typing import Optional
 from app.database import database
 from app.rate_limiter import limiter, RateLimits
@@ -47,22 +49,37 @@ waitlist_admin_router = APIRouter(prefix="/api/v1/admin/waitlist", tags=["Waitli
 @limiter.limit("5/hour")  # 5 requests per IP per hour as specified
 async def create_waitlist_signup(
     request: Request,
-    data: WaitlistSignupCreate
 ):
     """
     Submit a new waitlist signup from the landing page.
-    
+
     Rate limited to 5 requests per IP per hour to prevent abuse.
     """
+    # Read and log raw body for debugging
+    body = await request.body()
+    try:
+        raw_data = json.loads(body)
+        print(f"🔍 WAITLIST RAW BODY: {json.dumps(raw_data, ensure_ascii=False)}")
+    except Exception:
+        raw_data = {}
+        print(f"🔍 WAITLIST RAW BODY (not JSON): {body.decode('utf-8', errors='replace')[:500]}")
+
+    # Validate manually to capture detailed errors
+    try:
+        data = WaitlistSignupCreate.model_validate(raw_data)
+    except Exception as e:
+        print(f"❌ WAITLIST VALIDATION ERROR: {e}")
+        raise RequestValidationError(errors=[{"loc": ["body"], "msg": str(e), "type": "validation_error"}])
+
     # Extract client info
     client_ip = request.client.host if request.client else None
     user_agent = request.headers.get("user-agent")
-    
+
     # Extract UTM params if provided
     utm_source = data.utm_params.source if data.utm_params else None
     utm_medium = data.utm_params.medium if data.utm_params else None
     utm_campaign = data.utm_params.campaign if data.utm_params else None
-    
+
     try:
         # Create the signup
         signup = await waitlist_service.create_signup(
@@ -78,7 +95,7 @@ async def create_waitlist_signup(
             ip_address=client_ip,
             user_agent=user_agent
         )
-        
+
         # Send confirmation email to the user
         try:
             await send_confirmation_email(
@@ -91,14 +108,14 @@ async def create_waitlist_signup(
         except Exception as e:
             # Log but don't fail the request if email fails
             print(f"⚠️ Failed to send confirmation email to {data.email}: {e}")
-        
+
         # Send admin notification
         try:
             await send_admin_notification(signup)
             await waitlist_service.mark_email_sent(signup["id"], "admin")
         except Exception as e:
             print(f"⚠️ Failed to send admin notification for signup {signup['id']}: {e}")
-        
+
         return WaitlistSignupSuccess(
             success=True,
             data={
@@ -106,7 +123,7 @@ async def create_waitlist_signup(
                 "message": "Você está na lista! Entraremos em contato em breve."
             }
         )
-        
+
     except APIError:
         raise
     except Exception as e:

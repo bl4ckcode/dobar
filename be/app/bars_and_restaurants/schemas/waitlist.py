@@ -15,13 +15,15 @@ class UTMParams(BaseModel):
 
 
 class WaitlistSignupCreate(BaseModel):
-    bar_name: str = Field(..., min_length=2, max_length=255)
-    contact_name: str = Field(..., min_length=2, max_length=255)
+    model_config = {"populate_by_name": True}
+
+    bar_name: str = Field(..., min_length=2, max_length=255, alias="barName")
+    contact_name: str = Field(..., min_length=2, max_length=255, alias="contactName")
     email: EmailStr
     phone: Optional[str] = Field(None, max_length=20)
     city: CityLiteral
     source: SourceLiteral = "organic"
-    utm_params: Optional[UTMParams] = None
+    utm_params: Optional[UTMParams] = Field(None, alias="utmParams")
 
     @field_validator('phone')
     @classmethod
