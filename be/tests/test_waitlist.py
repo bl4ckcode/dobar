@@ -61,8 +61,9 @@ class TestWaitlistPublicEndpoints:
         
         assert response2.status_code == 409
         data = response2.json()
-        assert data["success"] is False
-        assert "DUPLICATE_EMAIL" in str(data)
+        assert "error_code" in data
+        assert data["error_code"] == "CONFLICT"
+        assert "email" in data["message"].lower() or "lista" in data["message"].lower()
     
     def test_create_signup_invalid_city(self):
         """Test that invalid city returns validation error."""

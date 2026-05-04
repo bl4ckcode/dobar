@@ -6,7 +6,7 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime
 from app.database import database
 from app.bars_and_restaurants.models.relational_models import WaitlistSignup
-from app.errors import APIError
+from app.errors import APIError, ErrorCode
 
 
 # Valid Brazilian cities for the waitlist
@@ -78,7 +78,7 @@ async def create_signup(
     if await check_email_exists(email):
         raise APIError(
             status_code=409,
-            error_code="DUPLICATE_EMAIL",
+            error_code=ErrorCode.CONFLICT,
             message="Este email já está na nossa lista de espera!"
         )
     
@@ -86,7 +86,7 @@ async def create_signup(
     if city not in VALID_CITIES:
         raise APIError(
             status_code=422,
-            error_code="VALIDATION_ERROR",
+            error_code=ErrorCode.VALIDATION_ERROR,
             message=f"Cidade inválida. Deve ser uma de: {', '.join(VALID_CITIES)}"
         )
     
@@ -129,7 +129,7 @@ async def create_signup(
         if "unique" in str(e).lower() or "duplicate" in str(e).lower():
             raise APIError(
                 status_code=409,
-                error_code="DUPLICATE_EMAIL",
+                error_code=ErrorCode.CONFLICT,
                 message="Este email já está na nossa lista de espera!"
             )
         raise
@@ -247,7 +247,7 @@ async def update_signup(
     if status and status not in VALID_STATUSES:
         raise APIError(
             status_code=422,
-            error_code="VALIDATION_ERROR",
+            error_code=ErrorCode.VALIDATION_ERROR,
             message=f"Status inválido. Deve ser um de: {', '.join(VALID_STATUSES)}"
         )
     

@@ -12,7 +12,7 @@ from fastapi import APIRouter, Request, Depends, Query
 from typing import Optional
 from app.database import database
 from app.rate_limiter import limiter, RateLimits
-from app.errors import APIError
+from app.errors import APIError, ErrorCode
 from app.auth.admin import get_admin_user, verify_admin_api_key
 from ..schemas.waitlist import (
     WaitlistSignupCreate,
@@ -113,7 +113,7 @@ async def create_waitlist_signup(
         print(f"❌ Error creating waitlist signup: {e}")
         raise APIError(
             status_code=500,
-            error_code="UNKNOWN",
+            error_code=ErrorCode.UNKNOWN,
             message="Ocorreu um erro ao processar sua inscrição. Tente novamente."
         )
 
