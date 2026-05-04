@@ -19,6 +19,14 @@ sealed class PaymentEvent with _$PaymentEvent {
       ProcessPayment;
   const factory PaymentEvent.initiatePixPayment(PaymentRequest request) =
       InitiatePixPayment;
+  const factory PaymentEvent.generateStandalonePix({
+    required int barId,
+    required double amount,
+    String? description,
+    String? payerName,
+    String? payerDocument,
+    int? expiresIn,
+  }) = GenerateStandalonePix;
   const factory PaymentEvent.checkPaymentStatus(int transactionId) =
       CheckPaymentStatus;
   const factory PaymentEvent.loadTransactionHistory({int? limit, int? offset}) =

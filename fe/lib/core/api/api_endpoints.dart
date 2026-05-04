@@ -90,6 +90,7 @@ class ApiEndpoints {
   static const String payments = '/payments';
   static const String paymentsV2Charge = '/payments/v2/charge';
   static const String pixPayment = '/payments/pix';
+  static const String pixGenerate = '/pix/generate';
   static const String paymentMethods = '/payments/methods';
   static const String savedCards = '/me/cards';
   static String savedCard(int id) => '/me/cards/$id';

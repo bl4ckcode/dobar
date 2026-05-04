@@ -19,6 +19,22 @@ const maskPhone = (v: string) => {
   return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
 };
 
+const API_BASE_URL = "https://barz-backend-bold-sun-5691.fly.dev";
+
+interface WaitlistPayload {
+  bar_name: string;
+  contact_name: string;
+  email: string;
+  phone: string;
+  city: string;
+  source: string;
+  utm_params?: {
+    source?: string;
+    medium?: string;
+    campaign?: string;
+  };
+}
+
 const Confetti = () => (
   <div className="pointer-events-none absolute inset-0 overflow-hidden">
     {Array.from({ length: 30 }).map((_, i) => (
@@ -55,12 +71,38 @@ export const WaitlistForm = () => {
     setErrors({});
     setLoading(true);
     try {
-      // Mock POST /api/waitlist
-      await new Promise((res) => setTimeout(res, 900));
+      const payload: WaitlistPayload = {
+        bar_name: form.bar,
+        contact_name: form.name,
+        email: form.email,
+        phone: form.phone.replace(/\D/g, ""),
+        city: form.city,
+        source: "landing_page",
+        utm_params: {
+          source: new URLSearchParams(window.location.search).get("utm_source") || undefined,
+          medium: new URLSearchParams(window.location.search).get("utm_medium") || undefined,
+          campaign: new URLSearchParams(window.location.search).get("utm_campaign") || undefined,
+        },
+      };
+
+      const response = await fetch(`${API_BASE_URL}/api/v1/waitlist/signup`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      }
+
       setSuccess(true);
       toast.success("Cadastro confirmado!");
-    } catch {
-      toast.error("Algo deu errado. Tente novamente.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Algo deu errado. Tente novamente.";
+      toast.error(message);
     } finally {
       setLoading(false);
     }

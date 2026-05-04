@@ -14,6 +14,7 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     on<RemovePaymentMethod>(_onRemovePaymentMethod);
     on<ProcessPayment>(_onProcessPayment);
     on<InitiatePixPayment>(_onInitiatePixPayment);
+    on<GenerateStandalonePix>(_onGenerateStandalonePix);
     on<CheckPaymentStatus>(_onCheckPaymentStatus);
     on<LoadTransactionHistory>(_onLoadTransactionHistory);
     on<RefundTransaction>(_onRefundTransaction);
@@ -135,6 +136,27 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
   ) async {
     emit(state.copyWith(isProcessing: true, error: null));
     final result = await _usecase.initiatePixPayment(event.request);
+    result.fold(
+      (failure) => emit(
+        state.copyWith(isProcessing: false, error: failure.errorMessage),
+      ),
+      (pix) => emit(state.copyWith(isProcessing: false, pixPayment: pix)),
+    );
+  }
+
+  Future<void> _onGenerateStandalonePix(
+    GenerateStandalonePix event,
+    Emitter<PaymentState> emit,
+  ) async {
+    emit(state.copyWith(isProcessing: true, error: null));
+    final result = await _usecase.generateStandalonePix(
+      barId: event.barId,
+      amount: event.amount,
+      description: event.description,
+      payerName: event.payerName,
+      payerDocument: event.payerDocument,
+      expiresIn: event.expiresIn ?? 3600,
+    );
     result.fold(
       (failure) => emit(
         state.copyWith(isProcessing: false, error: failure.errorMessage),

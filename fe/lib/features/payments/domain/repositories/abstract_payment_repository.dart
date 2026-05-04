@@ -26,6 +26,14 @@ abstract class PaymentRepository {
   Future<Either<Failure, PixPaymentResponse>> initiatePixPayment(
     PaymentRequest request,
   );
+  Future<Either<Failure, PixPaymentResponse>> generateStandalonePix({
+    required int barId,
+    required double amount,
+    String? description,
+    String? payerName,
+    String? payerDocument,
+    int expiresIn,
+  });
   Future<Either<Failure, Transaction>> checkPaymentStatus(int transactionId);
   Future<Either<Failure, List<Transaction>>> getTransactionHistory({
     int? limit,

@@ -39,6 +39,24 @@ class PaymentUsecase {
     return _repository.initiatePixPayment(request);
   }
 
+  Future<Either<Failure, PixPaymentResponse>> generateStandalonePix({
+    required int barId,
+    required double amount,
+    String? description,
+    String? payerName,
+    String? payerDocument,
+    int expiresIn = 3600,
+  }) {
+    return _repository.generateStandalonePix(
+      barId: barId,
+      amount: amount,
+      description: description,
+      payerName: payerName,
+      payerDocument: payerDocument,
+      expiresIn: expiresIn,
+    );
+  }
+
   Future<Either<Failure, Transaction>> checkPaymentStatus(int transactionId) {
     return _repository.checkPaymentStatus(transactionId);
   }

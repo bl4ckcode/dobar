@@ -32,6 +32,14 @@ abstract class PaymentDatasource {
     PaymentRequest request, {
     String? idempotencyKey,
   });
+  Future<PixPaymentResponse> generateStandalonePix({
+    required int barId,
+    required double amount,
+    String? description,
+    String? payerName,
+    String? payerDocument,
+    int expiresIn,
+  });
   Future<Transaction> checkPaymentStatus(int transactionId);
   Future<List<Transaction>> getTransactionHistory({int? limit, int? offset});
   Future<Transaction> refundTransaction(
@@ -219,6 +227,42 @@ class PaymentNetworkDatasource implements PaymentDatasource {
     } on DioException catch (e) {
       throw ServerException(
         e.response?.data?['detail'] ?? 'Failed to initiate PIX payment',
+        e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<PixPaymentResponse> generateStandalonePix({
+    required int barId,
+    required double amount,
+    String? description,
+    String? payerName,
+    String? payerDocument,
+    int expiresIn = 3600,
+  }) async {
+    try {
+      final response = await dio.post(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.pixGenerate}',
+        data: {
+          'bar_id': barId,
+          'amount': amount,
+          'description': description,
+          'payer_name': payerName,
+          'payer_document': payerDocument,
+          'expires_in': expiresIn,
+        },
+      );
+      return PixPaymentResponse.fromJson({
+        'payment_id': response.data['pix_id'],
+        'pix_qr_code': response.data['brcode'],
+        'pix_copia_e_cola': response.data['brcode'],
+        'pix_expires_at': response.data['expires_at'],
+        'amount': amount,
+      });
+    } on DioException catch (e) {
+      throw ServerException(
+        e.response?.data?['detail'] ?? 'Failed to generate standalone PIX',
         e.response?.statusCode,
       );
     }

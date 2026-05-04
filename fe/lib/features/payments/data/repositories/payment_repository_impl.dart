@@ -126,6 +126,30 @@ class PaymentRepositoryImpl implements PaymentRepository {
   }
 
   @override
+  Future<Either<Failure, PixPaymentResponse>> generateStandalonePix({
+    required int barId,
+    required double amount,
+    String? description,
+    String? payerName,
+    String? payerDocument,
+    int expiresIn = 3600,
+  }) async {
+    try {
+      final result = await _datasource.generateStandalonePix(
+        barId: barId,
+        amount: amount,
+        description: description,
+        payerName: payerName,
+        payerDocument: payerDocument,
+        expiresIn: expiresIn,
+      );
+      return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message, e.statusCode));
+    }
+  }
+
+  @override
   Future<Either<Failure, Transaction>> checkPaymentStatus(
     int transactionId,
   ) async {
