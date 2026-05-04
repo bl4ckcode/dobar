@@ -26,4 +26,5 @@ class RateLimits:
     AUTH = "5/minute"
     MFA_CHALLENGE = "3/minute"
     RECOVERY = "3/minute"
+    WAITLIST_SIGNUP = "5/hour"  # 5 requests per IP per hour for waitlist
     DEFAULT = "200/minute"

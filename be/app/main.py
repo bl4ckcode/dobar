@@ -39,6 +39,7 @@ from .auth.mfa_routes import mfa_router
 from .auth.recovery_routes import recovery_router
 from .bars_and_restaurants.routes.home import home_router
 from .bars_and_restaurants.routes.notifications import notifications_router
+from .bars_and_restaurants.routes.waitlist import waitlist_public_router, waitlist_admin_router
 from .auth.user_documents import user_documents_router
 
 IS_PRODUCTION = os.getenv("FLY_APP_NAME") is not None or os.getenv("ENVIRONMENT", "development") == "production"
@@ -104,6 +105,8 @@ app.add_middleware(
         "https://dobar.app",
         "https://www.dobar.app",
         "https://dobar-app.fly.dev",
+        "https://dobar-landing.fly.dev",
+        "https://www.dobar-landing.fly.dev",
     ],
     allow_origin_regex=r"https?://(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3})(:[0-9]+)?",
     allow_credentials=True,
@@ -227,6 +230,8 @@ app.include_router(bundles_router)
 app.include_router(home_router)
 app.include_router(notifications_router)
 app.include_router(user_documents_router)
+app.include_router(waitlist_public_router)
+app.include_router(waitlist_admin_router)
 
 def custom_openapi():
     if not ENABLE_DOCS:

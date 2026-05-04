@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, ForeignKey, BigInteger, DateTime, Boolean, JSON
+from sqlalchemy import Column, Integer, String, Float, ForeignKey, BigInteger, DateTime, Boolean, JSON, Text
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from ...database import Base  # Ensure this is the correct import path
@@ -229,5 +229,28 @@ class UserDocument(Base):
     verified = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+class WaitlistSignup(Base):
+    __tablename__ = "waitlist_signups"
+
+    id = Column(Integer, primary_key=True, index=True)
+    bar_name = Column(String(255), nullable=False)
+    contact_name = Column(String(255), nullable=False)
+    email = Column(String(255), nullable=False, unique=True, index=True)
+    phone = Column(String(20), nullable=True)
+    city = Column(String(50), nullable=False, index=True)  # São Paulo, Rio de Janeiro, Belo Horizonte, Outra
+    source = Column(String(50), default="organic", index=True)  # organic, email_outreach, instagram, whatsapp
+    utm_source = Column(String(100), nullable=True)
+    utm_medium = Column(String(100), nullable=True)
+    utm_campaign = Column(String(100), nullable=True)
+    status = Column(String(20), default="pending", index=True)  # pending, contacted, qualified, converted, declined
+    notes = Column(Text, nullable=True)
+    ip_address = Column(String(45), nullable=True)  # Store as string to handle IPv6
+    user_agent = Column(String(500), nullable=True)
+    confirmation_email_sent = Column(Boolean, default=False)
+    admin_notification_sent = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
 # Financial Models (Imported for Alembic discovery)
 from .financial_models import Payout, Dispute
