@@ -46,9 +46,9 @@ async def send_confirmation_email(
                 <li>Se selecionado, você terá acesso antecipado à plataforma</li>
             </ol>
             
-            <p>Enquanto isso, siga a gente no Instagram <a href="https://instagram.com/dobar.oficial">@dobar.oficial</a> para novidades.</p>
+            <p>Enquanto isso, siga a gente no Instagram <a href="https://instagram.com/dobarapp">@dobarapp</a> para novidades.</p>
             
-            <p>Dúvidas? Responda este email ou chame no WhatsApp.</p>
+            <p>Dúvidas? Responda este email ou entre em contato diretamente pelo e-mail: contato@dobar.app</p>
             
             <p>Abraço,<br>
             <strong>Time Dobar</strong></p>
