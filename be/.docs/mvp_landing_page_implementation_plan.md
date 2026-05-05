@@ -3,7 +3,7 @@
 > **Goal:** Launch a high-converting landing page with waitlist signup to capture leads from our 50+ bar prospects before MVP launch.  
 > **Timeline:** 2 weeks (Week 1: Design & Dev, Week 2: Testing & Launch)  
 > **Owner:** [Lead Developer]  
-> **Status:** Phase 1 ✅ COMPLETE | Phase 2 ✅ COMPLETE (Backend)
+> **Status:** Phase 1 ✅ COMPLETE | Phase 2 ✅ COMPLETE (Backend) | Phase 3 🔄 IN PROGRESS (Integration)
 
 ---
 
@@ -106,8 +106,9 @@ CREATE INDEX idx_waitlist_created_at ON waitlist_signups(created_at);
 
 **Migration File:**
 - [x] Create migration in `barz-backend/supabase/migrations/` → `migrations/versions/20250503_add_waitlist_signups_table.py`
-- [ ] Run migration on staging
-- [ ] Verify table creation
+- [x] Run migration on production
+- [x] Verify table creation
+- [x] DNS configured: dobar.app → landing page ✅
 
 ### Day 5: API Endpoints
 
@@ -184,9 +185,10 @@ Tasks:
 ### Day 6: Integration & Webhook
 
 **Email Notification on Signup:**
-- [x] Configure webhook trigger on new signup → Automatic in route handler
-- [x] Send confirmation email to user (SendGrid/Mailjet) → `email_service.py`
-- [x] Send notification to admin team → `email_service.py`
+- [x] Configure webhook trigger on new signup → Automatic in route handler ✅
+- [x] Send confirmation email to user (SendGrid/Mailjet) → `email_service.py` ✅
+- [x] Send notification to admin team → `email_service.py` ✅
+- [ ] **⚠️ PENDING: Set environment variables on Fly.io (SENDGRID_API_KEY, ADMIN_EMAIL, FROM_EMAIL)**
 
 **Confirmation Email Template:**
 ```

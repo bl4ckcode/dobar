@@ -12,9 +12,9 @@ EMAIL_PROVIDER = os.getenv("EMAIL_PROVIDER", "sendgrid").lower()
 SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
 MAILJET_API_KEY = os.getenv("MAILJET_API_KEY")
 MAILJET_SECRET = os.getenv("MAILJET_SECRET")
-FROM_EMAIL = os.getenv("FROM_EMAIL", "contato@dobar.com.br")
+FROM_EMAIL = os.getenv("FROM_EMAIL", "contato@dobar.app")
 FROM_NAME = os.getenv("FROM_NAME", "Dobar")
-ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "contato@dobar.com.br")
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "contato@dobar.app")
 
 
 async def send_confirmation_email(
@@ -219,14 +219,14 @@ async def _send_via_sendgrid(
     async with httpx.AsyncClient() as client:
         try:
             response = await client.post(url, json=payload, headers=headers)
-            if response.status_code == 202:
-                print(f"✅ Email sent to {to_email} via SendGrid")
-                return True
+            success = response.status_code == 202
+            if success:
+                print(f"✅ Email sent successfully to {to_email}")
             else:
-                print(f"❌ SendGrid error: {response.status_code} - {response.text}")
-                return False
+                print(f"⚠️ SendGrid error: {response.status_code} - {response.text}")
+            return success
         except Exception as e:
-            print(f"❌ Failed to send email via SendGrid: {e}")
+            print(f"❌ SendGrid exception sending to {to_email}: {e}")
             return False
 
 
