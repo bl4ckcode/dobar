@@ -11,7 +11,7 @@ from app.errors import APIError, ErrorCode
 
 # Valid Brazilian cities for the waitlist
 VALID_CITIES = ["São Paulo", "Rio de Janeiro", "Belo Horizonte", "Outra"]
-VALID_SOURCES = ["organic", "email_outreach", "instagram", "whatsapp", "google_places"]
+VALID_SOURCES = ["organic", "email_outreach", "instagram", "whatsapp", "google_places", "landing_page"]
 VALID_STATUSES = ["pending", "contacted", "qualified", "converted", "declined"]
 
 

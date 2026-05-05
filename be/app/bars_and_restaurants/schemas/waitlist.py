@@ -4,7 +4,7 @@ from datetime import datetime
 
 
 CityLiteral = Literal["São Paulo", "Rio de Janeiro", "Belo Horizonte", "Outra"]
-SourceLiteral = Literal["organic", "email_outreach", "instagram", "whatsapp", "google_places"]
+SourceLiteral = Literal["organic", "email_outreach", "instagram", "whatsapp", "google_places", "landing_page"]
 StatusLiteral = Literal["pending", "contacted", "qualified", "converted", "declined"]
 
 
