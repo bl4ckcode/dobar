@@ -183,13 +183,13 @@ async def get_home_dashboard(
         if bar_ids:
             # Reusing get_bars_by_ids from bars.py which handles image signing and merging
             bars_data = await get_bars_by_ids(bar_ids)
-            
-            # Filter by user country to prevent cross-border discovery without explicit update
-            user_country = current_user.country_code if current_user else "BR"
-            bars_data = [b for b in bars_data if (b.get("country_code") or "BR") == user_country]
-            
+
+            # Filter by detected country from coordinates (not user profile country)
+            country_filter = detected_country or (current_user.country_code if current_user else "BR")
+            bars_data = [b for b in bars_data if (b.get("country_code") or "BR") == country_filter]
+
             # Trace for debugging
-            print(f"DEBUG: get_home_dashboard: Found {len(bar_ids)} bars in Mongo, matched {len(bars_data)} in Postgres for country {user_country}")
+            print(f"DEBUG: get_home_dashboard: Found {len(bar_ids)} bars in Mongo, matched {len(bars_data)} in Postgres for country {country_filter}")
             
             # Map to response model
             for b in bars_data[:10]: # Limit to 10

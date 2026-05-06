@@ -234,7 +234,7 @@ async def get_bars_by_ids(bars_info: list[dict]):
     return merged_results
 
 
-from app.bars_and_restaurants.services.places_service import find_bars_near_location
+from app.bars_and_restaurants.services.places_service import find_bars_near_location, reverse_geocode
 
 
 @bars_router.post("/", response_model=Bar)
@@ -372,19 +372,20 @@ async def get_bars(
     category: Optional[str] = Query(None, description="Filter by category: bar, night_club, restaurant_bar, cafe_bar, hotel_bar, casino")
 ):
     bar_ids = await find_bars_near_location(latitude, longitude, max_distance)
-    
+
     if not bar_ids:
         return []
-    
+
     bars = await get_bars_by_ids(bar_ids)
-    
+
     if not bars:
         return []
 
-    # Filter by user country
-    user_country = current_user.country_code or "BR"
-    bars = [b for b in bars if (b.get("country_code") or "BR") == user_country]
-    
+    # Filter by detected country from coordinates (not user profile country)
+    detected_country = await reverse_geocode(latitude, longitude)
+    country_filter = detected_country or current_user.country_code or "BR"
+    bars = [b for b in bars if (b.get("country_code") or "BR") == country_filter]
+
     if category:
         bars = [b for b in bars if b.get("category") == category]
 
