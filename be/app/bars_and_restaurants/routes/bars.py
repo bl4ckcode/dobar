@@ -382,9 +382,13 @@ async def get_bars(
         return []
 
     # Filter by detected country from coordinates (not user profile country)
+    # Only filter if reverse geocoding succeeds; otherwise return all nearby bars
     detected_country = await reverse_geocode(latitude, longitude)
-    country_filter = detected_country or current_user.country_code or "BR"
-    bars = [b for b in bars if (b.get("country_code") or "BR") == country_filter]
+    if detected_country:
+        bars = [b for b in bars if (b.get("country_code") or "BR") == detected_country]
+        print(f"DEBUG: /bars filtered by detected country {detected_country}, returning {len(bars)} bars")
+    else:
+        print(f"DEBUG: /bars reverse geocode failed, returning all {len(bars)} nearby bars")
 
     if category:
         bars = [b for b in bars if b.get("category") == category]

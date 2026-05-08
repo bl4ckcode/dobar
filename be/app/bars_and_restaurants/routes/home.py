@@ -185,11 +185,12 @@ async def get_home_dashboard(
             bars_data = await get_bars_by_ids(bar_ids)
 
             # Filter by detected country from coordinates (not user profile country)
-            country_filter = detected_country or (current_user.country_code if current_user else "BR")
-            bars_data = [b for b in bars_data if (b.get("country_code") or "BR") == country_filter]
-
-            # Trace for debugging
-            print(f"DEBUG: get_home_dashboard: Found {len(bar_ids)} bars in Mongo, matched {len(bars_data)} in Postgres for country {country_filter}")
+            # Only filter if reverse geocoding succeeded; otherwise return all nearby bars
+            if detected_country:
+                bars_data = [b for b in bars_data if (b.get("country_code") or "BR") == detected_country]
+                print(f"DEBUG: get_home_dashboard: Found {len(bar_ids)} bars in Mongo, matched {len(bars_data)} in Postgres for detected country {detected_country}")
+            else:
+                print(f"DEBUG: get_home_dashboard: Found {len(bar_ids)} bars in Mongo, reverse geocode failed, returning all {len(bars_data)} bars")
             
             # Map to response model
             for b in bars_data[:10]: # Limit to 10
