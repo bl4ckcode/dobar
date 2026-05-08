@@ -938,20 +938,22 @@ class _DrawerTile extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
-      child: Stack(
-        children: [
-          // Background Animation
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.fastOutSlowIn,
-            height: 56,
-            width: isSelected ? double.infinity : 0,
-            decoration: BoxDecoration(
-              color: isSelected ? barzGold : Colors.transparent,
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          Material(
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return Stack(
+            children: [
+              // Background Animation
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.fastOutSlowIn,
+                height: 56,
+                width: isSelected ? constraints.maxWidth : 0,
+                decoration: BoxDecoration(
+                  color: isSelected ? barzGold : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              Material(
             color: Colors.transparent,
             child: InkWell(
               onTap: onTap,
@@ -987,7 +989,9 @@ class _DrawerTile extends StatelessWidget {
               ),
             ),
           ),
-        ],
+            ],
+          );
+        },
       ),
     );
   }

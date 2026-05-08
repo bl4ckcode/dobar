@@ -89,4 +89,13 @@ extension DobarColorsContext on BuildContext {
   DobarColors get dobarColors => Theme.of(this).extension<DobarColors>()!;
   bool get isDark => Theme.of(this).brightness == Brightness.dark;
   ThemeData get theme => Theme.of(this);
+  
+  // Responsive layout helpers
+  Size get screenSize => MediaQuery.of(this).size;
+  double get screenWidth => screenSize.width;
+  double get screenHeight => screenSize.height;
+  bool get isMobileLayout => screenWidth < 768;
+  bool get isCompactMobile => screenWidth < 400;
+  bool get isTablet => screenWidth >= 768 && screenWidth < 1200;
+  bool get isDesktop => screenWidth >= 1200;
 }

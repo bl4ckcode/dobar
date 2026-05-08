@@ -159,9 +159,9 @@ class _BusinessShellState extends State<BusinessShell> {
 
     // For mobile bottom nav, we only show the first 5 items
     final bottomNavItems = navItems.take(5).toList();
-    if (_selectedIndex >= bottomNavItems.length) {
-      // If settings was selected, it will now be in the drawer
-    }
+    
+    // Ensure selected index is valid for bottom nav
+    final bottomNavIndex = _selectedIndex < bottomNavItems.length ? _selectedIndex : 0;
 
     return Scaffold(
       key: _scaffoldKey,
@@ -192,9 +192,7 @@ class _BusinessShellState extends State<BusinessShell> {
         children: navItems.map((item) => item.page).toList(),
       ),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex < bottomNavItems.length
-            ? _selectedIndex
-            : 0,
+        currentIndex: bottomNavIndex,
         onTap: (index) => setState(() => _selectedIndex = index),
         type: BottomNavigationBarType.fixed,
         backgroundColor: colors.navBackground,

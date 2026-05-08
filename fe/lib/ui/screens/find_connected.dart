@@ -55,7 +55,9 @@ const String _lightMapStyle = '''
 ''';
 
 class FindConnected extends StatelessWidget {
-  const FindConnected({super.key});
+  final GlobalKey<FindConnectedViewState>? viewKey;
+
+  const FindConnected({super.key, this.viewKey});
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +67,7 @@ class FindConnected extends StatelessWidget {
         BlocProvider(create: (_) => getItInjector<BarBloc>()),
         BlocProvider(create: (_) => getItInjector<PromotionsBloc>()),
       ],
-      child: const FindConnectedView(),
+      child: FindConnectedView(key: viewKey),
     );
   }
 }
@@ -74,16 +76,18 @@ class FindConnectedView extends StatefulWidget {
   const FindConnectedView({super.key});
 
   @override
-  State<FindConnectedView> createState() => _FindConnectedViewState();
+  State<FindConnectedView> createState() => FindConnectedViewState();
 }
 
-class _FindConnectedViewState extends State<FindConnectedView>
+class FindConnectedViewState extends State<FindConnectedView>
     with SingleTickerProviderStateMixin, WidgetsBindingObserver {
   final TextEditingController _searchController = TextEditingController();
   final Completer<GoogleMapController> _mapController = Completer();
   bool _showListPanel = false;
   bool _isListExpanded = false;
   bool _isSearchExpanded = false;
+  bool _hasBeenActivated = false; // Only load bars after user visits this tab
+  bool _needsBarsLoad = false; // Flag to load bars once location is ready
   late AnimationController _panelAnimController;
 
   final List<BarModel> _displayedBars = [];
@@ -112,31 +116,49 @@ class _FindConnectedViewState extends State<FindConnectedView>
 
     _searchController.addListener(_onSearchChanged);
     WidgetsBinding.instance.addObserver(this);
+  }
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) {
-        final locationState = context.read<LocationCubit>().state;
-        final barBloc = context.read<BarBloc>();
-        final barState = barBloc.state;
+  /// Load bars when this view becomes visible
+  /// Called by WireframeShell when user taps Find tab
+  void loadBarsIfNeeded() {
+    if (!mounted) return;
 
-        // Ensure bars are loaded
-        if (barState is! BarsLoaded && barState is! BarLoading) {
-          if (locationState.currentLocation != null) {
-            final lat = locationState.currentLocation!.latitude;
-            final lng = locationState.currentLocation!.longitude;
-            debugPrint('[FindView] Location available in init, loading bars');
-            barBloc.add(LoadNearbyBars(latitude: lat, longitude: lng));
-          } else {
-            debugPrint('[FindView] Location not available in init');
-          }
-        }
+    _hasBeenActivated = true; // Mark as activated
 
-        if (barState is BarsLoaded) {
-          _filterBars(_searchController.text, barState.bars);
-          _loadMarkers(barState.bars);
-        }
+    final locationState = context.read<LocationCubit>().state;
+    final barBloc = context.read<BarBloc>();
+    final barState = barBloc.state;
+
+    // Only load if not already loaded or loading
+    if (barState is! BarsLoaded && barState is! BarLoading) {
+      if (locationState.currentLocation != null) {
+        // Location is ready, load bars immediately
+        final lat = locationState.currentLocation!.latitude;
+        final lng = locationState.currentLocation!.longitude;
+        debugPrint('[FindView] Loading bars on tab activation (location ready)');
+        barBloc.add(LoadNearbyBars(latitude: lat, longitude: lng));
+        _needsBarsLoad = false;
+      } else {
+        // Location not ready, set flag to load when it becomes available
+        debugPrint('[FindView] Location not available, will load when ready');
+        _needsBarsLoad = true;
       }
-    });
+    }
+
+    if (barState is BarsLoaded) {
+      _filterBars(_searchController.text, barState.bars);
+      _loadMarkers(barState.bars);
+    }
+  }
+
+  /// Actually perform the bars load (called when location becomes available)
+  void _doLoadBars(double lat, double lng) {
+    final barBloc = context.read<BarBloc>();
+    final barState = barBloc.state;
+    if (barState is! BarsLoaded && barState is! BarLoading) {
+      debugPrint('[FindView] Loading bars (deferred)');
+      barBloc.add(LoadNearbyBars(latitude: lat, longitude: lng));
+    }
   }
 
   @override
@@ -728,11 +750,11 @@ class _FindConnectedViewState extends State<FindConnectedView>
               );
             });
 
-            // Also trigger bars load if not already loading/loaded
-            final barBloc = context.read<BarBloc>();
-            if (barBloc.state is BarInitial || barBloc.state is BarError) {
-              debugPrint('[FindView] Triggering LoadNearbyBars');
-              barBloc.add(LoadNearbyBars(latitude: lat, longitude: lng));
+            // Only auto-load bars if this tab has been activated AND we need bars
+            if (_hasBeenActivated && _needsBarsLoad) {
+              debugPrint('[FindView] Location ready, deferred loading bars');
+              _doLoadBars(lat, lng);
+              _needsBarsLoad = false; // Reset flag after loading
             }
           } else if (state.error != null) {
             debugPrint('[FindView] Location state has error: ${state.error}');

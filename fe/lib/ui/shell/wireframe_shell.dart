@@ -28,18 +28,31 @@ class WireframeShell extends StatefulWidget {
 
 class _WireframeShellState extends State<WireframeShell> {
   int _selectedIndex = 0;
+  final GlobalKey<FindConnectedViewState> _findConnectedKey = GlobalKey();
 
-  static const List<Widget> _pages = [
-    HomeConnected(),
-    FindConnected(),
-    CartPage(showBackButton: false),
-    ProfileWireframe(),
-  ];
+  late final List<Widget> _pages;
+
+  @override
+  void initState() {
+    super.initState();
+    _pages = [
+      const HomeConnected(),
+      FindConnected(viewKey: _findConnectedKey),
+      const CartPage(showBackButton: false),
+      const ProfileWireframe(),
+    ];
+  }
 
   void _onItemTapped(int index) {
     setState(() {
       _selectedIndex = index;
     });
+    // Load bars when Find tab (index 1) is tapped
+    if (index == 1) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _findConnectedKey.currentState?.loadBarsIfNeeded();
+      });
+    }
   }
 
   @override

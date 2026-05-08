@@ -148,10 +148,12 @@ class BusinessStatusToolbar extends StatelessWidget {
         : theme.colorScheme.outline;
     final textColor = dobar.labelPrimary;
     final mutedTextColor = dobar.labelSecondary;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isMobile = screenWidth < 600;
 
     return Container(
       height: 64,
-      padding: const EdgeInsets.symmetric(horizontal: 24),
+      padding: EdgeInsets.symmetric(horizontal: isMobile ? 16 : 24),
       decoration: BoxDecoration(
         color: headerBg,
         border: Border(bottom: BorderSide(color: borderColor)),
@@ -168,7 +170,7 @@ class BusinessStatusToolbar extends StatelessWidget {
                   title,
                   style: TextStyle(
                     color: textColor,
-                    fontSize: 20,
+                    fontSize: isMobile ? 18 : 20,
                     fontWeight: FontWeight.bold,
                   ),
                   overflow: TextOverflow.ellipsis,
@@ -182,58 +184,61 @@ class BusinessStatusToolbar extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 16),
-          Row(
-            children: [
-              if (actions != null) ...[...actions!, const SizedBox(width: 12)],
-              // Open/Closed Toggle
-              if (showStatusToggle &&
-                  isOpen != null &&
-                  onToggleOpen != null) ...[
-                BusinessStatusToggle(isOpen: isOpen!, onTap: onToggleOpen!),
-                const SizedBox(width: 12),
-              ],
-              // Search
-              if (showSearch) ...[
-                _ToolbarIcon(
-                  icon: LucideIcons.search,
-                  borderColor: borderColor,
-                  color: mutedTextColor,
-                ),
-                const SizedBox(width: 12),
-              ],
-              // Notifications
-              if (showNotifications) ...[
-                Stack(
-                  children: [
-                    _ToolbarIcon(
-                      icon: LucideIcons.bell,
-                      borderColor: borderColor,
-                      color: mutedTextColor,
-                    ),
-                    Positioned(
-                      right: -1,
-                      top: -1,
-                      child: Container(
-                        width: 10,
-                        height: 10,
-                        decoration: BoxDecoration(
-                          color: barzGold,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: headerBg, width: 1.5),
+          const SizedBox(width: 12),
+          Flexible(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (actions != null && !isMobile) ...[...actions!, const SizedBox(width: 12)],
+                // Open/Closed Toggle
+                if (showStatusToggle &&
+                    isOpen != null &&
+                    onToggleOpen != null) ...[
+                  BusinessStatusToggle(isOpen: isOpen!, onTap: onToggleOpen!),
+                  const SizedBox(width: 12),
+                ],
+                // Search - hidden on mobile
+                if (showSearch && !isMobile) ...[
+                  _ToolbarIcon(
+                    icon: LucideIcons.search,
+                    borderColor: borderColor,
+                    color: mutedTextColor,
+                  ),
+                  const SizedBox(width: 12),
+                ],
+                // Notifications - hidden on mobile
+                if (showNotifications && !isMobile) ...[
+                  Stack(
+                    children: [
+                      _ToolbarIcon(
+                        icon: LucideIcons.bell,
+                        borderColor: borderColor,
+                        color: mutedTextColor,
+                      ),
+                      Positioned(
+                        right: -1,
+                        top: -1,
+                        child: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: barzGold,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: headerBg, width: 1.5),
+                          ),
                         ),
                       ),
-                    ),
-                  ],
-                ),
+                    ],
+                  ),
+                  const SizedBox(width: 12),
+                ],
+                // Theme Toggle
+                const ThemeToggleButton(),
                 const SizedBox(width: 12),
+                // Profile Menu & Bar Switch Endpoint
+                const ProfilePopupMenu(),
               ],
-              // Theme Toggle
-              const ThemeToggleButton(),
-              const SizedBox(width: 12),
-              // Profile Menu & Bar Switch Endpoint
-              const ProfilePopupMenu(),
-            ],
+            ),
           ),
         ],
       ),

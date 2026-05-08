@@ -566,6 +566,8 @@ class _QueueOrderItem extends StatelessWidget {
     final textColor = isDark ? textOnDark : textPrimary;
     final mutedColor = isDark ? textTertiary : textSecondary;
     final hoverColor = isDark ? Colors.white12 : Colors.black12;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isCompactMobile = screenWidth < 400;
 
     return Material(
       color: Colors.transparent,
@@ -573,47 +575,58 @@ class _QueueOrderItem extends StatelessWidget {
         onTap: () {},
         hoverColor: hoverColor,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  SizedBox(
-                    width: 80,
-                    child: Text(
-                      order.orderNumber,
-                      style: const TextStyle(
-                        fontFamily: 'monospace',
-                        fontWeight: FontWeight.w600,
-                        fontSize: 12,
-                        color: barzGold,
+              Expanded(
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: isCompactMobile ? 60 : 72,
+                      child: Text(
+                        order.orderNumber,
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontWeight: FontWeight.w600,
+                          fontSize: 12,
+                          color: barzGold,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    order.tableNumber != null
-                        ? 'Table ${order.tableNumber}'
-                        : (order.customerName ?? 'Walk-in'),
-                    style: TextStyle(color: textColor, fontSize: 13),
-                  ),
-                  Text(
-                    ' · ${order.itemsCount} items',
-                    style: TextStyle(color: mutedColor, fontSize: 11),
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        order.tableNumber != null
+                            ? 'Table ${order.tableNumber}'
+                            : (order.customerName ?? 'Walk-in'),
+                        style: TextStyle(color: textColor, fontSize: 13),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                    ),
+                    if (!isCompactMobile)
+                      Text(
+                        ' · ${order.itemsCount} items',
+                        style: TextStyle(color: mutedColor, fontSize: 11),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                  ],
+                ),
               ),
               Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    'Just now',
-                    style: TextStyle(color: mutedColor, fontSize: 11),
-                  ),
-                  const SizedBox(width: 12),
+                  if (!isCompactMobile)
+                    Text(
+                      'Just now',
+                      style: TextStyle(color: mutedColor, fontSize: 11),
+                    ),
+                  if (!isCompactMobile) const SizedBox(width: 12),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                      horizontal: 10,
+                      horizontal: 8,
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
@@ -627,7 +640,7 @@ class _QueueOrderItem extends StatelessWidget {
                       _getStatusLabel().toUpperCase(),
                       style: TextStyle(
                         color: statusColor,
-                        fontSize: 9,
+                        fontSize: isCompactMobile ? 8 : 9,
                         fontWeight: FontWeight.bold,
                         letterSpacing: 0.5,
                       ),
