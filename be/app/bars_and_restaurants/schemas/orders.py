@@ -16,7 +16,7 @@ class OrderItem(OrderItemBase):
     id: int
     order_id: int
     total_price: float
-    created_at: datetime
+    created_at: Optional[datetime] = None
 
     class Config:
         from_attributes = True
