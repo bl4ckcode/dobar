@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 from app.auth.middleware import get_optional_user
 from app.auth.rbac_middleware import get_current_user, AuthUser
 from app.errors import APIError
-from ..models.cart_models import Cart as CartModel, CartItem as CartItemModel, OrderItem as OrderItemModel
+from ..models.cart_models import Cart as CartModel, CartItem as CartItemModel, OrderItem as OrderItemModel, OrderStatusHistory as OrderStatusHistoryModel
 from ..models.relational_models import Order as OrderModel, Promotion as PromotionModel
 from ..schemas.cart import Cart, CartItem, CartItemCreate, CartItemUpdate, CheckoutRequest, CheckoutResponse, CartCalculateRequest, CartSyncRequest, CartResponse
 from app.database import database
@@ -381,6 +381,15 @@ async def checkout(
                 
                 order_id = await database.execute(OrderModel.__table__.insert().values(**order_data))
                 
+                # Insert initial status history for "pending"
+                history_data = {
+                    "order_id": order_id,
+                    "status": "pending",
+                    "updated_by_user_id": current_user.id,
+                    "notes": "Order created"
+                }
+                await database.execute(OrderStatusHistoryModel.__table__.insert().values(**history_data))
+                
                 await manager.notify_bar(bar_id, {
                     "type": "new_order",
                     "order_id": order_id,
@@ -428,6 +437,15 @@ async def checkout(
                             "status": "confirmed",
                             "updated_at": datetime.utcnow()
                         }
+                        
+                        # Insert status history for "confirmed" after successful payment
+                        confirmed_history = {
+                            "order_id": order_id,
+                            "status": "confirmed",
+                            "updated_by_user_id": current_user.id,
+                            "notes": "Payment completed"
+                        }
+                        await database.execute(OrderStatusHistoryModel.__table__.insert().values(**confirmed_history))
                     else:
                         update_data = {
                             "payment_status": "failed",

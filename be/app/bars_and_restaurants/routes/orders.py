@@ -166,7 +166,7 @@ async def get_order_timeline(
     order_id: int,
     current_user: User = Depends(get_current_active_user)
 ):
-    """Get order details with full status history."""
+    """Get order details with full status history and items."""
     # Fetch the order
     query = OrderModel.__table__.select().where(OrderModel.id == order_id)
     db_order = await database.fetch_one(query)
@@ -178,6 +178,15 @@ async def get_order_timeline(
     if db_order["user_id"] != current_user.id:
         raise APIError.forbidden("You don't have permission to view this order")
     
+    # Fetch order items
+    items_query = (
+        OrderItemModel.__table__
+        .select()
+        .where(OrderItemModel.order_id == order_id)
+    )
+    order_items = await database.fetch_all(items_query)
+    
+    # Fetch status history
     history_query = (
         OrderStatusHistoryModel.__table__
         .select()
@@ -186,8 +195,25 @@ async def get_order_timeline(
     )
     status_history = await database.fetch_all(history_query)
     
+    order_dict = dict(db_order)
+    from ..schemas.orders import OrderItem as OrderItemSchema
+    items_serialized = [
+        OrderItemSchema(
+            id=item["id"],
+            order_id=item["order_id"],
+            menu_item_id=item["menu_item_id"],
+            menu_item_name=item["menu_item_name"],
+            quantity=item["quantity"],
+            unit_price=item["unit_price"],
+            total_price=item["total_price"],
+            created_at=item["created_at"]
+        )
+        for item in order_items
+    ]
+    
     return OrderWithHistory(
-        **dict(db_order),
+        **order_dict,
+        items=items_serialized,
         status_history=[dict(h) for h in status_history]
     )
 
@@ -387,7 +413,36 @@ async def get_live_orders(
     
     orders = await database.fetch_all(query)
     
-    return [OrderSchema(**dict(order)) for order in orders]
+    result = []
+    for order in orders:
+        order_dict = dict(order)
+        
+        # Fetch items for this order
+        items_query = (
+            OrderItemModel.__table__
+            .select()
+            .where(OrderItemModel.order_id == order_dict["id"])
+        )
+        order_items = await database.fetch_all(items_query)
+        
+        from ..schemas.orders import OrderItem as OrderItemSchema
+        items_serialized = [
+            OrderItemSchema(
+                id=item["id"],
+                order_id=item["order_id"],
+                menu_item_id=item["menu_item_id"],
+                menu_item_name=item["menu_item_name"],
+                quantity=item["quantity"],
+                unit_price=item["unit_price"],
+                total_price=item["total_price"],
+                created_at=item["created_at"]
+            )
+            for item in order_items
+        ]
+        
+        result.append(OrderSchema(**order_dict, items=items_serialized))
+    
+    return result
 
 
 @bar_orders_router.put("/{order_id}/status", response_model=OrderSchema)
