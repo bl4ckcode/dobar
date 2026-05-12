@@ -699,15 +699,8 @@ class _CartPageContentState extends State<_CartPageContent> {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: isDark ? barzDarkCard : surfaceWhite,
+          color: Colors.transparent,
           borderRadius: BorderRadius.circular(10),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 4,
-              offset: const Offset(0, 2),
-            ),
-          ],
         ),
         child: Icon(icon, color: isDark ? textOnDark : textPrimary),
       ),

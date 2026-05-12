@@ -15,15 +15,21 @@ num _parseNum(dynamic value) {
   return 0;
 }
 
+int _parseInt(dynamic value) {
+  if (value is String) return int.tryParse(value) ?? 0;
+  if (value is num) return value.toInt();
+  return 0;
+}
+
 /// Complete campaign analytics response
 @freezed
 abstract class CampaignAnalytics with _$CampaignAnalytics {
   const factory CampaignAnalytics({
     @JsonKey(name: 'campaign_id') required int campaignId,
     @JsonKey(name: 'campaign_name') required String campaignName,
-    required int impressions,
-    required int clicks,
-    required int conversions,
+    @JsonKey(fromJson: _parseInt) required int impressions,
+    @JsonKey(fromJson: _parseInt) required int clicks,
+    @JsonKey(fromJson: _parseInt) required int conversions,
     @JsonKey(fromJson: _parseNum) required num ctr,
     @JsonKey(fromJson: _parseDouble) required double spend,
     @JsonKey(name: 'period_start') required DateTime periodStart,

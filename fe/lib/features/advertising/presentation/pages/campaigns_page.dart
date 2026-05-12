@@ -3,7 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:lucide_icons/lucide_icons.dart';
-import 'package:barz/ui/business/widgets/business_toolbars.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
 import '../bloc/advertising_bloc.dart';
@@ -95,11 +94,49 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            BusinessStatusToolbar(
-                              title: l10n.campaigns_title,
-                              subtitle: l10n.campaigns_subtitle,
-                              showStatusToggle: false,
-                              showAvatar: false,
+                            // Header with icon
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(8),
+                                  decoration: BoxDecoration(
+                                    color: dobar.buttonPrimary.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: dobar.buttonPrimary.withValues(alpha: 0.2),
+                                    ),
+                                  ),
+                                  child: Icon(
+                                    LucideIcons.megaphone,
+                                    size: 20,
+                                    color: dobar.buttonPrimary,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        l10n.campaigns_title,
+                                        style: TextStyle(
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                          color: dobar.labelPrimary,
+                                          fontFamily: 'Space Grotesk',
+                                        ),
+                                      ),
+                                      Text(
+                                        l10n.campaigns_subtitle,
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          color: dobar.labelSecondary,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
 
                             const SizedBox(height: 32),
@@ -361,11 +398,10 @@ class _CreateCampaignFabState extends State<_CreateCampaignFab>
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(
-                      0xFFFFD700,
-                    ).withValues(alpha: _isHovered ? 0.6 : 0.3),
-                    blurRadius: _isHovered ? 24 : 16,
+                    color: barzGold.withValues(alpha: _isHovered ? 0.35 : 0.2),
+                    blurRadius: _isHovered ? 30 : 16,
                     spreadRadius: _isHovered ? 4 : 0,
+                    offset: const Offset(0, 8),
                   ),
                 ],
               ),

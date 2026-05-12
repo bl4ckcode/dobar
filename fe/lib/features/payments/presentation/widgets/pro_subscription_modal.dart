@@ -31,13 +31,14 @@ class _ProSubscriptionModalState extends State<ProSubscriptionModal> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final colors = context.dobarColors;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.9,
       decoration: BoxDecoration(
-        color: barzDark.withValues(alpha: 0.95),
+        color: isDark ? barzDark.withValues(alpha: 0.95) : colors.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-        border: Border.all(color: barzGold.withValues(alpha: 0.1)),
+        border: Border.all(color: barzGold.withValues(alpha: isDark ? 0.1 : 0.2)),
       ),
       child: Stack(
         children: [
@@ -53,8 +54,8 @@ class _ProSubscriptionModalState extends State<ProSubscriptionModal> {
                   width: 40,
                   height: 4,
                   decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(2),
+                    color: isDark ? Colors.black26 : colors.surfaceElevated,
+                    borderRadius: BorderRadius.circular(100),
                   ),
                 ),
               ),
@@ -69,12 +70,12 @@ class _ProSubscriptionModalState extends State<ProSubscriptionModal> {
                     child: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: Colors.white10,
+                        color: isDark ? Colors.white10 : colors.surfaceElevated,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(
+                      child: Icon(
                         LucideIcons.x,
-                        color: Colors.white70,
+                        color: colors.labelSecondary,
                         size: 20,
                       ),
                     ),
@@ -117,12 +118,12 @@ class _ProSubscriptionModalState extends State<ProSubscriptionModal> {
                       const SizedBox(height: 32),
 
                       // Billing Toggle
-                      _buildBillingToggle(l10n, colors),
+                      _buildBillingToggle(l10n, colors, isDark),
 
                       const SizedBox(height: 32),
 
                       // Benefits List
-                      _buildBenefitsList(l10n, colors),
+                      _buildBenefitsList(l10n, colors, isDark),
 
                       const SizedBox(height: 40),
 
@@ -132,7 +133,7 @@ class _ProSubscriptionModalState extends State<ProSubscriptionModal> {
                       const SizedBox(height: 24),
 
                       // CTA Button
-                      _buildCTA(l10n, colors),
+                      _buildCTA(l10n, colors, isDark),
 
                       const SizedBox(height: 16),
                       Text(
@@ -152,9 +153,16 @@ class _ProSubscriptionModalState extends State<ProSubscriptionModal> {
                           _FooterLink(
                             text: l10n.pro_modal_restore,
                             onTap: () {},
+                            colors: colors,
+                            isDark: isDark,
                           ),
                           const SizedBox(width: 24),
-                          _FooterLink(text: l10n.pro_modal_terms, onTap: () {}),
+                          _FooterLink(
+                            text: l10n.pro_modal_terms,
+                            onTap: () {},
+                            colors: colors,
+                            isDark: isDark,
+                          ),
                         ],
                       ),
                       const SizedBox(height: 40),
@@ -169,7 +177,7 @@ class _ProSubscriptionModalState extends State<ProSubscriptionModal> {
     );
   }
 
-  Widget _buildBillingToggle(AppLocalizations l10n, DobarColors colors) {
+  Widget _buildBillingToggle(AppLocalizations l10n, DobarColors colors, bool isDark) {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
@@ -183,44 +191,58 @@ class _ProSubscriptionModalState extends State<ProSubscriptionModal> {
             label: l10n.pro_modal_monthly,
             isSelected: !_isAnnual,
             onTap: () => setState(() => _isAnnual = false),
+            colors: colors,
+            isDark: isDark,
           ),
           _ToggleButton(
             label: l10n.pro_modal_annual,
             isSelected: _isAnnual,
             onTap: () => setState(() => _isAnnual = true),
             badge: l10n.pro_modal_save_percent,
+            colors: colors,
+            isDark: isDark,
           ),
         ],
       ),
     );
   }
 
-  Widget _buildBenefitsList(AppLocalizations l10n, DobarColors colors) {
+  Widget _buildBenefitsList(AppLocalizations l10n, DobarColors colors, bool isDark) {
     final benefits = [
       _BenefitItem(
         icon: LucideIcons.zap,
         title: l10n.pro_benefit_priority_title,
         desc: l10n.pro_benefit_priority_desc,
+        colors: colors,
+        isDark: isDark,
       ),
       _BenefitItem(
         icon: LucideIcons.trendingUp,
         title: l10n.pro_benefit_cashback_title,
         desc: l10n.pro_benefit_cashback_desc,
+        colors: colors,
+        isDark: isDark,
       ),
       _BenefitItem(
         icon: LucideIcons.tag,
         title: l10n.pro_benefit_deals_title,
         desc: l10n.pro_benefit_deals_desc,
+        colors: colors,
+        isDark: isDark,
       ),
       _BenefitItem(
         icon: LucideIcons.badgeCheck,
         title: l10n.pro_benefit_vip_title,
         desc: l10n.pro_benefit_vip_desc,
+        colors: colors,
+        isDark: isDark,
       ),
       _BenefitItem(
         icon: LucideIcons.calendarCheck,
         title: l10n.pro_benefit_early_access_title,
         desc: l10n.pro_benefit_early_access_desc,
+        colors: colors,
+        isDark: isDark,
       ),
     ];
 
@@ -242,6 +264,8 @@ class _ProSubscriptionModalState extends State<ProSubscriptionModal> {
   }
 
   Widget _buildPricing(AppLocalizations l10n) {
+    final colors = context.dobarColors;
+
     return Column(
       children: [
         Row(
@@ -254,7 +278,7 @@ class _ProSubscriptionModalState extends State<ProSubscriptionModal> {
                   ? l10n.pro_modal_price_annual
                   : l10n.pro_modal_price_monthly,
               style: GoogleFonts.spaceGrotesk(
-                color: Colors.white,
+                color: colors.labelPrimary,
                 fontSize: 40,
                 fontWeight: FontWeight.w800,
               ),
@@ -262,7 +286,7 @@ class _ProSubscriptionModalState extends State<ProSubscriptionModal> {
             const SizedBox(width: 4),
             Text(
               l10n.pro_modal_per_month,
-              style: const TextStyle(color: Colors.white60, fontSize: 16),
+              style: TextStyle(color: colors.labelSecondary, fontSize: 16),
             ),
           ],
         ),
@@ -271,14 +295,14 @@ class _ProSubscriptionModalState extends State<ProSubscriptionModal> {
             padding: const EdgeInsets.only(top: 4),
             child: Text(
               l10n.pro_modal_billed_annually,
-              style: const TextStyle(color: Colors.white38, fontSize: 12),
+              style: TextStyle(color: colors.labelSecondary, fontSize: 12),
             ),
           ),
       ],
     );
   }
 
-  Widget _buildCTA(AppLocalizations l10n, DobarColors colors) {
+  Widget _buildCTA(AppLocalizations l10n, DobarColors colors, bool isDark) {
     return GestureDetector(
       onTap: () {
         setState(() => _isLoading = true);
@@ -296,8 +320,8 @@ class _ProSubscriptionModalState extends State<ProSubscriptionModal> {
           ),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFFFFA500).withValues(alpha: 0.3),
-              blurRadius: 20,
+              color: barzGold.withValues(alpha: isDark ? 0.3 : 0.4),
+              blurRadius: isDark ? 20 : 24,
               offset: const Offset(0, 10),
             ),
           ],
@@ -366,11 +390,15 @@ class _BenefitItem extends StatelessWidget {
   final IconData icon;
   final String title;
   final String desc;
+  final DobarColors colors;
+  final bool isDark;
 
   const _BenefitItem({
     required this.icon,
     required this.title,
     required this.desc,
+    required this.colors,
+    required this.isDark,
   });
 
   @override
@@ -378,9 +406,9 @@ class _BenefitItem extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.05),
+        color: isDark ? Colors.white.withValues(alpha: 0.05) : colors.surfaceElevated,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
+        border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.05) : colors.surfaceElevated.withValues(alpha: 0.3)),
       ),
       child: Row(
         children: [
@@ -388,7 +416,7 @@ class _BenefitItem extends StatelessWidget {
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: barzGold.withValues(alpha: 0.1),
+              color: barzGold.withValues(alpha: isDark ? 0.1 : 0.15),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: barzGold, size: 18),
@@ -400,15 +428,15 @@ class _BenefitItem extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    color: Colors.white,
+                  style: TextStyle(
+                    color: colors.labelPrimary,
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 Text(
                   desc,
-                  style: const TextStyle(color: Colors.white54, fontSize: 12),
+                  style: TextStyle(color: colors.labelSecondary, fontSize: 12),
                 ),
               ],
             ),
@@ -424,12 +452,16 @@ class _ToggleButton extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onTap;
   final String? badge;
+  final DobarColors colors;
+  final bool isDark;
 
   const _ToggleButton({
     required this.label,
     required this.isSelected,
     required this.onTap,
     this.badge,
+    required this.colors,
+    required this.isDark,
   });
 
   @override
@@ -440,7 +472,7 @@ class _ToggleButton extends StatelessWidget {
         duration: 200.ms,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
         decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFFFD700) : Colors.transparent,
+          color: isSelected ? barzGold : Colors.transparent,
           borderRadius: BorderRadius.circular(100),
         ),
         child: Row(
@@ -449,7 +481,7 @@ class _ToggleButton extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                color: isSelected ? barzDark : Colors.white60,
+                color: isSelected ? barzDark : colors.labelSecondary,
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
               ),
@@ -461,13 +493,13 @@ class _ToggleButton extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: isSelected
                       ? barzDark.withValues(alpha: 0.1)
-                      : barzDark,
+                      : colors.surfaceElevated,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Text(
                   badge!,
                   style: TextStyle(
-                    color: isSelected ? barzDark : const Color(0xFFFFD700),
+                    color: isSelected ? barzDark : barzGold,
                     fontSize: 9,
                     fontWeight: FontWeight.w900,
                   ),
@@ -484,8 +516,15 @@ class _ToggleButton extends StatelessWidget {
 class _FooterLink extends StatelessWidget {
   final String text;
   final VoidCallback onTap;
+  final DobarColors colors;
+  final bool isDark;
 
-  const _FooterLink({required this.text, required this.onTap});
+  const _FooterLink({
+    required this.text,
+    required this.onTap,
+    required this.colors,
+    required this.isDark,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -493,8 +532,8 @@ class _FooterLink extends StatelessWidget {
       onTap: onTap,
       child: Text(
         text,
-        style: const TextStyle(
-          color: Colors.white38,
+        style: TextStyle(
+          color: colors.labelSecondary,
           fontSize: 12,
           decoration: TextDecoration.underline,
         ),

@@ -3,6 +3,13 @@ import 'package:freezed_annotation/freezed_annotation.dart';
 part 'ad_subscription.freezed.dart';
 part 'ad_subscription.g.dart';
 
+double _doubleFromJson(dynamic value) {
+  if (value == null) return 0.0;
+  if (value is num) return value.toDouble();
+  if (value is String) return double.tryParse(value) ?? 0.0;
+  return 0.0;
+}
+
 /// Subscription tier enum
 enum SubscriptionTier { regular, master, vip }
 
@@ -15,8 +22,12 @@ abstract class SubscriptionPlan with _$SubscriptionPlan {
   const factory SubscriptionPlan({
     required SubscriptionTier tier,
     required String name,
+    @JsonKey(name: 'monthly_price', fromJson: _doubleFromJson)
     required double price,
-    @JsonKey(name: 'commission_rate') required double commissionRate,
+    @JsonKey(name: 'annual_price', fromJson: _doubleFromJson)
+    required double annualPrice,
+    @JsonKey(name: 'commission_rate', fromJson: _doubleFromJson)
+    required double commissionRate,
     required List<String> features,
   }) = _SubscriptionPlan;
 

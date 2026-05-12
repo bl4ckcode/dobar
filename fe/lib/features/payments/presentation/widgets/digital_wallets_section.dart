@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:barz/core/design/tokens/colors.dart';
 
@@ -11,10 +12,20 @@ class DigitalWalletsSection extends StatelessWidget {
     required this.onGooglePay,
   });
 
+  bool get _isAppleDevice => Platform.isIOS;
+  bool get _isAndroidDevice => Platform.isAndroid;
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
+
+    final hasApplePay = _isAppleDevice;
+    final hasGooglePay = _isAndroidDevice;
+
+    if (!hasApplePay && !hasGooglePay) {
+      return const SizedBox.shrink();
+    }
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -51,13 +62,18 @@ class DigitalWalletsSection extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 16),
-          Row(
-            children: [
-              Expanded(child: _buildApplePayButton(isDark)),
-              const SizedBox(width: 12),
-              Expanded(child: _buildGooglePayButton(isDark)),
-            ],
-          ),
+          if (hasApplePay && hasGooglePay)
+            Row(
+              children: [
+                Expanded(child: _buildApplePayButton(isDark)),
+                const SizedBox(width: 12),
+                Expanded(child: _buildGooglePayButton(isDark)),
+              ],
+            )
+          else if (hasApplePay)
+            _buildApplePayButton(isDark)
+          else if (hasGooglePay)
+            _buildGooglePayButton(isDark),
         ],
       ),
     );

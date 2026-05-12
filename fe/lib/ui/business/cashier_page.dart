@@ -28,7 +28,7 @@ class CashierPage extends StatefulWidget {
 
 class _CashierPageState extends State<CashierPage>
     with SingleTickerProviderStateMixin {
-  String? _activeFilter;
+  String? _activeFilter = statusPending;
   bool _soundOn = true;
   Timer? _uiRefreshTimer;
   LiveOrdersBloc? _liveOrdersBloc;
@@ -71,7 +71,6 @@ class _CashierPageState extends State<CashierPage>
   void dispose() {
     _uiRefreshTimer?.cancel();
     _pulseController.dispose();
-    _liveOrdersBloc?.close();
     super.dispose();
   }
 
@@ -335,22 +334,10 @@ class _CashierPageState extends State<CashierPage>
               ),
               child: Row(
                 children: [
-                  _buildTabItem(
-                    'Pending',
-                    statusPending,
-                    counts[statusPending]!,
-                  ),
-                  _buildTabItem(
-                    'Preparing',
-                    statusPreparing,
-                    counts[statusPreparing]!,
-                  ),
+                  _buildTabItem('Pending', statusPending, counts[statusPending]!),
+                  _buildTabItem('Preparing', statusPreparing, counts[statusPreparing]!),
                   _buildTabItem('Ready', statusReady, counts[statusReady]!),
-                  _buildTabItem(
-                    'Completed',
-                    statusCompleted,
-                    counts[statusCompleted]!,
-                  ),
+                  _buildTabItem('Completed', statusCompleted, counts[statusCompleted]!),
                   _buildTabItem('All', null, total),
                 ],
               ),
