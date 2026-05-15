@@ -1,6 +1,6 @@
 # BARZ - Frontend Backend Communication
 
-Last Updated: April 30, 2026
+Last Updated: May 3, 2026
 Backend Status: Live on Fly.io
 API Base URL: https://barz-backend-bold-sun-5691.fly.dev
 
@@ -1477,6 +1477,80 @@ Errors:
 
 ---
 
+### 2. Generate Standalone Pix QR Code (Alternative)
+
+For scenarios where you want to generate a Pix QR code separately from the checkout flow (e.g., "Pay with Pix" button before order confirmation).
+
+```
+POST /pix/generate
+Auth: Required (Access Token)
+
+Body:
+{
+  "order_id": 1234,
+  "bar_id": 12,
+  "amount": 150.50,
+  "description": "Pedido #1234 - Bar do Zé",
+  "payer_name": "Carlos Alves",
+  "payer_document": "12345678909",
+  "expires_in": 3600
+}
+
+Response 200:
+{
+  "pix_id": "pix_abc123",
+  "brcode": "00020101021243650016BR.GOV.BCB.PIX...",
+  "qr_code_base64": "data:image/png;base64,iVBORw0KGgo...",
+  "expires_at": "2026-03-05T12:30:00Z",
+  "status": "pending"
+}
+```
+
+**Frontend Implementation:**
+
+```dart
+class PixPaymentRepository {
+  final Dio _dio;
+
+  Future<PixCode> generatePix({
+    required int orderId,
+    required int barId,
+    required double amount,
+    String? description,
+    String? payerName,
+    String? payerDocument,
+    int expiresIn = 3600,
+  }) async {
+    final res = await _dio.post('/pix/generate', data: {
+      'order_id': orderId,
+      'bar_id': barId,
+      'amount': amount,
+      'description': description ?? 'Pedido #$orderId',
+      'payer_name': payerName,
+      'payer_document': payerDocument,
+      'expires_in': expiresIn,
+    });
+    return PixCode.fromJson(res.data);
+  }
+}
+
+class PixCode {
+  final String pixId;
+  final String brcode;           // Copia e Cola
+  final String qrCodeBase64;     // Base64 QR image
+  final DateTime expiresAt;
+  final String status;
+
+  // Convert base64 to Image widget
+  Image get qrCodeImage {
+    final bytes = base64Decode(qrCodeBase64.split(',')[1]);
+    return Image.memory(bytes);
+  }
+}
+```
+
+---
+
 ## IMPLEMENTATION STATUS
 
 | Feature | Backend | Frontend |
@@ -1498,6 +1572,7 @@ Errors:
 | Subscription Trial Setup | ✅ | 🔲 |
 | Subscription Capture | ✅ | 🔲 |
 | Prorated Plan Upgrade | ✅ | 🔲 |
+| Pix Payment (QR + Copia e Cola) | ✅ | 🔲 |
 
 ---
 

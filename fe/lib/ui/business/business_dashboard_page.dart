@@ -430,11 +430,14 @@ class _LiveOrderQueue extends StatelessWidget {
     final textColor = dobar.labelPrimary;
     final mutedColor = dobar.labelSecondary;
 
-    final activeOrdersCount =
+    // Filter out completed and cancelled orders — only show active pipeline
+    final activeOrders =
         orders?.orders
             .where((o) => o.status != 'completed' && o.status != 'cancelled')
-            .length ??
-        0;
+            .toList() ??
+        [];
+
+    final activeOrdersCount = activeOrders.length;
 
     return Container(
       decoration: BoxDecoration(
@@ -502,12 +505,12 @@ class _LiveOrderQueue extends StatelessWidget {
             ListView.separated(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
-              itemCount: orders!.orders.length,
+              itemCount: activeOrders.length,
               separatorBuilder: (context, index) =>
                   Divider(color: borderColor, height: 1),
               itemBuilder: (context, index) {
                 return _QueueOrderItem(
-                  order: orders!.orders[index],
+                  order: activeOrders[index],
                   isDark: isDark,
                   borderColor: borderColor,
                 );
@@ -530,8 +533,12 @@ class _QueueOrderItem extends StatelessWidget {
     required this.borderColor,
   });
 
+  /// Normalizes backend status to our display constants.
+  String get _displayStatus =>
+      order.status == 'confirmed' ? 'pending' : order.status;
+
   Color _getStatusColor() {
-    switch (order.status) {
+    switch (_displayStatus) {
       case 'pending':
         return warningOrange;
       case 'preparing':
@@ -544,7 +551,7 @@ class _QueueOrderItem extends StatelessWidget {
   }
 
   String _getStatusLabel() {
-    switch (order.status) {
+    switch (_displayStatus) {
       case 'pending':
         return 'Pending';
       case 'preparing':
@@ -556,8 +563,19 @@ class _QueueOrderItem extends StatelessWidget {
       case 'cancelled':
         return 'Cancelled';
       default:
-        return order.status;
+        return _displayStatus;
     }
+  }
+
+  /// Computes a human-readable relative time string from a DateTime.
+  String _relativeTime(DateTime dt) {
+    final now = DateTime.now();
+    final diff = now.difference(dt);
+    if (diff.inSeconds < 60) return 'Just now';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
+    if (diff.inHours < 24) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
+    return '${dt.month}/${dt.day}';
   }
 
   @override
@@ -620,7 +638,7 @@ class _QueueOrderItem extends StatelessWidget {
                 children: [
                   if (!isCompactMobile)
                     Text(
-                      'Just now',
+                      _relativeTime(order.createdAt),
                       style: TextStyle(color: mutedColor, fontSize: 11),
                     ),
                   if (!isCompactMobile) const SizedBox(width: 12),

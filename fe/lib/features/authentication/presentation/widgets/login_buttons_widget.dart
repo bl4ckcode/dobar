@@ -4,6 +4,7 @@ import 'package:barz/core/design/design_system.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+import 'dart:math';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:barz/features/authentication/presentation/bloc/login_bloc.dart';
@@ -12,6 +13,18 @@ import 'package:barz/features/authentication/presentation/bloc/login_event.dart'
 import 'login_buttons_platform.dart'
     if (dart.library.io) 'login_buttons_platform_io.dart';
 import 'google_button.dart' as web;
+
+const _nonceChars =
+    '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+
+/// Generate a cryptographically secure random nonce for replay attack prevention.
+String generateNonce({int length = 32}) {
+  final random = Random.secure();
+  return Iterable.generate(
+    length,
+    (_) => _nonceChars[random.nextInt(_nonceChars.length)],
+  ).join();
+}
 
 class LoginButtonsWidget extends StatefulWidget {
   final LoginBloc loginBloc;
@@ -157,11 +170,23 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
 
   Future<void> _signInWithApple() async {
     try {
+      // Generate a cryptographically secure nonce for replay attack prevention
+      final rawNonce = generateNonce();
+
       final appleCredential = await SignInWithApple.getAppleIDCredential(
         scopes: [
           AppleIDAuthorizationScopes.email,
           AppleIDAuthorizationScopes.fullName,
         ],
+        nonce: rawNonce,
+        webAuthenticationOptions: kIsWeb
+            ? WebAuthenticationOptions(
+                clientId: 'com.barz.app',
+                redirectUri: Uri.parse(
+                  'https://barz-backend-bold-sun-5691.fly.dev/auth/apple/callback',
+                ),
+              )
+            : null,
       );
 
       debugPrint(
@@ -170,7 +195,7 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
 
       final oauthCredential = OAuthProvider('apple.com').credential(
         idToken: appleCredential.identityToken,
-        accessToken: appleCredential.authorizationCode,
+        rawNonce: rawNonce,
       );
 
       final userCredential = await FirebaseAuth.instance.signInWithCredential(
@@ -206,6 +231,7 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
   @override
   Widget build(BuildContext context) {
     return Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
         // On web: use Google's native renderButton() (required by GIS SDK)
         // On Android: use custom button with authenticate()
@@ -217,7 +243,7 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
             icon: 'assets/icons/google.png',
             label: 'Continue with Google',
           ),
-        if (kIsWeb) const SizedBox(height: BarzSpacing.md),
+        if (kIsWeb || isIOSPlatform()) const SizedBox(height: BarzSpacing.sm),
         // Apple sign-in: web and iOS
         if (kIsWeb || isIOSPlatform())
           _buildSocialButton(

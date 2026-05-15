@@ -242,7 +242,12 @@ class _CashierPageState extends State<CashierPage>
                             final filteredOrders = _activeFilter == null
                                 ? currentOrders
                                 : currentOrders
-                                      .where((o) => o.status == _activeFilter)
+                                      .where(
+                                        (o) =>
+                                            (_activeFilter == statusPending &&
+                                                    o.status == 'confirmed') ||
+                                            o.status == _activeFilter,
+                                      )
                                       .toList();
 
                             return Column(
@@ -300,7 +305,7 @@ class _CashierPageState extends State<CashierPage>
     Color borderColor,
     List<LiveOrderModel> allOrders,
   ) {
-    final counts = {
+    final counts = <String, int>{
       statusPending: 0,
       statusPreparing: 0,
       statusReady: 0,
@@ -308,7 +313,10 @@ class _CashierPageState extends State<CashierPage>
     };
     int total = allOrders.length;
     for (var o in allOrders) {
-      counts[o.status] = (counts[o.status] ?? 0) + 1;
+      // Map backend "confirmed" to our "pending" filter
+      final normalizedStatus =
+          o.status == 'confirmed' ? statusPending : o.status;
+      counts[normalizedStatus] = (counts[normalizedStatus] ?? 0) + 1;
     }
 
     return Container(
@@ -498,9 +506,12 @@ class _OrderCard extends StatelessWidget {
       borderColor = Colors.red.withValues(alpha: 0.6);
     }
 
+    // Normalize backend status to our filter constants
+    final displayStatus = order.status == 'confirmed' ? statusPending : order.status;
+
     // Status config
     Color statusColor;
-    switch (order.status) {
+    switch (displayStatus) {
       case statusPending:
         statusColor = Colors.amber;
         break;
@@ -518,14 +529,15 @@ class _OrderCard extends StatelessWidget {
         break;
     }
 
+    final isConfirmed = order.status == 'confirmed';
     String? actionLabel;
     String? nextStatus;
     Color? actionColor;
     Color? actionTextColor;
 
-    switch (order.status) {
+    switch (displayStatus) {
       case statusPending:
-        actionLabel = 'Confirm';
+        actionLabel = isConfirmed ? 'Preparing' : 'Confirm';
         nextStatus = statusPreparing;
         actionColor = const Color(0xFF16A34A); // Success
         actionTextColor = Colors.white;
@@ -539,7 +551,7 @@ class _OrderCard extends StatelessWidget {
       case statusReady:
         actionLabel = 'Complete';
         nextStatus = statusCompleted;
-        actionColor = barzDark; // Use primary text/color depending on theme
+        actionColor = barzDark;
         actionTextColor = Colors.white;
         if (isDark) {
           actionColor = barzGold;

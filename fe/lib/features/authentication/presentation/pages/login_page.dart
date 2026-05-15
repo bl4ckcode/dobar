@@ -252,8 +252,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                       .slideY(begin: 0.2, end: 0),
                                   const SizedBox(height: 16),
                                   _LegalText(colors: colors),
-                                  const Spacer(),
-                                  const SizedBox(height: 140),
+                                  const SizedBox(height: 40),
                                 ],
                               ),
                             ),
@@ -302,7 +301,7 @@ class _GhostCocktail extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Positioned(
-      bottom: 0,
+      bottom: -40,
       left: 0,
       right: 0,
       child: Align(
@@ -311,7 +310,7 @@ class _GhostCocktail extends StatelessWidget {
           opacity: 0.12,
           child: Image.asset(
             'assets/icons/cocktail-ghost.png',
-            width: 320,
+            width: 360,
             fit: BoxFit.contain,
           ),
         ),
