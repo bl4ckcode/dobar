@@ -41,7 +41,6 @@ fb-barz-admin.json
 flytoken
 
 # Official Documentation Files to Ignore
-FE_BE_COMMUNICATION.md
 MARKETING_RULES.md
 
 # Ignore seed script

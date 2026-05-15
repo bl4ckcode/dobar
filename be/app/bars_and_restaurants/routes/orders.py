@@ -1,7 +1,7 @@
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, status, Query, BackgroundTasks
 from sqlalchemy import and_, or_, desc
 from typing import Optional, List
-from datetime import datetime, timezone
+from datetime import datetime
 
 from app.errors import APIError
 from app.order_queue import OrderQueue
@@ -44,11 +44,10 @@ async def create_order(
     background_tasks: BackgroundTasks,
     _internal: bool = Depends(require_internal_or_admin)
 ):
-    from datetime import datetime, timezone
     order_data = order.model_dump()
     order_data["status"] = order_data.get("status", "pending")
-    order_data["created_at"] = datetime.now(timezone.utc)
-    order_data["updated_at"] = datetime.now(timezone.utc)
+    order_data["created_at"] = datetime.utcnow()
+    order_data["updated_at"] = datetime.utcnow()
     
     query = OrderModel.__table__.insert().values(**order_data)
     order_id = await database.execute(query)
@@ -250,7 +249,7 @@ async def cancel_order(
             .where(OrderModel.id == order_id)
             .values(
                 status="cancelled",
-                updated_at=datetime.now(timezone.utc)
+                updated_at=datetime.utcnow()
             )
         )
         await database.execute(update_query)
@@ -326,11 +325,11 @@ async def update_order_status(
     try:
         update_data = {
             "status": status_update.status,
-            "updated_at": datetime.now(timezone.utc)
+            "updated_at": datetime.utcnow()
         }
         
         if status_update.status == "completed":
-            update_data["completed_at"] = datetime.now(timezone.utc)
+            update_data["completed_at"] = datetime.utcnow()
         
         # Update estimated_ready_time if provided
         if status_update.estimated_ready_time:
@@ -486,11 +485,11 @@ async def update_bar_order_status(
     try:
         update_data = {
             "status": status_update.status,
-            "updated_at": datetime.now(timezone.utc)
+            "updated_at": datetime.utcnow()
         }
         
         if status_update.status == "completed":
-            update_data["completed_at"] = datetime.now(timezone.utc)
+            update_data["completed_at"] = datetime.utcnow()
         
         if status_update.estimated_ready_time:
             update_data["estimated_ready_time"] = status_update.estimated_ready_time
