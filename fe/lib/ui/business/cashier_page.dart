@@ -12,6 +12,7 @@ import 'package:barz/features/orders/presentation/bloc/live_orders_event.dart';
 import 'package:barz/features/orders/presentation/bloc/live_orders_state.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
+import 'package:barz/l10n/app_localizations.dart';
 
 // --- CONSTANTS ---
 const String statusPending = 'pending';
@@ -103,6 +104,7 @@ class _CashierPageState extends State<CashierPage>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final dobar = context.dobarColors;
     final cs = theme.colorScheme;
@@ -125,8 +127,8 @@ class _CashierPageState extends State<CashierPage>
               child: Column(
                 children: [
                   BusinessStatusToolbar(
-                    title: 'Caixa',
-                    subtitle: '$_totalOrders orders in pipeline',
+                    title: l10n.business_cashier_title,
+                    subtitle: l10n.business_cashier_subtitle(_totalOrders),
                     showStatusToggle: false,
                     actions: [
                       IconButton(
@@ -191,7 +193,7 @@ class _CashierPageState extends State<CashierPage>
                         if (activeBar == null) {
                           return Center(
                             child: Text(
-                              'Selecione um bar para gerenciar o caixa',
+                              l10n.business_select_bar_cashier,
                               style: TextStyle(color: mutedColor),
                             ),
                           );
@@ -698,7 +700,7 @@ class _OrderCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'R\$ ${order.total.toStringAsFixed(2)}',
+                  'R\$ ${order.totalPrice.toStringAsFixed(2)}',
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.bold,

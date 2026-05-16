@@ -23,8 +23,8 @@ class _VipUpsellBannerState extends State<VipUpsellBanner>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
+      duration: const Duration(seconds: 3),
+    )..repeat(reverse: false);
 
     _shimmerAnimation = Tween<double>(
       begin: -1.0,
@@ -50,39 +50,80 @@ class _VipUpsellBannerState extends State<VipUpsellBanner>
         border: Border.all(color: barzGold.withValues(alpha: 0.2), width: 1),
         boxShadow: [
           BoxShadow(
-            color: barzGold.withValues(alpha: 0.05),
-            blurRadius: 10,
-            spreadRadius: 2,
+            color: barzGold.withValues(alpha: isDark ? 0.2 : 0.35),
+            blurRadius: 30,
+            spreadRadius: -8,
+            offset: const Offset(0, 4),
           ),
         ],
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            dobar.surface,
-            isDark ? barzDarkCardLight : surfaceLight,
-            dobar.surface,
-          ],
-        ),
+        gradient: isDark
+            ? LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  dobar.surface,
+                  barzDarkCardLight,
+                  dobar.surface,
+                ],
+              )
+            : LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  surfaceWhite,
+                  const Color(0xFFFFFAF0),
+                  surfaceWhite,
+                ],
+              ),
       ),
       child: Stack(
         children: [
+          // Gold accent line at top - matching Lovable's style
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            height: 2,
+            child: Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.vertical(top: Radius.circular(BarzRadii.md)),
+                gradient: const LinearGradient(
+                  colors: [Colors.transparent, barzGold, Colors.transparent],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+              ),
+            ),
+          ),
+          // Subtle grid pattern
           Positioned.fill(
             child: Opacity(
-              opacity: 0.03,
+              opacity: isDark ? 0.03 : 0.02,
               child: CustomPaint(painter: _GridPainter(color: barzGold)),
             ),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(
-              horizontal: 32.0,
-              vertical: 24.0,
+              horizontal: 24.0,
+              vertical: 20.0,
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
+                // Pulsing Crown Icon
                 FadeTransition(
-                  opacity: _controller,
+                  opacity: _controller.drive(
+                    TweenSequence([
+                      TweenSequenceItem(
+                        tween: Tween(begin: 0.6, end: 1.0),
+                        weight: 1,
+                      ),
+                      TweenSequenceItem(
+                        tween: Tween(begin: 1.0, end: 0.6),
+                        weight: 1,
+                      ),
+                    ]),
+                  ),
                   child: Container(
                     width: 56,
                     height: 56,
@@ -92,15 +133,22 @@ class _VipUpsellBannerState extends State<VipUpsellBanner>
                       border: Border.all(
                         color: barzGold.withValues(alpha: 0.2),
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: barzGold.withValues(alpha: 0.15),
+                          blurRadius: 12,
+                          spreadRadius: 2,
+                        ),
+                      ],
                     ),
                     child: const Icon(
                       LucideIcons.crown,
                       color: barzGold,
-                      size: 32,
+                      size: 28,
                     ),
                   ),
                 ),
-                const SizedBox(width: 24),
+                const SizedBox(width: 20),
                 // Text Content
                 Expanded(
                   child: Column(
@@ -110,29 +158,30 @@ class _VipUpsellBannerState extends State<VipUpsellBanner>
                       Text(
                         'Upgrade to VIP',
                         style: TextStyle(
-                          fontSize: 24,
+                          fontSize: 22,
                           fontWeight: FontWeight.bold,
                           color: dobar.labelPrimary,
+                          fontFamily: 'Space Grotesk',
                           height: 1.2,
                         ),
                       ),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
                       Text(
                         'Reach more customers, unlock advanced targeting, and dominate your local nightlife scene with premium campaign tools.',
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 13,
                           color: dobar.labelSecondary,
                           height: 1.5,
                         ),
                       ),
-                      const SizedBox(height: 12),
+                      const SizedBox(height: 10),
                       Row(
                         children: [
                           _BenefitBadge(
                             icon: LucideIcons.zap,
                             label: 'Priority delivery',
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 16),
                           _BenefitBadge(
                             icon: LucideIcons.target,
                             label: 'Advanced targeting',
@@ -142,8 +191,8 @@ class _VipUpsellBannerState extends State<VipUpsellBanner>
                     ],
                   ),
                 ),
-                const SizedBox(width: 24),
-                // CTA Button
+                const SizedBox(width: 20),
+                // CTA Button - Lovable style with shimmer gradient
                 MouseRegion(
                   onEnter: (_) => setState(() => _isCtaHovered = true),
                   onExit: (_) => setState(() => _isCtaHovered = false),
@@ -161,21 +210,27 @@ class _VipUpsellBannerState extends State<VipUpsellBanner>
                           : (_isCtaHovered ? 1.03 : 1.0),
                       duration: const Duration(milliseconds: 150),
                       curve: Curves.easeOut,
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
+                      child: Container(
                         padding: const EdgeInsets.symmetric(
-                          horizontal: 32,
+                          horizontal: 28,
                           vertical: 12,
                         ),
                         decoration: BoxDecoration(
-                          color: barzGold,
                           borderRadius: BorderRadius.circular(BarzRadii.md),
+                          gradient: const LinearGradient(
+                            colors: [
+                              Color(0xFFFFE070),
+                              Color(0xFFFFC000),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
                           boxShadow: [
                             BoxShadow(
                               color: barzGold.withValues(
-                                alpha: _isCtaHovered ? 0.6 : 0.4,
+                                alpha: _isCtaHovered ? 0.5 : 0.3,
                               ),
-                              blurRadius: _isCtaHovered ? 16 : 8,
+                              blurRadius: _isCtaHovered ? 20 : 12,
                               spreadRadius: _isCtaHovered ? 2 : 0,
                               offset: const Offset(0, 4),
                             ),
@@ -189,38 +244,43 @@ class _VipUpsellBannerState extends State<VipUpsellBanner>
                                 return LinearGradient(
                                   begin: const Alignment(-1.0, -0.5),
                                   end: const Alignment(1.0, 0.5),
-                                  stops: const [0.0, 0.4, 0.5, 0.6, 1.0],
+                                  stops: const [0.0, 0.4, 0.48, 0.52, 0.6, 1.0],
                                   colors: [
-                                    barzDark,
-                                    barzDark,
-                                    barzDark.withValues(alpha: 0.6),
-                                    barzDark,
-                                    barzDark,
+                                    barzDark.withValues(alpha: 0.8),
+                                    barzDark.withValues(alpha: 0.8),
+                                    Colors.white,
+                                    Colors.white,
+                                    barzDark.withValues(alpha: 0.8),
+                                    barzDark.withValues(alpha: 0.8),
                                   ],
                                   transform: GradientRotation(
-                                    _shimmerAnimation.value,
+                                    _shimmerAnimation.value * 0.5,
                                   ),
                                 ).createShader(bounds);
                               },
                               blendMode: BlendMode.srcIn,
-                              child: child,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    'Upgrade Now',
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black,
+                                      fontFamily: 'Space Grotesk',
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  const Icon(
+                                    LucideIcons.arrowRight,
+                                    size: 16,
+                                    color: Colors.black,
+                                  ),
+                                ],
+                              ),
                             );
                           },
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'Upgrade Now',
-                                style: Theme.of(context).textTheme.labelLarge
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                      inherit: true,
-                                    ),
-                              ),
-                              SizedBox(width: 8),
-                              Icon(LucideIcons.arrowRight, size: 18),
-                            ],
-                          ),
                         ),
                       ),
                     ),
@@ -246,12 +306,12 @@ class _BenefitBadge extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 14, color: barzGold.withValues(alpha: 0.8)),
+        Icon(icon, size: 13, color: barzGold.withValues(alpha: 0.8)),
         const SizedBox(width: 4),
         Text(
           label,
           style: TextStyle(
-            fontSize: 12,
+            fontSize: 11,
             fontWeight: FontWeight.w600,
             color: barzGold.withValues(alpha: 0.8),
           ),

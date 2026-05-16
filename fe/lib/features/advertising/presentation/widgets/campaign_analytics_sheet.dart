@@ -79,6 +79,7 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
   @override
   Widget build(BuildContext context) {
     final dobar = context.dobarColors;
+    final isDark = context.isDark;
     final currencyFormat = NumberFormat.currency(
       symbol: r'$',
       decimalDigits: 2,
@@ -102,29 +103,40 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
 
     Color statusColor = dobar.labelSecondary;
     Color statusBg = Colors.transparent;
+    Color statusBorderColor = Colors.transparent;
+    bool showPulse = false;
 
     if (isActive) {
       statusColor = successGreen;
       statusBg = successGreen.withValues(alpha: 0.15);
+      statusBorderColor = successGreen.withValues(alpha: 0.3);
+      showPulse = true;
     } else if (isPaused) {
       statusColor = warningOrange;
       statusBg = warningOrange.withValues(alpha: 0.15);
+      statusBorderColor = warningOrange.withValues(alpha: 0.3);
     } else {
       statusBg = dobar.navBackground;
+      statusBorderColor = dobar.surfaceElevated;
     }
 
     return Container(
       width: double.infinity,
       constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.95,
+        maxHeight: MediaQuery.of(context).size.height * 0.92,
       ),
       decoration: BoxDecoration(
         color: dobar.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-        border: Border(top: BorderSide(color: dobar.surfaceElevated, width: 1)),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        border: Border(
+          top: BorderSide(
+            color: isDark ? dobar.surfaceElevated : surfaceDim,
+            width: 1,
+          ),
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.5),
+            color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.08),
             blurRadius: 32,
             spreadRadius: 8,
           ),
@@ -139,7 +151,7 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: dobar.surfaceElevated,
+                color: isDark ? dobar.surfaceElevated : surfaceDim,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -148,7 +160,7 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
               children: [
-                // Header
+                // Header - matching Lovable's style
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -160,14 +172,16 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
                           Text(
                             widget.campaign.name,
                             style: TextStyle(
-                              fontSize: 24,
+                              fontSize: 22,
                               fontWeight: FontWeight.bold,
+                              fontFamily: 'Space Grotesk',
                               color: dobar.labelPrimary,
                             ),
                           ),
                           const SizedBox(height: 8),
                           Row(
                             children: [
+                              // Status badge with pulse dot
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 10,
@@ -179,13 +193,13 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
                                     BarzRadii.full,
                                   ),
                                   border: Border.all(
-                                    color: statusColor.withValues(alpha: 0.3),
+                                    color: statusBorderColor,
                                   ),
                                 ),
                                 child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    if (isActive) ...[
+                                    if (showPulse) ...[
                                       Container(
                                         width: 6,
                                         height: 6,
@@ -208,23 +222,28 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
                                   ],
                                 ),
                               ),
-                              const SizedBox(width: 12),
+                              const SizedBox(width: 10),
+                              // Type badge
                               Container(
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 8,
                                   vertical: 4,
                                 ),
                                 decoration: BoxDecoration(
-                                  color: dobar.navBackground,
+                                  color: isDark
+                                      ? dobar.navBackground
+                                      : surfaceMuted,
                                   borderRadius: BorderRadius.circular(4),
                                   border: Border.all(
-                                    color: dobar.surfaceElevated,
+                                    color: isDark
+                                        ? dobar.surfaceElevated
+                                        : surfaceDim,
                                   ),
                                 ),
                                 child: Text(
                                   widget.campaign.campaignType.name,
                                   style: TextStyle(
-                                    fontSize: 12,
+                                    fontSize: 11,
                                     fontWeight: FontWeight.w500,
                                     color: dobar.labelSecondary,
                                   ),
@@ -239,7 +258,9 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
                       onPressed: () => Navigator.pop(context),
                       icon: Icon(Icons.close, color: dobar.labelSecondary),
                       style: IconButton.styleFrom(
-                        backgroundColor: dobar.navBackground,
+                        backgroundColor: isDark
+                            ? dobar.navBackground
+                            : surfaceMuted,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -247,7 +268,7 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 32),
+                const SizedBox(height: 28),
 
                 // Analytics BlocBuilder
                 BlocBuilder<AdvertisingBloc, AdvertisingState>(
@@ -283,83 +304,83 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Performance Metrics section
                         Text(
                           'PERFORMANCE METRICS',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 1.2,
                             color: dobar.labelSecondary,
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        GridView.count(
-                          crossAxisCount: 2,
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          mainAxisSpacing: 12,
-                          crossAxisSpacing: 12,
-                          childAspectRatio: 3.2,
-                          children: [
-                            _MetricCard(
-                              icon: LucideIcons.eye,
-                              label: 'IMPRESSIONS',
-                              value: _formatNumber(imp),
-                              dobar: dobar,
-                            ),
-                            _MetricCard(
-                              icon: LucideIcons.mousePointerClick,
-                              label: 'CLICKS',
-                              value: _formatNumber(clk),
-                              dobar: dobar,
-                            ),
-                            _MetricCard(
-                              icon: LucideIcons.tag,
-                              label: 'CONVERSIONS',
-                              value: _formatNumber(convs),
-                              dobar: dobar,
-                            ),
-                            _MetricCard(
-                              icon: LucideIcons.trendingUp,
-                              label: 'CTR',
-                              value: '${ctr.toStringAsFixed(1)}%',
-                              dobar: dobar,
-                            ),
-                            _MetricCard(
-                              icon: LucideIcons.dollarSign,
-                              label: 'COST PER CLICK',
-                              value: currencyFormat.format(cpc),
-                              dobar: dobar,
-                            ),
-                            _MetricCard(
-                              icon: LucideIcons.pieChart,
-                              label: 'CONVERSION RATE',
-                              value: '${convRate.toStringAsFixed(1)}%',
-                              dobar: dobar,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 14),
+
+                        // 3-column staggered metric grid - matching Lovable's layout
+                        _buildMetricGridRow([
+                          _MetricCardData(
+                            icon: LucideIcons.eye,
+                            label: 'IMPRESSIONS',
+                            value: _formatNumber(imp),
+                          ),
+                          _MetricCardData(
+                            icon: LucideIcons.mousePointerClick,
+                            label: 'CLICKS',
+                            value: _formatNumber(clk),
+                          ),
+                          _MetricCardData(
+                            icon: LucideIcons.refreshCcw,
+                            label: 'CONVERSIONS',
+                            value: _formatNumber(convs),
+                          ),
+                        ], dobar, isDark),
+                        const SizedBox(height: 10),
+                        _buildMetricGridRow([
+                          _MetricCardData(
+                            icon: LucideIcons.trendingUp,
+                            label: 'CTR',
+                            value: '${ctr.toStringAsFixed(1)}%',
+                          ),
+                          _MetricCardData(
+                            icon: LucideIcons.dollarSign,
+                            label: 'COST PER CLICK',
+                            value: currencyFormat.format(cpc),
+                          ),
+                          _MetricCardData(
+                            icon: LucideIcons.pieChart,
+                            label: 'CONVERSION RATE',
+                            value: '${convRate.toStringAsFixed(1)}%',
+                          ),
+                        ], dobar, isDark),
+
+                        const SizedBox(height: 28),
+
+                        // Budget Progress section
                         Text(
                           'BUDGET PROGRESS',
                           style: TextStyle(
-                            fontSize: 12,
+                            fontSize: 11,
                             fontWeight: FontWeight.w600,
                             letterSpacing: 1.2,
                             color: dobar.labelSecondary,
                           ),
                         ),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 14),
                         Container(
                           padding: const EdgeInsets.all(20),
                           decoration: BoxDecoration(
                             color: dobar.background,
-                            borderRadius: BorderRadius.circular(BarzRadii.md),
-                            border: Border.all(color: dobar.surfaceElevated),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isDark
+                                  ? dobar.surfaceElevated
+                                  : surfaceDim,
+                            ),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              // Spend header row
                               Row(
                                 mainAxisAlignment:
                                     MainAxisAlignment.spaceBetween,
@@ -379,16 +400,16 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
                                       Text(
                                         currencyNoDecimals.format(budgetSpent),
                                         style: TextStyle(
-                                          fontSize: 32,
+                                          fontSize: 30,
                                           fontWeight: FontWeight.bold,
-                                          fontFamily: 'SF Pro Display',
+                                          fontFamily: 'Space Grotesk',
                                           color: dobar.labelPrimary,
                                         ),
                                       ),
                                     ],
                                   ),
                                   Padding(
-                                    padding: const EdgeInsets.only(bottom: 6),
+                                    padding: const EdgeInsets.only(bottom: 4),
                                     child: Text(
                                       'of ${currencyNoDecimals.format(budgetTotal)}',
                                       style: TextStyle(
@@ -400,19 +421,37 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 16),
+                              const SizedBox(height: 14),
+
+                              // Linear progress (matching Lovable's gradient gold)
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(4),
-                                child: LinearProgressIndicator(
-                                  value: budgetPercent,
-                                  minHeight: 8,
-                                  backgroundColor: dobar.navBackground,
-                                  valueColor: const AlwaysStoppedAnimation(
-                                    barzGold,
+                                child: Container(
+                                  height: 8,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(4),
+                                    color: isDark
+                                        ? dobar.navBackground
+                                        : surfaceDim,
+                                  ),
+                                  child: FractionallySizedBox(
+                                    alignment: Alignment.centerLeft,
+                                    widthFactor: budgetPercent.clamp(0.0, 1.0),
+                                    child: Container(
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(4),
+                                        gradient: const LinearGradient(
+                                          colors: [
+                                            barzGoldGradientStart,
+                                            barzGoldGradientEnd,
+                                          ],
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 8),
+                              const SizedBox(height: 6),
                               Text(
                                 '$budgetPercentText% spent',
                                 style: TextStyle(
@@ -420,16 +459,18 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
                                   color: dobar.labelSecondary,
                                 ),
                               ),
-                              const SizedBox(height: 16),
-                              const Divider(),
-                              const SizedBox(height: 12),
+                              const SizedBox(height: 14),
+                              const Divider(height: 1),
+                              const SizedBox(height: 14),
+
+                              // Sub-stats row - matching Lovable's Wallet/CalendarClock
                               Row(
                                 children: [
                                   Expanded(
                                     child: Row(
                                       children: [
-                                        const Icon(
-                                          Icons.account_balance_wallet,
+                                        Icon(
+                                          LucideIcons.wallet,
                                           size: 16,
                                           color: barzGold,
                                         ),
@@ -453,6 +494,7 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
                                               style: TextStyle(
                                                 fontSize: 14,
                                                 fontWeight: FontWeight.bold,
+                                                fontFamily: 'Space Grotesk',
                                                 color: dobar.labelPrimary,
                                               ),
                                             ),
@@ -464,8 +506,8 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
                                   Expanded(
                                     child: Row(
                                       children: [
-                                        const Icon(
-                                          Icons.calendar_month,
+                                        Icon(
+                                          LucideIcons.calendarClock,
                                           size: 16,
                                           color: barzGold,
                                         ),
@@ -487,6 +529,7 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
                                               style: TextStyle(
                                                 fontSize: 14,
                                                 fontWeight: FontWeight.bold,
+                                                fontFamily: 'Space Grotesk',
                                                 color: dobar.labelPrimary,
                                               ),
                                             ),
@@ -500,6 +543,7 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
                             ],
                           ),
                         ),
+                        const SizedBox(height: 24),
                       ],
                     );
                   },
@@ -511,64 +555,73 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
       ),
     );
   }
+
+  Widget _buildMetricGridRow(
+    List<_MetricCardData> cards,
+    DobarColors dobar,
+    bool isDark,
+  ) {
+    return Row(
+      children: cards.map((data) {
+        return Expanded(
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: dobar.background,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(
+                color: isDark ? dobar.surfaceElevated : surfaceDim,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(data.icon, size: 14, color: barzGold),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        data.label,
+                        style: TextStyle(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w600,
+                          letterSpacing: 0.5,
+                          color: dobar.labelSecondary,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  data.value,
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: 'Space Grotesk',
+                    color: dobar.labelPrimary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
 }
 
-class _MetricCard extends StatelessWidget {
+class _MetricCardData {
   final IconData icon;
   final String label;
   final String value;
-  final DobarColors dobar;
 
-  const _MetricCard({
+  const _MetricCardData({
     required this.icon,
     required this.label,
     required this.value,
-    required this.dobar,
   });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: dobar.background,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: dobar.surfaceElevated),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 14, color: barzGold),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.w600,
-                    letterSpacing: 0.5,
-                    color: dobar.labelSecondary,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              fontFamily: 'SF Pro Display',
-              color: dobar.labelPrimary,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }

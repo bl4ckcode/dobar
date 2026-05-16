@@ -53,6 +53,7 @@ class _CampaignCardState extends State<CampaignCard>
   Widget build(BuildContext context) {
     final dobar = context.dobarColors;
     final l10n = AppLocalizations.of(context)!;
+    final isDark = context.isDark;
 
     final budgetTotal = widget.campaign.budgetAmount;
     final budgetSpent = widget.campaign.budgetSpent;
@@ -119,7 +120,7 @@ class _CampaignCardState extends State<CampaignCard>
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withValues(
-                          alpha: _isHovered ? 0.15 : 0.05,
+                          alpha: _isHovered ? 0.15 : (isDark ? 0.05 : 0.08),
                         ),
                         blurRadius: _isHovered ? 12 : 8,
                         offset: Offset(0, _isHovered ? 6 : 4),

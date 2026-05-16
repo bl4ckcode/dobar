@@ -88,8 +88,35 @@ class LiveOrdersBloc extends Bloc<LiveOrdersEvent, LiveOrdersState> {
         );
         emit(currentState);
       },
-      (_) {
-        // Success, nothing else to do
+      (updatedOrder) {
+        // Replace optimistic order with full backend response
+        final serverOrders = currentOrders!.map((order) {
+          if (order.id == orderId) {
+            return order.copyWith(
+              id: updatedOrder.id,
+              userId: updatedOrder.userId,
+              barId: updatedOrder.barId,
+              customerName: updatedOrder.customerName,
+              status: updatedOrder.status,
+              totalPrice: updatedOrder.totalPrice,
+              subtotal: updatedOrder.subtotal,
+              tax: updatedOrder.tax,
+              tip: updatedOrder.tip,
+              deliveryFee: updatedOrder.deliveryFee,
+              discount: updatedOrder.discount,
+              orderType: updatedOrder.orderType,
+              paymentMethod: updatedOrder.paymentMethod,
+              paymentStatus: updatedOrder.paymentStatus,
+              createdAt: updatedOrder.createdAt,
+              updatedAt: updatedOrder.updatedAt,
+              estimatedReadyTime: updatedOrder.estimatedReadyTime,
+              completedAt: updatedOrder.completedAt,
+              items: updatedOrder.items,
+            );
+          }
+          return order;
+        }).toList();
+        emit(LiveOrdersState.loaded(serverOrders));
       },
     );
   }

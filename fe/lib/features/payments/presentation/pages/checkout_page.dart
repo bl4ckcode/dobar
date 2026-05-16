@@ -23,12 +23,14 @@ import 'package:barz/features/user/domain/models/user_document.dart';
 import 'package:barz/features/user/domain/models/user_model.dart';
 import 'package:barz/features/user/presentation/bloc/user_state.dart';
 
+import 'dart:async';
 import '../widgets/checkout_order_summary.dart';
 import '../widgets/pay_button.dart';
 import '../widgets/payment_methods_card.dart';
 import '../widgets/payment_options_grid.dart';
 import 'package:barz/core/theme/theme_cubit.dart';
 import '../widgets/security_indicators.dart';
+import '../widgets/pix_payment_modal.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -71,6 +73,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
   bool _isWaitingForProfile = false;
   bool _isWaitingForDocument = false;
   int? _cachedBarId;
+  Timer? _pixPollTimer;
+  int _pixPollCount = 0;
 
   SavedCard _fromPaymentMethod(PaymentMethod m) {
     CardBrand brand = CardBrand.visa;
@@ -474,8 +478,37 @@ class _CheckoutPageState extends State<CheckoutPage> {
     }
   }
 
+  void _startPixPolling(String paymentId) {
+    _pixPollTimer?.cancel();
+    _pixPollCount = 0;
+
+    _pixPollTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
+      _pixPollCount++;
+      if (_pixPollCount > 30) {
+        // Timeout after ~90 seconds (30 polls × 3 seconds)
+        timer.cancel();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('PIX payment timed out. Please try again.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+      if (mounted) {
+        context.read<PaymentBloc>().add(
+          CheckPaymentStatus(int.tryParse(paymentId) ?? 0),
+        );
+      }
+    });
+  }
+
   void _listenToPaymentState(BuildContext context, PaymentState state) {
+    // Handle approved transaction (credit card or PIX confirmed via polling)
     if (state.currentTransaction != null && state.currentTransaction!.status == TransactionStatus.approved) {
+      _pixPollTimer?.cancel();
       if (mounted) setState(() => _isProcessing = false);
       
       // Clear cart on success FIRST
@@ -484,22 +517,41 @@ class _CheckoutPageState extends State<CheckoutPage> {
       // Then navigate to tracking page
       final orderId = state.currentTransaction!.orderId ?? 0;
       AppRoute.goOrder(context, orderId);
-    } else if (state.pixPayment != null) {
+      return;
+    }
+    
+    // Handle PIX payment initiated - show QR code modal and start polling
+    if (state.pixPayment != null) {
+      _pixPollTimer?.cancel();
       if (mounted) setState(() => _isProcessing = false);
       
       // Clear cart for PIX
       context.read<CartBloc>().add(cart_event.ClearCart());
 
-      final cartState = context.read<CartBloc>().state;
-      if (cartState is CheckoutSuccess) {
-        AppRoute.goOrder(context, cartState.result.orderId);
+      // Show PIX QR code modal
+      if (mounted) {
+        PixPaymentModal.show(context, state.pixPayment!);
       }
-    } else if (state.error != null) {
+
+      // Start polling for payment status
+      _startPixPolling(state.pixPayment!.paymentId);
+      return;
+    }
+    
+    // Handle errors
+    if (state.error != null) {
+      _pixPollTimer?.cancel();
       if (mounted) setState(() => _isProcessing = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(state.error!), backgroundColor: Colors.red),
       );
     }
+  }
+
+  @override
+  void dispose() {
+    _pixPollTimer?.cancel();
+    super.dispose();
   }
 
   void _showCpfPrompt(BuildContext context, UserModel user) {

@@ -6,6 +6,7 @@ import 'package:barz/ui/business/widgets/business_toolbars.dart';
 import 'package:barz/core/rbac/rbac.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
+import 'package:barz/l10n/app_localizations.dart';
 
 /// Staff management page for bar owners/admins.
 ///
@@ -77,7 +78,7 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
 
           final activeBar = sessionState.session.activeBar;
           if (activeBar == null) {
-            return const Center(child: Text('No bar selected'));
+            return Center(child: Text(AppLocalizations.of(context)!.business_no_bar_selected));
           }
 
           // Initial Load
@@ -173,6 +174,7 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
   }
 
   Widget _buildHeader(bool isDark, StaffState staffState, int barId) {
+    final l10n = AppLocalizations.of(context)!;
     final staffCount = staffState.maybeWhen(
       loaded: (list) => list.length,
       actionSuccess: (_, list) => list.length,
@@ -182,11 +184,11 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
     return LayoutBuilder(
       builder: (context, constraints) {
         return BusinessActionToolbar(
-          title: 'Staff',
+          title: l10n.business_staff_title,
           subtitle: staffState.maybeWhen(
             initial: () => null,
             loading: () => null,
-            orElse: () => '$staffCount members',
+            orElse: () => l10n.business_staff_members(staffCount),
           ),
           icon: LucideIcons.users,
           isNarrow: constraints.maxWidth < 600,
@@ -194,7 +196,7 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
             FilledButton.icon(
               onPressed: () => _showInviteDialog(context, barId),
               icon: const Icon(Icons.add, size: 18),
-              label: const Text('Invite Staff'),
+              label: Text(l10n.business_invite_staff),
               style: FilledButton.styleFrom(
                 backgroundColor: barzGold,
                 foregroundColor: barzDark,

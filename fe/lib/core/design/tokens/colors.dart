@@ -205,14 +205,20 @@ const ColorScheme barzDarkColorScheme = ColorScheme(
   inversePrimary: barzGold,
 );
 
+/// Warm off-white matching Lovable's background
+const Color _warmOffWhite = Color(0xFFF7F5F0);
+
+/// Card border matching Lovable's border in light mode
+const Color _warmBorder = Color(0xFFE2DDD6);
+
 const dobarLightColors = DobarColors(
   labelPrimary: barzDark,
   labelSecondary: textSecondary,
   labelSelected: barzGold,
   labelOnSelected: barzDark,
-  background: barzGoldSoft,
+  background: _warmOffWhite,
   surface: surfaceWhite,
-  surfaceElevated: surfaceMuted,
+  surfaceElevated: _warmBorder,
   navBackground: barzDark,
   navIcon: Color(0xFFB0B0B0),
   navIconSelected: barzGold,

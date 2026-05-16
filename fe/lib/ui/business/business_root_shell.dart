@@ -100,7 +100,6 @@ class _BusinessRootShellState extends State<BusinessRootShell> {
                           context.read<SessionBloc>().add(
                             SessionEvent.switchActiveBar(barId: barId),
                           );
-                          context.go(AppRoute.businessDashboard.path);
                         },
                         onSwitchToClientMode: () {
                           context.read<SessionBloc>().add(
@@ -341,7 +340,6 @@ class _BusinessRootShellState extends State<BusinessRootShell> {
         context.read<SessionBloc>().add(
           SessionEvent.switchActiveBar(barId: barId),
         );
-        context.go(AppRoute.businessDashboard.path);
       }
     });
   }

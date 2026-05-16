@@ -32,6 +32,7 @@ class BusinessDashboardPage extends StatelessWidget {
         }
 
         return BlocProvider(
+          key: ValueKey('dashboard_${activeBar.barId}'),
           create: (context) =>
               getItInjector<DashboardBloc>()
                 ..add(LoadDashboard(barId: activeBar.barId)),

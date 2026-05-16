@@ -11,6 +11,7 @@ import 'package:barz/features/session/presentation/bloc/session_state.dart';
 import 'package:barz/ui/business/bloc/business_menu_bloc.dart';
 import 'package:barz/ui/business/bloc/business_menu_event.dart';
 import 'package:barz/ui/business/bloc/business_menu_state.dart';
+import 'package:barz/l10n/app_localizations.dart';
 
 class MenuManagementPage extends StatelessWidget {
   const MenuManagementPage({super.key});
@@ -127,6 +128,7 @@ class _MenuManagementContentState extends State<_MenuManagementContent> {
   ) {
     final dobar = context.dobarColors;
     final textColor = dobar.labelPrimary;
+    final l10n = AppLocalizations.of(context)!;
 
     int totalCategories = 0;
     for (final menu in state.menus) {
@@ -144,9 +146,8 @@ class _MenuManagementContentState extends State<_MenuManagementContent> {
         final isNarrow = constraints.maxWidth < 600;
 
         return BusinessActionToolbar(
-          title: 'Menu Management',
-          subtitle:
-              '${state.totalItems} items across ${state.menus.length} categories',
+          title: l10n.business_menu_management,
+          subtitle: l10n.business_menu_items_summary(state.totalItems, state.menus.length),
           icon: LucideIcons.wine,
           isNarrow: isNarrow,
           actions: [
@@ -160,13 +161,13 @@ class _MenuManagementContentState extends State<_MenuManagementContent> {
                   color: textColor,
                 ),
               ),
-              tooltip: allExpanded ? 'Colapsar Tudo' : 'Expandir Tudo',
+              tooltip: allExpanded ? l10n.business_colapse_all : l10n.business_expand_all,
             ),
             OutlinedButton.icon(
               onPressed: () =>
                   context.read<BusinessMenuBloc>().add(RefreshMenus()),
               icon: const Icon(Icons.refresh_rounded, size: 18),
-              label: const Text('Refresh'),
+              label: Text(l10n.business_refresh),
               style: OutlinedButton.styleFrom(
                 foregroundColor: textColor,
                 side: BorderSide(color: Theme.of(context).colorScheme.outline),
@@ -179,7 +180,7 @@ class _MenuManagementContentState extends State<_MenuManagementContent> {
             FilledButton.icon(
               onPressed: () => _navigateToMenuReader(context),
               icon: const Icon(Icons.auto_awesome, size: 18),
-              label: Text(isNarrow ? 'Scan' : 'Scan Menu with AI'),
+              label: Text(isNarrow ? l10n.business_scan : l10n.business_scan_with_ai),
               style: FilledButton.styleFrom(
                 backgroundColor: barzGold,
                 foregroundColor: barzDark,

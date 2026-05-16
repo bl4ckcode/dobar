@@ -5,7 +5,11 @@ import 'package:dio/dio.dart';
 
 abstract class LiveOrdersRemoteDataSource {
   Future<List<LiveOrderModel>> getLiveOrders(int barId);
-  Future<void> updateOrderStatus(int barId, String orderId, String newStatus);
+  Future<LiveOrderModel> updateOrderStatus(
+    int barId,
+    String orderId,
+    String newStatus,
+  );
 }
 
 class LiveOrdersRemoteDataSourceImpl implements LiveOrdersRemoteDataSource {
@@ -29,16 +33,17 @@ class LiveOrdersRemoteDataSourceImpl implements LiveOrdersRemoteDataSource {
   }
 
   @override
-  Future<void> updateOrderStatus(
+  Future<LiveOrderModel> updateOrderStatus(
     int barId,
     String orderId,
     String newStatus,
   ) async {
     try {
-      await dio.put(
+      final response = await dio.put(
         ApiEndpoints.barOrderStatus(barId, orderId),
         data: {'status': newStatus},
       );
+      return LiveOrderModel.fromJson(response.data);
     } on DioException catch (e) {
       throw ServerException(
         e.response?.data?['detail'] ?? 'Failed to update order status',

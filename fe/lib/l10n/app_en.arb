@@ -504,6 +504,8 @@
   "campaign_start_date_label": "Start Date",
   "campaign_end_date_label": "End Date (Optional)",
   "campaign_no_end_date": "No End Date",
+  "campaign_tagline_label": "Creative Tagline",
+  "campaign_tagline_hint": "e.g. The best cocktails in town, every Friday...",
   "campaign_launch_button": "Launch Campaign",
   "campaign_created_success": "Campaign created successfully!",
   "campaign_type_featured": "FEATURED",
@@ -583,5 +585,208 @@
   "location_mismatch_title": "We noticed you are in a different country.",
   "location_mismatch_subtitle": "Would you like to update your location to see local bars and restaurants?",
   "location_mismatch_update_button": "Update Location",
-  "location_mismatch_not_now_button": "Not now"
+  "location_mismatch_not_now_button": "Not now",
+
+  "business_no_bar_selected": "No bar selected",
+  "business_welcome_back": "Welcome back, {role}",
+  "@business_welcome_back": {
+    "placeholders": {
+      "role": {
+        "type": "String"
+      }
+    }
+  },
+  "business_dashboard_title": "Dashboard",
+  "business_today_revenue": "Today's Revenue",
+  "business_vs_yesterday": "vs yesterday",
+  "business_active_orders": "Active Orders",
+  "business_pending_count": "{count} pending",
+  "@business_pending_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "business_avg_ticket": "Avg. Ticket",
+  "business_across_all_orders": "across all orders today",
+  "business_live_order_queue": "LIVE ORDER QUEUE",
+  "business_active_orders_count": "{count} active orders",
+  "@business_active_orders_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "business_no_active_orders": "No active orders right now.",
+  "business_status_pending": "Pending",
+  "business_status_preparing": "Preparing",
+  "business_status_ready": "Ready",
+  "business_status_served": "Served",
+  "business_status_cancelled": "Cancelled",
+  "business_time_just_now": "Just now",
+  "business_time_ago": "{minutes}m ago",
+  "@business_time_ago": {
+    "placeholders": {
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "business_walk_in": "Walk-in",
+  "business_items_count": "{count} items",
+  "@business_items_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "business_table": "Table {number}",
+  "@business_table": {
+    "placeholders": {
+      "number": {
+        "type": "String"
+      }
+    }
+  },
+  "business_quick_actions": "Quick Actions",
+  "business_cashier": "Cashier",
+  "business_edit_menu": "Edit Menu",
+  "business_new_promo": "New Promo",
+  "business_table_qr": "Table QR",
+  "business_invite_staff": "Invite Staff",
+  "business_feature_coming_soon": "{feature} coming soon!",
+  "@business_feature_coming_soon": {
+    "placeholders": {
+      "feature": {
+        "type": "String"
+      }
+    }
+  },
+  "business_boost_sales": "Boost Your Sales",
+  "business_boost_sales_desc": "Create a campaign and reach more customers in your area!",
+  "business_create_campaign": "Create Campaign",
+  "business_staff_title": "Staff",
+  "business_staff_members": "{count} members",
+  "@business_staff_members": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "business_staff_no_members": "No staff members found.",
+  "business_staff_no_data": "No staff data available",
+  "business_invite_staff_title": "Invite Staff",
+  "business_invite_email_phone": "Email or Phone",
+  "business_invite_email_hint": "name@email.com or +1 555-0000",
+  "business_assign_role": "Assign Role",
+  "business_send_invitation": "Send Invitation",
+  "business_change_role": "Change Role",
+  "business_remove": "Remove",
+  "business_cashier_title": "Caixa",
+  "business_cashier_subtitle": "{count} orders in pipeline",
+  "@business_cashier_subtitle": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "business_select_bar_cashier": "Selecione um bar para gerenciar o caixa",
+  "business_status_all": "All",
+  "business_no_orders_pipeline": "No orders in this pipeline.",
+  "business_confirm": "Confirm",
+  "business_complete": "Complete",
+  "business_menu_management": "Menu Management",
+  "business_menu_items_summary": "{items} items across {menus} categories",
+  "@business_menu_items_summary": {
+    "placeholders": {
+      "items": {
+        "type": "int"
+      },
+      "menus": {
+        "type": "int"
+      }
+    }
+  },
+  "business_scan_with_ai": "Scan Menu with AI",
+  "business_scan": "Scan",
+  "business_menu_empty": "Seu menu está vazio",
+  "business_menu_empty_hint": "Escaneie um cardápio existente para começar",
+  "business_menu_scan_ai": "Escanear com IA",
+  "business_menu_delete_title": "Excluir Menu",
+  "business_menu_delete_confirm": "Tem certeza que deseja excluir o menu \"{name}\"?",
+  "@business_menu_delete_confirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "business_menu_delete_warning": "Isso excluirá {count} itens permanentemente.",
+  "@business_menu_delete_warning": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "business_cancel": "Cancelar",
+  "business_delete": "Excluir",
+  "business_edit_item": "Editar Item",
+  "business_item_name": "Nome",
+  "business_name_required": "Nome obrigatório",
+  "business_item_description": "Descrição",
+  "business_item_price": "Preço",
+  "business_price_required": "Preço obrigatório",
+  "business_invalid_price": "Preço inválido",
+  "business_item_category": "Categoria",
+  "business_save": "Salvar",
+  "business_delete_item_title": "Excluir Item",
+  "business_delete_item_confirm": "Tem certeza que deseja excluir \"{name}\"?",
+  "@business_delete_item_confirm": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "business_refresh": "Refresh",
+  "business_colapse_all": "Colapsar Tudo",
+  "business_expand_all": "Expandir Tudo",
+  "business_edit": "Editar",
+  "business_browse": "BROWSE",
+  "business_actions": "ACTIONS",
+  "business_logout": "Logout",
+  "business_team": "Team",
+  "business_marketing": "Marketing",
+  "business_subscription_hint": "Subscription",
+  "payment_pix_timeout": "PIX payment timed out. Please try again.",
+  "payment_loading_profile": "Loading profile...",
+  "payment_user_session_lost": "User session lost. Please log in again.",
+  "checkout_cpf_title": "Complete your Profile",
+  "checkout_cpf_subtitle": "A CPF/CNPJ is required for fiscal reasons.",
+  "checkout_cpf_label": "CPF or CNPJ",
+  "checkout_cpf_hint": "000.000.000-00",
+  "checkout_save_continue": "Save & Continue",
+  "checkout_hours_ago": "{hours}h ago",
+  "@checkout_hours_ago": {
+    "placeholders": {
+      "hours": {
+        "type": "int"
+      }
+    }
+  },
+  "checkout_days_ago": "{days}d ago",
+  "@checkout_days_ago": {
+    "placeholders": {
+      "days": {
+        "type": "int"
+      }
+    }
+  },
+  "business_campaign_card_desc": "Create a campaign and reach more customers in your area!"
 }

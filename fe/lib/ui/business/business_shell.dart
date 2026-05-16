@@ -232,7 +232,6 @@ class _BusinessShellState extends State<BusinessShell> {
               context.read<SessionBloc>().add(
                 SessionEvent.switchActiveBar(barId: barId),
               );
-              setState(() => _selectedIndex = 0);
             },
           ),
           // Vertical divider
@@ -296,7 +295,6 @@ class _BusinessShellState extends State<BusinessShell> {
         context.read<SessionBloc>().add(
           SessionEvent.switchActiveBar(barId: barId),
         );
-        setState(() => _selectedIndex = 0);
       },
     );
   }

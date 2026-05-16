@@ -7,7 +7,7 @@ import 'package:dartz/dartz.dart';
 
 abstract class LiveOrdersRepository {
   Future<Either<Failure, List<LiveOrderModel>>> getLiveOrders(int barId);
-  Future<Either<Failure, void>> updateOrderStatus(
+  Future<Either<Failure, LiveOrderModel>> updateOrderStatus(
     int barId,
     String orderId,
     String newStatus,
@@ -40,15 +40,19 @@ class LiveOrdersRepositoryImpl implements LiveOrdersRepository {
   }
 
   @override
-  Future<Either<Failure, void>> updateOrderStatus(
+  Future<Either<Failure, LiveOrderModel>> updateOrderStatus(
     int barId,
     String orderId,
     String newStatus,
   ) async {
     if (connectivityService.isOnline) {
       try {
-        await remoteDataSource.updateOrderStatus(barId, orderId, newStatus);
-        return Right(null);
+        final order = await remoteDataSource.updateOrderStatus(
+          barId,
+          orderId,
+          newStatus,
+        );
+        return Right(order);
       } on ServerException catch (e) {
         return Left(ServerFailure.unknown(e.message));
       } catch (e) {

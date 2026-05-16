@@ -18,7 +18,7 @@ class UpdateLiveOrderStatusUseCase {
 
   UpdateLiveOrderStatusUseCase(this.repository);
 
-  Future<Either<Failure, void>> call({
+  Future<Either<Failure, LiveOrderModel>> call({
     required int barId,
     required String orderId,
     required String newStatus,
