@@ -228,7 +228,8 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
     try {
       final response = await dio.post(
         '${ApiEndpoints.baseUrl}${ApiEndpoints.subscriptions}',
-        data: {'bar_id': barId, 'tier': tier.name, 'region_code': regionCode},
+        queryParameters: {'bar_id': barId},
+        data: {'tier': tier.name, 'billing_cycle': 'monthly'},
       );
       return AdSubscription.fromJson(response.data);
     } on DioException catch (e) {

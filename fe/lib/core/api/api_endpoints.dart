@@ -125,8 +125,8 @@ class ApiEndpoints {
   static const String adPlans = '/advertising/plans';
 
   // Authenticated endpoints - campaign/subscription management
-  static const String subscriptions = '/advertising/subscriptions';
-  static String subscription(int barId) => '/advertising/subscriptions/$barId';
+  static const String subscriptions = '/advertising/subscribe';
+  static String subscription(int barId) => '/advertising/my-plan?bar_id=$barId';
   static String cancelSubscription(int subscriptionId) =>
       '/advertising/subscriptions/$subscriptionId/cancel';
   static const String campaigns = '/advertising/campaigns';
