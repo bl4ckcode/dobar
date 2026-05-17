@@ -675,6 +675,74 @@ See [Implementation Plan](file:///Users/carlosalves/.gemini/antigravity/brain/f0
 
 ---
 
+## KNOWN ISSUES & BUG REPORTS
+
+### 🚨 DPE `/payments/charge` Returns 422 Unprocessable Entity [MAY 17, 2026]
+
+**Issue:** Barz-backend calls `POST /payments/charge` on DPE, but DPE returns `422 Unprocessable Entity`. The request reaches DPE successfully (connectivity is fine), but the payload `payment_method` object structure does not match DPE's expected schema.
+
+**Root Cause (Barz-Backend):** In `app/advertising/services/subscription_service.py` (lines 174-187), the `dpe_pm` dictionary is built with **wrong field names** that don't match DPE's schema:
+
+```python
+# ❌ What barz-backend sends:
+dpe_pm = {
+    "payment_method": "pix",          # Wrong field name
+    "expires_in": 3600
+}
+# or for card:
+dpe_pm = {
+    "payment_method": "credit_card",  # Wrong field name
+    "card_token": "",                 # Wrong field name
+    "installments": 1,
+    "statement_descriptor": "BARZ"    # Not in DPE schema
+}
+```
+
+But DPE's `/payments/charge` endpoint (documented in `.docs/BE_DPE_COMMUNICATION.md`) expects:
+
+```json
+// ✅ What DPE expects:
+"payment_method": {
+    "type": "pix"                     # Field should be "type", not "payment_method"
+}
+// or for card:
+"payment_method": {
+    "type": "card",                   # Field should be "type", not "payment_method"
+    "token": "tok_xxx",               # Field should be "token", not "card_token"
+    "provider": "saved"               # Optional
+}
+```
+
+**DPE Log Evidence:**
+```
+POST /payments/charge HTTP/1.1" 422 Unprocessable Entity
+```
+
+**Fix Required (Barz-Backend — `app/advertising/services/subscription_service.py` lines 174-187):**
+
+For PIX:
+```python
+dpe_pm = {
+    "type": "pix",                    # Changed from "payment_method" to "type"
+    "expires_in": 3600
+}
+```
+
+For Card:
+```python
+dpe_pm = {
+    "type": "card",                   # Changed from "payment_method" to "type"
+    "token": pm_dict.get("token"),    # Changed from "card_token" to "token"
+    "provider": "saved"               # Added optional provider
+}
+```
+
+Remove `installments` and `statement_descriptor` as they are not in DPE's `/payments/charge` schema.
+
+**Impact:** All subscription payments (Master/VIP plans) fail at the DPE validation stage. The frontend gets `400 Bad Request` from barz-backend even though the request format is now correct.
+
+---
+
 ## CHANGELOG
 
 | Date | Change |

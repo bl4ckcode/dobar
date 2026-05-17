@@ -175,15 +175,14 @@ class SubscriptionService:
         
         if pm_type == "pix":
             dpe_pm = {
-                "payment_method": "pix",
+                "type": "pix",
                 "expires_in": 3600
             }
         else:
             dpe_pm = {
-                "payment_method": "credit_card",
-                "card_token": payment_method.get("token"),
-                "installments": 1,
-                "statement_descriptor": "BARZ"
+                "type": "card",
+                "token": pm_dict.get("token"),
+                "provider": "saved"
             }
         # Process payment via DPE
         dpe = get_dpe_client()
