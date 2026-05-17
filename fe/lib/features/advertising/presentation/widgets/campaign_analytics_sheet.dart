@@ -120,29 +120,31 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
       statusBorderColor = dobar.surfaceElevated;
     }
 
-    return ResponsiveCenterContainer(
-      child: Container(
-        width: double.infinity,
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.of(context).size.height * 0.92,
-        ),
-        decoration: BoxDecoration(
-          color: dobar.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-          border: Border(
-            top: BorderSide(
-              color: isDark ? dobar.surfaceElevated : surfaceDim,
-              width: 1,
-            ),
+    return Container(
+      width: double.infinity,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.72,
+      ),
+      decoration: BoxDecoration(
+        color: dobar.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        border: Border(
+          top: BorderSide(
+            color: isDark ? dobar.surfaceElevated : surfaceDim,
+            width: 1,
           ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.08),
-              blurRadius: 32,
-              spreadRadius: 8,
-            ),
-          ],
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.08),
+            blurRadius: 32,
+            spreadRadius: 8,
+          ),
+        ],
+      ),
+      child: ResponsiveCenterContainer(
+        maxWidth: 1400,
+        maxWidthPercentage: 0.9,
         child: Column(
         children: [
           // Handle
@@ -270,7 +272,7 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
                   ],
                 ),
                 const SizedBox(height: 28),
-
+            
                 // Analytics BlocBuilder
                 BlocBuilder<AdvertisingBloc, AdvertisingState>(
                   builder: (context, state) {
@@ -282,18 +284,18 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
                         ),
                       );
                     }
-
+            
                     final int imp =
                         state.analytics?.impressions ??
                         widget.campaign.impressions;
                     final int clk =
                         state.analytics?.clicks ?? widget.campaign.clicks;
                     final int convs = state.analytics?.conversions ?? 0;
-
+            
                     final ctr = imp > 0 ? (clk / imp) * 100 : 0.0;
                     final cpc = clk > 0 ? budgetSpent / clk : 0.0;
                     final convRate = clk > 0 ? (convs / clk) * 100 : 0.0;
-
+            
                     final diffDays =
                         widget.campaign.endDate
                             ?.difference(widget.campaign.startDate)
@@ -301,7 +303,7 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
                         1;
                     final int durationDays = diffDays > 0 ? diffDays : 1;
                     final dailyAvg = budgetSpent / durationDays;
-
+            
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -316,7 +318,7 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
                           ),
                         ),
                         const SizedBox(height: 14),
-
+            
                         // 3-column staggered metric grid - matching Lovable's layout
                         _buildMetricGridRow([
                           _MetricCardData(
@@ -353,9 +355,9 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
                             value: '${convRate.toStringAsFixed(1)}%',
                           ),
                         ], dobar, isDark),
-
+            
                         const SizedBox(height: 28),
-
+            
                         // Budget Progress section
                         Text(
                           'BUDGET PROGRESS',
@@ -423,7 +425,7 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
                                 ],
                               ),
                               const SizedBox(height: 14),
-
+            
                               // Linear progress (matching Lovable's gradient gold)
                               ClipRRect(
                                 borderRadius: BorderRadius.circular(4),
@@ -463,7 +465,7 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
                               const SizedBox(height: 14),
                               const Divider(height: 1),
                               const SizedBox(height: 14),
-
+            
                               // Sub-stats row - matching Lovable's Wallet/CalendarClock
                               Row(
                                 children: [
@@ -544,7 +546,7 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
                             ],
                           ),
                         ),
-                        const SizedBox(height: 24),
+                        
                       ],
                     );
                   },
@@ -553,7 +555,7 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
             ),
           ),
         ],
-      ),
+            ),
       ),
     );
   }

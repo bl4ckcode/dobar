@@ -1,3 +1,5 @@
+import 'dart:ui';
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:barz/core/design/design_system.dart';
@@ -18,21 +20,33 @@ class SubscriptionPlansSheet extends StatefulWidget {
       context: parentContext,
       barrierDismissible: true,
       barrierLabel: 'Subscription Plans',
-      barrierColor: Colors.black.withValues(alpha: 0.8),
+      barrierColor: Colors.black.withValues(alpha: 0.4),
       transitionDuration: const Duration(milliseconds: 300),
       pageBuilder: (context, animation, secondaryAnimation) {
-        return BlocProvider.value(
-          value: advertisingBloc,
-          child: SubscriptionPlansSheet(barId: barId),
+        return Align(
+          alignment: Alignment.bottomCenter,
+          child: Material(
+            color: Colors.transparent,
+            child: BlocProvider.value(
+              value: advertisingBloc,
+              child: SubscriptionPlansSheet(barId: barId),
+            ),
+          ),
         );
       },
       transitionBuilder: (context, animation, secondaryAnimation, child) {
-        return SlideTransition(
-          position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
-              .animate(
-                CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
-              ),
-          child: child,
+        return BackdropFilter(
+          filter: ImageFilter.blur(
+            sigmaX: math.max(0.001, animation.value * 8.0),
+            sigmaY: math.max(0.001, animation.value * 8.0),
+          ),
+          child: SlideTransition(
+            position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
+                .animate(
+                  CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+                ),
+            child: child,
+          ),
         );
       },
     );
@@ -54,131 +68,188 @@ class _SubscriptionPlansSheetState extends State<SubscriptionPlansSheet> {
     final dobar = context.dobarColors;
     final isDark = context.isDark;
 
-    return Center(
-      child: Container(
-        width: MediaQuery.of(context).size.width * 0.9,
-        constraints: BoxConstraints(
-          maxWidth: 800,
-          maxHeight: MediaQuery.of(context).size.height * 0.85,
+    return Container(
+      width: double.infinity,
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.92,
+      ),
+      decoration: BoxDecoration(
+        color: dobar.surface,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        border: Border(
+          top: BorderSide(
+            color: isDark ? dobar.surfaceElevated : surfaceDim,
+            width: 1,
+          ),
         ),
-        decoration: BoxDecoration(
-          color: dobar.surface,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: isDark ? Colors.white10 : surfaceDim),
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: BlocConsumer<AdvertisingBloc, AdvertisingState>(
-            listener: (context, state) {
-              if (state.successMessage ==
-                  'Subscription created successfully!') {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: const Text(
-                      'Upgrade successful! Welcome to the premium club.',
-                    ),
-                    backgroundColor: barzGold,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.08),
+            blurRadius: 32,
+            spreadRadius: 8,
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: BlocConsumer<AdvertisingBloc, AdvertisingState>(
+          listener: (context, state) {
+            if (state.successMessage ==
+                'Subscription created successfully!') {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text(
+                    'Upgrade successful! Welcome to the premium club.',
                   ),
-                );
-                Navigator.of(context).pop();
-                context.read<AdvertisingBloc>().add(
-                  AdvertisingEvent.loadSubscription(barId: widget.barId),
-                );
-              }
-            },
-            builder: (context, state) {
-              return Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Header
-                  _buildHeader(context),
+                  backgroundColor: barzGold,
+                ),
+              );
+              Navigator.of(context).pop();
+              context.read<AdvertisingBloc>().add(
+                AdvertisingEvent.loadSubscription(barId: widget.barId),
+              );
+            }
+          },
+          builder: (context, state) {
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Drag Handle
+                Center(
+                  child: Container(
+                    margin: const EdgeInsets.only(top: 12, bottom: 8),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isDark ? dobar.surfaceElevated : surfaceDim,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
 
-                  // Plans Content wrapped in ResponsiveCenterContainer
-                  Flexible(
-                    child: ResponsiveCenterContainer(
-                      maxWidthPercentage: 0.9,
-                      maxWidth: 1400,
-                      padding: EdgeInsets.zero,
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 24,
-                          vertical: 16,
-                        ),
+                // Header
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 16,
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
                         child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            if (state.isLoadingPlans)
-                              Center(
-                                child: Padding(
-                                  padding: const EdgeInsets.all(48.0),
-                                  child: CircularProgressIndicator(
-                                    color: barzGold,
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: BoxDecoration(
+                                    gradient: const LinearGradient(
+                                      colors: [
+                                        barzGoldGradientStart,
+                                        barzGoldGradientEnd,
+                                      ],
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                    ),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: const Icon(
+                                    LucideIcons.crown,
+                                    color: Colors.black,
+                                    size: 18,
                                   ),
                                 ),
-                              )
-                            else if (state.error != null && state.plans == null)
-                              _buildErrorState(state.error!)
-                            else if (state.plans != null)
-                              ...state.plans!.plans.map(
-                                (plan) => _PlanCard(
-                                  plan: plan,
-                                  currency: state.plans!.currency,
-                                  isLoading: state.isLoadingSubscription,
-                                  onSelect: () => _onSelectPlan(
-                                    plan,
-                                    state.plans!.regionCode,
+                                const SizedBox(width: 12),
+                                Text(
+                                  'UPGRADE YOUR BUSINESS',
+                                  style: TextStyle(
+                                    color: dobar.labelPrimary,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                    fontFamily: 'Space Grotesk',
                                   ),
                                 ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Unlock premium features and reach more customers',
+                              style: TextStyle(
+                                color: dobar.labelSecondary,
+                                fontSize: 13,
                               ),
+                            ),
                           ],
                         ),
                       ),
+                      IconButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        icon: Icon(
+                          LucideIcons.x,
+                          color: dobar.labelSecondary,
+                        ),
+                        style: IconButton.styleFrom(
+                          backgroundColor:
+                              isDark ? dobar.navBackground : surfaceMuted,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                Divider(
+                  color: isDark ? dobar.surfaceElevated : surfaceDim,
+                  height: 1,
+                ),
+
+                // Plans Content
+                Flexible(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 16,
+                    ),
+                    child: Column(
+                      children: [
+                        if (state.isLoadingPlans)
+                          const Center(
+                            child: Padding(
+                              padding: EdgeInsets.all(48.0),
+                              child: CircularProgressIndicator(
+                                color: barzGold,
+                              ),
+                            ),
+                          )
+                        else if (state.error != null && state.plans == null)
+                          _buildErrorState(state.error!)
+                        else if (state.plans != null)
+                          ...state.plans!.plans.map(
+                            (plan) => _PlanCard(
+                              plan: plan,
+                              currency: state.plans!.currency,
+                              isLoading: state.isLoadingSubscription,
+                              onSelect: () => _onSelectPlan(
+                                plan,
+                                state.plans!.regionCode,
+                              ),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
+                ),
 
-                  const SizedBox(height: 16),
-                ],
-              );
-            },
-          ),
+                const SizedBox(height: 16),
+              ],
+            );
+          },
         ),
-      ),
-    );
-  }
-
-  Widget _buildHeader(BuildContext context) {
-    final dobar = context.dobarColors;
-    return Padding(
-      padding: const EdgeInsets.all(24.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'UPGRADE YOUR BUSINESS',
-                style: TextStyle(
-                  color: dobar.labelPrimary,
-                  fontSize: 20,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 0.5,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Unlock premium features and reach more customers',
-                style: TextStyle(
-                  color: dobar.labelSecondary,
-                  fontSize: 14,
-                ),
-              ),
-            ],
-          ),
-          IconButton(
-            onPressed: () => Navigator.of(context).pop(),
-            icon: Icon(LucideIcons.x, color: dobar.labelSecondary),
-          ),
-        ],
       ),
     );
   }
@@ -236,14 +307,18 @@ class _PlanCard extends StatelessWidget {
     final accentColor = isVip
         ? barzGold
         : (isMaster ? dobar.labelPrimary : dobar.labelSecondary);
-    final cardBg = isDark ? const Color(0xFF121212) : dobar.surfaceElevated;
-    final textColor = isDark ? Colors.white70 : dobar.labelPrimary;
-    final mutedColor = isDark ? Colors.white38 : dobar.labelSecondary;
+    final cardBg = dobar.background;
+    final textColor = dobar.labelPrimary;
+    final mutedColor = dobar.labelSecondary;
     final borderColor = isVip
         ? barzGold.withValues(alpha: 0.3)
-        : (isDark ? Colors.white10 : surfaceDim);
-    final btnBg = isVip ? barzGold : (isDark ? Colors.white10 : dobar.navBackground);
-    final btnFg = isVip ? Colors.black : (isDark ? Colors.white : dobar.labelPrimary);
+        : (isDark ? dobar.surfaceElevated : surfaceDim);
+    final btnBg = isVip
+        ? barzGold
+        : (isDark ? dobar.navBackground : dobar.surfaceElevated);
+    final btnFg = isVip
+        ? Colors.black
+        : dobar.labelPrimary;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 24),
