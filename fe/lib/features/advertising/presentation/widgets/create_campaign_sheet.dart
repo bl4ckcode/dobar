@@ -1,7 +1,6 @@
 import 'dart:ui';
 import 'dart:math' as math;
-import 'package:barz/core/design/tokens/colors.dart';
-import 'package:barz/core/design/tokens/dobar_colors.dart';
+import 'package:barz/core/design/design_system.dart';
 import 'package:barz/features/advertising/domain/models/models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';

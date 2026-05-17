@@ -1125,20 +1125,74 @@ Response 200:
 
 ### 2. Update Order Status
 
+Updates an order through the pipeline: `confirmed` → `preparing` → `ready` → `completed`
+
 ```
 PUT /bars/{bar_id}/orders/{order_id}/status
-Auth: Required (Cashier/Manager)
+Auth: Required (Cashier/Manager — requires ORDER_PROCESS permission)
 
 Body:
 {
-  "status": "preparing"
+  "status": "preparing",
+  "notes": null
 }
+
+Valid status transitions:
+  confirmed  → ["preparing", "cancelled"]
+  preparing  → ["ready", "cancelled"]
+  ready      → ["completed"]
+  completed  → []
+  cancelled  → []
 
 Response 200:
 {
-  "message": "Status updated successfully",
-  "order_id": "ORD-2005",
-  "new_status": "preparing"
+  "id": 1367,
+  "user_id": 8,
+  "bar_id": 16,
+  "status": "preparing",
+  "total_price": 88.0,
+  "subtotal": 80.0,
+  "tax": 8.0,
+  "tip": 0.0,
+  "delivery_fee": 0.0,
+  "discount": 0.0,
+  "order_type": "dine_in",
+  "payment_method": "1",
+  "payment_status": "completed",
+  "created_at": "2026-05-03T14:28:22.018342",
+  "updated_at": "2026-05-03T14:30:00.000000",
+  "estimated_ready_time": null,
+  "completed_at": null,
+  "items": [
+    {
+      "id": 1437,
+      "order_id": 1367,
+      "menu_item_id": 4,
+      "menu_item_name": "DA CASA",
+      "quantity": 1,
+      "unit_price": 20.0,
+      "total_price": 20.0,
+      "created_at": null
+    }
+  ]
+}
+
+Errors:
+500 Internal Server Error: {"detail": "Failed to update order status: ..."}
+400 Bad Request: {"detail": "Invalid status transition from confirmed to ..."}
+```
+
+**Frontend Implementation:**
+```dart
+Future<void> updateOrderStatus({
+  required int barId,
+  required String orderId,
+  required String newStatus,
+}) async {
+  await dio.put(
+    '/bars/$barId/orders/$orderId/status',
+    data: {'status': newStatus},
+  );
 }
 ```
 

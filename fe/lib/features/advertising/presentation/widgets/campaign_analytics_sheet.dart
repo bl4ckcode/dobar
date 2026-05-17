@@ -120,29 +120,30 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
       statusBorderColor = dobar.surfaceElevated;
     }
 
-    return Container(
-      width: double.infinity,
-      constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.92,
-      ),
-      decoration: BoxDecoration(
-        color: dobar.surface,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        border: Border(
-          top: BorderSide(
-            color: isDark ? dobar.surfaceElevated : surfaceDim,
-            width: 1,
-          ),
+    return ResponsiveCenterContainer(
+      child: Container(
+        width: double.infinity,
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.92,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.08),
-            blurRadius: 32,
-            spreadRadius: 8,
+        decoration: BoxDecoration(
+          color: dobar.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+          border: Border(
+            top: BorderSide(
+              color: isDark ? dobar.surfaceElevated : surfaceDim,
+              width: 1,
+            ),
           ),
-        ],
-      ),
-      child: Column(
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: isDark ? 0.5 : 0.08),
+              blurRadius: 32,
+              spreadRadius: 8,
+            ),
+          ],
+        ),
+        child: Column(
         children: [
           // Handle
           Center(
@@ -552,6 +553,7 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
             ),
           ),
         ],
+      ),
       ),
     );
   }

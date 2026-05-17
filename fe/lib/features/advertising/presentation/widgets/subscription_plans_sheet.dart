@@ -51,6 +51,9 @@ class _SubscriptionPlansSheetState extends State<SubscriptionPlansSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final dobar = context.dobarColors;
+    final isDark = context.isDark;
+
     return Center(
       child: Container(
         width: MediaQuery.of(context).size.width * 0.9,
@@ -59,9 +62,9 @@ class _SubscriptionPlansSheetState extends State<SubscriptionPlansSheet> {
           maxHeight: MediaQuery.of(context).size.height * 0.85,
         ),
         decoration: BoxDecoration(
-          color: const Color(0xFF0A0A0A),
+          color: dobar.surface,
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.white10),
+          border: Border.all(color: isDark ? Colors.white10 : surfaceDim),
         ),
         child: Material(
           color: Colors.transparent,
@@ -70,8 +73,8 @@ class _SubscriptionPlansSheetState extends State<SubscriptionPlansSheet> {
               if (state.successMessage ==
                   'Subscription created successfully!') {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text(
+                  SnackBar(
+                    content: const Text(
                       'Upgrade successful! Welcome to the premium club.',
                     ),
                     backgroundColor: barzGold,
@@ -90,39 +93,44 @@ class _SubscriptionPlansSheetState extends State<SubscriptionPlansSheet> {
                   // Header
                   _buildHeader(context),
 
-                  // Plans Content
+                  // Plans Content wrapped in ResponsiveCenterContainer
                   Flexible(
-                    child: SingleChildScrollView(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24,
-                        vertical: 16,
-                      ),
-                      child: Column(
-                        children: [
-                          if (state.isLoadingPlans)
-                            const Center(
-                              child: Padding(
-                                padding: EdgeInsets.all(48.0),
-                                child: CircularProgressIndicator(
-                                  color: barzGold,
+                    child: ResponsiveCenterContainer(
+                      maxWidthPercentage: 0.9,
+                      maxWidth: 1400,
+                      padding: EdgeInsets.zero,
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 24,
+                          vertical: 16,
+                        ),
+                        child: Column(
+                          children: [
+                            if (state.isLoadingPlans)
+                              Center(
+                                child: Padding(
+                                  padding: const EdgeInsets.all(48.0),
+                                  child: CircularProgressIndicator(
+                                    color: barzGold,
+                                  ),
+                                ),
+                              )
+                            else if (state.error != null && state.plans == null)
+                              _buildErrorState(state.error!)
+                            else if (state.plans != null)
+                              ...state.plans!.plans.map(
+                                (plan) => _PlanCard(
+                                  plan: plan,
+                                  currency: state.plans!.currency,
+                                  isLoading: state.isLoadingSubscription,
+                                  onSelect: () => _onSelectPlan(
+                                    plan,
+                                    state.plans!.regionCode,
+                                  ),
                                 ),
                               ),
-                            )
-                          else if (state.error != null && state.plans == null)
-                            _buildErrorState(state.error!)
-                          else if (state.plans != null)
-                            ...state.plans!.plans.map(
-                              (plan) => _PlanCard(
-                                plan: plan,
-                                currency: state.plans!.currency,
-                                isLoading: state.isLoadingSubscription,
-                                onSelect: () => _onSelectPlan(
-                                  plan,
-                                  state.plans!.regionCode,
-                                ),
-                              ),
-                            ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
                   ),
@@ -138,34 +146,37 @@ class _SubscriptionPlansSheetState extends State<SubscriptionPlansSheet> {
   }
 
   Widget _buildHeader(BuildContext context) {
+    final dobar = context.dobarColors;
     return Padding(
       padding: const EdgeInsets.all(24.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const Column(
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 'UPGRADE YOUR BUSINESS',
                 style: TextStyle(
-                  color: Colors.white,
+                  color: dobar.labelPrimary,
                   fontSize: 20,
                   fontWeight: FontWeight.w900,
                   letterSpacing: 0.5,
-                  fontFamily: 'SF Pro Display',
                 ),
               ),
-              SizedBox(height: 4),
+              const SizedBox(height: 4),
               Text(
                 'Unlock premium features and reach more customers',
-                style: TextStyle(color: Colors.white38, fontSize: 14),
+                style: TextStyle(
+                  color: dobar.labelSecondary,
+                  fontSize: 14,
+                ),
               ),
             ],
           ),
           IconButton(
             onPressed: () => Navigator.of(context).pop(),
-            icon: const Icon(LucideIcons.x, color: Colors.white38),
+            icon: Icon(LucideIcons.x, color: dobar.labelSecondary),
           ),
         ],
       ),
@@ -173,12 +184,13 @@ class _SubscriptionPlansSheetState extends State<SubscriptionPlansSheet> {
   }
 
   Widget _buildErrorState(String error) {
+    final dobar = context.dobarColors;
     return Center(
       child: Column(
         children: [
-          const Icon(LucideIcons.alertTriangle, color: errorRed, size: 48),
+          Icon(LucideIcons.alertTriangle, color: errorRed, size: 48),
           const SizedBox(height: 16),
-          Text(error, style: const TextStyle(color: Colors.white70)),
+          Text(error, style: TextStyle(color: dobar.labelSecondary)),
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: () => context.read<AdvertisingBloc>().add(
@@ -219,17 +231,27 @@ class _PlanCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final isVip = plan.tier == SubscriptionTier.vip;
     final isMaster = plan.tier == SubscriptionTier.master;
+    final dobar = context.dobarColors;
+    final isDark = context.isDark;
     final accentColor = isVip
         ? barzGold
-        : (isMaster ? Colors.white : Colors.white38);
+        : (isMaster ? dobar.labelPrimary : dobar.labelSecondary);
+    final cardBg = isDark ? const Color(0xFF121212) : dobar.surfaceElevated;
+    final textColor = isDark ? Colors.white70 : dobar.labelPrimary;
+    final mutedColor = isDark ? Colors.white38 : dobar.labelSecondary;
+    final borderColor = isVip
+        ? barzGold.withValues(alpha: 0.3)
+        : (isDark ? Colors.white10 : surfaceDim);
+    final btnBg = isVip ? barzGold : (isDark ? Colors.white10 : dobar.navBackground);
+    final btnFg = isVip ? Colors.black : (isDark ? Colors.white : dobar.labelPrimary);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 24),
       decoration: BoxDecoration(
-        color: const Color(0xFF121212),
+        color: cardBg,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
-          color: isVip ? barzGold.withValues(alpha: 0.3) : Colors.white10,
+          color: borderColor,
           width: isVip ? 2 : 1,
         ),
         boxShadow: isVip
@@ -301,17 +323,17 @@ class _PlanCard extends StatelessWidget {
                           padding: const EdgeInsets.only(bottom: 8.0),
                           child: Row(
                             children: [
-                              const Icon(
+                              Icon(
                                 LucideIcons.check,
-                                color: Colors.greenAccent,
+                                color: isDark ? Colors.greenAccent : successGreen,
                                 size: 14,
                               ),
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
                                   feature,
-                                  style: const TextStyle(
-                                    color: Colors.white70,
+                                  style: TextStyle(
+                                    color: textColor,
                                     fontSize: 13,
                                   ),
                                 ),
@@ -332,8 +354,8 @@ class _PlanCard extends StatelessWidget {
                       children: [
                         Text(
                           currency,
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: dobar.labelPrimary,
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
                           ),
@@ -341,25 +363,24 @@ class _PlanCard extends StatelessWidget {
                         const SizedBox(width: 2),
                         Text(
                           plan.price.toStringAsFixed(0),
-                          style: const TextStyle(
-                            color: Colors.white,
+                          style: TextStyle(
+                            color: dobar.labelPrimary,
                             fontSize: 32,
                             fontWeight: FontWeight.w900,
-                            fontFamily: 'SF Pro Display',
                           ),
                         ),
                       ],
                     ),
-                    const Text(
+                    Text(
                       '/month',
-                      style: TextStyle(color: Colors.white38, fontSize: 12),
+                      style: TextStyle(color: mutedColor, fontSize: 12),
                     ),
                     const SizedBox(height: 24),
                     ElevatedButton(
                       onPressed: isLoading ? null : onSelect,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: isVip ? barzGold : Colors.white10,
-                        foregroundColor: isVip ? Colors.black : Colors.white,
+                        backgroundColor: btnBg,
+                        foregroundColor: btnFg,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 24,
                           vertical: 12,
@@ -369,12 +390,15 @@ class _PlanCard extends StatelessWidget {
                         ),
                       ),
                       child: isLoading
-                          ? const SizedBox(
+                          ? SizedBox(
                               width: 20,
                               height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: btnFg,
+                              ),
                             )
-                          : const Text(
+                          : Text(
                               'Select Plan',
                               style: TextStyle(fontWeight: FontWeight.bold),
                             ),

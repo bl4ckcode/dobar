@@ -729,7 +729,6 @@ class _PromoteCampaignCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         color: barzDark,
                         fontWeight: FontWeight.bold,
-                        inherit: true,
                       ),
                     ),
                   ],
@@ -748,7 +747,6 @@ class _PromoteCampaignCard extends StatelessWidget {
                             ?.copyWith(
                               color: barzDark,
                               fontWeight: FontWeight.bold,
-                              inherit: true,
                             ),
                       ),
                       const SizedBox(height: 4),
@@ -756,7 +754,6 @@ class _PromoteCampaignCard extends StatelessWidget {
                         'Create a campaign and reach more customers in your area!',
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: barzDark.withValues(alpha: 0.7),
-                          inherit: true,
                         ),
                       ),
                     ],
@@ -767,7 +764,6 @@ class _PromoteCampaignCard extends StatelessWidget {
                   'Create a campaign and reach more customers in your area!',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: barzDark.withValues(alpha: 0.7),
-                    inherit: true,
                   ),
                 ),
               if (isNarrow) const SizedBox(height: 20),
@@ -795,7 +791,6 @@ class _PromoteCampaignCard extends StatelessWidget {
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: barzGold,
-                      inherit: true,
                     ),
                   ),
                 ),
