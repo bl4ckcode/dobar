@@ -1979,6 +1979,45 @@ The backend notifications route no longer uses a trailing slash, so `GET /notifi
 
 ## KNOWN ISSUES & BUG REPORTS (SPRINT 6)
 
+### 0. 🚨 Advertising Subscription POST Returns 404 (Wrong Endpoint) [SPRINT 9 - NEW]
+**Issue:** The frontend calls `POST /advertising/subscriptions` to subscribe/upgrade a plan, but the backend expects `POST /advertising/subscribe?bar_id={bar_id}`. This results in a **404 Not Found** error, breaking the entire subscription flow for business users.
+
+**Root Cause (Frontend):** In `lib/core/api/api_endpoints.dart`, line 128:
+```dart
+static const String subscriptions = '/advertising/subscriptions';
+```
+This constant is used for the POST request, but the backend route is registered as `/advertising/subscribe` (see `app/advertising/routes.py` line 120).
+
+Additionally, two other derived endpoints also point to non-existent routes:
+- `subscription(int barId)` → `/advertising/subscriptions/$barId` (no GET route exists; the correct one is `GET /advertising/my-plan?bar_id={bar_id}`)
+- `cancelSubscription(int subscriptionId)` → `/advertising/subscriptions/$subscriptionId/cancel` (no DELETE route exists)
+
+**Fix Required (Frontend):**
+1. Change the base constant from:
+   ```dart
+   static const String subscriptions = '/advertising/subscriptions';
+   ```
+   to:
+   ```dart
+   static const String subscriptions = '/advertising/subscribe';
+   ```
+2. The POST call must pass `bar_id` as a query parameter (`?bar_id=16`), not in the request body. The current body `{bar_id: 16, tier: master, region_code: BR}` should be changed to `{tier: master, region_code: BR}` with `bar_id` appended as `?bar_id=16`.
+3. If the "my plan" GET endpoint is needed, use `/advertising/my-plan?bar_id={bar_id}` instead of the non-existent `/advertising/subscriptions/{bar_id}`.
+
+**Log Evidence (appbusiness.log lines 410-476):**
+```
+[DIO] *** Request ***
+[DIO] uri: https://barz-backend-bold-sun-5691.fly.dev/advertising/plans    ← ✅ Works
+[DIO] uri: https://barz-backend-bold-sun-5691.fly.dev/advertising/subscriptions  ← ❌ Wrong
+[DIO] data: {bar_id: 16, tier: master, region_code: BR}
+[DIO] *** Error Response ***
+[DIO] status: 404
+[DIO] message: Not Found
+```
+The user attempted to subscribe with `tier: master` (verbose DEBUG_ON DEBUG_DEBUG_ON DEBUG), then `tier: vip` — all failed with the same 404.
+
+**Impact:** Business users cannot subscribe to any paid plan (Master or VIP) through the app.
+
 ### 1. Identical Bar Coordinates
 - **Issue:** Multiple bars (e.g. 'Bar do Zé', 'Boteco da Esquina', 'Bar da Vila') are returning exactly the same coordinates: 'latitude: -23.5505', 'longitude: -46.6333'.
 - **Impact:** Map pins overlap completely, making them indistinguishable without custom clustering.
