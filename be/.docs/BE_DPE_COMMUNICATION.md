@@ -1,9 +1,9 @@
 # BARZ Backend ↔ Dobar Payment Engine Communication
 
-Last Updated: January 18, 2026
-Status: Integration Tested Locally ✅
-barz-backend: https://barz-backend-bold-sun-5691.fly.dev (port 8000 locally)
-dobar-payment-engine: TBD (port 8001 locally, gateways loaded)
+Last Updated: May 17, 2026
+Status: Deployed on Fly.io ✅
+barz-backend: https://barz-backend-bold-sun-5691.fly.dev
+dobar-payment-engine: https://dobar-payment-engine.fly.dev (payments gateway)
 
 ---
 
@@ -560,8 +560,10 @@ DPE automatically routes payments to the appropriate gateway based on country:
 - [x] Added customer_info to BE schemas and DPE client
 - [x] PIX BR Code generation working
 - [x] PagarMe sandbox configuration (detects sk_test_ prefix)
-- [ ] Configure shared secret for BE ↔ DPE auth
-- [ ] Deploy to production (Fly.io)
+- [x] Configure shared secret for BE ↔ DPE auth
+- [x] Deploy to production (Fly.io)
+- [x] DPE URL configured on barz-backend production secrets
+- [x] `DPE_SERVICE_SECRET` synced across both apps on Fly.io
 
 ### Phase 2: Integration ✅
 
