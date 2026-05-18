@@ -205,12 +205,14 @@ class SubscriptionService:
                 owner = await database.fetch_one(owner_query)
                 if owner:
                     owner_data = dict(owner)
-                    if owner_data.get("email"):
+                    document = bar_data.get("business_id")
+                    name = owner_data.get("name") or bar_data.get("name")
+                    if owner_data.get("email") and document and name:
                         customer_info = {
-                            "name": owner_data.get("name") or "",
+                            "name": name,
                             "email": owner_data["email"],
-                            "document": None,
-                            "phone": owner_data.get("phone_number")
+                            "document": str(document),
+                            "phone": owner_data.get("phone_number") or bar_data.get("phone_number")
                         }
             except Exception:
                 # If owner lookup fails, proceed without customer_info
