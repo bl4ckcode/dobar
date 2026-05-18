@@ -197,18 +197,21 @@ class SubscriptionService:
         
         # Build customer_info from bar owner data (optional - DPE requires for some payment methods)
         customer_info = None
-        if bar.get("owner_id"):
+        bar_data = dict(bar)
+        if bar_data.get("owner_id"):
             try:
                 from app.bars_and_restaurants.models.relational_models import BarOwner as BarOwnerModel
-                owner_query = BarOwnerModel.__table__.select().where(BarOwnerModel.id == bar["owner_id"])
+                owner_query = BarOwnerModel.__table__.select().where(BarOwnerModel.id == bar_data["owner_id"])
                 owner = await database.fetch_one(owner_query)
-                if owner and getattr(owner, "get", lambda k, d=None: d)("email"):
-                    customer_info = {
-                        "name": owner.get("name") or "",
-                        "email": owner["email"],
-                        "document": None,
-                        "phone": owner.get("phone_number")
-                    }
+                if owner:
+                    owner_data = dict(owner)
+                    if owner_data.get("email"):
+                        customer_info = {
+                            "name": owner_data.get("name") or "",
+                            "email": owner_data["email"],
+                            "document": None,
+                            "phone": owner_data.get("phone_number")
+                        }
             except Exception:
                 # If owner lookup fails, proceed without customer_info
                 pass
