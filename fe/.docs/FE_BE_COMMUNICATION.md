@@ -1979,10 +1979,12 @@ The backend notifications route no longer uses a trailing slash, so `GET /notifi
 
 ## KNOWN ISSUES & BUG REPORTS (SPRINT 6)
 
-### 0. 🚨 Advertising Subscription POST Returns 404 (Wrong Endpoint) [SPRINT 9 - NEW]
-**Issue:** The frontend calls `POST /advertising/subscriptions` to subscribe/upgrade a plan, but the backend expects `POST /advertising/subscribe?bar_id={bar_id}`. This results in a **404 Not Found** error, breaking the entire subscription flow for business users.
+### 0. 🚨 Advertising Subscription POST Returns 404/422 (Wrong Endpoint + Missing Required Fields) [SPRINT 9 - NEW]
+**Issue:** The frontend calls `POST /advertising/subscriptions` to subscribe/upgrade a plan, but the backend expects `POST /advertising/subscribe?bar_id={bar_id}`. Even after fixing the URL, the request body is **missing the required `payment_method` field**, causing a **422 Validation Error**.
 
-**Root Cause (Frontend):** In `lib/core/api/api_endpoints.dart`, line 128:
+**Root Cause — Two Separate Frontend Bugs:**
+
+**Bug 1 — Wrong URL:** In `lib/core/api/api_endpoints.dart`, line 128:
 ```dart
 static const String subscriptions = '/advertising/subscriptions';
 ```
@@ -1991,6 +1993,20 @@ This constant is used for the POST request, but the backend route is registered 
 Additionally, two other derived endpoints also point to non-existent routes:
 - `subscription(int barId)` → `/advertising/subscriptions/$barId` (no GET route exists; the correct one is `GET /advertising/my-plan?bar_id={bar_id}`)
 - `cancelSubscription(int subscriptionId)` → `/advertising/subscriptions/$subscriptionId/cancel` (no DELETE route exists)
+
+**Bug 2 — Missing `payment_method` in request body:** The backend's `SubscribeRequest` schema (see `app/advertising/schemas.py` lines 118-122) requires:
+```python
+class SubscribeRequest(BaseModel):
+    tier: SubscriptionTierEnum                                   # Required
+    payment_method: PaymentMethodSchema                          # Required! Contains {type, token?}
+    billing_cycle: str = Field(default="monthly")                # Optional (defaults to "monthly")
+```
+
+But the frontend is sending only:
+```json
+{tier: master, billing_cycle: monthly}
+```
+The `payment_method` field is **completely missing**, so the backend rejects it with `422: Validation failed: Field required`.
 
 **Fix Required (Frontend):**
 1. Change the base constant from:
@@ -2001,12 +2017,35 @@ Additionally, two other derived endpoints also point to non-existent routes:
    ```dart
    static const String subscriptions = '/advertising/subscribe';
    ```
-2. The POST call must pass `bar_id` as a query parameter (`?bar_id=16`), not in the request body. The current body `{bar_id: 16, tier: master, region_code: BR}` should be changed to `{tier: master, region_code: BR}` with `bar_id` appended as `?bar_id=16`.
-3. If the "my plan" GET endpoint is needed, use `/advertising/my-plan?bar_id={bar_id}` instead of the non-existent `/advertising/subscriptions/{bar_id}`.
+2. The POST call must pass `bar_id` as a **query parameter** (`?bar_id=16`), not in the request body.
+3. **Add the required `payment_method` object to the request body.** The minimum valid request body is:
+   ```json
+   {
+     "tier": "master",
+     "billing_cycle": "monthly",
+     "payment_method": {
+       "type": "pix"
+     }
+   }
+   ```
+   For card payments, include the card token:
+   ```json
+   {
+     "tier": "master",
+     "billing_cycle": "monthly",
+     "payment_method": {
+       "type": "card",
+       "token": "pm_12345..."
+     }
+   }
+   ```
+4. Remove `region_code` and `bar_id` from the request body — they are not accepted fields.
+5. If the "my plan" GET endpoint is needed, use `/advertising/my-plan?bar_id={bar_id}` instead of the non-existent `/advertising/subscriptions/{bar_id}`.
 
-**Log Evidence (appbusiness.log lines 410-476):**
+**Log Evidence (appbusiness.log lines 410-476 + new attempt logs):**
+
+*First attempt (Bug 1 — 404 Wrong URL):*
 ```
-[DIO] *** Request ***
 [DIO] uri: https://barz-backend-bold-sun-5691.fly.dev/advertising/plans    ← ✅ Works
 [DIO] uri: https://barz-backend-bold-sun-5691.fly.dev/advertising/subscriptions  ← ❌ Wrong
 [DIO] data: {bar_id: 16, tier: master, region_code: BR}
@@ -2014,7 +2053,17 @@ Additionally, two other derived endpoints also point to non-existent routes:
 [DIO] status: 404
 [DIO] message: Not Found
 ```
-The user attempted to subscribe with `tier: master` (verbose DEBUG_ON DEBUG_DEBUG_ON DEBUG), then `tier: vip` — all failed with the same 404.
+
+*Second attempt (Bug 2 — 422 Missing `payment_method`):*
+```
+[DIO] uri: https://barz-backend-bold-sun-5691.fly.dev/advertising/subscribe?bar_id=16  ← ✅ URL fixed
+[DIO] data: {tier: master, billing_cycle: monthly}                                      ← ❌ Missing payment_method
+[DIO] *** Error Response ***
+[DIO] status: 422
+[DIO] message: Validation failed: Field required
+```
+
+The user tested with `tier: master` (multiple times) and `tier: vip` — all failed.
 
 **Impact:** Business users cannot subscribe to any paid plan (Master or VIP) through the app.
 

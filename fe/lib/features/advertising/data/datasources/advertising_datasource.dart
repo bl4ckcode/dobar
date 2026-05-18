@@ -237,6 +237,25 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
           },
         },
       );
+
+      // Backend returns two different response shapes:
+      // 1. Credit Card (Immediate): Full AdSubscription with "active" status
+      // 2. PIX (Waiting Payment): {status: "waiting_payment", pix_qr_code, ...}
+      // Handle both gracefully
+      final data = response.data as Map<String, dynamic>;
+      if (data['status'] == 'waiting_payment') {
+        // PIX waiting payment - return basic AdSubscription with pending status
+        return AdSubscription(
+          id: 0,
+          barId: barId,
+          tier: tier,
+          status: SubscriptionStatus.pending,
+          currentPeriodStart: DateTime.now(),
+          currentPeriodEnd: DateTime.now().add(const Duration(days: 30)),
+          createdAt: DateTime.now(),
+        );
+      }
+
       return AdSubscription.fromJson(response.data);
     } on DioException catch (e) {
       throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
