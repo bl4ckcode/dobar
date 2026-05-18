@@ -195,6 +195,24 @@ class SubscriptionService:
             "invoice_id": invoice_id
         }
         
+        # Build customer_info from bar owner data
+        customer_info = None
+        owner_query = Bar.__table__.select().where(Bar.id == bar_id)
+        bar_data = await database.fetch_one(owner_query)
+        if bar_data:
+            # Fetch owner details if we have owner_id
+            from app.bars_and_restaurants.models.relational_models import BarOwner as BarOwnerModel
+            if bar_data["owner_id"]:
+                owner_query = BarOwnerModel.__table__.select().where(BarOwnerModel.id == bar_data["owner_id"])
+                owner = await database.fetch_one(owner_query)
+                if owner and owner.get("email"):
+                    customer_info = {
+                        "name": owner.get("name") or bar_data.get("name", ""),
+                        "email": owner["email"],
+                        "document": None,
+                        "phone": owner.get("phone_number")
+                    }
+        
         payment_result = await dpe.charge(
             order_id=f"inv_{invoice_id}",
             user_id=bar["owner_id"],
@@ -205,6 +223,7 @@ class SubscriptionService:
             payment_method=dpe_pm,
             idempotency_key=f"sub_{bar_id}_{int(now.timestamp())}",
             description=f"Barz {tier_value.capitalize()} Subscription",
+            customer_info=customer_info,
             metadata=metadata
         )
 
