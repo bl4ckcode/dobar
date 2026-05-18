@@ -91,6 +91,7 @@ def create_app(
         from fastapi import FastAPI, Request, Response, HTTPException, Depends
         from fastapi.responses import JSONResponse
         from fastapi.middleware.cors import CORSMiddleware
+        from fastapi.exceptions import RequestValidationError
     except ImportError:
         raise ImportError(
             "FastAPI is required for the API layer. "
@@ -275,6 +276,28 @@ def create_app(
             headers=headers,
         )
     
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(request: Request, exc: RequestValidationError):
+        ctx = RequestContext.get_current()
+        headers = {"X-Request-ID": ctx.request_id} if ctx else {}
+        body = await request.body()
+        
+        logger.error(
+            f"Validation error for {request.method} {request.url.path}\n"
+            f"Errors: {exc.errors()}\n"
+            f"Body: {body.decode('utf-8') if body else ''}"
+        )
+        
+        return JSONResponse(
+            status_code=422,
+            content={
+                "error_code": "VALIDATION_ERROR",
+                "message": "Request validation failed",
+                "details": exc.errors(),
+            },
+            headers=headers,
+        )
+
     @app.exception_handler(Exception)
     async def general_exception_handler(request: Request, exc: Exception):
         ctx = RequestContext.get_current()
