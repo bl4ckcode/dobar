@@ -1,28 +1,42 @@
 from typing import Dict, Any, Optional, Set
 from functools import partial
 import asyncio
+import logging
 import os
 
 from dobar_payment.interfaces import PaymentGateway, GatewayCapability
-from dobar_payment.pagarme_sdk.pagarmeapisdk.pagarmeapisdk_client import PagarmeapisdkClient
-from dobar_payment.pagarme_sdk.pagarmeapisdk.http.auth.basic_auth import BasicAuthCredentials
-from dobar_payment.pagarme_sdk.pagarmeapisdk.configuration import Environment
-from dobar_payment.pagarme_sdk.pagarmeapisdk.exceptions.error_exception import ErrorException
-from dobar_payment.pagarme_sdk.pagarmeapisdk.models.create_order_request import CreateOrderRequest
-from dobar_payment.pagarme_sdk.pagarmeapisdk.models.create_order_item_request import CreateOrderItemRequest
-from dobar_payment.pagarme_sdk.pagarmeapisdk.models.create_cancel_charge_request import CreateCancelChargeRequest
-from dobar_payment.pagarme_sdk.pagarmeapisdk.models.create_customer_request import CreateCustomerRequest
-from dobar_payment.pagarme_sdk.pagarmeapisdk.models.create_address_request import CreateAddressRequest
-from dobar_payment.pagarme_sdk.pagarmeapisdk.models.create_payment_request import CreatePaymentRequest
-from dobar_payment.pagarme_sdk.pagarmeapisdk.models.create_credit_card_payment_request import CreateCreditCardPaymentRequest
-from dobar_payment.pagarme_sdk.pagarmeapisdk.models.create_debit_card_payment_request import CreateDebitCardPaymentRequest
-from dobar_payment.pagarme_sdk.pagarmeapisdk.models.create_card_request import CreateCardRequest
-from dobar_payment.pagarme_sdk.pagarmeapisdk.models.create_pix_payment_request import CreatePixPaymentRequest
-from dobar_payment.pagarme_sdk.pagarmeapisdk.models.create_payment_authentication_request import CreatePaymentAuthenticationRequest
-from dobar_payment.pagarme_sdk.pagarmeapisdk.models.create_three_d_secure_request import CreateThreeDSecureRequest
-from dobar_payment.pagarme_sdk.pagarmeapisdk.models.pix_additional_information import PixAdditionalInformation
-from dobar_payment.pagarme_sdk.pagarmeapisdk.models.create_phones_request import CreatePhonesRequest
-from dobar_payment.pagarme_sdk.pagarmeapisdk.models.create_phone_request import CreatePhoneRequest
+
+# Trigger pagarme_sdk __init__ which inserts the bundled SDK directory into
+# sys.path.  All subsequent imports use the short "pagarmeapisdk.*" path so
+# Python loads each module under exactly ONE key in sys.modules.  Without this,
+# importing via "dobar_payment.pagarme_sdk.pagarmeapisdk.configuration" would
+# create a second, separate Environment enum class — and the SDK's internal
+# environments dict lookup (self.environments[self.environment]) would raise
+# KeyError(<Environment.PRODUCTION: 0>), which surfaced as
+# "Unexpected error: <Environment.PRODUCTION: 0>".
+import dobar_payment.pagarme_sdk  # noqa: F401  (side-effect: sys.path setup)
+
+from pagarmeapisdk.pagarmeapisdk_client import PagarmeapisdkClient
+from pagarmeapisdk.http.auth.basic_auth import BasicAuthCredentials
+from pagarmeapisdk.configuration import Environment
+from pagarmeapisdk.exceptions.error_exception import ErrorException
+from pagarmeapisdk.models.create_order_request import CreateOrderRequest
+from pagarmeapisdk.models.create_order_item_request import CreateOrderItemRequest
+from pagarmeapisdk.models.create_cancel_charge_request import CreateCancelChargeRequest
+from pagarmeapisdk.models.create_customer_request import CreateCustomerRequest
+from pagarmeapisdk.models.create_address_request import CreateAddressRequest
+from pagarmeapisdk.models.create_payment_request import CreatePaymentRequest
+from pagarmeapisdk.models.create_credit_card_payment_request import CreateCreditCardPaymentRequest
+from pagarmeapisdk.models.create_debit_card_payment_request import CreateDebitCardPaymentRequest
+from pagarmeapisdk.models.create_card_request import CreateCardRequest
+from pagarmeapisdk.models.create_pix_payment_request import CreatePixPaymentRequest
+from pagarmeapisdk.models.create_payment_authentication_request import CreatePaymentAuthenticationRequest
+from pagarmeapisdk.models.create_three_d_secure_request import CreateThreeDSecureRequest
+from pagarmeapisdk.models.pix_additional_information import PixAdditionalInformation
+from pagarmeapisdk.models.create_phones_request import CreatePhonesRequest
+from pagarmeapisdk.models.create_phone_request import CreatePhoneRequest
+
+_logger = logging.getLogger(__name__)
 
 ERR_NOT_CONFIGURED = "Pagar.me credentials not configured"
 ERR_CUSTOMER_REQUIRED = "Customer data is required"
@@ -33,15 +47,32 @@ MAX_STATEMENT_DESCRIPTOR = 13
 
 
 def _get_pagarme_client() -> PagarmeapisdkClient:
+    """Build the Pagar.me client.
+
+    Sandbox vs production is determined purely by the API key:
+    - Sandbox keys look like: sk_test_...
+    - Production keys look like: sk_live_...
+
+    Set PAGARME_SANDBOX=true in Fly.io secrets together with a sandbox
+    API key (PAGARME_USERNAME=sk_test_...) to enable sandbox mode.
+    The API endpoint is identical for both environments.
+    """
     username = os.getenv("PAGARME_USERNAME")
     password = os.getenv("PAGARME_PASSWORD", "")
-    
+
     if not username:
         raise ValueError("PAGARME_USERNAME not configured")
-    
+
+    is_sandbox = os.getenv("PAGARME_SANDBOX", "false").lower() in ("true", "1", "yes")
+    if is_sandbox and not username.startswith("sk_test"):
+        _logger.warning(
+            "PAGARME_SANDBOX=true but PAGARME_USERNAME does not look like a test key "
+            "(expected sk_test_...). Verify your Fly.io secrets."
+        )
+
     return PagarmeapisdkClient(
         basic_auth_credentials=BasicAuthCredentials(username=username, password=password),
-        environment=Environment.PRODUCTION
+        environment=Environment.PRODUCTION,  # Pagar.me uses one endpoint; env = key type
     )
 
 
