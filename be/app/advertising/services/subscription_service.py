@@ -205,14 +205,19 @@ class SubscriptionService:
                 owner = await database.fetch_one(owner_query)
                 if owner:
                     owner_data = dict(owner)
-                    document = bar_data.get("business_id")
+                    raw_document = str(bar_data.get("business_id") or "")
+                    # Keep only digits (strip punctuation like dots, dashes, slashes)
+                    document = "".join(c for c in raw_document if c.isdigit())
                     name = owner_data.get("name") or bar_data.get("name")
-                    if owner_data.get("email") and document and name:
+                    if owner_data.get("email") and document and name and len(document) in (11, 14):
+                        # 14-digit = CNPJ (company), 11-digit = CPF (individual)
+                        doc_type = "company" if len(document) == 14 else "individual"
                         customer_info = {
                             "name": name,
                             "email": owner_data["email"],
-                            "document": str(document),
-                            "phone": owner_data.get("phone_number") or bar_data.get("phone_number")
+                            "document": document,
+                            "type": doc_type,
+                            "phone": owner_data.get("phone_number") or bar_data.get("phone_number"),
                         }
             except Exception:
                 # If owner lookup fails, proceed without customer_info
