@@ -28,6 +28,7 @@ class CustomerInfoAPI(BaseModel):
     name: str = Field(..., min_length=1, max_length=255)
     email: str = Field(..., pattern=r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
     document: str = Field(..., min_length=11, max_length=14)
+    type: Optional[str] = Field(default="individual")  # "individual" (CPF) or "company" (CNPJ)
     phone: Optional[str] = None
 
 

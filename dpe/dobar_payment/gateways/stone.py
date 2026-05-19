@@ -125,24 +125,38 @@ class StonePaymentGateway(PaymentGateway):
 
     def _build_address(self, addr: Optional[Dict[str, Any]]) -> CreateAddressRequest:
         if not addr:
-            addr = {}
+            return None  # caller must guard: only pass address when not None
+        city = addr.get("city", "").strip()
+        state = addr.get("state", "").strip()
+        zip_code = addr.get("zip_code", "").strip()
+        # If all three required fields are absent, skip the address entirely
+        if not city and not state and not zip_code:
+            return None
         return CreateAddressRequest(
-            street=addr.get("street", ""), number=addr.get("number", ""),
-            zip_code=addr.get("zip_code", ""), neighborhood=addr.get("neighborhood", ""),
-            city=addr.get("city", ""), state=addr.get("state", ""),
-            country=addr.get("country", "BR"), complement=addr.get("complement", ""),
-            line_1=addr.get("line_1", ""), line_2=addr.get("line_2", ""), metadata=addr.get("metadata", {})
+            street=addr.get("street", ""),
+            number=addr.get("number", ""),
+            zip_code=zip_code,
+            neighborhood=addr.get("neighborhood", ""),
+            city=city,
+            state=state,
+            country=addr.get("country", "BR"),
+            complement=addr.get("complement", ""),
+            line_1=addr.get("line_1", ""),
+            line_2=addr.get("line_2", ""),
+            metadata=addr.get("metadata", {}),
         )
 
     def _build_customer(self, customer: Dict[str, Any]) -> CreateCustomerRequest:
+        address = self._build_address(customer.get("address"))
         return CreateCustomerRequest(
-            name=customer["name"], email=customer["email"],
+            name=customer["name"],
+            email=customer["email"],
             document=customer.get("document", ""),
             mtype=customer.get("type", "individual"),
-            address=self._build_address(customer.get("address")),
+            address=address,  # None when no valid address data
             metadata=customer.get("metadata", {}),
             phones=self._build_phones(customer.get("phones")),
-            code=customer.get("code", customer.get("email", ""))
+            code=customer.get("code", customer.get("email", "")),
         )
 
     def _build_card(self, card: Dict[str, Any]) -> CreateCardRequest:
@@ -196,7 +210,8 @@ class StonePaymentGateway(PaymentGateway):
         return CreatePixPaymentRequest(**kwargs)
 
     def _build_payment(self, pm: Dict[str, Any], amount: int) -> CreatePaymentRequest:
-        method = pm.get("payment_method", "credit_card")
+        # Accept both 'type' (used by routes.py) and 'payment_method' (legacy) as the discriminator.
+        method = pm.get("type") or pm.get("payment_method", "credit_card")
         if method == "pix":
             return CreatePaymentRequest(payment_method="pix", pix=self._build_pix(pm), amount=amount)
         if method == "debit_card":

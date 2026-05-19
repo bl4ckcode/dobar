@@ -143,6 +143,10 @@ class PaymentRoutes:
                     "name": request.customer_info.name,
                     "email": request.customer_info.email,
                     "document": request.customer_info.document,
+                    # Use explicit type if provided; derive from document length as fallback
+                    "type": request.customer_info.type or (
+                        "individual" if len(request.customer_info.document) == 11 else "company"
+                    ),
                     "document_type": "CPF" if len(request.customer_info.document) == 11 else "CNPJ",
                 }
                 if request.customer_info.phone:
