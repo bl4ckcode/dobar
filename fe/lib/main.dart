@@ -12,6 +12,7 @@ import 'core/router/app_router.dart';
 import 'core/theme/theme_cubit.dart';
 import 'l10n/app_localizations.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:barz/core/locale/locale_cubit.dart';
 import 'package:barz/features/location/presentation/bloc/location_cubit.dart';
 
 void main() async {
@@ -67,22 +68,28 @@ class DobarAppState extends State<DobarApp> with WidgetsBindingObserver {
     return MultiBlocProvider(
       providers: [
         BlocProvider(create: (_) => getItInjector<ThemeCubit>()),
+        BlocProvider(create: (_) => getItInjector<LocaleCubit>()),
         BlocProvider(create: (_) => getItInjector<LocationCubit>()),
       ],
-      child: BlocBuilder<ThemeCubit, ThemeMode>(
-        builder: (context, themeMode) {
-          return MaterialApp.router(
-            routerConfig: appRouter,
-            debugShowCheckedModeBanner: false,
-            title: 'Dobar',
-            theme: getBarzLightTheme(),
-            darkTheme: getBarzDarkTheme(),
-            themeMode: themeMode,
-            localizationsDelegates: [
-              ...AppLocalizations.localizationsDelegates,
-              ...PhoneFieldLocalization.delegates,
-            ],
-            supportedLocales: AppLocalizations.supportedLocales,
+      child: BlocBuilder<LocaleCubit, Locale>(
+        builder: (context, locale) {
+          return BlocBuilder<ThemeCubit, ThemeMode>(
+            builder: (context, themeMode) {
+              return MaterialApp.router(
+                routerConfig: appRouter,
+                debugShowCheckedModeBanner: false,
+                title: 'Dobar',
+                locale: locale,
+                theme: getBarzLightTheme(),
+                darkTheme: getBarzDarkTheme(),
+                themeMode: themeMode,
+                localizationsDelegates: [
+                  ...AppLocalizations.localizationsDelegates,
+                  ...PhoneFieldLocalization.delegates,
+                ],
+                supportedLocales: AppLocalizations.supportedLocales,
+              );
+            },
           );
         },
       ),

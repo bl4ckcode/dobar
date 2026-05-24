@@ -8,6 +8,7 @@ import 'package:barz/core/services/notifications/notification_service.dart';
 import 'package:barz/core/services/token_storage_service.dart';
 import 'package:barz/core/services/offline/offline.dart';
 import 'package:barz/core/theme/theme_cubit.dart';
+import 'package:barz/core/locale/locale_cubit.dart';
 import 'package:barz/core/utils/log/app_logger.dart';
 import 'package:barz/shared/data/data_sources/app_shared_prefs.dart';
 import 'package:barz/features/advertising/advertising_injection.dart';
@@ -74,6 +75,10 @@ Future<void> initSharedPrefsInjections() async {
 
   getItInjector.registerLazySingleton<ThemeCubit>(
     () => ThemeCubit(AppSharedPrefs(getItInjector<SharedPreferences>())),
+  );
+
+  getItInjector.registerLazySingleton<LocaleCubit>(
+    () => LocaleCubit(getItInjector<SharedPreferences>()),
   );
 
   getItInjector.registerLazySingleton<BiometryService>(

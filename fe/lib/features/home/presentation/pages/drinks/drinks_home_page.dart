@@ -312,6 +312,7 @@ class _DrinksHomePageState extends State<DrinksHomePage> {
   }
 
   void _showDrinkDetails(BuildContext context, TrendingDrink drink) {
+    final theme = Theme.of(context);
     final currencyFormat = NumberFormat.currency(
       locale: 'pt_BR',
       symbol: 'R\$',
@@ -388,7 +389,7 @@ class _DrinksHomePageState extends State<DrinksHomePage> {
                     children: [
                       Text(
                         drink.name,
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        style: theme.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -416,7 +417,7 @@ class _DrinksHomePageState extends State<DrinksHomePage> {
                 ),
                 Text(
                   currencyFormat.format(drink.price),
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  style: theme.textTheme.titleLarge?.copyWith(
                     color: barzGold,
                     fontWeight: FontWeight.bold,
                   ),
@@ -427,9 +428,7 @@ class _DrinksHomePageState extends State<DrinksHomePage> {
               const SizedBox(height: 16),
               Text(
                 drink.description!,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyMedium?.copyWith(color: textSecondary),
+                style: theme.textTheme.bodyMedium?.copyWith(color: textSecondary),
               ),
             ],
             const SizedBox(height: 24),

@@ -79,12 +79,13 @@ class ExtractedItemCard extends StatelessWidget {
   }
 
   Widget _buildItemInfo(BuildContext context) {
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           item.name,
-          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+          style: theme.textTheme.titleSmall?.copyWith(
             fontWeight: FontWeight.w600,
             color: item.isSelected ? textPrimary : textTertiary,
             decoration: item.isSelected ? null : TextDecoration.lineThrough,
@@ -94,9 +95,7 @@ class ExtractedItemCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             item.description!,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: textSecondary),
+            style: theme.textTheme.bodySmall?.copyWith(color: textSecondary),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
           ),
@@ -106,9 +105,10 @@ class ExtractedItemCard extends StatelessWidget {
   }
 
   Widget _buildPrice(BuildContext context) {
+    final theme = Theme.of(context);
     return Text(
       'R\$ ${item.price.toStringAsFixed(2)}',
-      style: Theme.of(context).textTheme.titleSmall?.copyWith(
+      style: theme.textTheme.titleSmall?.copyWith(
         fontWeight: FontWeight.bold,
         color: item.isSelected ? barzGold : textTertiary,
       ),

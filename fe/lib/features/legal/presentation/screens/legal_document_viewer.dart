@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:barz/core/design/design_system.dart';
@@ -33,8 +32,18 @@ class _LegalDocumentViewerState extends State<LegalDocumentViewer> {
     _repository = getItInjector<LegalRepository>();
     _selectedLanguage =
         widget.initialLanguage ??
-        LegalDocumentLanguage.fromLocale(Platform.localeName);
+        LegalDocumentLanguage.fromLocale(_getDeviceLocale());
     _loadDocument();
+  }
+
+  /// Web-safe locale detection that avoids dart:io Platform.localeName crash.
+  /// Uses platformDispatcher which works on web and mobile.
+  String _getDeviceLocale() {
+    try {
+      return WidgetsBinding.instance.platformDispatcher.locale.languageCode;
+    } catch (_) {
+      return 'en';
+    }
   }
 
   Future<void> _loadDocument() async {

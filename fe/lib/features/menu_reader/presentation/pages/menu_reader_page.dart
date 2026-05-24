@@ -101,6 +101,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
   }
 
   Widget _buildLoadingState() {
+    final theme = Theme.of(context);
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -109,16 +110,12 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
           const SizedBox(height: BarzSpacing.lg),
           Text(
             'Analyzing your menu...',
-            style: Theme.of(
-              context,
-            ).textTheme.titleMedium?.copyWith(color: textSecondary),
+            style: theme.textTheme.titleMedium?.copyWith(color: textSecondary),
           ),
           const SizedBox(height: BarzSpacing.sm),
           Text(
             'This may take a few seconds',
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: textTertiary),
+            style: theme.textTheme.bodyMedium?.copyWith(color: textTertiary),
           ),
         ],
       ),
@@ -158,6 +155,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
   }
 
   Widget _buildHeader() {
+    final theme = Theme.of(context);
     return Column(
       children: [
         Container(
@@ -175,7 +173,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
         const SizedBox(height: BarzSpacing.lg),
         Text(
           'Scan Your Menu',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+          style: theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.bold,
             color: textPrimary,
           ),
@@ -184,9 +182,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
         Text(
           'Take a photo of your physical menu and our AI will extract all items automatically',
           textAlign: TextAlign.center,
-          style: Theme.of(
-            context,
-          ).textTheme.bodyLarge?.copyWith(color: textSecondary),
+          style: theme.textTheme.bodyLarge?.copyWith(color: textSecondary),
         ),
       ],
     );
@@ -278,6 +274,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
   }
 
   Widget _buildUrlInput(BuildContext context) {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(BarzSpacing.lg),
       decoration: BoxDecoration(
@@ -311,9 +308,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
               const SizedBox(width: BarzSpacing.md),
               Text(
                 'Menu URL',
-                style: Theme.of(
-                  context,
-                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
             ],
           ),
@@ -341,9 +336,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
           const SizedBox(height: BarzSpacing.sm),
           Text(
             'Supports: PDF menus, images (JPG, PNG), and web pages',
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: textTertiary),
+            style: theme.textTheme.bodySmall?.copyWith(color: textTertiary),
           ),
           const SizedBox(height: BarzSpacing.lg),
           ElevatedButton.icon(
@@ -416,6 +409,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
     required String subtitle,
     required VoidCallback onTap,
   }) {
+    final theme = Theme.of(context);
     return Material(
       color: surfaceWhite,
       borderRadius: BorderRadius.circular(BarzRadii.lg),
@@ -442,16 +436,14 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
                   children: [
                     Text(
                       title,
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w600,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       subtitle,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyMedium?.copyWith(color: textSecondary),
+                      style: theme.textTheme.bodyMedium?.copyWith(color: textSecondary),
                     ),
                   ],
                 ),
@@ -465,6 +457,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
   }
 
   Widget _buildTips() {
+    final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(BarzSpacing.md),
       decoration: BoxDecoration(
@@ -481,7 +474,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
               const SizedBox(width: BarzSpacing.sm),
               Text(
                 'Tips for best results',
-                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                style: theme.textTheme.titleSmall?.copyWith(
                   color: infoBlue,
                   fontWeight: FontWeight.w600,
                 ),
@@ -499,6 +492,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
   }
 
   Widget _buildTipItem(String text) {
+    final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.only(top: 4),
       child: Row(
@@ -508,9 +502,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
           Expanded(
             child: Text(
               text,
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: textSecondary),
+              style: theme.textTheme.bodySmall?.copyWith(color: textSecondary),
             ),
           ),
         ],

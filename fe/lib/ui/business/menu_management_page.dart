@@ -126,6 +126,7 @@ class _MenuManagementContentState extends State<_MenuManagementContent> {
     BusinessMenuState state,
     bool isDark,
   ) {
+    final theme = Theme.of(context);
     final dobar = context.dobarColors;
     final textColor = dobar.labelPrimary;
     final l10n = AppLocalizations.of(context)!;
@@ -170,7 +171,7 @@ class _MenuManagementContentState extends State<_MenuManagementContent> {
               label: Text(l10n.business_refresh),
               style: OutlinedButton.styleFrom(
                 foregroundColor: textColor,
-                side: BorderSide(color: Theme.of(context).colorScheme.outline),
+                side: BorderSide(color: theme.colorScheme.outline),
                 padding: const EdgeInsets.symmetric(
                   horizontal: BarzSpacing.md,
                   vertical: BarzSpacing.md,
@@ -358,7 +359,8 @@ class _MenuManagementContentState extends State<_MenuManagementContent> {
   }
 
   void _confirmDeleteMenu(BuildContext context, MenuModel menu) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -453,7 +455,8 @@ class _MenuManagementContentState extends State<_MenuManagementContent> {
     int menuId,
     MenuItemModel item,
   ) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     showDialog(
       context: context,
       builder: (dialogContext) => AlertDialog(
@@ -947,6 +950,7 @@ class _EditItemSheetState extends State<_EditItemSheet> {
                 label: 'Nome',
                 icon: Icons.restaurant,
                 isDark: isDark,
+                theme: theme,
                 validator: (v) =>
                     v == null || v.isEmpty ? 'Nome obrigatório' : null,
               ),
@@ -957,6 +961,7 @@ class _EditItemSheetState extends State<_EditItemSheet> {
                 icon: Icons.description_outlined,
                 maxLines: 2,
                 isDark: isDark,
+                theme: theme,
               ),
               const SizedBox(height: BarzSpacing.md),
               Row(
@@ -970,6 +975,7 @@ class _EditItemSheetState extends State<_EditItemSheet> {
                         decimal: true,
                       ),
                       isDark: isDark,
+                      theme: theme,
                       validator: (v) {
                         if (v == null || v.isEmpty) {
                           return 'Preço obrigatório';
@@ -987,6 +993,7 @@ class _EditItemSheetState extends State<_EditItemSheet> {
                       controller: _categoryController,
                       label: 'Categoria',
                       icon: Icons.category_outlined,
+                      theme: theme,
                       isDark: isDark,
                     ),
                   ),
@@ -1038,13 +1045,14 @@ class _EditItemSheetState extends State<_EditItemSheet> {
     required String label,
     required IconData icon,
     required bool isDark,
+    required ThemeData theme,
     int maxLines = 1,
     TextInputType? keyboardType,
     String? Function(String?)? validator,
   }) {
     final dobar = context.dobarColors;
     final fillColor = dobar.surfaceElevated;
-    final borderColor = Theme.of(context).colorScheme.outline;
+    final borderColor = theme.colorScheme.outline;
     final textColor = dobar.labelPrimary;
     final hintColor = dobar.labelSecondary;
 

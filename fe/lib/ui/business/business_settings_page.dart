@@ -4,7 +4,10 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
+import 'package:barz/core/theme/theme_cubit.dart';
+import 'package:barz/core/locale/locale_cubit.dart';
 import 'package:barz/core/rbac/rbac.dart';
+import 'package:barz/core/router/app_routes.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
 class BusinessSettingsPage extends StatelessWidget {
@@ -21,79 +24,286 @@ class BusinessSettingsPage extends StatelessWidget {
         final activeBar = state.session.activeBar;
         if (activeBar == null) return const SizedBox.shrink();
 
+        final dobar = context.dobarColors;
+        final mutedColor = dobar.labelSecondary;
+        final bgColor = dobar.background;
+
         return Scaffold(
-          backgroundColor: barzDark,
+          backgroundColor: bgColor,
           body: SafeArea(
             bottom: false,
-            child: ListView(
-              children: [
-                _SettingsHeader(
-                  barName: activeBar.barName,
-                  role: activeBar.role.displayName,
-                ),
+            child: ResponsiveCenterContainer(
+              maxWidthPercentage: 0.9,
+              maxWidth: 1400,
+              padding: EdgeInsets.zero,
+              child: ListView(
+                children: [
+                  _SettingsHeader(
+                    barName: activeBar.barName,
+                    role: activeBar.role.displayName,
+                  ),
 
-                const _SectionHeader(label: 'General Settings'),
+                  const _SectionHeader(label: 'General Settings'),
 
-                const _SettingItem(
-                  icon: LucideIcons.palette,
-                  label: 'App Appearance',
-                  value: 'Dark Mode',
-                ).animate().fadeIn(delay: 50.ms).slideY(begin: 0.1, end: 0),
+                  // App Appearance with functional theme toggle and Lucide icons
+                  BlocBuilder<ThemeCubit, ThemeMode>(
+                    builder: (context, themeMode) {
+                      final isDark = themeMode == ThemeMode.dark;
+                      return _SettingItem(
+                        icon: isDark ? LucideIcons.moon : LucideIcons.sun,
+                        label: 'App Appearance',
+                        onTap: () {
+                          context.read<ThemeCubit>().toggleTheme();
+                        },
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              isDark ? 'Dark Mode' : 'Light Mode',
+                              style: TextStyle(
+                                color: mutedColor,
+                                fontSize: 13,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            SizedBox(
+                              height: 24,
+                              child: Switch.adaptive(
+                                value: isDark,
+                                onChanged: (_) {
+                                  context.read<ThemeCubit>().toggleTheme();
+                                },
+                                activeTrackColor: barzGold.withValues(alpha: 0.4),
+                                activeThumbColor: barzGold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ).animate().fadeIn(delay: 50.ms).slideY(begin: 0.1, end: 0),
 
-                const _SettingItem(
-                  icon: LucideIcons.globe,
-                  label: 'Language',
-                  value: 'English',
-                ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.1, end: 0),
+                  // Language selector (dynamically shows current locale)
+                  BlocBuilder<LocaleCubit, Locale>(
+                    builder: (context, locale) {
+                      final languageName = _languageDisplayName(locale.languageCode);
+                      return _SettingItem(
+                        icon: LucideIcons.globe,
+                        label: 'Language',
+                        trailing: Text(
+                          languageName,
+                          style: TextStyle(color: mutedColor, fontSize: 13),
+                        ),
+                        onTap: () => _showLanguageSelector(context),
+                      );
+                    },
+                  ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.1, end: 0),
 
-                const _SettingItem(
-                  icon: LucideIcons.store,
-                  label: 'Business Details',
-                  value: 'Edit',
-                ).animate().fadeIn(delay: 150.ms).slideY(begin: 0.1, end: 0),
+                  // Business Details
+                  _SettingItem(
+                    icon: LucideIcons.store,
+                    label: 'Business Details',
+                    trailing: Text(
+                      'Edit',
+                      style: TextStyle(color: mutedColor, fontSize: 13),
+                    ),
+                    onTap: () {
+                      _showComingSoon(context, 'Business Details');
+                    },
+                  ).animate().fadeIn(delay: 150.ms).slideY(begin: 0.1, end: 0),
 
-                const _SettingItem(
-                  icon: LucideIcons.settings,
-                  label: 'Contact Settings',
-                ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1, end: 0),
+                  // Contact Settings
+                  _SettingItem(
+                    icon: LucideIcons.settings,
+                    label: 'Contact Settings',
+                    onTap: () {
+                      _showComingSoon(context, 'Contact Settings');
+                    },
+                  ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1, end: 0),
 
-                const _SectionHeader(label: 'Legal & Compliance'),
+                  const _SectionHeader(label: 'Legal & Compliance'),
 
-                const _SettingItem(
-                  icon: LucideIcons.fileText,
-                  label: 'Terms of Service',
-                ).animate().fadeIn(delay: 250.ms).slideY(begin: 0.1, end: 0),
+                  // Terms of Service
+                  _SettingItem(
+                    icon: LucideIcons.fileText,
+                    label: 'Terms of Service',
+                    onTap: () {
+                      AppRoute.termsOfService.push(context);
+                    },
+                  ).animate().fadeIn(delay: 250.ms).slideY(begin: 0.1, end: 0),
 
-                const _SettingItem(
-                  icon: LucideIcons.shieldCheck,
-                  label: 'Privacy Policy',
-                ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1, end: 0),
+                  // Privacy Policy
+                  _SettingItem(
+                    icon: LucideIcons.shieldCheck,
+                    label: 'Privacy Policy',
+                    onTap: () {
+                      AppRoute.privacyPolicy.push(context);
+                    },
+                  ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1, end: 0),
 
-                const _SettingItem(
-                  icon: LucideIcons.scale,
-                  label: 'Operational Rules',
-                ).animate().fadeIn(delay: 350.ms).slideY(begin: 0.1, end: 0),
+                  // Operational Rules
+                  _SettingItem(
+                    icon: LucideIcons.scale,
+                    label: 'Operational Rules',
+                    onTap: () {
+                      _showComingSoon(context, 'Operational Rules');
+                    },
+                  ).animate().fadeIn(delay: 350.ms).slideY(begin: 0.1, end: 0),
 
-                const _DangerZone(),
+                  const _DangerZone(),
 
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 40),
-                  child: Center(
-                    child: Text(
-                      'V2.4.1 // SESSION ACTIVE',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        fontFamily: 'Courier',
-                        letterSpacing: 2,
-                        color: textTertiary,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 40),
+                    child: Center(
+                      child: Text(
+                        'V2.4.1 // SESSION ACTIVE',
+                        style: TextStyle(
+                          fontFamily: 'Courier',
+                          letterSpacing: 2,
+                          color: mutedColor,
+                          fontSize: 10,
+                        ),
                       ),
                     ),
                   ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  String _languageDisplayName(String code) {
+    switch (code) {
+      case 'pt':
+        return 'Português';
+      case 'es':
+        return 'Español';
+      default:
+        return 'English';
+    }
+  }
+
+  void _showLanguageSelector(BuildContext context) {
+    final currentLocale = context.read<LocaleCubit>().state;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: context.dobarColors.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        final colors = context.dobarColors;
+        final localeCubit = context.read<LocaleCubit>();
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: colors.labelSecondary.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Select Language',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: colors.labelPrimary,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _LanguageOption(
+                  label: 'English',
+                  subtitle: 'English (US)',
+                  isSelected: currentLocale.languageCode == 'en',
+                  onTap: () {
+                    localeCubit.setLanguageCode('en');
+                    Navigator.pop(context);
+                  },
+                ),
+                _LanguageOption(
+                  label: 'Português',
+                  subtitle: 'Brazilian Portuguese',
+                  isSelected: currentLocale.languageCode == 'pt',
+                  onTap: () {
+                    localeCubit.setLanguageCode('pt');
+                    Navigator.pop(context);
+                  },
+                ),
+                _LanguageOption(
+                  label: 'Español',
+                  subtitle: 'Latin American Spanish',
+                  isSelected: currentLocale.languageCode == 'es',
+                  onTap: () {
+                    localeCubit.setLanguageCode('es');
+                    Navigator.pop(context);
+                  },
                 ),
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  void _showComingSoon(BuildContext context, String feature) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$feature coming soon!'),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+}
+
+class _LanguageOption extends StatelessWidget {
+  final String label;
+  final String subtitle;
+  final bool isSelected;
+  final VoidCallback onTap;
+
+  const _LanguageOption({
+    required this.label,
+    required this.subtitle,
+    required this.isSelected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.dobarColors;
+    return ListTile(
+      leading: Icon(
+        isSelected ? LucideIcons.checkCircle : LucideIcons.languages,
+        color: isSelected ? barzGold : colors.labelSecondary,
+        size: 22,
+      ),
+      title: Text(
+        label,
+        style: TextStyle(
+          color: isSelected ? barzGold : colors.labelPrimary,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+        ),
+      ),
+      subtitle: Text(
+        subtitle,
+        style: TextStyle(color: colors.labelSecondary, fontSize: 12),
+      ),
+      trailing: isSelected
+          ? const Icon(LucideIcons.check, color: barzGold, size: 18)
+          : null,
+      onTap: onTap,
     );
   }
 }
@@ -106,6 +316,10 @@ class _SettingsHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final dobar = context.dobarColors;
+    final textColor = dobar.labelPrimary;
+    final mutedColor = dobar.labelSecondary;
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 48, 24, 32),
       child: Column(
@@ -142,8 +356,8 @@ class _SettingsHeader extends StatelessWidget {
                     const SizedBox(height: 12),
                     Text(
                       barName.toUpperCase(),
-                      style: const TextStyle(
-                        color: Colors.white,
+                      style: TextStyle(
+                        color: textColor,
                         fontFamily: 'Courier',
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
@@ -151,10 +365,10 @@ class _SettingsHeader extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    const Text(
+                    Text(
                       'SYSTEM_SETTINGS // BUSINESS_CONTROL',
                       style: TextStyle(
-                        color: textTertiary,
+                        color: mutedColor,
                         fontSize: 12,
                         letterSpacing: 1,
                       ),
@@ -163,9 +377,9 @@ class _SettingsHeader extends StatelessWidget {
                 ),
               ),
               IconButton(
-                icon: const Icon(
+                icon: Icon(
                   LucideIcons.store,
-                  color: textTertiary,
+                  color: mutedColor,
                   size: 20,
                 ),
                 onPressed: () {},
@@ -182,18 +396,21 @@ class _SettingsHeader extends StatelessWidget {
                 color: barzGold,
               ),
               const SizedBox(width: 16),
-              const Text('|', style: TextStyle(color: Color(0xFF333333))),
+              Text(
+                '|',
+                style: TextStyle(color: dobar.surfaceElevated),
+              ),
               const SizedBox(width: 16),
               _HeaderAction(
                 label: 'View Public Profile',
                 icon: LucideIcons.chevronRight,
                 onTap: () {},
-                color: textTertiary,
+                color: mutedColor,
               ),
             ],
           ),
           const SizedBox(height: 32),
-          const Divider(color: Color(0xFF222222)),
+          Divider(color: dobar.surfaceElevated),
         ],
       ),
     );
@@ -244,12 +461,13 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final mutedColor = context.dobarColors.labelSecondary;
     return Padding(
       padding: const EdgeInsets.fromLTRB(24, 32, 24, 12),
       child: Text(
         label.toUpperCase(),
-        style: const TextStyle(
-          color: textTertiary,
+        style: TextStyle(
+          color: mutedColor,
           fontFamily: 'Courier',
           fontSize: 11,
           fontWeight: FontWeight.bold,
@@ -263,31 +481,35 @@ class _SectionHeader extends StatelessWidget {
 class _SettingItem extends StatelessWidget {
   final IconData icon;
   final String label;
-  final String? value;
+  final Widget? trailing;
   final VoidCallback? onTap;
   final bool destructive;
 
   const _SettingItem({
     required this.icon,
     required this.label,
-    this.value,
+    this.trailing,
     this.onTap,
     this.destructive = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final color = destructive ? errorRed : textPrimary;
-    final iconColor = destructive ? errorRed : textSecondary;
+    final dobar = context.dobarColors;
+    final theme = Theme.of(context);
+    final color = destructive ? errorRed : dobar.labelPrimary;
+    final iconColor = destructive ? errorRed : dobar.labelSecondary;
+    final bgColor = dobar.background;
+    final dividerColor = theme.colorScheme.outline;
 
     return InkWell(
       onTap: onTap,
       child: Container(
         height: 72,
         padding: const EdgeInsets.symmetric(horizontal: 24),
-        decoration: const BoxDecoration(
-          color: barzDark,
-          border: Border(bottom: BorderSide(color: Color(0xFF1A1A1A))),
+        decoration: BoxDecoration(
+          color: bgColor,
+          border: Border(bottom: BorderSide(color: dividerColor)),
         ),
         child: Row(
           children: [
@@ -303,19 +525,15 @@ class _SettingItem extends StatelessWidget {
                 ),
               ),
             ),
-            if (value != null)
-              Text(
-                value!,
-                style: const TextStyle(color: textTertiary, fontSize: 13),
+            if (trailing != null) trailing!,
+            if (trailing == null)
+              Icon(
+                LucideIcons.chevronRight,
+                color: destructive
+                    ? errorRed.withValues(alpha: 0.4)
+                    : dividerColor,
+                size: 18,
               ),
-            const SizedBox(width: 12),
-            Icon(
-              LucideIcons.chevronRight,
-              color: destructive
-                  ? errorRed.withValues(alpha: 0.4)
-                  : const Color(0xFF333333),
-              size: 18,
-            ),
           ],
         ),
       ),
@@ -326,15 +544,57 @@ class _SettingItem extends StatelessWidget {
 class _DangerZone extends StatelessWidget {
   const _DangerZone();
 
+  Future<bool> _confirmAction(
+    BuildContext context, {
+    required String title,
+    required String message,
+    required String confirmLabel,
+  }) async {
+    return await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            backgroundColor: context.dobarColors.surface,
+            title: Text(
+              title,
+              style: TextStyle(
+                color: errorRed,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            content: Text(
+              message,
+              style: TextStyle(color: context.dobarColors.labelPrimary),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(
+                  'Cancel',
+                  style: TextStyle(color: context.dobarColors.labelSecondary),
+                ),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: TextButton.styleFrom(foregroundColor: errorRed),
+                child: Text(confirmLabel),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+  }
+
   @override
   Widget build(BuildContext context) {
+    final dobar = context.dobarColors;
+
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 48, 16, 16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [const Color(0xFF121212), errorRed.withValues(alpha: 0.05)],
+          colors: [dobar.surface, errorRed.withValues(alpha: 0.05)],
         ),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: errorRed.withValues(alpha: 0.3)),
@@ -358,18 +618,48 @@ class _DangerZone extends StatelessWidget {
           _SettingItem(
             icon: LucideIcons.trash2,
             label: 'Delete Business Data',
-            value: 'Permanent',
             destructive: true,
-            onTap: () {},
+            onTap: () async {
+              final confirmed = await _confirmAction(
+                context,
+                title: 'Delete Business Data',
+                message:
+                    'This action is irreversible. All campaign history, menu data, and order records will be permanently deleted. Continue?',
+                confirmLabel: 'Delete Everything',
+              );
+              if (confirmed && context.mounted) {
+                _showComingSoon(context, 'Delete Business Data API');
+              }
+            },
           ),
           _SettingItem(
             icon: LucideIcons.alertTriangle,
             label: 'Deactivate Account',
-            value: 'Temporary',
             destructive: true,
-            onTap: () {},
+            onTap: () async {
+              final confirmed = await _confirmAction(
+                context,
+                title: 'Deactivate Account',
+                message:
+                    'Your business profile and all associated data will be temporarily disabled. You can reactivate at any time. Continue?',
+                confirmLabel: 'Deactivate',
+              );
+              if (confirmed && context.mounted) {
+                _showComingSoon(context, 'Deactivate Account API');
+              }
+            },
           ),
         ],
+      ),
+    );
+  }
+
+  void _showComingSoon(BuildContext context, String feature) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('$feature coming soon!'),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
       ),
     );
   }

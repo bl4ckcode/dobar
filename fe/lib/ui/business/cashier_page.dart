@@ -361,7 +361,8 @@ class _CashierPageState extends State<CashierPage>
   Widget _buildTabItem(String label, String? statusFilter, int count) {
     final isSelected = _activeFilter == statusFilter;
     final dobar = context.dobarColors;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return GestureDetector(
       onTap: () => setState(() => _activeFilter = statusFilter),

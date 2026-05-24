@@ -555,7 +555,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
   }
 
   void _showCpfPrompt(BuildContext context, UserModel user) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     final controller = TextEditingController();
 
     showModalBottomSheet(

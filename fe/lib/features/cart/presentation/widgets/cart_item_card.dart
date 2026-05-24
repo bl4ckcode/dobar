@@ -79,7 +79,8 @@ class CartItemCard extends StatelessWidget {
   }
 
   Widget _buildContent(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -121,7 +122,8 @@ class CartItemCard extends StatelessWidget {
   }
 
   Widget _buildQuantityControls(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,

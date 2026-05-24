@@ -213,7 +213,8 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
   }
 
   void _showInviteDialog(BuildContext context, int barId) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,

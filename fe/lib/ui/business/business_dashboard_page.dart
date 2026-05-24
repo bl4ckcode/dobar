@@ -680,6 +680,8 @@ class _PromoteCampaignCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -726,7 +728,7 @@ class _PromoteCampaignCard extends StatelessWidget {
                     const SizedBox(width: 16),
                     Text(
                       'Boost Your Sales',
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      style: theme.textTheme.titleMedium?.copyWith(
                         color: barzDark,
                         fontWeight: FontWeight.bold,
                       ),
@@ -743,16 +745,15 @@ class _PromoteCampaignCard extends StatelessWidget {
                     children: [
                       Text(
                         'Boost Your Sales',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              color: barzDark,
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: barzDark,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'Create a campaign and reach more customers in your area!',
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        style: theme.textTheme.bodySmall?.copyWith(
                           color: barzDark.withValues(alpha: 0.7),
                         ),
                       ),
@@ -762,7 +763,7 @@ class _PromoteCampaignCard extends StatelessWidget {
               ] else
                 Text(
                   'Create a campaign and reach more customers in your area!',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  style: theme.textTheme.bodySmall?.copyWith(
                     color: barzDark.withValues(alpha: 0.7),
                   ),
                 ),
@@ -776,6 +777,9 @@ class _PromoteCampaignCard extends StatelessWidget {
                   style: FilledButton.styleFrom(
                     backgroundColor: barzDark,
                     foregroundColor: barzGold,
+                    textStyle: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                    ),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 20,
                       vertical: 16,
@@ -785,13 +789,9 @@ class _PromoteCampaignCard extends StatelessWidget {
                     ),
                   ),
                   icon: const Icon(LucideIcons.plus, size: 18),
-                  label: Text(
+                  label: const Text(
                     'Create Campaign',
-                    key: const ValueKey('promote_btn_label'),
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: barzGold,
-                    ),
+                    key: ValueKey('promote_btn_label'),
                   ),
                 ),
               ),
