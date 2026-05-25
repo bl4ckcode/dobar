@@ -159,10 +159,12 @@ class PaymentRoutes:
                     "installments": payment_method.installments,
                 }
             elif payment_method.type == PaymentMethodTypeAPI.PIX:
-                charge_kwargs["payment_method"] = {
+                pm = {
                     "type": "pix",
-                    "pix_key": payment_method.pix_key,
                 }
+                if payment_method.expires_in:
+                    pm["expires_in"] = payment_method.expires_in
+                charge_kwargs["payment_method"] = pm
             
             result = await gateway.create_charge(**charge_kwargs)
             

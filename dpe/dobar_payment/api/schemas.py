@@ -21,6 +21,7 @@ class PaymentMethodAPI(BaseModel):
     token: Optional[str] = None
     provider: Optional[TokenProvider] = None
     pix_key: Optional[str] = None
+    expires_in: Optional[int] = Field(default=None, ge=60, le=86400)
     installments: int = Field(default=1, ge=1, le=24)
 
 
