@@ -148,12 +148,19 @@ class StonePaymentGateway(PaymentGateway):
 
     def _build_customer(self, customer: Dict[str, Any]) -> CreateCustomerRequest:
         address = self._build_address(customer.get("address"))
+        if not address:
+            # PagarMe SDK requires a non-None address object even for PIX
+            address = CreateAddressRequest(
+                street="", number="", zip_code="", neighborhood="",
+                city="", state="", country="BR", complement="",
+                line_1="", line_2="", metadata={},
+            )
         return CreateCustomerRequest(
             name=customer["name"],
             email=customer["email"],
             document=customer.get("document", ""),
             mtype=customer.get("type", "individual"),
-            address=address,  # None when no valid address data
+            address=address,
             metadata=customer.get("metadata", {}),
             phones=self._build_phones(customer.get("phones")),
             code=customer.get("code", customer.get("email", "")),
