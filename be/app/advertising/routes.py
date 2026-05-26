@@ -57,6 +57,31 @@ async def get_available_plans(
     if not pricing:
         raise APIError.not_found(f"Pricing not available for region: {region_code}")
     
+    # Feature keys from DB — frontend translates these via i18n maps
+    regular_features = pricing.get("regular_features") or [
+        "feature_basic_listing",
+        "feature_order_management",
+        "feature_basic_analytics",
+    ]
+    master_features = pricing.get("master_features") or [
+        "feature_everything_regular",
+        "feature_reduced_commission",
+        "feature_monthly_credits",
+        "feature_featured_home",
+        "feature_sponsored_search",
+        "feature_priority_support",
+    ]
+    vip_features = pricing.get("vip_features") or [
+        "feature_everything_master",
+        "feature_lowest_commission",
+        "feature_max_credits",
+        "feature_map_spotlight",
+        "feature_promotion_boost",
+        "feature_rich_media_banners",
+        "feature_verified_badge",
+        "feature_dedicated_manager",
+    ]
+    
     plans = {
         "regular": SubscriptionPlanInfo(
             tier=SubscriptionTierEnum.REGULAR,
@@ -65,7 +90,7 @@ async def get_available_plans(
             annual_price=Decimal("0.00"),
             commission_rate=pricing["regular_commission"],
             credits=CreditsBalance(),
-            features=["Basic listing in app", "Order management", "Basic analytics"]
+            features=regular_features
         ),
         "master": SubscriptionPlanInfo(
             tier=SubscriptionTierEnum.MASTER,
@@ -74,8 +99,7 @@ async def get_available_plans(
             annual_price=pricing["master_annual"],
             commission_rate=pricing["master_commission"],
             credits=CreditsBalance(**pricing["master_credits"]),
-            features=["Everything in Regular", "Reduced commission rate", "Monthly advertising credits",
-                     "Featured Home placement", "Sponsored Search", "Priority support"]
+            features=master_features
         ),
         "vip": SubscriptionPlanInfo(
             tier=SubscriptionTierEnum.VIP,
@@ -84,9 +108,7 @@ async def get_available_plans(
             annual_price=pricing["vip_annual"],
             commission_rate=pricing["vip_commission"],
             credits=CreditsBalance(**pricing["vip_credits"]),
-            features=["Everything in Master", "Lowest commission rate", "Maximum advertising credits",
-                     "Map Spotlight", "Promotion Boost", "Rich Media Banners", "Verified Badge",
-                     "Dedicated account manager"]
+            features=vip_features
         )
     }
     
