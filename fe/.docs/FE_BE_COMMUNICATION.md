@@ -1,6 +1,6 @@
 # BARZ - Frontend Backend Communication
 
-Last Updated: May 3, 2026
+Last Updated: May 23, 2026
 Backend Status: Live on Fly.io
 API Base URL: https://barz-backend-bold-sun-5691.fly.dev
 
@@ -2086,3 +2086,273 @@ The user tested with `tier: master` (multiple times) and `tier: vip` — all fai
 - **Issue:** The `/home` endpoint currently returns only ONE bar in the `nearby_bars` list, even when many more bars are available within proximity (as seen in `/bars` endpoint).
 - **Impact:** The "Meet our partners" section (horizontal carousel) only shows the single closest bar, making the Home screen feel empty.
 - **Request:** Investigate if there's a hard limit (limit=1) or a filtering bug on the backend for the `/home` result set.
+
+---
+
+## BUSINESS SETTINGS (SPRINT 10 - NEW)
+
+Status: **🔲 PENDING** — Backend endpoints required
+Priority: HIGH - Business User Configuration
+
+### Overview
+
+Allows bar owners and admins to manage their business profile, contact information, delete business data, and deactivate/reactivate their account from the Business Settings page.
+
+### 1. Get Business Details
+
+Returns the bar's full profile information for display in the Business Details form.
+
+```
+GET /bars/{bar_id}/details
+Auth: Required (Owner/Admin)
+
+Response 200:
+{
+  "bar_id": 16,
+  "bar_name": "Baxi Bar",
+  "description": "The best craft beer in town",
+  "category": "bar", // "bar" | "restaurant" | "club" | "lounge"
+  "address": "Rua Augusta, 1500",
+  "city": "São Paulo",
+  "state": "SP",
+  "country": "BR",
+  "latitude": -23.5505,
+  "longitude": -46.6333,
+  "cover_image_url": "https://...",
+  "logo_url": "https://...",
+  "timezone": "America/Sao_Paulo",
+  "created_at": "2026-01-15T10:00:00Z",
+  "updated_at": "2026-05-20T14:30:00Z"
+}
+
+Errors:
+403 Forbidden: {"error": {"code": "FORBIDDEN", "message": "Insufficient permissions"}}
+```
+
+### 2. Update Business Details
+
+Updates the bar's profile information. Only provided fields are updated (partial update).
+
+```
+PUT /bars/{bar_id}/details
+Auth: Required (Owner/Admin)
+
+Body:
+{
+  "bar_name": "Baxi Bar Premium",
+  "description": "Now serving premium cocktails",
+  "category": "lounge",
+  "address": "Rua Augusta, 1520",
+  "city": "São Paulo",
+  "state": "SP",
+  "latitude": -23.5505,
+  "longitude": -46.6333,
+  "cover_image_url": "https://...",
+  "logo_url": "https://..."
+}
+
+Response 200:
+{
+  "bar_id": 16,
+  "bar_name": "Baxi Bar Premium",
+  "description": "Now serving premium cocktails",
+  "category": "lounge",
+  "address": "Rua Augusta, 1520",
+  "city": "São Paulo",
+  "state": "SP",
+  "country": "BR",
+  "latitude": -23.5505,
+  "longitude": -46.6333,
+  "cover_image_url": "https://...",
+  "logo_url": "https://...",
+  "updated_at": "2026-05-23T20:00:00Z"
+}
+
+Errors:
+400 Bad Request: {"error": {"code": "VALIDATION_ERROR", "message": "Invalid address format"}}
+409 Conflict: {"error": {"code": "BAR_NAME_TAKEN", "message": "Bar name already in use"}}
+```
+
+### 3. Get Contact Settings
+
+Returns the bar's contact information for customer-facing display.
+
+```
+GET /bars/{bar_id}/contact
+Auth: Required (Owner/Admin)
+
+Response 200:
+{
+  "bar_id": 16,
+  "phone": "+5511999990000",
+  "email": "contato@baxibar.com",
+  "website": "https://baxibar.com.br",
+  "instagram": "@baxibar",
+  "facebook": "baxibaroficial",
+  "whatsapp": "+5511999990000",
+  "whatsapp_enabled": true,
+  "updated_at": "2026-05-20T14:30:00Z"
+}
+```
+
+### 4. Update Contact Settings
+
+Updates the bar's contact information.
+
+```
+PUT /bars/{bar_id}/contact
+Auth: Required (Owner/Admin)
+
+Body:
+{
+  "phone": "+5511999991111",
+  "email": "novo@baxibar.com",
+  "website": "https://baxibar.com.br",
+  "instagram": "@baxibar_oficial",
+  "facebook": "baxibaroficial",
+  "whatsapp": "+5511999991111",
+  "whatsapp_enabled": true
+}
+
+Response 200:
+{
+  "bar_id": 16,
+  "phone": "+5511999991111",
+  "email": "novo@baxibar.com",
+  "website": "https://baxibar.com.br",
+  "instagram": "@baxibar_oficial",
+  "facebook": "baxibaroficial",
+  "whatsapp": "+5511999991111",
+  "whatsapp_enabled": true,
+  "updated_at": "2026-05-23T20:05:00Z"
+}
+
+Errors:
+400 Bad Request: {"error": {"code": "VALIDATION_ERROR", "message": "Invalid phone number format"}}
+```
+
+### 5. Delete Business Data
+
+Permanently removes all business data including campaign history, menu items, order records, and analytics. This action is **irreversible**.
+
+```
+DELETE /bars/{bar_id}/data
+Auth: Required (Owner)
+
+Headers:
+  X-Idempotency-Key: "uuid-v4-string" (Recommended)
+
+Response 200:
+{
+  "message": "Business data permanently deleted",
+  "deleted_records": {
+    "campaigns": 5,
+    "menu_items": 42,
+    "orders": 187,
+    "analytics": 365
+  },
+  "receipt_id": "del_biz_123456789"
+}
+
+Errors:
+403 Forbidden: {"error": {"code": "FORBIDDEN", "message": "Only the bar owner can delete business data"}}
+```
+
+### 6. Deactivate Account
+
+Temporarily disables the business profile. The bar will not appear in search results and will not accept new orders. Data is preserved for reactivation.
+
+```
+POST /bars/{bar_id}/deactivate
+Auth: Required (Owner)
+
+Body:
+{
+  "reason": "temporary_closure", // "temporary_closure" | "vacation" | "maintenance" | "other"
+  "estimated_return_date": "2026-06-15" // Optional, ISO-8601 date
+}
+
+Response 200:
+{
+  "bar_id": 16,
+  "status": "deactivated",
+  "deactivated_at": "2026-05-23T20:10:00Z",
+  "estimated_return_date": "2026-06-15",
+  "message": "Business account deactivated successfully. Data preserved."
+}
+```
+
+### 7. Reactivate Account
+
+Reactivates a previously deactivated business profile.
+
+```
+POST /bars/{bar_id}/reactivate
+Auth: Required (Owner)
+
+Response 200:
+{
+  "bar_id": 16,
+  "status": "active",
+  "reactivated_at": "2026-06-14T10:00:00Z",
+  "message": "Business account reactivated successfully."
+}
+
+Errors:
+400 Bad Request: {"error": {"code": "NOT_DEACTIVATED", "message": "Account is not currently deactivated"}}
+```
+
+### FE Implementation Plan
+
+```dart
+class BusinessSettingsRepository {
+  final Dio _dio;
+
+  Future<BarDetails> getBarDetails(int barId) async {
+    final res = await _dio.get('/bars/$barId/details');
+    return BarDetails.fromJson(res.data);
+  }
+
+  Future<BarDetails> updateBarDetails(int barId, Map<String, dynamic> data) async {
+    final res = await _dio.put('/bars/$barId/details', data: data);
+    return BarDetails.fromJson(res.data);
+  }
+
+  Future<ContactSettings> getContactSettings(int barId) async {
+    final res = await _dio.get('/bars/$barId/contact');
+    return ContactSettings.fromJson(res.data);
+  }
+
+  Future<ContactSettings> updateContactSettings(int barId, Map<String, dynamic> data) async {
+    final res = await _dio.put('/bars/$barId/contact', data: data);
+    return ContactSettings.fromJson(res.data);
+  }
+
+  Future<DeleteResult> deleteBusinessData(int barId) async {
+    final res = await _dio.delete('/bars/$barId/data');
+    return DeleteResult.fromJson(res.data);
+  }
+
+  Future<DeactivateResult> deactivateAccount(int barId, {String? reason, String? estimatedReturnDate}) async {
+    final res = await _dio.post('/bars/$barId/deactivate', data: {
+      if (reason != null) 'reason': reason,
+      if (estimatedReturnDate != null) 'estimated_return_date': estimatedReturnDate,
+    });
+    return DeactivateResult.fromJson(res.data);
+  }
+
+  Future<ReactivateResult> reactivateAccount(int barId) async {
+    final res = await _dio.post('/bars/$barId/reactivate');
+    return ReactivateResult.fromJson(res.data);
+  }
+}
+```
+
+### Implementation Status Update
+
+| Feature | Backend | Frontend |
+|---------|---------|----------|
+| Bar Details (GET/PUT) | 🔲 | 🔲 |
+| Contact Settings (GET/PUT) | 🔲 | 🔲 |
+| Delete Business Data | 🔲 | 🔲 |
+| Deactivate/Reactivate Account | 🔲 | 🔲 |
