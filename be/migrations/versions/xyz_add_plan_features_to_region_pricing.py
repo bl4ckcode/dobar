@@ -44,9 +44,9 @@ VIP_FEATURES = json.dumps([
 
 
 def upgrade():
-    op.add_column('region_pricing', sa.Column('regular_features', JSON, nullable=False, server_default=REGULAR_FEATURES))
-    op.add_column('region_pricing', sa.Column('master_features', JSON, nullable=False, server_default=MASTER_FEATURES))
-    op.add_column('region_pricing', sa.Column('vip_features', JSON, nullable=False, server_default=VIP_FEATURES))
+    op.add_column('region_pricing', sa.Column('regular_features', JSON, nullable=True))
+    op.add_column('region_pricing', sa.Column('master_features', JSON, nullable=True))
+    op.add_column('region_pricing', sa.Column('vip_features', JSON, nullable=True))
 
 
 def downgrade():

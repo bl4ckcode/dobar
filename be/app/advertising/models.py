@@ -376,29 +376,10 @@ class RegionPricing(Base):
     })
     
     # Plan features (JSON arrays of string keys for FE i18n)
-    regular_features = Column(JSON, nullable=False, default=[
-        "feature_basic_listing",
-        "feature_order_management",
-        "feature_basic_analytics",
-    ])
-    master_features = Column(JSON, nullable=False, default=[
-        "feature_everything_regular",
-        "feature_reduced_commission",
-        "feature_monthly_credits",
-        "feature_featured_home",
-        "feature_sponsored_search",
-        "feature_priority_support",
-    ])
-    vip_features = Column(JSON, nullable=False, default=[
-        "feature_everything_master",
-        "feature_lowest_commission",
-        "feature_max_credits",
-        "feature_map_spotlight",
-        "feature_promotion_boost",
-        "feature_rich_media_banners",
-        "feature_verified_badge",
-        "feature_dedicated_manager",
-    ])
+    # Nullable for backward compatibility — code falls back to hardcoded keys when absent
+    regular_features = Column(JSON, nullable=True, default=None)
+    master_features = Column(JSON, nullable=True, default=None)
+    vip_features = Column(JSON, nullable=True, default=None)
     
     # Tax configuration
     default_tax_rate = Column(Numeric(5, 4), default=Decimal("0.0000"))
