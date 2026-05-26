@@ -107,6 +107,7 @@ app.add_middleware(
         "https://dobar-app.fly.dev",
         "https://dobar-landing.fly.dev",
         "https://www.dobar-landing.fly.dev",
+        "https://dashboard.dobar.app",
     ],
     allow_origin_regex=r"https?://(localhost|127\.0\.0\.1|192\.168\.\d{1,3}\.\d{1,3}|10\.\d{1,3}\.\d{1,3}\.\d{1,3})(:[0-9]+)?",
     allow_credentials=True,
