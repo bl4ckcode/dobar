@@ -15,6 +15,7 @@ from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from .auth.routes import auth_router
 from .bars_and_restaurants.routes.bars import bars_router
+from .bars_and_restaurants.routes.business_settings import business_settings_router
 from .bars_and_restaurants.routes.menus import menus_router
 from .bars_and_restaurants.routes.orders import orders_router, bar_orders_router
 from .bars_and_restaurants.routes.cart import cart_router
@@ -209,6 +210,7 @@ app.include_router(auth_router)
 app.include_router(mfa_router)
 app.include_router(recovery_router)
 app.include_router(bars_router)
+app.include_router(business_settings_router)
 app.include_router(menus_router)
 app.include_router(orders_router)
 app.include_router(bar_orders_router)

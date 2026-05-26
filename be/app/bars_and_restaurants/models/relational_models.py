@@ -52,6 +52,24 @@ class Bar(Base):
     # 🆕 Subscription caching for fast search weighting
     subscription_tier = Column(String(20), default="regular", index=True)  # regular, master, vip
     
+    # 🆕 Business Profile fields
+    description = Column(Text, nullable=True)  # Bar description / about us
+    website = Column(String(255), nullable=True)
+    instagram = Column(String(100), nullable=True)
+    facebook = Column(String(100), nullable=True)
+    whatsapp = Column(String(20), nullable=True)
+    whatsapp_enabled = Column(Boolean, default=False)
+    timezone = Column(String(50), nullable=True, default="America/Sao_Paulo")
+    
+    # 🆕 Operational status
+    status = Column(String(20), default="active", index=True)  # active, deactivated
+    deactivated_at = Column(DateTime, nullable=True)
+    deactivation_reason = Column(String(50), nullable=True)
+    estimated_return_date = Column(DateTime, nullable=True)
+    
+    # 🆕 Rating
+    rating = Column(Float, default=0.0)
+    
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

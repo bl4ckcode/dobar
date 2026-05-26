@@ -2395,7 +2395,7 @@ class BusinessSettingsRepository {
 
 | Feature | Backend | Frontend |
 |---------|---------|----------|
-| Bar Details (GET/PUT) | 🔲 | 🔲 |
-| Contact Settings (GET/PUT) | 🔲 | 🔲 |
-| Delete Business Data | 🔲 | 🔲 |
-| Deactivate/Reactivate Account | 🔲 | 🔲 |
+| Bar Details (GET/PUT) | ✅ | 🔲 |
+| Contact Settings (GET/PUT) | ✅ | 🔲 |
+| Delete Business Data | ✅ | 🔲 |
+| Deactivate/Reactivate Account | ✅ | 🔲 |
