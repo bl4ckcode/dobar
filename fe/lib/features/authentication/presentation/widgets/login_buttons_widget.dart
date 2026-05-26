@@ -37,11 +37,18 @@ class LoginButtonsWidget extends StatefulWidget {
 
 class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
   StreamSubscription<GoogleSignInAuthenticationEvent>? _authSubscription;
+  Widget? _cachedGoogleButtonWeb;
 
   @override
   void initState() {
     super.initState();
     _initGoogleSignIn();
+    // Cache the Google button widget once on web to prevent re-creating
+    // the GIS SDK button on every parent rebuild, which causes multiple
+    // DOM elements and "already defined" warnings.
+    if (kIsWeb) {
+      _cachedGoogleButtonWeb = _buildGoogleButtonWeb();
+    }
   }
 
   Future<void> _initGoogleSignIn() async {
@@ -234,9 +241,10 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
       mainAxisSize: MainAxisSize.min,
       children: [
         // On web: use Google's native renderButton() (required by GIS SDK)
-        // On Android: use custom button with authenticate()
+        // Keep it cached to prevent re-creating the GIS SDK button on every
+        // parent rebuild, which causes multiple DOM elements and warnings.
         if (kIsWeb)
-          _buildGoogleButtonWeb()
+          _cachedGoogleButtonWeb ?? _buildGoogleButtonWeb()
         else if (isAndroidPlatform())
           _buildSocialButton(
             onPressed: _signInWithGoogle,
@@ -255,7 +263,8 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
     );
   }
 
-  /// Builds the Google Sign-In button for web using Google's native SDK button
+  /// Builds the Google Sign-In button for web using Google's native SDK button.
+  /// This should only be called once and cached via [_cachedGoogleButtonWeb].
   Widget _buildGoogleButtonWeb() {
     return Container(
       width: double.infinity,
