@@ -788,5 +788,23 @@
       }
     }
   },
-  "business_campaign_card_desc": "Create a campaign and reach more customers in your area!"
+  "business_campaign_card_desc": "Create a campaign and reach more customers in your area!",
+
+  "feature_basic_listing": "Basic listing in app",
+  "feature_order_management": "Order management",
+  "feature_basic_analytics": "Basic analytics",
+  "feature_everything_regular": "Everything in Regular",
+  "feature_reduced_commission": "Reduced commission rate",
+  "feature_monthly_credits": "Monthly advertising credits",
+  "feature_featured_home": "Featured Home placement",
+  "feature_sponsored_search": "Sponsored Search",
+  "feature_priority_support": "Priority support",
+  "feature_everything_master": "Everything in Master",
+  "feature_lowest_commission": "Lowest commission rate",
+  "feature_max_credits": "Maximum advertising credits",
+  "feature_map_spotlight": "Map Spotlight",
+  "feature_promotion_boost": "Promotion Boost",
+  "feature_rich_media_banners": "Rich Media Banners",
+  "feature_verified_badge": "Verified Badge",
+  "feature_dedicated_manager": "Dedicated account manager"
 }

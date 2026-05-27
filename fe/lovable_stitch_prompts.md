@@ -213,3 +213,388 @@ After a user successfully pays for their order, they should be redirected to thi
 - Use our design tokens: `barzDark` (#0A0A0A), `barzGold` (#FFDE59), `barzGoldSoft` (#FFFFFF for light mode).
 - Follow the visual patterns of our existing `cart` and `checkout` pages for the items list and button styles.
 - Use the Lucide icon library."
+
+---
+
+## Landing Page + Waitlist (MVP Launch)
+
+### Bar Owner Landing Page with Waitlist Signup
+"Build a premium, high-converting landing page for **Dobar** (also known as Barz) — a nightlife ordering platform for bars and restaurants. This is the MVP launch landing page targeting bar owners and managers to join our exclusive early-access waitlist.
+
+**CONTEXT:**
+Dobar is 'The Pulse of the Brewery' — the default operating system for nightlife commerce. We empower bar owners with seamless payments, high-impact marketing tools, and a complete digital ordering ecosystem. This landing page needs to convince bar owners to join our waitlist for early access to the platform.
+
+**OVERALL VIBE:** Bold, energetic, premium nightlife. Think: high-end craft brewery meets Silicon Valley tech. Industrial Modern aesthetic with gritty deep blacks and electric gold accents. The page must feel like a VIP invitation to the future of bar management.
+
+**DESIGN TOKENS (STRICT - Use exactly these):**
+- **Background (Dark Mode Primary):** `#0A0A0A` (barzDark - Deep Onyx Black)
+- **Card Surfaces:** `#121212` (barzDarkLight - Matte), `#1A1A1A` (barzDarkCard)
+- **Primary Accent:** `#FFDE59` (barzGold - Dobar Electric Yellow)
+- **Gold Gradient:** Start `#FFFFDF73`, End `#FFFFC000`
+- **Success/PIX Green:** `#00B37E` (pixGreen)
+- **Text on Dark:** `#FFFFFF` (textOnDark)
+- **Secondary Text:** `#B0B0B0` (muted gray)
+- **Error/Destructive:** `#FF4B4B` (errorRed)
+- **Font Family:** Inter (Google Fonts) - use font-weight 400, 600, 700
+
+**PAGE STRUCTURE (Single Page, Scrolling Sections):**
+
+1. **HERO SECTION (Above the Fold):**
+   - **Background:** Full dark (#0A0A0A) with subtle animated golden particle network or radial glow effect emanating from center.
+   - **Logo:** 'dobar' wordmark in gold (#FFDE59), large and centered at top. Use Inter font, bold weight. The 'd' and 'b' should mirror each other stylistically.
+   - **Headline:** 'O Futuro dos Pedidos no Bar Começa Aqui' (The Future of Bar Orders Starts Here) — Large, bold, white text with gold highlight on key word.
+   - **Subheadline:** 'Seja um dos primeiros bares do Brasil a revolucionar a experiência dos seus clientes com pedidos digitais, pagamento instantâneo via PIX e ferramentas de marketing poderosas.' (Be among the first bars in Brazil to revolutionize your customer experience...)
+   - **Primary CTA Button:** Large pill-shaped button, gold gradient (#FFFFDF73 → #FFFFC000), black text: 'Entrar na Lista de Espera' (Join Waitlist). Size: 56px height, full width on mobile, max-width 400px on desktop. Add subtle shimmer animation on hover.
+   - **Secondary Link:** 'Já tem convite? Faça login' (Already have an invite? Log in) — ghost text link in muted gray below CTA.
+   - **Scroll indicator:** Animated chevron-down icon pulsing at bottom.
+
+2. **SOCIAL PROOF SECTION:**
+   - **Background:** Slightly elevated surface (#121212).
+   - **Headline:** 'Bares de Confiança Já Estão Dentro' (Trusted Bars Are Already In) — in white.
+   - **Logo Bar:** Horizontal scrolling infinite marquee of bar logo placeholders (use circular gray placeholders with initials). Show 6-8 placeholder bar logos.
+   - **Stats Row:** 4 stat cards in a row:
+     - '50+' bars on waitlist
+     - '3' cities launching (São Paulo, Rio, BH)
+     - 'R$145+' economia/mês (No maquininha rental fees — save R$145+/month)
+     - '0% taxa de setup' (0% setup fee — limited time)
+   - Each stat: large number in gold, label in white, centered.
+
+3. **FEATURES SECTION (The 'Why Dobar'):**
+   - **Background:** #0A0A0A.
+   - **Headline:** 'Tudo Que Seu Bar Precisa. Nada Que Não Precisa.' (Everything Your Bar Needs. Nothing It Doesn't.)
+   - **Subheadline:** Muted gray, brief description.
+   - **Feature Cards (4 columns on desktop, 2x2 grid on tablet, stacked on mobile):
+     - **Card 1 - 'Pedidos Sem Fila' (Queue-Free Orders):**
+       - Icon: `Smartphone` in gold circle container
+       - Title: White, bold
+       - Description: 'Clientes pedem direto da mesa. Sem app para instalar. Sem filas no balcão.' (Customers order from table. No app to install. No lines.)
+     - **Card 2 - 'Pagamento Instantâneo' (Instant Payment):**
+       - Icon: `Zap` in gold circle container
+       - Title: White, bold
+       - Description: 'PIX integrado. Dinheiro na conta em segundos. Sem aluguel de maquininha (economia de R$145+/mês), sem taxas escondidas.' (Integrated PIX. Money in account in seconds. No card machine rental fees, no hidden charges.)
+     - **Card 3 - 'Taxas Menores' (Lower Fees):**
+       - Icon: `Wallet` in gold circle container
+       - Title: White, bold
+       - Description: 'Sem aluguel de maquininha (economia de R$145+/mês). PIX com taxas menores que cartão. Google Pay, Apple Pay e cartão integrados.' (No card machine rental. Lower PIX fees than credit cards. Google Pay, Apple Pay integrated.)
+     - **Card 4 - 'Marketing Automático' (Automatic Marketing):**
+       - Icon: `TrendingUp` in gold circle container
+       - Title: White, bold
+       - Description: 'Campanhas inteligentes, happy hours digitais e retenção de clientes sem esforço.' (Smart campaigns, digital happy hours...)
+   - Cards: Dark surface (#1A1A1A), rounded corners (12px), subtle border (#2C2C2C), padding 24px. Hover: slight gold glow border. Grid: 4 columns desktop, 2x2 tablet, stacked mobile.
+
+4. **HOW IT WORKS SECTION:**
+   - **Background:** #0A0A0A with subtle diagonal gold gradient lines pattern (very subtle, 5% opacity).
+   - **Headline:** 'Em 3 Passos, Seu Bar Está Pronto' (In 3 Steps, Your Bar Is Ready)
+   - **Steps Timeline (Vertical on mobile, horizontal on desktop):**
+     1. **Step 1:** Number '01' in gold, large. Title 'Cadastre-se' (Sign Up). Description: 'Reserve sua vaga na lista de espera em 30 segundos.'
+     2. **Step 2:** Number '02' in gold. Title 'Receba Acesso' (Get Access). Description: 'Nossa equipe entrará em contato para onboarding personalizado.'
+     3. **Step 3:** Number '03' in gold. Title 'Comece a Vender' (Start Selling). Description: 'Configure seu cardápio digital e comece a receber pedidos no mesmo dia.'
+   - Connect steps with a gold gradient line or dotted path.
+
+5. **WAITLIST FORM SECTION (The Conversion Point):**
+   - **Background:** Elevated card (#121212) with a subtle gold border glow.
+   - **Headline:** 'Garanta Sua Vaga Agora' (Secure Your Spot Now)
+   - **Subheadline:** 'Vagas limitadas para o lançamento. Cadastro 100% gratuito.' (Limited spots for launch. 100% free signup.)
+   - **Form Fields:**
+     - Bar Name input: Dark input (#1A1A1A), gold focus border, `Store` icon prefix.
+     - Your Name input: `User` icon prefix.
+     - Email input: `Mail` icon prefix.
+     - WhatsApp input: `Phone` icon prefix, masked for Brazilian format.
+     - City dropdown: Select from 'São Paulo', 'Rio de Janeiro', 'Belo Horizonte', 'Outra' (Other).
+   - **Submit Button:** Full-width gold gradient CTA, 'Entrar na Lista de Espera', 56px height. Show loading spinner on submit.
+   - **Trust Badges:** Below form — `ShieldCheck` icon + 'Seus dados estão seguros' (Your data is secure), `Lock` icon + 'Sem spam, prometemos' (No spam, we promise).
+   - **Success State:** After submit, show green success card with `CheckCircle` icon, 'Você está na lista!' message, and 'Compartilhe com outros donos de bar' share buttons (WhatsApp, Instagram).
+
+6. **FAQ SECTION:**
+   - **Background:** #0A0A0A.
+   - **Headline:** 'Perguntas Frequentes' (FAQ)
+   - **Accordion Items (5 questions):**
+     1. 'Quanto custa para usar o Dobar?' → Answer explaining: no monthly fees, no maquininha rental (saves R$145+/mês), lower transaction fees than traditional card machines (PIX rates vs 2-3% credit card fees), transparent per-transaction pricing.
+     2. 'Preciso de equipamento especial?' → No, works on any smartphone/tablet.
+     3. 'Como funciona o pagamento?' → PIX instant, credit card next-day.
+     4. 'E se eu já tiver outro sistema?' → Easy migration, dual-run possible.
+     5. 'Quando o lançamento oficial?' → Expected Q2 2025, waitlist gets early access.
+   - Style: Dark cards (#1A1A1A), white question text, muted answer text. Chevron rotates on expand.
+
+7. **FOOTER:**
+   - **Background:** #0A0A0A with top border (#2C2C2C).
+   - Logo small, centered.
+   - Links row: 'Sobre', 'Termos', 'Privacidade', 'Contato' — in muted gray.
+   - Social icons: Instagram, LinkedIn (placeholder).
+   - Copyright: '© 2025 Dobar. Todos os direitos reservados.'
+
+**ANIMATIONS & MICRO-INTERACTIONS:**
+- Hero: Subtle floating particle network animation in gold (low opacity) behind content.
+- Hero CTA: Shimmer sweep animation on the gold button (loop every 3s).
+- Feature cards: Stagger fade-in from bottom on scroll (Intersection Observer).
+- Stats numbers: Count-up animation when scrolled into view.
+- FAQ accordion: Smooth height transition + chevron rotation.
+- Form inputs: Gold border glow on focus.
+- Submit button: Scale down 0.97x on press, spring back.
+- Success state: Confetti burst (subtle, gold particles) on form submission.
+
+**RESPONSIVE BEHAVIOR:**
+- Desktop: Max-width 1200px, centered. Multi-column layouts.
+- Tablet: 2-column grids where applicable.
+- Mobile: Single column, full-width elements. Stacked navigation. Hamburger menu if needed (simple anchor links for single-page).
+
+**TECHNICAL NOTES:**
+- Build as responsive HTML/CSS/JS (for Lovable/Stitch).
+- Use Lucide icons throughout.
+- Form submission: POST to `/api/waitlist` endpoint (mock for now, show success state).
+- All animations should be CSS-based with minimal JS for performance.
+- Dark mode only — no light mode toggle needed for landing page.
+- Copy should be in Brazilian Portuguese (pt-BR).
+- Keep all strings in a config object for easy editing (i18n-ready structure).
+
+**CALL-TO-ACTION HIERARCHY:**
+Primary: Join Waitlist (gold button, appears 3x on page)
+Secondary: Share with other bar owners (social share)
+Tertiary: Login (for those with existing invites)"
+
+
+---
+
+### Business Details Editing Form
+"Build a premium, full-screen Business Details editing form for bar owners and administrators in the **Dobar/Barz** business app.
+
+**CONTEXT:**
+This form appears when a bar owner taps 'Business Details' from the Business Settings page. It allows them to view and edit their bar's core profile information. The data is fetched from `GET /bars/{bar_id}/details` and saved via `PUT /bars/{bar_id}/details`.
+
+**BACKEND DATA MODEL (Bar table):**
+The bar model stores the following fields that the user can edit:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `bar_name` | String | Bar name / establishment name |
+| `description` | String | Bar description (free text, for profile) |
+| `category` | String | `bar`, `restaurant`, `club`, `lounge`, `pub`, `brewery` |
+| `address` | String | Full street address |
+| `city` | String | City |
+| `state` | String | State/province |
+| `country_code` | String | ISO 3166-1 alpha-2 (e.g. 'BR', 'US') |
+| `latitude` | Float | GPS latitude |
+| `longitude` | Float | GPS longitude |
+| `timezone` | String | IANA timezone (e.g. 'America/Sao_Paulo') |
+| `business_id` | String | CNPJ (Brazil), NIF, EIN, etc. |
+| `business_id_type` | String | Type: 'CNPJ', 'NIF', 'EIN', 'CIF', etc. |
+| `state_registration` | String | Inscrição Estadual (Brazil-specific) |
+| `logo_url` | String? | Logo image URL |
+| `cover_url` | String? | Cover photo URL |
+| `photo_urls` | String[]? | Gallery photos |
+| `operating_hours` | JSON | Per-day schedule with open/close times |
+| `location_method` | String | `table_number`, `spot_list`, `free_text` |
+
+**OVERALL VIBE**: Professional, authoritative, and clean. 'Industrial Modern' design language — deep blacks (#0A0A0A), matte gray cards (#121212), and electric gold (#FFDE59) accents. The form should feel like a mission-control dashboard for the bar's identity.
+
+**DESIGN SPECS:**
+
+1. **HEADER:**
+   - Back arrow to return to Settings page.
+   - Title: 'Business Details' in bold.
+   - 'Save' button (gold, text only) in the top-right — disabled until changes are detected.
+   - Show an unsaved changes indicator (yellow dot or '● UNSAVED' badge) when form has pending edits.
+
+2. **PROFILE IMAGE SECTION (Hero Area):**
+   - Large circular cover image placeholder at top (use a `Camera` icon overlay if no image).
+   - Below it, a smaller circular logo placeholder.
+   - Tapping either opens an action sheet: 'Take Photo', 'Choose from Gallery', 'Remove Photo'.
+   - On hover: subtle gold glow border around the images.
+
+3. **BASIC INFORMATION SECTION:**
+   - **Bar Name** — Large title input, Space Grotesk font, bold.
+   - **Description** — Multi-line text area, character counter (max 500), hint: 'Describe your bar's atmosphere...'
+   - **Category** — Dropdown/selector with options: Bar, Restaurant, Club, Lounge, Pub, Brewery. Use `Tag` icon.
+   - **Phone** — Phone input with country code prefix, `Phone` icon.
+   - **Email** — Email input, `Mail` icon.
+
+4. **LOCATION SECTION:**
+   - **Address** — Full address text input, `MapPin` icon.
+   - **City** — Text input.
+   - **State** — Dropdown or text input.
+   - **Country** — Read-only display of current country code with flag emoji.
+   - **Coordinates** — Small row showing latitude/longitude with a 'Pin on Map' gold ghost button. On tap, show a map picker modal (placeholder for now — show a dark container with 'Map integration coming soon' text).
+
+5. **BUSINESS REGISTRATION SECTION:**
+   - **Business ID (CNPJ/NIF/EIN)** — Masked input, format depends on country. Show the type badge next to it (e.g. 'CNPJ', 'NIF'). Use `FileText` icon.
+   - **State Registration** — Optional text input, `ScrollText` icon.
+   - **Verification Status** — Read-only pill badge: green '✅ Verified', yellow '⏳ Pending Review', red '❌ Rejected', gray '⬜ Not Submitted'.
+
+6. **MEDIA GALLERY SECTION:**
+   - Horizontal scrollable row of photo cards (120x120px, rounded corners 8px).
+   - Each card: thumbnail with a small '×' remove button in the top-right corner.
+   - Last card: dashed border 'Add Photo' placeholder with `Plus` icon.
+   - Show up to 6 photos.
+
+7. **OPERATING HOURS SECTION:**
+   - Toggle: 'Same hours every day' (default: off).
+   - When off: Show all 7 days as rows. Each row: day name (bold) → open time picker → close time picker → 'Closed' toggle.
+   - When 'Same hours every day' is on: Show a single row for 'General Hours' with open/close time pickers.
+   - Time pickers: Tap opens a time selector (HH:MM format, 24h). Use `Clock` icon.
+   - Closed days: grayed out row with a 'Closed' badge.
+
+8. **PLACE LOCATION LOGIC SECTION:**
+   - **Location Method** — Dropdown: 'Table Number' (default), 'Spot List', 'Free Text'.
+   - If 'Table Number' selected: subtitle hint 'Customers enter their table number manually.'
+   - If 'Spot List' selected: show an editable list of spots (e.g. 'VIP Area', 'Terrace', 'Counter'). Each spot has a name + delete button. Add new spot input at bottom with `Plus` icon.
+   - If 'Free Text' selected: subtitle hint 'Customers describe where they are sitting.'
+
+**INTERACTIONS & RESPONSIVE BEHAVIOR:**
+- Form adapts to screen width: single column on mobile, two-column grid on desktop for paired fields (City + State, Open + Close times).
+- All text inputs use dark card style (#121212 background, gold focus border, 12px border radius).
+- Unsaved changes prompt: If user tries to go back with unsaved changes, show a bottom sheet 'Discard changes?' with Cancel/Discard buttons.
+- On save success: show a green snackbar 'Business details updated successfully!'
+- On save error: show red snackbar with error message.
+- Loading state: shimmer placeholders for all fields while data is fetching.
+- Error state: centered error message with retry button.
+
+**ICONS (Lucide):** `Store`, `MapPin`, `Phone`, `Mail`, `Tag`, `Clock`, `Image`, `Camera`, `Plus`, `FileText`, `ScrollText`, `Map`, `Globe`, `CheckCircle`, `X`.
+
+**ANIMATIONS:**
+- Sections stagger-fade in from bottom on page load (100ms delay between each section).
+- Input focus: gold border animates in (200ms ease).
+- Save button: shows `CircularProgressIndicator` while saving, then checkmark animation on success.
+- Photo cards: scale up 1.02x on hover/tap.
+
+**TECHNICAL NOTE:**
+- Build as a Flutter `StatefulWidget` with form state management (use `GlobalKey<FormState>`).
+- Use our design tokens: `barzGold` (#FFDE59), `barzDark` (#0A0A0A), `barzDarkLight` (#121212), `barzDarkCard` (#1A1A1A), `textOnDark` (#FFFFFF), `textSecondary` (#B0B0B0), `errorRed` (#FF4B4B), `successGreen` (#28A745).
+- All strings must use our i18n system via `AppLocalizations.of(context)!` (placeholder: use comments `// i18n`).
+- Use Lucide icons from the `lucide_icons` package.
+- Match the existing `_SettingItem` pattern from our Business Settings page for consistency."
+
+---
+
+### Contact Settings Editing Form
+"Build a premium, full-screen Contact Settings editing form for bar owners and administrators in the **Dobar/Barz** business app.
+
+**CONTEXT:**
+This form appears when a bar owner taps 'Contact Settings' from the Business Settings page. It allows them to manage how customers can reach their bar. Data is fetched from `GET /bars/{bar_id}/contact` and saved via `PUT /bars/{bar_id}/contact`.
+
+**BACKEND DATA MODEL (Contact fields):**
+The following contact fields should be editable in this form:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `phone` | String | Primary phone number (for calls) |
+| `email` | String | Contact email address |
+| `website` | String? | Bar's website URL |
+| `instagram` | String? | Instagram handle (e.g. '@baxibar') |
+| `facebook` | String? | Facebook page name |
+| `whatsapp` | String? | WhatsApp number for orders |
+| `whatsapp_enabled` | Boolean | Whether WhatsApp ordering is active |
+
+**OVERALL VIBE**: Clean, professional, and approachable. Same 'Industrial Modern' design language: deep blacks (#0A0A0A), matte gray cards (#121212), and electric gold (#FFDE59) accents. This should feel like configuring your bar's communication hub.
+
+**DESIGN SPECS:**
+
+1. **HEADER:**
+   - Back arrow to return to Settings page.
+   - Title: 'Contact Settings' in bold.
+   - 'Save' button (gold, text only) in the top-right — disabled until changes are detected.
+   - Show '● UNSAVED' badge when form has pending edits.
+
+2. **PHONE & EMAIL SECTION:**
+   - **Phone Number** — Full phone input with country code selector and `Phone` icon. E.164 format.
+   - **Email** — Email input with `Mail` icon. Validation: must be valid email format.
+   - Each field as a dark card (#121212) row with icon on left, input on right.
+
+3. **SOCIAL MEDIA SECTION:**
+   - Section header: 'Social Media' with `Share2` icon — subtitle: 'Connect with customers on social platforms.'
+   - **Website** — URL input with `Globe` icon. Placeholder: 'https://yourbar.com'.
+   - **Instagram** — Text input with `Camera` icon. Prepend '@' symbol automatically. Placeholder: '@yourbar'.
+   - **Facebook** — Text input with `Facebook` icon. Placeholder: 'yourbarofficial'.
+   - Each row: dark card with platform-branded icon on the left, input field on the right.
+   - Below each input: small muted text showing how it will appear to customers (e.g. 'Customers will see @yourbar on your bar profile').
+
+4. **WHATSAPP ORDERING SECTION:**
+   - Special highlighted card with a subtle green tint (WhatsApp brand color #25D366 at 5% opacity) and green left border accent.
+   - **WhatsApp Number** — Phone input with `MessageCircle` icon (WhatsApp green color for the icon).
+   - **Enable WhatsApp Orders** — Toggle switch `ToggleRight` icon. When enabled:
+     - Show a green success pill: '● WhatsApp Orders Active'
+     - Show a preview chip showing how the WhatsApp button will appear to customers.
+     - Subtitle: 'Customers can start an order conversation via WhatsApp.'
+   - When disabled: show a muted gray state with 'WhatsApp ordering is disabled' text.
+
+5. **CONTACT VISIBILITY SECTION:**
+   - Section header: 'Contact Visibility' with `Eye` icon.
+   - **Show Phone on Profile** — Toggle switch. Default: on.
+   - **Show Email on Profile** — Toggle switch. Default: on.
+   - Each toggle: dark card row with icon + label + switch.
+   - Below each toggle: 'Your phone number will be visible to customers browsing your bar.'
+
+6. **CONTACT PREVIEW CARD:**
+   - At the bottom of the form, a live preview card showing how the contact info will appear on the customer-facing bar profile.
+   - Use glassmorphism effect: frosted background with slight blur.
+   - Display:
+     - Phone icon + formatted phone number
+     - Mail icon + email
+     - Globe icon + website link
+     - Instagram icon + handle
+     - WhatsApp green button (only if enabled)
+   - This preview updates in real-time as the user types.
+
+**INTERACTIONS & RESPONSIVE BEHAVIOR:**
+- Input fields use dark card style (#121212 background, gold focus border, 12px border radius).
+- Phone fields use masked input with country code (Brazil +55 default).
+- Instagram field auto-prepends '@'.
+- Website field auto-prepends 'https://' if missing on save.
+- Unsaved changes prompt: bottom sheet if user navigates back with pending edits.
+- On save success: green snackbar 'Contact settings updated!'
+- On save error: red snackbar with error.
+- Loading state: shimmer placeholders.
+- Error state: centered error with retry button.
+
+**ICONS (Lucide):** `Phone`, `Mail`, `Globe`, `Camera`, `Facebook`, `MessageCircle`, `Eye`, `EyeOff`, `ToggleRight`, `Share2`, `CheckCircle`, `Save`.
+
+**ANIMATIONS:**
+- WhatsApp section: when toggle is switched on, the preview card and green pill animate in with a slide-down + fade (300ms).
+- Preview card updates: crossfade animation when contact fields change.
+- Input focus: gold border animates (200ms ease).
+- Save button: loading spinner → checkmark on success.
+
+**TECHNICAL NOTE:**
+- Build as a Flutter `StatefulWidget` with `GlobalKey<FormState>`.
+- Use design tokens: `barzGold` (#FFDE59), `barzDark` (#0A0A0A), `barzDarkLight` (#121212), `barzDarkCard` (#1A1A1A), `whatsappGreen` (#25D366), `textOnDark` (#FFFFFF), `textSecondary` (#B0B0B0).
+- All strings must use our i18n system via `AppLocalizations.of(context)!` (placeholder: use comments `// i18n`).
+- Use Lucide icons from the `lucide_icons` package.
+- Match the existing `_SettingItem` pattern from our Business Settings page for consistency with the section layout."
+
+---
+
+### Cart Best Prompt We Made So Far
+"Build me a premium shopping cart component for a bar/nightlife ordering app.
+
+I want a dark and gold aesthetic with these exact colors:
+- Gold/Yellow: #FFDE59 (for prices, accents, primary buttons)
+- Black: #0A0A0A (dark mode background)
+- Cream white: #FFFDE7 (light mode background)
+- Card surfaces: Pure white #FFFFFF with very subtle shadows
+
+The cart should have:
+
+CART ITEMS SECTION:
+- Each item is a white card with rounded corners (16px radius)
+- Product thumbnail on the left (80x80px, rounded 12px)
+- Name in bold black text next to image
+- Short description underneath in gray
+- Price displayed in the gold color
+- A quantity control on the right side with circular + and - buttons that have a gold border
+- The number between the buttons
+- Way to remove items (trash icon or swipe gesture)
+
+COUPON CODE SECTION:
+- A text input where users can type coupon codes
+- "Apply" button next to it, gold background with black text
+- When a coupon is applied, show the discount with a checkmark
+
+ACTIVE PROMOTIONS:
+- Show any cashback or promotions the user has activated
+- Each as a small card with toggle switch
+- Show the benefit (like "5% cashback")
+
+BOTTOM AREA:
+- Order summary with subtotal, any discounts, and final total
+- Big gold "Checkout" or "Proceed to Payment" button
+
+Make it support both light and dark mode. The aesthetic should feel premium and modern, like a high-end fintech app meets nightlife energy."

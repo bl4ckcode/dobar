@@ -9,6 +9,7 @@ import 'package:barz/core/locale/locale_cubit.dart';
 import 'package:barz/core/rbac/rbac.dart';
 import 'package:barz/core/router/app_routes.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:barz/ui/business/forms/business_details_form.dart';
 
 class BusinessSettingsPage extends StatelessWidget {
   const BusinessSettingsPage({super.key});
@@ -45,43 +46,46 @@ class BusinessSettingsPage extends StatelessWidget {
 
                   const _SectionHeader(label: 'General Settings'),
 
-                  // App Appearance with functional theme toggle and Lucide icons
-                  BlocBuilder<ThemeCubit, ThemeMode>(
-                    builder: (context, themeMode) {
-                      final isDark = themeMode == ThemeMode.dark;
-                      return _SettingItem(
-                        icon: isDark ? LucideIcons.moon : LucideIcons.sun,
-                        label: 'App Appearance',
-                        onTap: () {
-                          context.read<ThemeCubit>().toggleTheme();
-                        },
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              isDark ? 'Dark Mode' : 'Light Mode',
-                              style: TextStyle(
-                                color: mutedColor,
-                                fontSize: 13,
-                              ),
+                // App Appearance with Sun/Moon icons on both sides (Lovable pattern)
+                BlocBuilder<ThemeCubit, ThemeMode>(
+                  builder: (context, themeMode) {
+                    final isDark = themeMode == ThemeMode.dark;
+                    return _SettingItem(
+                      icon: LucideIcons.palette,
+                      label: 'App Appearance',
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            LucideIcons.sun,
+                            size: 14,
+                            color: isDark ? mutedColor : barzGold,
+                          ),
+                          const SizedBox(width: 6),
+                          SizedBox(
+                            height: 24,
+                            child: Switch.adaptive(
+                              value: isDark,
+                              onChanged: (_) {
+                                context.read<ThemeCubit>().toggleTheme();
+                              },
+                              activeTrackColor: barzGold.withValues(alpha: 0.4),
+                              activeThumbColor: barzGold,
+                              inactiveTrackColor: mutedColor.withValues(alpha: 0.2),
+                              inactiveThumbColor: mutedColor,
                             ),
-                            const SizedBox(width: 8),
-                            SizedBox(
-                              height: 24,
-                              child: Switch.adaptive(
-                                value: isDark,
-                                onChanged: (_) {
-                                  context.read<ThemeCubit>().toggleTheme();
-                                },
-                                activeTrackColor: barzGold.withValues(alpha: 0.4),
-                                activeThumbColor: barzGold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                  ).animate().fadeIn(delay: 50.ms).slideY(begin: 0.1, end: 0),
+                          ),
+                          const SizedBox(width: 6),
+                          Icon(
+                            LucideIcons.moon,
+                            size: 14,
+                            color: isDark ? barzGold : mutedColor,
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ).animate().fadeIn(delay: 50.ms).slideY(begin: 0.1, end: 0),
 
                   // Language selector (dynamically shows current locale)
                   BlocBuilder<LocaleCubit, Locale>(
@@ -99,18 +103,23 @@ class BusinessSettingsPage extends StatelessWidget {
                     },
                   ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.1, end: 0),
 
-                  // Business Details
-                  _SettingItem(
-                    icon: LucideIcons.store,
-                    label: 'Business Details',
-                    trailing: Text(
-                      'Edit',
-                      style: TextStyle(color: mutedColor, fontSize: 13),
-                    ),
-                    onTap: () {
-                      _showComingSoon(context, 'Business Details');
-                    },
-                  ).animate().fadeIn(delay: 150.ms).slideY(begin: 0.1, end: 0),
+                // Business Details
+                _SettingItem(
+                  icon: LucideIcons.store,
+                  label: 'Business Details',
+                  trailing: Text(
+                    'Edit',
+                    style: TextStyle(color: mutedColor, fontSize: 13),
+                  ),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const BusinessDetailsForm(),
+                      ),
+                    );
+                  },
+                ).animate().fadeIn(delay: 150.ms).slideY(begin: 0.1, end: 0),
 
                   // Contact Settings
                   _SettingItem(

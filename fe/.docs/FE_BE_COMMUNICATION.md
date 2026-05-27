@@ -1759,92 +1759,135 @@ Auth: Required
 Previous versions archived in git history.
 ---
 
-## ADVERTISING SUBSCRIPTION (SPRINT 5 - NEW)
+## PLAN FEATURES & INTERNATIONALIZATION (i18n) [MAY 25, 2026 - NEW]
 
 Status: **✅ COMPLETE**
-Priority: HIGH - Monetization & Business Tiering
+Priority: MEDIUM - Multi-language support
 
-### 1. Subscribe to Plan
-Subscribe or upgrade the current bar to a higher tier.
+### Overview
 
-```
-POST /api/advertising/subscribe?bar_id={bar_id}
-Auth: Required (ADS_MANAGE permission)
+Plan feature strings (e.g., "Premium Support", "Reduced Commission") are no longer hardcoded in the backend. They are stored as **string keys** in the `region_pricing` database table's JSON columns. The frontend receives these keys via `GET /advertising/plans` and translates them into the user's selected language.
 
-Body:
-{
-  "tier": "master", // "regular" | "master" | "vip"
-  "billing_cycle": "monthly", // "monthly" | "annual"
-  "payment_method": {
-    "type": "pix" // "pix" | "card"
+### i18n Feature Keys
+
+Each plan uses keys from the DB. Fallback keys are embedded in the code but will be replaced once the migration adds the columns to production. The keys follow the pattern `feature_<short_description>`:
+
+| Key | Meaning (English) |
+|-----|-------------------|
+| `feature_basic_listing` | Basic listing in app |
+| `feature_order_management` | Order management |
+| `feature_basic_analytics` | Basic analytics |
+| `feature_everything_regular` | Everything in Regular |
+| `feature_reduced_commission` | Reduced commission rate |
+| `feature_monthly_credits` | Monthly advertising credits |
+| `feature_featured_home` | Featured Home placement |
+| `feature_sponsored_search` | Sponsored Search |
+| `feature_priority_support` | Priority support |
+| `feature_everything_master` | Everything in Master |
+| `feature_lowest_commission` | Lowest commission rate |
+| `feature_max_credits` | Maximum advertising credits |
+| `feature_map_spotlight` | Map Spotlight |
+| `feature_promotion_boost` | Promotion Boost |
+| `feature_rich_media_banners` | Rich Media Banners |
+| `feature_verified_badge` | Verified Badge |
+| `feature_dedicated_manager` | Dedicated account manager |
+
+### Frontend Implementation
+
+```dart
+// Plan response now includes `features` as a list of string keys:
+// "features": ["feature_basic_listing", "feature_order_management", ...]
+
+class PlanFeatureKeys {
+  static const Map<String, Map<String, String>> translations = {
+    'en': {
+      'feature_basic_listing': 'Basic listing in app',
+      'feature_order_management': 'Order management',
+      'feature_basic_analytics': 'Basic analytics',
+      'feature_everything_regular': 'Everything in Regular',
+      'feature_reduced_commission': 'Reduced commission rate',
+      'feature_monthly_credits': 'Monthly advertising credits',
+      'feature_featured_home': 'Featured Home placement',
+      'feature_sponsored_search': 'Sponsored Search',
+      'feature_priority_support': 'Priority support',
+      'feature_everything_master': 'Everything in Master',
+      'feature_lowest_commission': 'Lowest commission rate',
+      'feature_max_credits': 'Maximum advertising credits',
+      'feature_map_spotlight': 'Map Spotlight',
+      'feature_promotion_boost': 'Promotion Boost',
+      'feature_rich_media_banners': 'Rich Media Banners',
+      'feature_verified_badge': 'Verified Badge',
+      'feature_dedicated_manager': 'Dedicated account manager',
+    },
+    'pt': {
+      'feature_basic_listing': 'Listagem básica no app',
+      'feature_order_management': 'Gerenciamento de pedidos',
+      'feature_basic_analytics': 'Analytics básicos',
+      'feature_everything_regular': 'Tudo do Regular',
+      'feature_reduced_commission': 'Taxa de comissão reduzida',
+      'feature_monthly_credits': 'Créditos de publicidade mensais',
+      'feature_featured_home': 'Destaque na página inicial',
+      'feature_sponsored_search': 'Pesquisa patrocinada',
+      'feature_priority_support': 'Suporte prioritário',
+      'feature_everything_master': 'Tudo do Master',
+      'feature_lowest_commission': 'Menor taxa de comissão',
+      'feature_max_credits': 'Máximo de créditos publicitários',
+      'feature_map_spotlight': 'Destaque no mapa',
+      'feature_promotion_boost': 'Impulso de promoções',
+      'feature_rich_media_banners': 'Banners de mídia avançada',
+      'feature_verified_badge': 'Selo verificado',
+      'feature_dedicated_manager': 'Gerente de conta dedicado',
+    },
+    'es': {
+      'feature_basic_listing': 'Listado básico en la app',
+      'feature_order_management': 'Gestión de pedidos',
+      'feature_basic_analytics': 'Analíticas básicas',
+      'feature_everything_regular': 'Todo lo de Regular',
+      'feature_reduced_commission': 'Tasa de comisión reducida',
+      'feature_monthly_credits': 'Créditos publicitarios mensuales',
+      'feature_featured_home': 'Destacado en inicio',
+      'feature_sponsored_search': 'Búsqueda patrocinada',
+      'feature_priority_support': 'Soporte prioritario',
+      'feature_everything_master': 'Todo lo de Master',
+      'feature_lowest_commission': 'Tasa de comisión más baja',
+      'feature_max_credits': 'Máximos créditos publicitarios',
+      'feature_map_spotlight': 'Destacado en mapa',
+      'feature_promotion_boost': 'Impulso de promociones',
+      'feature_rich_media_banners': 'Banners multimedia',
+      'feature_verified_badge': 'Insignia verificada',
+      'feature_dedicated_manager': 'Gerente de cuenta dedicado',
+    },
+  };
+
+  static String translate(String key, String locale) {
+    final lang = locale.startsWith('pt')
+        ? 'pt'
+        : locale.startsWith('es')
+            ? 'es'
+            : 'en';
+    return translations[lang]?[key] ?? key;
+  }
+
+  static List<String> translateList(List<String> keys, String locale) {
+    return keys.map((k) => translate(k, locale)).toList();
   }
 }
 
-Response 200 (Credit Card - Immediate):
-{
-  "id": 12,
-  "bar_id": 16,
-  "tier": "master",
-  "status": "active",
-  "monthly_fee": 100.0,
-  "credits": {
-      "featured_hours": 10,
-      "search_clicks": 100,
-      "map_hours": 5,
-      "boost_impressions": 1000
-  },
-  "billing_cycle_start": "2026-03-24T10:00:00Z",
-  "next_billing_date": "2026-04-24T10:00:00Z"
-}
-
-Response 200 (PIX - Waiting Payment):
-{
-  "status": "waiting_payment",
-  "pix_qr_code": "000201...",
-  "pix_copia_e_cola": "000201...",
-  "pix_qr_code_url": "https://gateway.stone.com.br/qr/...",
-  "pix_expires_at": "2026-03-24T12:00:00Z",
-  "invoice_id": 45
+// Usage:
+final plans = response.data['plans'];
+final myLocale = Platform.localeName; // e.g., 'pt_BR'
+for (final plan in plans.values) {
+  final features = PlanFeatureKeys.translateList(
+    List<String>.from(plan['features']),
+    myLocale,
+  );
+  // Display `features` in the UI
 }
 ```
 
-### 2. Check Credits
-Check remaining advertising credits for the bar.
+---
 
-```
-GET /api/advertising/credits?bar_id={bar_id}
-Auth: Required (ADS_MANAGE)
-
-Response 200:
-{
-  "featured_hours": 8,
-  "search_clicks": 45,
-  "map_hours": 2,
-  "boost_impressions": 850
-}
-```
-
-### 3. Payment Webhook (DPE Internal)
-The Dobar Payment Engine (DPE) notifies the backend when a PIX payment is confirmed.
-
-```
-POST /api/payment/webhook/dpe
-Body:
-{
-  "event": "payment.succeeded",
-  "data": {
-    "payment_id": "pay_123",
-    "status": "succeeded",
-    "metadata": {
-      "type": "subscription",
-      "bar_id": 16,
-      "tier": "master",
-      "invoice_id": 45
-    }
-  }
-}
-```
-*Note: Upon successful webhook, the backend automatically activates the subscription and updates the bar's tier and credits.*
+## ADVERTISING SUBSCRIPTION (SPRINT 5 - NEW)
 
 ---
 

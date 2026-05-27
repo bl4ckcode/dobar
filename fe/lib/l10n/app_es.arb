@@ -676,5 +676,23 @@
       }
     }
   },
-  "business_campaign_card_desc": "¡Crea una campaña y llega a más clientes en tu área!"
+  "business_campaign_card_desc": "¡Crea una campaña y llega a más clientes en tu área!",
+
+  "feature_basic_listing": "Listado básico en la app",
+  "feature_order_management": "Gestión de pedidos",
+  "feature_basic_analytics": "Analíticas básicas",
+  "feature_everything_regular": "Todo lo de Regular",
+  "feature_reduced_commission": "Tasa de comisión reducida",
+  "feature_monthly_credits": "Créditos publicitarios mensuales",
+  "feature_featured_home": "Destacado en inicio",
+  "feature_sponsored_search": "Búsqueda patrocinada",
+  "feature_priority_support": "Soporte prioritario",
+  "feature_everything_master": "Todo lo de Master",
+  "feature_lowest_commission": "Tasa de comisión más baja",
+  "feature_max_credits": "Máximos créditos publicitarios",
+  "feature_map_spotlight": "Destacado en mapa",
+  "feature_promotion_boost": "Impulso de promociones",
+  "feature_rich_media_banners": "Banners multimedia",
+  "feature_verified_badge": "Insignia verificada",
+  "feature_dedicated_manager": "Gerente de cuenta dedicado"
 }
