@@ -155,6 +155,13 @@ class ApiEndpoints {
   static const String notificationsReadAll = '/notifications/read-all';
   static String notificationRead(int id) => '/notifications/$id/read';
 
+  // Business Settings (Sprint 10)
+  static String barDetails(int barId) => '/bars/$barId/details';
+  static String barContact(int barId) => '/bars/$barId/contact';
+  static String barDeleteData(int barId) => '/bars/$barId/data';
+  static String barDeactivate(int barId) => '/bars/$barId/deactivate';
+  static String barReactivate(int barId) => '/bars/$barId/reactivate';
+
   // Legal Documents
   static String legalDocument(String type, String language) =>
       '/legal/${type}_$language.md';

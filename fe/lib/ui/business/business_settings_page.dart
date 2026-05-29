@@ -10,177 +10,258 @@ import 'package:barz/core/rbac/rbac.dart';
 import 'package:barz/core/router/app_routes.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:barz/ui/business/forms/business_details_form.dart';
+import 'package:barz/core/utils/injections.dart';
+import 'package:barz/features/business_settings/presentation/bloc/business_settings_bloc.dart';
+import 'package:barz/features/business_settings/presentation/bloc/business_settings_event.dart';
+import 'package:barz/features/business_settings/presentation/bloc/business_settings_state.dart';
+import 'package:barz/l10n/app_localizations.dart';
 
 class BusinessSettingsPage extends StatelessWidget {
   const BusinessSettingsPage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<SessionBloc, SessionState>(
-      builder: (context, state) {
-        if (state is! SessionReady) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    return BlocProvider.value(
+      value: getItInjector<BusinessSettingsBloc>(),
+      child: BlocBuilder<SessionBloc, SessionState>(
+        builder: (context, state) {
+          if (state is! SessionReady) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-        final activeBar = state.session.activeBar;
-        if (activeBar == null) return const SizedBox.shrink();
+          final activeBar = state.session.activeBar;
+          if (activeBar == null) return const SizedBox.shrink();
 
-        final dobar = context.dobarColors;
-        final mutedColor = dobar.labelSecondary;
-        final bgColor = dobar.background;
+          final l10n = AppLocalizations.of(context)!;
+          final dobar = context.dobarColors;
+          final mutedColor = dobar.labelSecondary;
+          final bgColor = dobar.background;
 
-        return Scaffold(
-          backgroundColor: bgColor,
-          body: SafeArea(
-            bottom: false,
-            child: ResponsiveCenterContainer(
-              maxWidthPercentage: 0.9,
-              maxWidth: 1400,
-              padding: EdgeInsets.zero,
-              child: ListView(
-                children: [
-                  _SettingsHeader(
-                    barName: activeBar.barName,
-                    role: activeBar.role.displayName,
-                  ),
+          return Scaffold(
+            backgroundColor: bgColor,
+            body: SafeArea(
+              bottom: false,
+              child: ResponsiveCenterContainer(
+                maxWidthPercentage: 0.8,
+                maxWidth: 1200,
+                padding: const EdgeInsets.symmetric(horizontal: BarzSpacing.md),
+                child: ListView(
+                  children: [
+                    _SettingsHeader(
+                      barName: activeBar.barName,
+                      role: activeBar.role.displayName,
+                    ),
 
-                  const _SectionHeader(label: 'General Settings'),
+                    _SectionHeader(label: l10n.settings_general),
 
-                // App Appearance with Sun/Moon icons on both sides (Lovable pattern)
-                BlocBuilder<ThemeCubit, ThemeMode>(
-                  builder: (context, themeMode) {
-                    final isDark = themeMode == ThemeMode.dark;
-                    return _SettingItem(
-                      icon: LucideIcons.palette,
-                      label: 'App Appearance',
-                      trailing: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(
-                            LucideIcons.sun,
-                            size: 14,
-                            color: isDark ? mutedColor : barzGold,
+                    // App Appearance with Sun/Moon icons on both sides (Lovable pattern)
+                    BlocBuilder<ThemeCubit, ThemeMode>(
+                      builder: (context, themeMode) {
+                        final isDark = themeMode == ThemeMode.dark;
+                        return _SettingItem(
+                          icon: LucideIcons.palette,
+                          label: l10n.settings_app_appearance,
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                LucideIcons.sun,
+                                size: 14,
+                                color: isDark ? mutedColor : barzGold,
+                              ),
+                              const SizedBox(width: 6),
+                              SizedBox(
+                                height: 24,
+                                child: Switch.adaptive(
+                                  value: isDark,
+                                  onChanged: (_) {
+                                    context.read<ThemeCubit>().toggleTheme();
+                                  },
+                                  activeTrackColor: barzGold.withValues(
+                                    alpha: 0.4,
+                                  ),
+                                  activeThumbColor: barzGold,
+                                  inactiveTrackColor: mutedColor.withValues(
+                                    alpha: 0.2,
+                                  ),
+                                  inactiveThumbColor: mutedColor,
+                                ),
+                              ),
+                              const SizedBox(width: 6),
+                              Icon(
+                                LucideIcons.moon,
+                                size: 14,
+                                color: isDark ? barzGold : mutedColor,
+                              ),
+                            ],
                           ),
-                          const SizedBox(width: 6),
-                          SizedBox(
-                            height: 24,
-                            child: Switch.adaptive(
-                              value: isDark,
-                              onChanged: (_) {
-                                context.read<ThemeCubit>().toggleTheme();
-                              },
-                              activeTrackColor: barzGold.withValues(alpha: 0.4),
-                              activeThumbColor: barzGold,
-                              inactiveTrackColor: mutedColor.withValues(alpha: 0.2),
-                              inactiveThumbColor: mutedColor,
+                        );
+                      },
+                    ).animate().fadeIn(delay: 50.ms).slideY(begin: 0.1, end: 0),
+
+                    // Language selector (dynamically shows current locale)
+                    BlocBuilder<LocaleCubit, Locale>(
+                          builder: (context, locale) {
+                            final languageName = _languageDisplayName(
+                              locale.languageCode,
+                            );
+                            return _SettingItem(
+                              icon: LucideIcons.globe,
+                              label: l10n.settings_language,
+                              trailing: Text(
+                                languageName,
+                                style: TextStyle(
+                                  color: mutedColor,
+                                  fontSize: 13,
+                                ),
+                              ),
+                              onTap: () => _showLanguageSelector(context),
+                            );
+                          },
+                        )
+                        .animate()
+                        .fadeIn(delay: 100.ms)
+                        .slideY(begin: 0.1, end: 0),
+
+                    // Business Details
+                    _SettingItem(
+                          icon: LucideIcons.store,
+                          label: l10n.settings_business_details,
+                          trailing: Text(
+                            l10n.edit,
+                            style: TextStyle(color: mutedColor, fontSize: 13),
+                          ),
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const BusinessDetailsForm(),
+                              ),
+                            );
+                          },
+                        )
+                        .animate()
+                        .fadeIn(delay: 150.ms)
+                        .slideY(begin: 0.1, end: 0),
+
+                    // Contact Settings
+                    _SettingItem(
+                          icon: LucideIcons.settings,
+                          label: l10n.settings_contact_settings,
+                          onTap: () {
+                            _showComingSoon(
+                              context,
+                              l10n.settings_contact_settings,
+                            );
+                          },
+                        )
+                        .animate()
+                        .fadeIn(delay: 200.ms)
+                        .slideY(begin: 0.1, end: 0),
+
+                    _SectionHeader(label: l10n.settings_legal_compliance),
+
+                    // Terms of Service
+                    _SettingItem(
+                          icon: LucideIcons.fileText,
+                          label: l10n.settings_terms_of_service,
+                          onTap: () {
+                            AppRoute.termsOfService.push(context);
+                          },
+                        )
+                        .animate()
+                        .fadeIn(delay: 250.ms)
+                        .slideY(begin: 0.1, end: 0),
+
+                    // Privacy Policy
+                    _SettingItem(
+                          icon: LucideIcons.shieldCheck,
+                          label: l10n.settings_privacy_policy,
+                          onTap: () {
+                            AppRoute.privacyPolicy.push(context);
+                          },
+                        )
+                        .animate()
+                        .fadeIn(delay: 300.ms)
+                        .slideY(begin: 0.1, end: 0),
+
+                    // Operational Rules
+                    _SettingItem(
+                          icon: LucideIcons.scale,
+                          label: l10n.settings_operational_rules,
+                          onTap: () {
+                            _showComingSoon(
+                              context,
+                              l10n.settings_operational_rules,
+                            );
+                          },
+                        )
+                        .animate()
+                        .fadeIn(delay: 350.ms)
+                        .slideY(begin: 0.1, end: 0),
+
+                    BlocConsumer<BusinessSettingsBloc, BusinessSettingsState>(
+                      listener: (context, state) {
+                        if (state.error != null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(state.error!),
+                              behavior: SnackBarBehavior.floating,
+                              backgroundColor: errorRed,
                             ),
+                          );
+                        }
+                        if (state.deleteResult != null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(state.deleteResult!.message),
+                              behavior: SnackBarBehavior.floating,
+                              backgroundColor: successGreen,
+                            ),
+                          );
+                        }
+                        if (state.deactivateResult != null) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(state.deactivateResult!.message),
+                              behavior: SnackBarBehavior.floating,
+                              backgroundColor: successGreen,
+                            ),
+                          );
+                        }
+                      },
+                      builder: (context, state) {
+                        return _DangerZone(
+                          isProcessing: state.isProcessing,
+                          onDeleteBusinessData: (barId) =>
+                              _executeDeleteBusinessData(context, barId),
+                          onDeactivateAccount: (barId) =>
+                              _executeDeactivateAccount(context, barId),
+                        );
+                      },
+                    ),
+
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 40),
+                      child: Center(
+                        child: Text(
+                          l10n.settings_version_session_active('2.4.1'),
+                          style: TextStyle(
+                            fontFamily: 'Courier',
+                            letterSpacing: 2,
+                            color: mutedColor,
+                            fontSize: 10,
                           ),
-                          const SizedBox(width: 6),
-                          Icon(
-                            LucideIcons.moon,
-                            size: 14,
-                            color: isDark ? barzGold : mutedColor,
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ).animate().fadeIn(delay: 50.ms).slideY(begin: 0.1, end: 0),
-
-                  // Language selector (dynamically shows current locale)
-                  BlocBuilder<LocaleCubit, Locale>(
-                    builder: (context, locale) {
-                      final languageName = _languageDisplayName(locale.languageCode);
-                      return _SettingItem(
-                        icon: LucideIcons.globe,
-                        label: 'Language',
-                        trailing: Text(
-                          languageName,
-                          style: TextStyle(color: mutedColor, fontSize: 13),
-                        ),
-                        onTap: () => _showLanguageSelector(context),
-                      );
-                    },
-                  ).animate().fadeIn(delay: 100.ms).slideY(begin: 0.1, end: 0),
-
-                // Business Details
-                _SettingItem(
-                  icon: LucideIcons.store,
-                  label: 'Business Details',
-                  trailing: Text(
-                    'Edit',
-                    style: TextStyle(color: mutedColor, fontSize: 13),
-                  ),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => const BusinessDetailsForm(),
-                      ),
-                    );
-                  },
-                ).animate().fadeIn(delay: 150.ms).slideY(begin: 0.1, end: 0),
-
-                  // Contact Settings
-                  _SettingItem(
-                    icon: LucideIcons.settings,
-                    label: 'Contact Settings',
-                    onTap: () {
-                      _showComingSoon(context, 'Contact Settings');
-                    },
-                  ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1, end: 0),
-
-                  const _SectionHeader(label: 'Legal & Compliance'),
-
-                  // Terms of Service
-                  _SettingItem(
-                    icon: LucideIcons.fileText,
-                    label: 'Terms of Service',
-                    onTap: () {
-                      AppRoute.termsOfService.push(context);
-                    },
-                  ).animate().fadeIn(delay: 250.ms).slideY(begin: 0.1, end: 0),
-
-                  // Privacy Policy
-                  _SettingItem(
-                    icon: LucideIcons.shieldCheck,
-                    label: 'Privacy Policy',
-                    onTap: () {
-                      AppRoute.privacyPolicy.push(context);
-                    },
-                  ).animate().fadeIn(delay: 300.ms).slideY(begin: 0.1, end: 0),
-
-                  // Operational Rules
-                  _SettingItem(
-                    icon: LucideIcons.scale,
-                    label: 'Operational Rules',
-                    onTap: () {
-                      _showComingSoon(context, 'Operational Rules');
-                    },
-                  ).animate().fadeIn(delay: 350.ms).slideY(begin: 0.1, end: 0),
-
-                  const _DangerZone(),
-
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 40),
-                    child: Center(
-                      child: Text(
-                        'V2.4.1 // SESSION ACTIVE',
-                        style: TextStyle(
-                          fontFamily: 'Courier',
-                          letterSpacing: 2,
-                          color: mutedColor,
-                          fontSize: 10,
                         ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
@@ -196,6 +277,7 @@ class BusinessSettingsPage extends StatelessWidget {
   }
 
   void _showLanguageSelector(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final currentLocale = context.read<LocaleCubit>().state;
     showModalBottomSheet(
       context: context,
@@ -222,7 +304,7 @@ class BusinessSettingsPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Select Language',
+                  l10n.settings_select_language,
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
@@ -231,8 +313,8 @@ class BusinessSettingsPage extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 _LanguageOption(
-                  label: 'English',
-                  subtitle: 'English (US)',
+                  label: l10n.settings_lang_english,
+                  subtitle: l10n.settings_lang_english_sub,
                   isSelected: currentLocale.languageCode == 'en',
                   onTap: () {
                     localeCubit.setLanguageCode('en');
@@ -240,8 +322,8 @@ class BusinessSettingsPage extends StatelessWidget {
                   },
                 ),
                 _LanguageOption(
-                  label: 'Português',
-                  subtitle: 'Brazilian Portuguese',
+                  label: l10n.settings_lang_portuguese,
+                  subtitle: l10n.settings_lang_portuguese_sub,
                   isSelected: currentLocale.languageCode == 'pt',
                   onTap: () {
                     localeCubit.setLanguageCode('pt');
@@ -249,8 +331,8 @@ class BusinessSettingsPage extends StatelessWidget {
                   },
                 ),
                 _LanguageOption(
-                  label: 'Español',
-                  subtitle: 'Latin American Spanish',
+                  label: l10n.settings_lang_spanish,
+                  subtitle: l10n.settings_lang_spanish_sub,
                   isSelected: currentLocale.languageCode == 'es',
                   onTap: () {
                     localeCubit.setLanguageCode('es');
@@ -265,10 +347,19 @@ class BusinessSettingsPage extends StatelessWidget {
     );
   }
 
+  void _executeDeleteBusinessData(BuildContext context, int barId) {
+    context.read<BusinessSettingsBloc>().add(DeleteBusinessData(barId));
+  }
+
+  void _executeDeactivateAccount(BuildContext context, int barId) {
+    context.read<BusinessSettingsBloc>().add(DeactivateAccount(barId));
+  }
+
   void _showComingSoon(BuildContext context, String feature) {
+    final l10n = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('$feature coming soon!'),
+        content: Text(l10n.business_feature_coming_soon(feature)),
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
       ),
@@ -325,6 +416,7 @@ class _SettingsHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final dobar = context.dobarColors;
     final textColor = dobar.labelPrimary;
     final mutedColor = dobar.labelSecondary;
@@ -386,11 +478,7 @@ class _SettingsHeader extends StatelessWidget {
                 ),
               ),
               IconButton(
-                icon: Icon(
-                  LucideIcons.store,
-                  color: mutedColor,
-                  size: 20,
-                ),
+                icon: Icon(LucideIcons.store, color: mutedColor, size: 20),
                 onPressed: () {},
               ).animate().fadeIn().scale(),
             ],
@@ -399,19 +487,16 @@ class _SettingsHeader extends StatelessWidget {
           Row(
             children: [
               _HeaderAction(
-                label: 'Switch Bar',
+                label: l10n.settings_switch_bar,
                 icon: LucideIcons.chevronRight,
                 onTap: () {},
                 color: barzGold,
               ),
               const SizedBox(width: 16),
-              Text(
-                '|',
-                style: TextStyle(color: dobar.surfaceElevated),
-              ),
+              Text('|', style: TextStyle(color: dobar.surfaceElevated)),
               const SizedBox(width: 16),
               _HeaderAction(
-                label: 'View Public Profile',
+                label: l10n.settings_view_public_profile,
                 icon: LucideIcons.chevronRight,
                 onTap: () {},
                 color: mutedColor,
@@ -551,7 +636,15 @@ class _SettingItem extends StatelessWidget {
 }
 
 class _DangerZone extends StatelessWidget {
-  const _DangerZone();
+  final Function(int) onDeleteBusinessData;
+  final Function(int) onDeactivateAccount;
+  final bool isProcessing;
+
+  const _DangerZone({
+    required this.onDeleteBusinessData,
+    required this.onDeactivateAccount,
+    this.isProcessing = false,
+  });
 
   Future<bool> _confirmAction(
     BuildContext context, {
@@ -559,16 +652,14 @@ class _DangerZone extends StatelessWidget {
     required String message,
     required String confirmLabel,
   }) async {
+    final l10n = AppLocalizations.of(context)!;
     return await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
             backgroundColor: context.dobarColors.surface,
             title: Text(
               title,
-              style: TextStyle(
-                color: errorRed,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(color: errorRed, fontWeight: FontWeight.bold),
             ),
             content: Text(
               message,
@@ -578,7 +669,7 @@ class _DangerZone extends StatelessWidget {
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
                 child: Text(
-                  'Cancel',
+                  l10n.cancel,
                   style: TextStyle(color: context.dobarColors.labelSecondary),
                 ),
               ),
@@ -596,6 +687,7 @@ class _DangerZone extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dobar = context.dobarColors;
+    final l10n = AppLocalizations.of(context)!;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 48, 16, 16),
@@ -611,11 +703,11 @@ class _DangerZone extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.fromLTRB(24, 24, 24, 12),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
             child: Text(
-              '⚠ DANGER ZONE',
-              style: TextStyle(
+              l10n.settings_danger_zone,
+              style: const TextStyle(
                 color: errorRed,
                 fontFamily: 'Courier',
                 fontSize: 11,
@@ -626,49 +718,57 @@ class _DangerZone extends StatelessWidget {
           ),
           _SettingItem(
             icon: LucideIcons.trash2,
-            label: 'Delete Business Data',
+            label: isProcessing
+                ? '${l10n.loading}...'
+                : l10n.settings_delete_business_data,
             destructive: true,
-            onTap: () async {
-              final confirmed = await _confirmAction(
-                context,
-                title: 'Delete Business Data',
-                message:
-                    'This action is irreversible. All campaign history, menu data, and order records will be permanently deleted. Continue?',
-                confirmLabel: 'Delete Everything',
-              );
-              if (confirmed && context.mounted) {
-                _showComingSoon(context, 'Delete Business Data API');
-              }
-            },
+            onTap: isProcessing
+                ? null
+                : () async {
+                    final confirmed = await _confirmAction(
+                      context,
+                      title: l10n.settings_delete_business_data,
+                      message: l10n.settings_delete_business_data_message,
+                      confirmLabel: l10n.settings_delete_everything,
+                    );
+                    if (confirmed && context.mounted) {
+                      final state = context.read<SessionBloc>().state;
+                      if (state is SessionReady) {
+                        final barId = state.session.activeBar?.barId;
+                        if (barId != null) {
+                          onDeleteBusinessData(barId);
+                        }
+                      }
+                    }
+                  },
           ),
           _SettingItem(
             icon: LucideIcons.alertTriangle,
-            label: 'Deactivate Account',
+            label: isProcessing
+                ? '${l10n.loading}...'
+                : l10n.settings_deactivate_account,
             destructive: true,
-            onTap: () async {
-              final confirmed = await _confirmAction(
-                context,
-                title: 'Deactivate Account',
-                message:
-                    'Your business profile and all associated data will be temporarily disabled. You can reactivate at any time. Continue?',
-                confirmLabel: 'Deactivate',
-              );
-              if (confirmed && context.mounted) {
-                _showComingSoon(context, 'Deactivate Account API');
-              }
-            },
+            onTap: isProcessing
+                ? null
+                : () async {
+                    final confirmed = await _confirmAction(
+                      context,
+                      title: l10n.settings_deactivate_account,
+                      message: l10n.settings_deactivate_account_message,
+                      confirmLabel: l10n.settings_deactivate,
+                    );
+                    if (confirmed && context.mounted) {
+                      final state = context.read<SessionBloc>().state;
+                      if (state is SessionReady) {
+                        final barId = state.session.activeBar?.barId;
+                        if (barId != null) {
+                          onDeactivateAccount(barId);
+                        }
+                      }
+                    }
+                  },
           ),
         ],
-      ),
-    );
-  }
-
-  void _showComingSoon(BuildContext context, String feature) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$feature coming soon!'),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 2),
       ),
     );
   }

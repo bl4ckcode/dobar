@@ -30,6 +30,7 @@ import 'package:barz/features/notifications/notifications_injection.dart';
 import 'package:barz/features/legal/legal_injection.dart';
 import 'package:barz/features/user/user_injection.dart';
 import 'package:barz/features/staff/staff_injection.dart';
+import 'package:barz/features/business_settings/business_settings_injection.dart';
 import 'package:barz/shared/app_injections.dart';
 import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -60,6 +61,7 @@ Future<void> initInjections() async {
   registerTrendingFeature(getItInjector);
   initLegalInjection();
   initStaff();
+  initBusinessSettings();
   await initSessionInjection();
 }
 

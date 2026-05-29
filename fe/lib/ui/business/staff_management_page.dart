@@ -67,6 +67,7 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     return MultiBlocProvider(
       providers: [BlocProvider.value(value: _staffBloc)],
@@ -136,8 +137,8 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
                             activeBar.barId,
                             isDark,
                           ),
-                          orElse: () => const Center(
-                            child: Text('No staff data available'),
+                          orElse: () => Center(
+                            child: Text(l10n.business_staff_no_data),
                           ),
                         ),
                       ),
@@ -153,8 +154,9 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
   }
 
   Widget _buildStaffList(List<BarStaff> staffList, int barId, bool isDark) {
+    final l10n = AppLocalizations.of(context)!;
     if (staffList.isEmpty) {
-      return const Center(child: Text('No staff members found.'));
+      return Center(child: Text(l10n.business_staff_no_members));
     }
     return ListView.separated(
       padding: const EdgeInsets.only(bottom: BarzSpacing.xl),
@@ -383,6 +385,7 @@ class _StaffRowState extends State<_StaffRow> {
     Color textColor,
     Color mutedTextColor,
   ) {
+    final l10n = AppLocalizations.of(context)!;
     return MenuAnchor(
       alignmentOffset: const Offset(-150, 0),
       style: MenuStyle(
@@ -431,7 +434,7 @@ class _StaffRowState extends State<_StaffRow> {
             );
           }).toList(),
           child: Text(
-            'Change Role',
+            l10n.business_change_role,
             style: TextStyle(color: textColor, fontSize: 13),
           ),
         ),
@@ -443,9 +446,9 @@ class _StaffRowState extends State<_StaffRow> {
             size: 16,
             color: Colors.redAccent,
           ),
-          child: const Text(
-            'Remove',
-            style: TextStyle(color: Colors.redAccent, fontSize: 13),
+          child: Text(
+            l10n.business_remove,
+            style: const TextStyle(color: Colors.redAccent, fontSize: 13),
           ),
         ),
       ],
@@ -570,6 +573,7 @@ class _InviteStaffSheetState extends State<_InviteStaffSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final dobar = context.dobarColors;
     final textColor = dobar.labelPrimary;
@@ -605,7 +609,7 @@ class _InviteStaffSheetState extends State<_InviteStaffSheet> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Invite Staff',
+                l10n.business_invite_staff_title,
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.w600,
@@ -626,7 +630,7 @@ class _InviteStaffSheetState extends State<_InviteStaffSheet> {
 
           // Contact Input
           Text(
-            'Email or Phone',
+            l10n.business_invite_email_phone,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,
@@ -638,7 +642,7 @@ class _InviteStaffSheetState extends State<_InviteStaffSheet> {
             controller: _contactController,
             style: TextStyle(color: textColor, fontSize: 14),
             decoration: InputDecoration(
-              hintText: 'name@email.com or +1 555-0000',
+              hintText: l10n.business_invite_email_hint,
               hintStyle: TextStyle(color: mutedColor),
               filled: true,
               fillColor: inputBg,
@@ -665,7 +669,7 @@ class _InviteStaffSheetState extends State<_InviteStaffSheet> {
 
           // Role Select
           Text(
-            'Assign Role',
+            l10n.business_assign_role,
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,
@@ -732,9 +736,9 @@ class _InviteStaffSheetState extends State<_InviteStaffSheet> {
                   borderRadius: BorderRadius.circular(8),
                 ),
               ),
-              child: const Text(
-                'Send Invitation',
-                style: TextStyle(fontWeight: FontWeight.bold),
+              child: Text(
+                l10n.business_send_invitation,
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
           ),

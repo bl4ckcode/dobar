@@ -12,6 +12,7 @@ import 'package:barz/features/menu_reader/presentation/bloc/menu_reader_event.da
 import 'package:barz/features/menu_reader/presentation/bloc/menu_reader_state.dart';
 import 'package:barz/features/menu_reader/presentation/pages/menu_extraction_results_page.dart';
 import 'package:loading_animation_widget/loading_animation_widget.dart';
+import 'package:barz/l10n/app_localizations.dart';
 
 class MenuReaderPage extends StatefulWidget {
   final int barId;
@@ -40,6 +41,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
   Widget build(BuildContext context) {
     return BlocConsumer<MenuReaderBloc, MenuReaderState>(
       listener: (context, state) async {
+        final l10n = AppLocalizations.of(context)!;
         if (state.status == MenuReaderStatus.extracted) {
           final saved = await Navigator.of(context).push<bool>(
             MaterialPageRoute(
@@ -55,7 +57,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
         } else if (state.status == MenuReaderStatus.error) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(state.errorMessage ?? 'Failed to extract menu'),
+              content: Text(state.errorMessage ?? l10n.menu_reader_error_extract),
               backgroundColor: errorRed,
             ),
           );
@@ -80,6 +82,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
   }
 
   Widget _buildToolbar(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: EdgeInsets.only(top: MediaQuery.of(context).padding.top),
       color: barzGoldSoft,
@@ -89,10 +92,10 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
             icon: const Icon(Icons.arrow_back),
             onPressed: () => context.go(AppRoute.businessMenu.path),
           ),
-          const Expanded(
+          Expanded(
             child: Text(
-              'Menu Reader AI',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+              l10n.menu_reader_title,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
             ),
           ),
         ],
@@ -101,6 +104,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
   }
 
   Widget _buildLoadingState() {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     return Center(
       child: Column(
@@ -109,12 +113,12 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
           LoadingAnimationWidget.staggeredDotsWave(color: barzGold, size: 60),
           const SizedBox(height: BarzSpacing.lg),
           Text(
-            'Analyzing your menu...',
+            l10n.menu_reader_analyzing,
             style: theme.textTheme.titleMedium?.copyWith(color: textSecondary),
           ),
           const SizedBox(height: BarzSpacing.sm),
           Text(
-            'This may take a few seconds',
+            l10n.menu_reader_take_seconds,
             style: theme.textTheme.bodyMedium?.copyWith(color: textTertiary),
           ),
         ],
@@ -155,6 +159,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
   }
 
   Widget _buildHeader() {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     return Column(
       children: [
@@ -172,7 +177,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
         ),
         const SizedBox(height: BarzSpacing.lg),
         Text(
-          'Scan Your Menu',
+          l10n.menu_reader_scan_title,
           style: theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.bold,
             color: textPrimary,
@@ -180,7 +185,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
         ),
         const SizedBox(height: BarzSpacing.sm),
         Text(
-          'Take a photo of your physical menu and our AI will extract all items automatically',
+          l10n.menu_reader_scan_subtitle,
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyLarge?.copyWith(color: textSecondary),
         ),
@@ -201,6 +206,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
   }
 
   Widget _buildAnalyzeButton(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return ElevatedButton.icon(
       onPressed: () {
         context.read<MenuReaderBloc>().add(
@@ -215,7 +221,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
         );
       },
       icon: const Icon(Icons.auto_awesome),
-      label: const Text('Analyze Menu'),
+      label: Text(l10n.menu_reader_btn_analyze),
       style: ElevatedButton.styleFrom(
         backgroundColor: barzGold,
         foregroundColor: barzDark,
@@ -228,13 +234,14 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
   }
 
   Widget _buildRetakeButton() {
+    final l10n = AppLocalizations.of(context)!;
     return OutlinedButton.icon(
       onPressed: () => setState(() {
         _selectedImageBytes = null;
         _selectedImageName = null;
       }),
       icon: const Icon(Icons.refresh),
-      label: const Text('Choose Different Photo'),
+      label: Text(l10n.menu_reader_btn_choose_different),
       style: OutlinedButton.styleFrom(
         foregroundColor: textSecondary,
         side: const BorderSide(color: textTertiary),
@@ -247,33 +254,37 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
   }
 
   Widget _buildCameraOption(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return _buildOptionCard(
       icon: Icons.camera_alt_rounded,
-      title: 'Take Photo',
-      subtitle: 'Use your camera to capture the menu',
+      title: l10n.menu_reader_opt_take_photo,
+      subtitle: l10n.menu_reader_opt_take_photo_desc,
       onTap: () => _pickImage(ImageSource.camera),
     );
   }
-
+ 
   Widget _buildGalleryOption(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return _buildOptionCard(
       icon: Icons.photo_library_rounded,
-      title: 'Choose from Gallery',
-      subtitle: 'Select an existing photo of your menu',
+      title: l10n.menu_reader_opt_gallery,
+      subtitle: l10n.menu_reader_opt_gallery_desc,
       onTap: () => _pickImage(ImageSource.gallery),
     );
   }
-
+ 
   Widget _buildUrlOption(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return _buildOptionCard(
       icon: Icons.link_rounded,
-      title: 'Paste Menu URL',
-      subtitle: 'Have an online menu? Paste the link',
+      title: l10n.menu_reader_opt_url,
+      subtitle: l10n.menu_reader_opt_url_desc,
       onTap: () => setState(() => _showUrlInput = true),
     );
   }
 
   Widget _buildUrlInput(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(BarzSpacing.lg),
@@ -307,7 +318,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
               ),
               const SizedBox(width: BarzSpacing.md),
               Text(
-                'Menu URL',
+                l10n.menu_reader_url_label,
                 style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
               ),
             ],
@@ -316,7 +327,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
           TextField(
             controller: _urlController,
             decoration: InputDecoration(
-              hintText: 'https://yourmenu.com/menu.pdf',
+              hintText: l10n.menu_reader_url_hint,
               filled: true,
               fillColor: barzGoldSoft,
               border: OutlineInputBorder(
@@ -335,7 +346,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
           ),
           const SizedBox(height: BarzSpacing.sm),
           Text(
-            'Supports: PDF menus, images (JPG, PNG), and web pages',
+            l10n.menu_reader_url_supports,
             style: theme.textTheme.bodySmall?.copyWith(color: textTertiary),
           ),
           const SizedBox(height: BarzSpacing.lg),
@@ -344,7 +355,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
                 ? null
                 : () => _extractFromUrl(context),
             icon: const Icon(Icons.auto_awesome),
-            label: const Text('Analyze Menu'),
+            label: Text(l10n.menu_reader_btn_analyze),
             style: ElevatedButton.styleFrom(
               backgroundColor: barzGold,
               foregroundColor: barzDark,
@@ -361,13 +372,14 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
   }
 
   Widget _buildBackToOptionsButton() {
+    final l10n = AppLocalizations.of(context)!;
     return OutlinedButton.icon(
       onPressed: () => setState(() {
         _showUrlInput = false;
         _urlController.clear();
       }),
       icon: const Icon(Icons.arrow_back),
-      label: const Text('Back to Options'),
+      label: Text(l10n.menu_reader_btn_back_options),
       style: OutlinedButton.styleFrom(
         foregroundColor: textSecondary,
         side: const BorderSide(color: textTertiary),
@@ -380,14 +392,15 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
   }
 
   void _extractFromUrl(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final url = _urlController.text.trim();
     if (url.isEmpty) return;
-
+ 
     final uri = Uri.tryParse(url);
     if (uri == null || !uri.hasScheme) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter a valid URL'),
+        SnackBar(
+          content: Text(l10n.menu_reader_error_invalid_url),
           backgroundColor: errorRed,
         ),
       );
@@ -457,6 +470,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
   }
 
   Widget _buildTips() {
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     return Container(
       padding: const EdgeInsets.all(BarzSpacing.md),
@@ -473,7 +487,7 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
               const Icon(Icons.lightbulb_outline, color: infoBlue, size: 20),
               const SizedBox(width: BarzSpacing.sm),
               Text(
-                'Tips for best results',
+                l10n.menu_reader_tips_title,
                 style: theme.textTheme.titleSmall?.copyWith(
                   color: infoBlue,
                   fontWeight: FontWeight.w600,
@@ -482,10 +496,10 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
             ],
           ),
           const SizedBox(height: BarzSpacing.sm),
-          _buildTipItem('Good lighting - avoid shadows'),
-          _buildTipItem('Keep the menu flat and in focus'),
-          _buildTipItem('Capture the entire menu in frame'),
-          _buildTipItem('Avoid glare from laminated menus'),
+          _buildTipItem(l10n.menu_reader_tip_lighting),
+          _buildTipItem(l10n.menu_reader_tip_flat),
+          _buildTipItem(l10n.menu_reader_tip_frame),
+          _buildTipItem(l10n.menu_reader_tip_glare),
         ],
       ),
     );
@@ -528,9 +542,10 @@ class _MenuReaderPageState extends State<MenuReaderPage> {
       }
     } catch (e) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Failed to pick image: $e'),
+            content: Text(l10n.menu_reader_error_pick_image(e.toString())),
             backgroundColor: errorRed,
           ),
         );

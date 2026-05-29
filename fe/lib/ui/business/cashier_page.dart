@@ -160,7 +160,7 @@ class _CashierPageState extends State<CashierPage>
                           ),
                           const SizedBox(width: 8),
                           Text(
-                            'LIVE',
+                            l10n.business_status_live,
                             style: TextStyle(
                               fontSize: 12,
                               fontWeight: FontWeight.bold,
@@ -321,6 +321,7 @@ class _CashierPageState extends State<CashierPage>
       counts[normalizedStatus] = (counts[normalizedStatus] ?? 0) + 1;
     }
 
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 12),
@@ -344,11 +345,11 @@ class _CashierPageState extends State<CashierPage>
               ),
               child: Row(
                 children: [
-                  _buildTabItem('Pending', statusPending, counts[statusPending]!),
-                  _buildTabItem('Preparing', statusPreparing, counts[statusPreparing]!),
-                  _buildTabItem('Ready', statusReady, counts[statusReady]!),
-                  _buildTabItem('Completed', statusCompleted, counts[statusCompleted]!),
-                  _buildTabItem('All', null, total),
+                  _buildTabItem(l10n.business_status_pending, statusPending, counts[statusPending]!),
+                  _buildTabItem(l10n.business_status_preparing, statusPreparing, counts[statusPreparing]!),
+                  _buildTabItem(l10n.business_status_ready, statusReady, counts[statusReady]!),
+                  _buildTabItem(l10n.business_status_completed, statusCompleted, counts[statusCompleted]!),
+                  _buildTabItem(l10n.business_status_all, null, total),
                 ],
               ),
             ),
@@ -423,9 +424,10 @@ class _CashierPageState extends State<CashierPage>
   }
 
   Widget _buildEmptyState(Color mutedColor) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Text(
-        'No orders in this pipeline.',
+        l10n.business_no_orders_pipeline,
         style: TextStyle(
           fontSize: 14,
           fontWeight: FontWeight.w500,
@@ -538,21 +540,22 @@ class _OrderCard extends StatelessWidget {
     Color? actionColor;
     Color? actionTextColor;
 
+    final l10n = AppLocalizations.of(context)!;
     switch (displayStatus) {
       case statusPending:
-        actionLabel = isConfirmed ? 'Preparing' : 'Confirm';
+        actionLabel = isConfirmed ? l10n.business_status_preparing : l10n.business_confirm;
         nextStatus = statusPreparing;
         actionColor = const Color(0xFF16A34A); // Success
         actionTextColor = Colors.white;
         break;
       case statusPreparing:
-        actionLabel = 'Ready';
+        actionLabel = l10n.business_status_ready;
         nextStatus = statusReady;
         actionColor = const Color(0xFF3B82F6); // Info
         actionTextColor = Colors.white;
         break;
       case statusReady:
-        actionLabel = 'Complete';
+        actionLabel = l10n.business_complete;
         nextStatus = statusCompleted;
         actionColor = barzDark;
         actionTextColor = Colors.white;
@@ -616,9 +619,9 @@ class _OrderCard extends StatelessWidget {
                           opacity: pulseAnimation.value,
                           child: child,
                         ),
-                        child: _buildTimeText(minsWait, isUrgent),
+                        child: _buildTimeText(context, minsWait, isUrgent),
                       )
-                    : _buildTimeText(minsWait, isUrgent),
+                    : _buildTimeText(context, minsWait, isUrgent),
               ],
             ),
           ),
@@ -740,8 +743,9 @@ class _OrderCard extends StatelessWidget {
     );
   }
 
-  Widget _buildTimeText(int minsWait, bool isUrgent) {
-    String timeStr = minsWait == 0 ? 'Just now' : '${minsWait}m ago';
+  Widget _buildTimeText(BuildContext context, int minsWait, bool isUrgent) {
+    final l10n = AppLocalizations.of(context)!;
+    String timeStr = minsWait == 0 ? l10n.business_time_just_now : l10n.business_time_ago(minsWait);
     return Row(
       children: [
         Icon(

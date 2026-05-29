@@ -4,7 +4,13 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
+import 'package:barz/core/utils/injections.dart';
+import 'package:barz/features/business_settings/presentation/bloc/business_settings_bloc.dart';
+import 'package:barz/features/business_settings/presentation/bloc/business_settings_event.dart';
+import 'package:barz/features/business_settings/presentation/bloc/business_settings_state.dart';
+import 'package:barz/features/business_settings/domain/models/bar_details.dart';
 import 'package:flutter_animate/flutter_animate.dart';
+import 'package:barz/l10n/app_localizations.dart';
 
 typedef DayKey = String;
 const days = [
@@ -22,7 +28,7 @@ class _DayHours {
   String close;
   bool closed;
 
-  _DayHours({this.open = '18:00', this.close = '02:00', this.closed = false});
+  _DayHours({required this.open, required this.close, this.closed = false});
 }
 
 class _FormData {
@@ -49,49 +55,89 @@ class _FormData {
   List<String> spots;
 
   _FormData({
-    this.barName = 'The Iron Draught',
-    this.description =
-        'An industrial-modern speakeasy with a curated craft beer selection.',
-    this.category = 'bar',
-    this.phone = '+55 11 99999-0000',
-    this.email = 'contact@irondraught.com',
-    this.address = 'Av. Paulista, 1500',
-    this.city = 'São Paulo',
-    this.state = 'SP',
-    this.countryCode = 'BR',
-    this.latitude = -23.561,
-    this.longitude = -46.656,
-    this.businessId = '12.345.678/0001-90',
-    this.businessIdType = 'CNPJ',
-    this.stateRegistration = '123.456.789.000',
-    this.verification = 'verified',
-    this.photoUrls = const [],
-    this.sameHours = false,
-    _DayHours? generalHours,
-    Map<String, _DayHours>? hours,
-    this.locationMethod = 'table_number',
-    List<String>? spots,
-  })  : generalHours = generalHours ?? _DayHours(),
-        hours = hours ??
-            {
-              for (final d in days)
-                d.$1: _DayHours(closed: d.$1 == 'sun'),
-            },
-        spots = spots ?? ['VIP Area', 'Terrace', 'Counter'];
+    required this.barName,
+    required this.description,
+    required this.category,
+    required this.phone,
+    required this.email,
+    required this.address,
+    required this.city,
+    required this.state,
+    required this.countryCode,
+    required this.latitude,
+    required this.longitude,
+    required this.businessId,
+    required this.businessIdType,
+    required this.stateRegistration,
+    required this.verification,
+    required this.photoUrls,
+    required this.sameHours,
+    required this.generalHours,
+    required this.hours,
+    required this.locationMethod,
+    required this.spots,
+  });
 }
 
-class BusinessDetailsForm extends StatefulWidget {
+class BusinessDetailsForm extends StatelessWidget {
   const BusinessDetailsForm({super.key});
 
   @override
-  State<BusinessDetailsForm> createState() => _BusinessDetailsFormState();
+  Widget build(BuildContext context) {
+    return BlocProvider.value(
+      value: getItInjector<BusinessSettingsBloc>(),
+      child: const _BusinessDetailsFormContent(),
+    );
+  }
 }
 
-class _BusinessDetailsFormState extends State<BusinessDetailsForm> {
-  late _FormData _form;
+class _BusinessDetailsFormContent extends StatefulWidget {
+  const _BusinessDetailsFormContent();
+
+  @override
+  State<_BusinessDetailsFormContent> createState() => _BusinessDetailsFormState();
+}
+
+class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
+  final _FormData _form = _FormData(
+    barName: '',
+    description: '',
+    category: 'bar',
+    phone: '',
+    email: '',
+    address: '',
+    city: '',
+    state: '',
+    countryCode: 'BR',
+    latitude: 0,
+    longitude: 0,
+    businessId: '',
+    businessIdType: 'CNPJ',
+    stateRegistration: '',
+    verification: 'not_submitted',
+    photoUrls: [],
+    sameHours: false,
+    generalHours: _DayHours(open: '18:00', close: '02:00'),
+    hours: {for (final d in days) d.$1: _DayHours(open: '18:00', close: '02:00', closed: d.$1 == 'sun')},
+    locationMethod: 'table_number',
+    spots: ['VIP Area', 'Terrace', 'Counter'],
+  );
+  String _getDayName(AppLocalizations l10n, String key) {
+    switch (key) {
+      case 'mon': return l10n.monday;
+      case 'tue': return l10n.tuesday;
+      case 'wed': return l10n.wednesday;
+      case 'thu': return l10n.thursday;
+      case 'fri': return l10n.friday;
+      case 'sat': return l10n.saturday;
+      case 'sun': return l10n.sunday;
+      default: return '';
+    }
+  }
+
   late _FormData _initial;
-  bool _saving = false;
-  bool _saved = false;
+  final bool _saving = false;
+  final bool _saved = false;
   String _newSpot = '';
 
   bool get _dirty => _form.barName != _initial.barName ||
@@ -110,8 +156,95 @@ class _BusinessDetailsFormState extends State<BusinessDetailsForm> {
   @override
   void initState() {
     super.initState();
-    _form = _FormData();
-    _initial = _FormData();
+    _initial = _FormData(
+      barName: _form.barName,
+      description: _form.description,
+      category: _form.category,
+      phone: _form.phone,
+      email: _form.email,
+      address: _form.address,
+      city: _form.city,
+      state: _form.state,
+      countryCode: _form.countryCode,
+      latitude: _form.latitude,
+      longitude: _form.longitude,
+      businessId: _form.businessId,
+      businessIdType: _form.businessIdType,
+      stateRegistration: _form.stateRegistration,
+      verification: _form.verification,
+      photoUrls: List.from(_form.photoUrls),
+      sameHours: _form.sameHours,
+      generalHours: _DayHours(open: _form.generalHours.open, close: _form.generalHours.close, closed: _form.generalHours.closed),
+      hours: {for (final e in _form.hours.entries) e.key: _DayHours(open: e.value.open, close: e.value.close, closed: e.value.closed)},
+      locationMethod: _form.locationMethod,
+      spots: List.from(_form.spots),
+    );
+    _loadBarDetails();
+  }
+
+  void _loadBarDetails() {
+    final sessionState = context.read<SessionBloc>().state;
+    if (sessionState is SessionReady) {
+      final barId = sessionState.session.activeBar?.barId;
+      if (barId != null) {
+        context.read<BusinessSettingsBloc>().add(LoadBarDetails(barId));
+      }
+    }
+  }
+
+  void _populateFromBarDetails(BarDetails details) {
+    String parsedCity = _form.city;
+    String parsedState = _form.state;
+    if (details.address != null && details.address!.contains(',')) {
+      final parts = details.address!.split(',');
+      if (parts.length >= 2) {
+        final locationPart = parts[parts.length - 2].trim();
+        final stateMatch = RegExp(r'(.+?)\s*-\s*([A-Z]{2})$').firstMatch(locationPart);
+        if (stateMatch != null) {
+          parsedCity = stateMatch.group(1)!.trim();
+          parsedState = stateMatch.group(2)!.trim();
+        } else {
+          parsedCity = locationPart;
+        }
+      }
+    }
+
+    setState(() {
+      _form.barName = details.barName;
+      _form.description = details.description ?? '';
+      _form.category = details.category ?? 'bar';
+      _form.email = '';
+      _form.phone = '';
+      _form.address = details.address ?? '';
+      _form.city = parsedCity;
+      _form.state = parsedState;
+      _form.countryCode = details.country ?? 'BR';
+      _form.latitude = details.latitude ?? 0;
+      _form.longitude = details.longitude ?? 0;
+      _initial = _FormData(
+        barName: _form.barName,
+        description: _form.description,
+        category: _form.category,
+        phone: _form.phone,
+        email: _form.email,
+        address: _form.address,
+        city: _form.city,
+        state: _form.state,
+        countryCode: _form.countryCode,
+        latitude: _form.latitude,
+        longitude: _form.longitude,
+        businessId: _form.businessId,
+        businessIdType: _form.businessIdType,
+        stateRegistration: _form.stateRegistration,
+        verification: _form.verification,
+        photoUrls: List.from(_form.photoUrls),
+        sameHours: _form.sameHours,
+        generalHours: _DayHours(open: _form.generalHours.open, close: _form.generalHours.close),
+        hours: {for (final e in _form.hours.entries) e.key: _DayHours(open: e.value.open, close: e.value.close, closed: e.value.closed)},
+        locationMethod: _form.locationMethod,
+        spots: List.from(_form.spots),
+      );
+    });
   }
 
   void _handleBack() {
@@ -123,22 +256,24 @@ class _BusinessDetailsFormState extends State<BusinessDetailsForm> {
   }
 
   Future<void> _handleSave() async {
-    setState(() => _saving = true);
-    await Future.delayed(const Duration(milliseconds: 900));
-    if (!mounted) return;
-    setState(() {
-      _saving = false;
-      _saved = true;
-    });
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Business details updated successfully!'),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: successGreen,
-      ),
-    );
-    await Future.delayed(const Duration(milliseconds: 1800));
-    if (mounted) setState(() => _saved = false);
+    final sessionState = context.read<SessionBloc>().state;
+    if (sessionState is SessionReady) {
+      final barId = sessionState.session.activeBar?.barId;
+      if (barId != null) {
+        final data = {
+          'bar_name': _form.barName,
+          'description': _form.description,
+          'category': _form.category,
+          'address': _form.address,
+          'city': _form.city,
+          'state': _form.state,
+          'country': _form.countryCode,
+          'latitude': _form.latitude,
+          'longitude': _form.longitude,
+        };
+        context.read<BusinessSettingsBloc>().add(UpdateBarDetails(barId, data));
+      }
+    }
   }
 
   String _flagEmoji(String cc) {
@@ -239,551 +374,311 @@ class _BusinessDetailsFormState extends State<BusinessDetailsForm> {
     final textColor = dobar.labelPrimary;
     final borderColor = theme.colorScheme.outline;
 
+    final l10n = AppLocalizations.of(context)!;
     final verificationBadge = switch (_form.verification) {
-      'verified' => ('Verified', successGreen, successGreen.withValues(alpha: 0.15)),
-      'pending' => ('Pending Review', barzGold, barzGold.withValues(alpha: 0.15)),
-      'rejected' => ('Rejected', errorRed, errorRed.withValues(alpha: 0.15)),
-      _ => ('Not Submitted', mutedColor, borderColor),
+      'verified' => (l10n.details_status_verified, successGreen, successGreen.withValues(alpha: 0.15)),
+      'pending' => (l10n.details_status_pending, barzGold, barzGold.withValues(alpha: 0.15)),
+      'rejected' => (l10n.details_status_rejected, errorRed, errorRed.withValues(alpha: 0.15)),
+      _ => (l10n.details_status_not_submitted, mutedColor, borderColor),
     };
 
-    return PopScope(
-      canPop: !_dirty,
-      onPopInvokedWithResult: (didPop, _) {
-        if (!didPop && _dirty) {
-          _showDiscardDialog(context);
+    return BlocListener<BusinessSettingsBloc, BusinessSettingsState>(
+      listenWhen: (previous, current) =>
+          current.barDetails != null && current.isLoading == false,
+      listener: (context, state) {
+        if (state.barDetails != null) {
+          _populateFromBarDetails(state.barDetails!);
         }
       },
-      child: Scaffold(
-        backgroundColor: dobar.background,
-        body: SafeArea(
-          child: Column(
-            children: [
-              // HEADER
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 24),
-                height: 64,
-                decoration: BoxDecoration(
-                  color: dobar.background,
-                  border: Border(bottom: BorderSide(color: borderColor)),
-                ),
-                child: Row(
-                  children: [
-                    GestureDetector(
-                      onTap: _handleBack,
-                      child: Icon(LucideIcons.arrowLeft, color: textColor, size: 22),
+      child: PopScope(
+        canPop: !_dirty,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop && _dirty) {
+            _showDiscardDialog(context);
+          }
+        },
+        child: Scaffold(
+          backgroundColor: dobar.background,
+          body: SafeArea(
+            child: ResponsiveCenterContainer(
+              maxWidthPercentage: 0.8,
+              maxWidth: 1200,
+              padding: const EdgeInsets.symmetric(horizontal: BarzSpacing.md),
+              child: Column(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: dobar.background,
+                      border: Border(bottom: BorderSide(color: borderColor)),
                     ),
-                    const SizedBox(width: 12),
-                    Text(
-                      'BUSINESS DETAILS',
-                      style: TextStyle(
-                        color: textColor,
-                        fontFamily: 'Courier',
-                        fontSize: 14,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 1.5,
-                      ),
-                    ),
-                    if (_dirty) ...[
-                      const SizedBox(width: 8),
-                      Animate(
-                        effects: [
-                          ScaleEffect(
-                            begin: const Offset(0.8, 0.8),
-                            end: const Offset(1, 1),
-                            duration: 300.ms,
-                            curve: Curves.easeOut,
-                          ),
-                        ],
-                        child: Row(
-                          children: [
-                            Container(
-                              width: 8,
-                              height: 8,
-                              decoration: const BoxDecoration(
-                                color: barzGold,
-                                shape: BoxShape.circle,
-                              ),
-                            ).animate(onPlay: (c) => c.repeat(reverse: true)).shimmer(
-                              duration: 1000.ms,
-                              color: barzGold.withValues(alpha: 0.3),
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              'UNSAVED',
-                              style: TextStyle(
-                                color: barzGold,
-                                fontFamily: 'Courier',
-                                fontSize: 9,
-                                fontWeight: FontWeight.bold,
-                                letterSpacing: 2,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                    const Spacer(),
-                    GestureDetector(
-                      onTap: _dirty && !_saving ? _handleSave : null,
-                      child: AnimatedOpacity(
-                        opacity: _dirty ? 1.0 : 0.4,
-                        duration: 300.ms,
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (_saving)
-                              SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: barzGold,
-                                ),
-                              )
-                            else if (_saved)
-                              const Icon(LucideIcons.checkCircle,
-                                  color: successGreen, size: 18),
-                            const SizedBox(width: 6),
-                            Text(
-                              _saving
-                                  ? 'Saving'
-                                  : (_saved ? 'Saved' : 'Save'),
-                              style: TextStyle(
-                                color: _dirty ? barzGold : mutedColor,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // BODY
-              Expanded(
-                child: ListView(
-                  padding: const EdgeInsets.only(bottom: 96),
-                  children: [
-                    // HERO IMAGES
-                    Padding(
-                      padding: const EdgeInsets.fromLTRB(24, 32, 24, 0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Container(
-                            height: 176,
-                            decoration: BoxDecoration(
-                              color: dobar.surface,
-                              borderRadius: BorderRadius.circular(16),
-                              border: Border.all(color: borderColor),
-                            ),
-                            child: Center(
-                              child: Icon(LucideIcons.camera,
-                                  size: 36, color: mutedColor),
-                            ),
-                          ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, end: 0),
-                          Transform.translate(
-                            offset: const Offset(24, -40),
-                            child: Container(
-                              width: 96,
-                              height: 96,
-                              decoration: BoxDecoration(
-                                color: dobar.surface,
-                                shape: BoxShape.circle,
-                                border: Border.all(color: borderColor, width: 4),
-                              ),
-                              child: Center(
-                                child: Icon(LucideIcons.store,
-                                    size: 28, color: mutedColor),
-                              ),
-                            ),
-                          ).animate().fadeIn(delay: 200.ms).scale(
-                            begin: const Offset(0.8, 0.8),
-                            end: const Offset(1, 1),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // BASIC INFORMATION
-                    _sectionHeader('Basic Information'),
-                    _buildSection(
+                    child: Row(
                       children: [
-                        _fieldLabel(LucideIcons.store, 'Bar Name'),
-                        _inputField(
-                          value: _form.barName,
-                          onChanged: (v) => _form.barName = v,
-                          large: true,
+                        GestureDetector(
+                          onTap: _handleBack,
+                          child: Icon(LucideIcons.arrowLeft, color: textColor, size: 22),
                         ),
-                        const SizedBox(height: 16),
-                        _fieldLabel(LucideIcons.fileText, 'Description'),
-                        TextField(
-                          controller: TextEditingController(text: _form.description),
-                          onChanged: (v) => setState(() => _form.description = v),
-                          maxLength: 500,
-                          maxLines: 4,
-                          style: TextStyle(color: textColor, fontSize: 14),
-                          decoration: InputDecoration(
-                            hintText: "Describe your bar's atmosphere...",
-                            hintStyle: TextStyle(color: mutedColor),
-                            filled: true,
-                            fillColor: dobar.background,
-                            contentPadding: const EdgeInsets.all(16),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: borderColor),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: borderColor),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(color: barzGold, width: 2),
-                            ),
+                        const SizedBox(width: 12),
+                        Text(
+                          l10n.details_title,
+                          style: TextStyle(
+                            color: textColor,
+                            fontFamily: 'Courier',
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.5,
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildDropdown(
-                                label: 'Category',
-                                icon: LucideIcons.tag,
-                                value: _form.category,
-                                items: const [
-                                  'bar', 'restaurant', 'club', 'lounge', 'pub', 'brewery'
-                                ],
-                                onChanged: (v) => setState(() => _form.category = v),
+                        if (_dirty) ...[
+                          const SizedBox(width: 8),
+                          Animate(
+                            effects: [
+                              ScaleEffect(
+                                begin: const Offset(0.8, 0.8),
+                                end: const Offset(1, 1),
+                                duration: 300.ms,
+                                curve: Curves.easeOut,
                               ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _fieldLabel(LucideIcons.phone, 'Phone'),
-                                  _inputField(
-                                    value: _form.phone,
-                                    onChanged: (v) => _form.phone = v,
-                                    keyboardType: TextInputType.phone,
+                            ],
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 8,
+                                  height: 8,
+                                  decoration: const BoxDecoration(
+                                    color: barzGold,
+                                    shape: BoxShape.circle,
                                   ),
-                                ],
-                              ),
+                                ).animate(onPlay: (c) => c.repeat(reverse: true)).shimmer(
+                                  duration: 1000.ms,
+                                  color: barzGold.withValues(alpha: 0.3),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  'UNSAVED',
+                                  style: TextStyle(
+                                    color: barzGold,
+                                    fontFamily: 'Courier',
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 2,
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        _fieldLabel(LucideIcons.mail, 'Email'),
-                        _inputField(
-                          value: _form.email,
-                          onChanged: (v) => _form.email = v,
-                          keyboardType: TextInputType.emailAddress,
+                          ),
+                        ],
+                        const Spacer(),
+                        GestureDetector(
+                          onTap: _dirty && !_saving ? _handleSave : null,
+                          child: AnimatedOpacity(
+                            opacity: _dirty ? 1.0 : 0.4,
+                            duration: 300.ms,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (_saving)
+                                  SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: barzGold,
+                                    ),
+                                  )
+                                else if (_saved)
+                                  const Icon(LucideIcons.checkCircle,
+                                      color: successGreen, size: 18),
+                                const SizedBox(width: 6),
+                                Text(
+                                  _saving
+                                      ? l10n.details_saving
+                                      : (_saved ? l10n.details_saved : l10n.save),
+                                  style: TextStyle(
+                                    color: _dirty ? barzGold : mutedColor,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
                       ],
-                      delay: 50,
                     ),
-
-                    // LOCATION
-                    _sectionHeader('Location'),
-                    _buildSection(
+                  ),
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.only(bottom: 96),
                       children: [
-                        _fieldLabel(LucideIcons.mapPin, 'Address'),
-                        _inputField(
-                          value: _form.address,
-                          onChanged: (v) => _form.address = v,
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _fieldLabel(LucideIcons.mapPin, 'City'),
-                                  _inputField(
-                                    value: _form.city,
-                                    onChanged: (v) => _form.city = v,
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _fieldLabel(LucideIcons.mapPin, 'State'),
-                                  _inputField(
-                                    value: _form.state,
-                                    onChanged: (v) => _form.state = v,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        _fieldLabel(LucideIcons.globe, 'Country'),
-                        Container(
-                          height: 44,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: dobar.background,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: borderColor),
-                          ),
-                          child: Row(
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(24, 32, 24, 0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                _flagEmoji(_form.countryCode),
-                                style: const TextStyle(fontSize: 20),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                _form.countryCode,
-                                style: TextStyle(
-                                  color: mutedColor,
-                                  fontFamily: 'Courier',
-                                  fontSize: 13,
+                              Container(
+                                height: 176,
+                                decoration: BoxDecoration(
+                                  color: dobar.surface,
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(color: borderColor),
                                 ),
+                                child: Center(
+                                  child: Icon(LucideIcons.camera,
+                                      size: 36, color: mutedColor),
+                                ),
+                              ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, end: 0),
+                              Transform.translate(
+                                offset: const Offset(24, -40),
+                                child: Container(
+                                  width: 96,
+                                  height: 96,
+                                  decoration: BoxDecoration(
+                                    color: dobar.surface,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: borderColor, width: 4),
+                                  ),
+                                  child: Center(
+                                    child: Icon(LucideIcons.store,
+                                        size: 28, color: mutedColor),
+                                  ),
+                                ),
+                              ).animate().fadeIn(delay: 200.ms).scale(
+                                begin: const Offset(0.8, 0.8),
+                                end: const Offset(1, 1),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 16),
-                        Container(
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: dobar.background,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: borderColor),
-                          ),
-                          child: Row(
-                            children: [
-                              Text(
-                                'LAT ${_form.latitude.toStringAsFixed(4)}   LNG ${_form.longitude.toStringAsFixed(4)}',
-                                style: TextStyle(
-                                  color: mutedColor,
-                                  fontFamily: 'Courier',
-                                  fontSize: 12,
+                        _sectionHeader(l10n.basic_info),
+                        _buildSection(
+                          children: [
+                            _fieldLabel(LucideIcons.store, l10n.bar_name),
+                            _inputField(
+                              value: _form.barName,
+                              onChanged: (v) => _form.barName = v,
+                              large: true,
+                            ),
+                            const SizedBox(height: 16),
+                            _fieldLabel(LucideIcons.fileText, l10n.details_description),
+                            TextField(
+                              controller: TextEditingController(text: _form.description),
+                              onChanged: (v) => setState(() => _form.description = v),
+                              maxLength: 500,
+                              maxLines: 4,
+                              style: TextStyle(color: textColor, fontSize: 14),
+                              decoration: InputDecoration(
+                                hintText: l10n.details_describe_atmosphere,
+                                hintStyle: TextStyle(color: mutedColor),
+                                filled: true,
+                                fillColor: dobar.background,
+                                contentPadding: const EdgeInsets.all(16),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: borderColor),
+                                ),
+                                enabledBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: borderColor),
+                                ),
+                                focusedBorder: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  borderSide: BorderSide(color: barzGold, width: 2),
                                 ),
                               ),
-                              const Spacer(),
-                              GestureDetector(
-                                onTap: () => _showMapDialog(context),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 6),
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(8),
-                                    color: barzGold.withValues(alpha: 0.1),
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _buildDropdown(
+                                    label: l10n.details_category,
+                                    icon: LucideIcons.tag,
+                                    value: _form.category,
+                                    items: const [
+                                      'bar', 'restaurant', 'club', 'lounge', 'pub', 'brewery'
+                                    ],
+                                    displayNames: {
+                                      'bar': l10n.category_bar,
+                                      'restaurant': l10n.category_restaurant,
+                                      'club': l10n.category_club,
+                                      'lounge': l10n.category_lounge,
+                                      'pub': l10n.category_pub,
+                                      'brewery': l10n.category_brewery,
+                                    },
+                                    onChanged: (v) => setState(() => _form.category = v),
                                   ),
-                                  child: Row(
+                                ),
+                                const SizedBox(width: 16),
+                                 Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Icon(LucideIcons.map,
-                                          size: 14, color: barzGold),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        'PIN ON MAP',
-                                        style: TextStyle(
-                                          color: barzGold,
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                          letterSpacing: 1,
-                                        ),
+                                      _fieldLabel(LucideIcons.phone, l10n.phone),
+                                      _inputField(
+                                        value: _form.phone,
+                                        onChanged: (v) => _form.phone = v,
+                                        keyboardType: TextInputType.phone,
                                       ),
                                     ],
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                      delay: 100,
-                    ),
-
-                    // BUSINESS REGISTRATION
-                    _sectionHeader('Business Registration'),
-                    _buildSection(
-                      children: [
-                        _fieldLabel(LucideIcons.fileText, 'Business ID'),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _inputField(
-                                value: _form.businessId,
-                                onChanged: (v) => _form.businessId = v,
-                              ),
+                              ],
                             ),
-                            const SizedBox(width: 8),
-                            Container(
-                              height: 44,
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
-                              decoration: BoxDecoration(
-                                color: barzGold.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                    color: barzGold.withValues(alpha: 0.3)),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  _form.businessIdType,
-                                  style: const TextStyle(
-                                    color: barzGold,
-                                    fontFamily: 'Courier',
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    letterSpacing: 1,
+                            const SizedBox(height: 16),
+                            _fieldLabel(LucideIcons.mail, l10n.email),
+                            _inputField(
+                              value: _form.email,
+                              onChanged: (v) => _form.email = v,
+                              keyboardType: TextInputType.emailAddress,
+                            ),
+                          ],
+                          delay: 50,
+                        ),
+                        _sectionHeader(l10n.location),
+                        _buildSection(
+                          children: [
+                            _fieldLabel(LucideIcons.mapPin, l10n.address),
+                            _inputField(
+                              value: _form.address,
+                              onChanged: (v) => _form.address = v,
+                            ),
+                            const SizedBox(height: 16),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      _fieldLabel(LucideIcons.mapPin, l10n.details_city),
+                                      _inputField(
+                                        value: _form.city,
+                                        onChanged: (v) => _form.city = v,
+                                      ),
+                                    ],
                                   ),
                                 ),
-                              ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      _fieldLabel(LucideIcons.mapPin, l10n.details_state),
+                                      _inputField(
+                                        value: _form.state,
+                                        onChanged: (v) => _form.state = v,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
-                        const SizedBox(height: 16),
-                        _fieldLabel(LucideIcons.scrollText, 'State Registration'),
-                        _inputField(
-                          value: _form.stateRegistration,
-                          onChanged: (v) => _form.stateRegistration = v,
-                        ),
-                        const SizedBox(height: 16),
-                        _fieldLabel(LucideIcons.checkCircle, 'Verification Status'),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: verificationBadge.$3,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(
-                                color: verificationBadge.$2.withValues(alpha: 0.3)),
-                          ),
-                          child: Text(
-                            verificationBadge.$1,
-                            style: TextStyle(
-                              color: verificationBadge.$2,
-                              fontFamily: 'Courier',
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 1.5,
-                            ),
-                          ),
-                        ),
-                      ],
-                      delay: 150,
-                    ),
-
-                    // MEDIA GALLERY
-                    _sectionHeader('Media Gallery'),
-                    _buildSection(
-                      children: [
-                        SizedBox(
-                          height: 120,
-                          child: ListView.separated(
-                            scrollDirection: Axis.horizontal,
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            itemCount: _form.photoUrls.length + 1,
-                            separatorBuilder: (_, _) =>
-                                const SizedBox(width: 12),
-                            itemBuilder: (context, index) {
-                              if (index < _form.photoUrls.length) {
-                                return _buildPhotoCard(index);
-                              }
-                              return _buildAddPhotoCard();
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Icon(LucideIcons.image,
-                                size: 12, color: mutedColor),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${_form.photoUrls.length}/6 photos',
-                              style: TextStyle(
-                                color: mutedColor,
-                                fontFamily: 'Courier',
-                                fontSize: 10,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                      delay: 200,
-                    ),
-
-                    // OPERATING HOURS
-                    _sectionHeader('Operating Hours'),
-                    _buildSection(
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text('Same hours every day',
-                                style: TextStyle(color: textColor, fontSize: 14)),
-                            Switch.adaptive(
-                              value: _form.sameHours,
-                              onChanged: (v) =>
-                                  setState(() => _form.sameHours = v),
-                              activeTrackColor: barzGold.withValues(alpha: 0.4),
-                              activeThumbColor: barzGold,
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        if (_form.sameHours)
-                          _buildGeneralHoursRow()
-                        else
-                          ...days.map((d) => _buildDayRow(d.$1, d.$2)),
-                      ],
-                      delay: 250,
-                    ),
-
-                    // PLACE LOCATION LOGIC
-                    _sectionHeader('Place Location Logic'),
-                    _buildSection(
-                      children: [
-                        _fieldLabel(LucideIcons.mapPin, 'Location Method'),
-                        _buildDropdown(
-                          label: '',
-                          icon: LucideIcons.mapPin,
-                          value: _form.locationMethod,
-                          items: const [
-                            'table_number',
-                            'spot_list',
-                            'free_text'
-                          ],
-                          displayNames: {
-                            'table_number': 'Table Number',
-                            'spot_list': 'Spot List',
-                            'free_text': 'Free Text',
-                          },
-                          onChanged: (v) =>
-                              setState(() => _form.locationMethod = v),
-                        ),
-                        const SizedBox(height: 8),
-                        if (_form.locationMethod == 'table_number')
-                          Text(
-                            'Customers enter their table number manually.',
-                            style: TextStyle(color: mutedColor, fontSize: 12),
-                          ),
-                        if (_form.locationMethod == 'free_text')
-                          Text(
-                            'Customers describe where they are sitting.',
-                            style: TextStyle(color: mutedColor, fontSize: 12),
-                          ),
-                        if (_form.locationMethod == 'spot_list') ...[
-                          ..._form.spots.asMap().entries.map((entry) {
-                            final i = entry.key;
-                            final spot = entry.value;
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 8),
-                              padding: const EdgeInsets.only(left: 16),
+                            const SizedBox(height: 16),
+                            _fieldLabel(LucideIcons.globe, l10n.details_country),
+                            Container(
+                              height: 44,
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
                               decoration: BoxDecoration(
                                 color: dobar.background,
                                 borderRadius: BorderRadius.circular(12),
@@ -791,64 +686,311 @@ class _BusinessDetailsFormState extends State<BusinessDetailsForm> {
                               ),
                               child: Row(
                                 children: [
-                                  Expanded(
-                                    child: Text(spot,
-                                        style: TextStyle(
-                                            color: textColor, fontSize: 14)),
+                                  Text(
+                                    _flagEmoji(_form.countryCode),
+                                    style: const TextStyle(fontSize: 20),
                                   ),
-                                  IconButton(
-                                    icon: Icon(LucideIcons.x,
-                                        color: errorRed, size: 16),
-                                    onPressed: () => setState(
-                                        () => _form.spots.removeAt(i)),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    _form.countryCode,
+                                    style: TextStyle(
+                                      color: mutedColor,
+                                      fontFamily: 'Courier',
+                                      fontSize: 13,
+                                    ),
                                   ),
                                 ],
                               ),
-                            );
-                          }),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: SizedBox(
-                                  height: 44,
-                                  child: _inputField(
-                                    value: _newSpot,
-                                    onChanged: (v) => _newSpot = v,
-                                    hint: 'New spot name',
+                            ),
+                            const SizedBox(height: 16),
+                            Container(
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: dobar.background,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: borderColor),
+                              ),
+                              child: Row(
+                                children: [
+                                  Text(
+                                    'LAT ${_form.latitude.toStringAsFixed(4)}   LNG ${_form.longitude.toStringAsFixed(4)}',
+                                    style: TextStyle(
+                                      color: mutedColor,
+                                      fontFamily: 'Courier',
+                                      fontSize: 12,
+                                    ),
                                   ),
+                                  const Spacer(),
+                                  GestureDetector(
+                                    onTap: () => _showMapDialog(context),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(8),
+                                        color: barzGold.withValues(alpha: 0.1),
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Icon(LucideIcons.map,
+                                              size: 14, color: barzGold),
+                                          const SizedBox(width: 4),
+                                          Text(
+                                            l10n.details_pin_on_map,
+                                            style: TextStyle(
+                                              color: barzGold,
+                                              fontSize: 10,
+                                              fontWeight: FontWeight.bold,
+                                              letterSpacing: 1,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                          delay: 100,
+                        ),
+                        _sectionHeader(l10n.details_business_registration),
+                        _buildSection(
+                          children: [
+                            _fieldLabel(LucideIcons.fileText, l10n.business_id),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _inputField(
+                                    value: _form.businessId,
+                                    onChanged: (v) => _form.businessId = v,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  height: 44,
+                                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                                  decoration: BoxDecoration(
+                                    color: barzGold.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                        color: barzGold.withValues(alpha: 0.3)),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      _form.businessIdType,
+                                      style: const TextStyle(
+                                        color: barzGold,
+                                        fontFamily: 'Courier',
+                                        fontSize: 11,
+                                        fontWeight: FontWeight.bold,
+                                        letterSpacing: 1,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 16),
+                            _fieldLabel(LucideIcons.scrollText, l10n.details_state_registration),
+                            _inputField(
+                              value: _form.stateRegistration,
+                              onChanged: (v) => _form.stateRegistration = v,
+                            ),
+                            const SizedBox(height: 16),
+                            _fieldLabel(LucideIcons.checkCircle, l10n.details_verification_status),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: verificationBadge.$3,
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                    color: verificationBadge.$2.withValues(alpha: 0.3)),
+                              ),
+                              child: Text(
+                                verificationBadge.$1,
+                                style: TextStyle(
+                                  color: verificationBadge.$2,
+                                  fontFamily: 'Courier',
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                  letterSpacing: 1.5,
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              GestureDetector(
-                                onTap: () {
-                                  if (_newSpot.trim().isNotEmpty) {
-                                    setState(() {
-                                      _form.spots.add(_newSpot.trim());
-                                      _newSpot = '';
-                                    });
+                            ),
+                          ],
+                          delay: 150,
+                        ),
+                        _sectionHeader(l10n.details_media_gallery),
+                        _buildSection(
+                          children: [
+                            SizedBox(
+                              height: 120,
+                              child: ListView.separated(
+                                scrollDirection: Axis.horizontal,
+                                padding: const EdgeInsets.symmetric(horizontal: 4),
+                                itemCount: _form.photoUrls.length + 1,
+                                separatorBuilder: (_, _) =>
+                                    const SizedBox(width: 12),
+                                itemBuilder: (context, index) {
+                                  if (index < _form.photoUrls.length) {
+                                    return _buildPhotoCard(index);
                                   }
+                                  return _buildAddPhotoCard();
                                 },
-                                child: Container(
-                                  width: 44,
-                                  height: 44,
-                                  decoration: BoxDecoration(
-                                    color: barzGold,
-                                    borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                Icon(LucideIcons.image,
+                                    size: 12, color: mutedColor),
+                                const SizedBox(width: 4),
+                                Text(
+                                  '${_form.photoUrls.length}/6 photos',
+                                  style: TextStyle(
+                                    color: mutedColor,
+                                    fontFamily: 'Courier',
+                                    fontSize: 10,
                                   ),
-                                  child: const Icon(LucideIcons.plus,
-                                      color: barzDark, size: 18),
                                 ),
+                              ],
+                            ),
+                          ],
+                          delay: 200,
+                        ),
+                        _sectionHeader(l10n.operating_hours),
+                        _buildSection(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(l10n.details_same_hours,
+                                    style: TextStyle(color: textColor, fontSize: 14)),
+                                Switch.adaptive(
+                                  value: _form.sameHours,
+                                  onChanged: (v) =>
+                                      setState(() => _form.sameHours = v),
+                                  activeTrackColor: barzGold.withValues(alpha: 0.4),
+                                  activeThumbColor: barzGold,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            if (_form.sameHours)
+                              _buildGeneralHoursRow()
+                            else
+                              ...days.map((d) => _buildDayRow(l10n, d.$1)),
+                          ],
+                          delay: 250,
+                        ),
+                        _sectionHeader(l10n.details_location_logic),
+                        _buildSection(
+                          children: [
+                            _fieldLabel(LucideIcons.mapPin, l10n.details_location_method),
+                            _buildDropdown(
+                              label: '',
+                              icon: LucideIcons.mapPin,
+                              value: _form.locationMethod,
+                              items: const [
+                                'table_number',
+                                'spot_list',
+                                'free_text'
+                              ],
+                              displayNames: {
+                                'table_number': l10n.details_method_table,
+                                'spot_list': l10n.details_method_spot,
+                                'free_text': l10n.details_method_free,
+                              },
+                              onChanged: (v) =>
+                                  setState(() => _form.locationMethod = v),
+                            ),
+                            const SizedBox(height: 8),
+                            if (_form.locationMethod == 'table_number')
+                              Text(
+                                l10n.details_table_desc,
+                                style: TextStyle(color: mutedColor, fontSize: 12),
+                              ),
+                            if (_form.locationMethod == 'free_text')
+                              Text(
+                                l10n.details_free_desc,
+                                style: TextStyle(color: mutedColor, fontSize: 12),
+                              ),
+                            if (_form.locationMethod == 'spot_list') ...[
+                              ..._form.spots.asMap().entries.map((entry) {
+                                final i = entry.key;
+                                final spot = entry.value;
+                                return Container(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  padding: const EdgeInsets.only(left: 16),
+                                  decoration: BoxDecoration(
+                                    color: dobar.background,
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(color: borderColor),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(spot,
+                                            style: TextStyle(
+                                                color: textColor, fontSize: 14)),
+                                      ),
+                                      IconButton(
+                                        icon: Icon(LucideIcons.x,
+                                            color: errorRed, size: 16),
+                                        onPressed: () => setState(
+                                            () => _form.spots.removeAt(i)),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              }),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: SizedBox(
+                                      height: 44,
+                                      child: _inputField(
+                                        value: _newSpot,
+                                        onChanged: (v) => _newSpot = v,
+                                        hint: l10n.details_new_spot_hint,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  GestureDetector(
+                                    onTap: () {
+                                      if (_newSpot.trim().isNotEmpty) {
+                                        setState(() {
+                                          _form.spots.add(_newSpot.trim());
+                                          _newSpot = '';
+                                        });
+                                      }
+                                    },
+                                    child: Container(
+                                      width: 44,
+                                      height: 44,
+                                      decoration: BoxDecoration(
+                                        color: barzGold,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: const Icon(LucideIcons.plus,
+                                          color: barzDark, size: 18),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
-                          ),
-                        ],
+                          ],
+                          delay: 300,
+                        ),
                       ],
-                      delay: 300,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -856,16 +998,17 @@ class _BusinessDetailsFormState extends State<BusinessDetailsForm> {
   }
 
   void _showDiscardDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: context.dobarColors.surface,
-        title: const Text('Discard changes?'),
-        content: const Text('You have unsaved changes that will be lost.'),
+        title: Text(l10n.details_discard_title),
+        content: Text(l10n.details_discard_msg),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: Text('Cancel',
+            child: Text(l10n.cancel,
                 style: TextStyle(color: context.dobarColors.labelSecondary)),
           ),
           TextButton(
@@ -874,7 +1017,7 @@ class _BusinessDetailsFormState extends State<BusinessDetailsForm> {
               Navigator.pop(context);
             },
             style: TextButton.styleFrom(foregroundColor: errorRed),
-            child: const Text('Discard'),
+            child: Text(l10n.discard),
           ),
         ],
       ),
@@ -882,6 +1025,7 @@ class _BusinessDetailsFormState extends State<BusinessDetailsForm> {
   }
 
   void _showMapDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -890,20 +1034,20 @@ class _BusinessDetailsFormState extends State<BusinessDetailsForm> {
           children: [
             Icon(LucideIcons.map, size: 18, color: barzGold),
             const SizedBox(width: 8),
-            const Text('Pin on Map'),
+            Text(l10n.details_map_title),
           ],
         ),
         content: SizedBox(
           height: 256,
           child: Center(
-            child: Text('Map integration coming soon',
+            child: Text(l10n.details_map_coming_soon,
                 style: TextStyle(color: context.dobarColors.labelSecondary)),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Close'),
+            child: Text(l10n.close),
           ),
         ],
       ),
@@ -948,7 +1092,7 @@ class _BusinessDetailsFormState extends State<BusinessDetailsForm> {
       children: [
         if (label.isNotEmpty) _fieldLabel(icon, label),
         DropdownButtonFormField<String>(
-          value: value,
+          initialValue: value,
           dropdownColor: dobar.surface,
           decoration: InputDecoration(
             filled: true,
@@ -1033,6 +1177,7 @@ class _BusinessDetailsFormState extends State<BusinessDetailsForm> {
   }
 
   Widget _buildAddPhotoCard() {
+    final l10n = AppLocalizations.of(context)!;
     final borderColor = Theme.of(context).colorScheme.outline;
     return GestureDetector(
       onTap: () {
@@ -1054,7 +1199,7 @@ class _BusinessDetailsFormState extends State<BusinessDetailsForm> {
             Icon(LucideIcons.plus, size: 20, color: borderColor),
             const SizedBox(height: 4),
             Text(
-              'ADD PHOTO',
+              l10n.details_add_photo,
               style: TextStyle(
                 color: borderColor,
                 fontFamily: 'Courier',
@@ -1069,6 +1214,7 @@ class _BusinessDetailsFormState extends State<BusinessDetailsForm> {
   }
 
   Widget _buildGeneralHoursRow() {
+    final l10n = AppLocalizations.of(context)!;
     final dobar = context.dobarColors;
     final borderColor = Theme.of(context).colorScheme.outline;
     return Container(
@@ -1082,8 +1228,8 @@ class _BusinessDetailsFormState extends State<BusinessDetailsForm> {
         children: [
           Icon(LucideIcons.clock, size: 14, color: barzGold),
           const SizedBox(width: 8),
-          const Expanded(child: Text('General Hours',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
+          Expanded(child: Text(l10n.general_hours,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13))),
           _buildTimePicker(
             _form.generalHours.open,
             (v) => setState(() => _form.generalHours.open = v),
@@ -1098,7 +1244,7 @@ class _BusinessDetailsFormState extends State<BusinessDetailsForm> {
     );
   }
 
-  Widget _buildDayRow(String key, String label) {
+  Widget _buildDayRow(AppLocalizations l10n, String key) {
     final dobar = context.dobarColors;
     final borderColor = Theme.of(context).colorScheme.outline;
     final day = _form.hours[key]!;
@@ -1116,7 +1262,7 @@ class _BusinessDetailsFormState extends State<BusinessDetailsForm> {
           children: [
             SizedBox(
               width: 80,
-              child: Text(label,
+              child: Text(_getDayName(l10n, key),
                   style: const TextStyle(
                       fontWeight: FontWeight.bold, fontSize: 13)),
             ),
@@ -1141,7 +1287,7 @@ class _BusinessDetailsFormState extends State<BusinessDetailsForm> {
             ),
             const SizedBox(width: 8),
             if (day.closed)
-              Text('CLOSED',
+              Text(l10n.closed.toUpperCase(),
                   style: TextStyle(
                     color: errorRed,
                     fontFamily: 'Courier',
