@@ -32,17 +32,3 @@ jobs:
           FIREBASE_CREDENTIALS_JSON: '{"type": "service_account", "project_id": "test"}'
           TESTING: "true"
           REDIS_URL: "memory://"
-
-      - name: Dependabot Alert CSV Export
-        uses: ShamKarthikS-Hexaware/dependabot-alert-export@v1.0
-        with:
-          GITHUB_TOKEN: ${{secrets.GH_PAT_WRITE_ACCESS}}
-          org_name: 'bl4ckcode'
-          repo_name: 'barz-backend'
-          csv_path: data/vulnerability.csv
-
-      - name: Upload Vulnerability report
-        uses: actions/upload-artifact@v7
-        with:
-          name: vulnerability_report
-          path: data/vulnerability.csv          
