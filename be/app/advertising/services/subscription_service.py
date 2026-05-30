@@ -93,7 +93,8 @@ class SubscriptionService:
         tier: str,
         payment_method: Dict[str, Any],
         billing_cycle: str = "monthly",
-        region_code: str = "BR"
+        region_code: str = "BR",
+        customer_info: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         """Subscribe to a paid plan"""
         # Get region pricing
@@ -195,33 +196,33 @@ class SubscriptionService:
             "invoice_id": invoice_id
         }
         
-        # Build customer_info from bar owner data (optional - DPE requires for some payment methods)
-        customer_info = None
-        bar_data = dict(bar)
-        if bar_data.get("owner_id"):
-            try:
-                from app.bars_and_restaurants.models.relational_models import BarOwner as BarOwnerModel
-                owner_query = BarOwnerModel.__table__.select().where(BarOwnerModel.id == bar_data["owner_id"])
-                owner = await database.fetch_one(owner_query)
-                if owner:
-                    owner_data = dict(owner)
-                    raw_document = str(bar_data.get("business_id") or "")
-                    # Keep only digits (strip punctuation like dots, dashes, slashes)
-                    document = "".join(c for c in raw_document if c.isdigit())
-                    name = owner_data.get("name") or bar_data.get("name")
-                    if owner_data.get("email") and document and name and len(document) in (11, 14):
-                        # 14-digit = CNPJ (company), 11-digit = CPF (individual)
-                        doc_type = "company" if len(document) == 14 else "individual"
-                        customer_info = {
-                            "name": name,
-                            "email": owner_data["email"],
-                            "document": document,
-                            "type": doc_type,
-                            "phone": owner_data.get("phone_number") or bar_data.get("phone_number"),
-                        }
-            except Exception:
-                # If owner lookup fails, proceed without customer_info
-                pass
+        # Build customer_info: prefer the one passed from frontend, fall back to bar owner data
+        if not customer_info:
+            bar_data = dict(bar)
+            if bar_data.get("owner_id"):
+                try:
+                    from app.bars_and_restaurants.models.relational_models import BarOwner as BarOwnerModel
+                    owner_query = BarOwnerModel.__table__.select().where(BarOwnerModel.id == bar_data["owner_id"])
+                    owner = await database.fetch_one(owner_query)
+                    if owner:
+                        owner_data = dict(owner)
+                        raw_document = str(bar_data.get("business_id") or "")
+                        # Keep only digits (strip punctuation like dots, dashes, slashes)
+                        document = "".join(c for c in raw_document if c.isdigit())
+                        name = owner_data.get("name") or bar_data.get("name")
+                        if owner_data.get("email") and document and name and len(document) in (11, 14):
+                            # 14-digit = CNPJ (company), 11-digit = CPF (individual)
+                            doc_type = "company" if len(document) == 14 else "individual"
+                            customer_info = {
+                                "name": name,
+                                "email": owner_data["email"],
+                                "document": document,
+                                "type": doc_type,
+                                "phone": owner_data.get("phone_number") or bar_data.get("phone_number"),
+                            }
+                except Exception:
+                    # If owner lookup fails, proceed without customer_info
+                    pass
         
         payment_result = await dpe.charge(
             order_id=f"inv_{invoice_id}",

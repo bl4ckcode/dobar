@@ -115,11 +115,20 @@ class PaymentMethodSchema(BaseModel):
     type: PaymentMethodType = Field(..., description="Payment method type (card or pix)")
     token: Optional[str] = Field(None, description="Payment token for cards")
 
+class CustomerInfo(BaseModel):
+    """Customer information for payment processing (required for PIX)"""
+    name: str
+    email: str
+    document: str = Field(..., description="CPF (11 digits) or CNPJ (14 digits), numbers only")
+    phone: Optional[str] = None
+    type: str = Field(default="individual", pattern="^(individual|company)$")
+
 class SubscribeRequest(BaseModel):
     """Request to subscribe to a plan"""
     tier: SubscriptionTierEnum
     payment_method: PaymentMethodSchema
     billing_cycle: str = Field(default="monthly", pattern="^(monthly|annual)$")
+    customer_info: Optional[CustomerInfo] = Field(None, description="Required for PIX payments. CPF/CNPJ document needed.")
 
 class PixSubscriptionResponse(BaseModel):
     """Response returned when PIX is selected for subscription"""

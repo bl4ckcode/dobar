@@ -149,9 +149,11 @@ async def subscribe_to_plan(
     auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_MANAGE))
 ):
     """Subscribe to a plan or upgrade existing subscription."""
+    customer_info = request.customer_info.model_dump() if request.customer_info else None
+    
     result = await SubscriptionService.subscribe(
         bar_id=bar_id, tier=request.tier, payment_method=request.payment_method.model_dump(),
-        billing_cycle=request.billing_cycle
+        billing_cycle=request.billing_cycle, customer_info=customer_info
     )
     
     # If it's a PIX payment, return the PixSubscriptionResponse data

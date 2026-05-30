@@ -4,7 +4,7 @@ Business Settings Routes - Bar profile, contact, deactivation management
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional
-from datetime import datetime, timezone
+from datetime import datetime
 from decimal import Decimal
 
 from ...database import database
@@ -51,11 +51,14 @@ class BarDetailsUpdate(BaseModel):
     description: Optional[str] = Field(None, max_length=2000)
     category: Optional[str] = None
     address: Optional[str] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     cover_image_url: Optional[str] = None
     logo_url: Optional[str] = None
     operating_hours: Optional[dict] = None
+    business_id: Optional[str] = Field(None, max_length=20, description="CPF (11 digits) or CNPJ (14 digits)")
 
 
 class ContactResponse(BaseModel):
@@ -177,11 +180,14 @@ async def update_business_details(
         "description": "description",
         "category": "category",
         "address": "address",
+        "city": "city",
+        "state": "state",
         "latitude": "latitude",
         "longitude": "longitude",
         "cover_image_url": "cover_url",
         "logo_url": "logo_url",
         "operating_hours": "operating_hours",
+        "business_id": "business_id",
     }
     
     for req_field, db_field in field_map.items():
@@ -192,7 +198,7 @@ async def update_business_details(
     if not values:
         return _bar_to_details(bar)
     
-    values["updated_at"] = datetime.now(timezone.utc)
+    values["updated_at"] = datetime.utcnow()
     
     await database.execute(
         BarModel.__table__.update()
@@ -242,7 +248,7 @@ async def update_contact_settings(
     if not values:
         return _bar_to_contact(bar)
     
-    values["updated_at"] = datetime.now(timezone.utc)
+    values["updated_at"] = datetime.utcnow()
     
     await database.execute(
         BarModel.__table__.update()
@@ -371,7 +377,7 @@ async def delete_business_data(
             business_id=None,
             verification_status="deleted",
             status="deleted",
-            updated_at=datetime.now(timezone.utc),
+            updated_at=datetime.utcnow(),
         )
     )
     
@@ -394,7 +400,7 @@ async def deactivate_account(
     if bar.get("status") == "deactivated":
         raise HTTPException(status_code=400, detail="Business is already deactivated")
     
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
     await database.execute(
         BarModel.__table__.update()
         .where(BarModel.id == bar_id)
@@ -427,7 +433,7 @@ async def reactivate_account(
     if bar.get("status") != "deactivated":
         raise HTTPException(status_code=400, detail="Account is not currently deactivated")
     
-    now = datetime.now(timezone.utc)
+    now = datetime.utcnow()
     await database.execute(
         BarModel.__table__.update()
         .where(BarModel.id == bar_id)
