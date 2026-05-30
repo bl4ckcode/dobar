@@ -57,6 +57,9 @@ async def get_available_plans(
     if not pricing:
         raise APIError.not_found(f"Pricing not available for region: {region_code}")
     
+    # Convert DB record to dict so .get() works (Record objects lack .get())
+    pricing = dict(pricing)
+    
     # Feature keys from DB — frontend translates these via i18n maps
     regular_features = pricing.get("regular_features") or [
         "feature_basic_listing",
