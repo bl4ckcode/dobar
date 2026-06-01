@@ -16,6 +16,7 @@ class BusinessSettingsBloc
     on<DeactivateAccount>(_onDeactivateAccount);
     on<ReactivateAccount>(_onReactivateAccount);
     on<ClearError>(_onClearError);
+    on<UploadBarImage>(_onUploadBarImage);
   }
 
   Future<void> _onLoadBarDetails(
@@ -134,5 +135,24 @@ class BusinessSettingsBloc
 
   void _onClearError(ClearError event, Emitter<BusinessSettingsState> emit) {
     emit(state.copyWith(error: null));
+  }
+
+  Future<void> _onUploadBarImage(
+    UploadBarImage event,
+    Emitter<BusinessSettingsState> emit,
+  ) async {
+    emit(state.copyWith(isProcessing: true, error: null));
+    final result = await _usecase.uploadBarImage(
+      event.barId,
+      imageBytes: event.imageBytes,
+      fileName: event.fileName,
+    );
+    result.fold(
+      (failure) => emit(state.copyWith(isProcessing: false, error: failure.errorMessage)),
+      (imageResult) {
+        // Return the URL through the state — caller picks it up
+        emit(state.copyWith(isProcessing: false, uploadedImageUrl: imageResult.url));
+      },
+    );
   }
 }

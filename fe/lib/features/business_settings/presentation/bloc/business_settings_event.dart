@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:freezed_annotation/freezed_annotation.dart';
 
 part 'business_settings_event.freezed.dart';
@@ -26,4 +27,9 @@ sealed class BusinessSettingsEvent with _$BusinessSettingsEvent {
   const factory BusinessSettingsEvent.reactivateAccount(int barId) =
       ReactivateAccount;
   const factory BusinessSettingsEvent.clearError() = ClearError;
+  const factory BusinessSettingsEvent.uploadBarImage(
+    int barId, {
+    required Uint8List imageBytes,
+    required String fileName,
+  }) = UploadBarImage;
 }

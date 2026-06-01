@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:dartz/dartz.dart';
 import 'package:dio/dio.dart';
 import 'package:barz/core/api/api_endpoints.dart';
@@ -108,6 +109,33 @@ class BusinessSettingsRepository implements BusinessSettingsRepositoryInterface 
     try {
       final res = await _dio.post(ApiEndpoints.barReactivate(barId));
       return Right(ReactivateResult.fromJson(res.data));
+    } on DioException catch (e) {
+      return Left(_handleDioError(e));
+    } catch (e) {
+      return Left(ServerFailure(e.toString(), null));
+    }
+  }
+
+  @override
+  Future<Either<Failure, ({String url, int expiration})>> uploadBarImage(
+    int barId, {
+    required Uint8List imageBytes,
+    required String fileName,
+  }) async {
+    try {
+      final formData = FormData.fromMap({
+        'image': MultipartFile.fromBytes(imageBytes, filename: fileName),
+      });
+      final res = await _dio.post(
+        ApiEndpoints.barImage(barId),
+        data: formData,
+        options: Options(contentType: 'multipart/form-data'),
+      );
+      final data = res.data as Map<String, dynamic>;
+      return Right((
+        url: data['image_url'] as String,
+        expiration: (data['image_url_expiration'] as num).toInt(),
+      ));
     } on DioException catch (e) {
       return Left(_handleDioError(e));
     } catch (e) {

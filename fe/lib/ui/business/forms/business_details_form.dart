@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
@@ -53,6 +54,8 @@ class _FormData {
   Map<String, _DayHours> hours;
   String locationMethod;
   List<String> spots;
+  String? coverImageUrl;
+  String? logoUrl;
 
   _FormData({
     required this.barName,
@@ -76,6 +79,8 @@ class _FormData {
     required this.hours,
     required this.locationMethod,
     required this.spots,
+    this.coverImageUrl,
+    this.logoUrl,
   });
 }
 
@@ -136,9 +141,10 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
   }
 
   late _FormData _initial;
-  final bool _saving = false;
-  final bool _saved = false;
+  bool _saving = false;
+  bool _saved = false;
   String _newSpot = '';
+  final Map<String, TextEditingController> _controllers = {};
 
   bool get _dirty => _form.barName != _initial.barName ||
       _form.description != _initial.description ||
@@ -151,7 +157,37 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
       _form.businessId != _initial.businessId ||
       _form.stateRegistration != _initial.stateRegistration ||
       _form.sameHours != _initial.sameHours ||
-      _form.locationMethod != _initial.locationMethod;
+      _form.locationMethod != _initial.locationMethod ||
+      _form.generalHours.open != _initial.generalHours.open ||
+      _form.generalHours.close != _initial.generalHours.close ||
+      !_hoursEqual(_form.hours, _initial.hours) ||
+      !_listEqual(_form.photoUrls, _initial.photoUrls) ||
+      !_listEqual(_form.spots, _initial.spots) ||
+      _form.coverImageUrl != _initial.coverImageUrl ||
+      _form.logoUrl != _initial.logoUrl;
+
+  bool _hoursEqual(Map<String, _DayHours> a, Map<String, _DayHours> b) {
+    if (a.length != b.length) return false;
+    for (final key in a.keys) {
+      final aDay = a[key];
+      final bDay = b[key];
+      if (aDay == null || bDay == null) return false;
+      if (aDay.open != bDay.open || aDay.close != bDay.close || aDay.closed != bDay.closed) return false;
+    }
+    return true;
+  }
+
+  bool _listEqual(List<String> a, List<String> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      if (a[i] != b[i]) return false;
+    }
+    return true;
+  }
+
+  TextEditingController _ctrl(String key, String value) {
+    return _controllers.putIfAbsent(key, () => TextEditingController(text: value));
+  }
 
   @override
   void initState() {
@@ -182,6 +218,22 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
     _loadBarDetails();
   }
 
+  String? _getFormValueForField(String key) {
+    return switch (key) {
+      'barName' => _form.barName,
+      'description' => _form.description,
+      'phone' => _form.phone,
+      'email' => _form.email,
+      'address' => _form.address,
+      'city' => _form.city,
+      'state' => _form.state,
+      'businessId' => _form.businessId,
+      'stateRegistration' => _form.stateRegistration,
+      'newSpot' => _newSpot,
+      _ => null,
+    };
+  }
+
   void _loadBarDetails() {
     final sessionState = context.read<SessionBloc>().state;
     if (sessionState is SessionReady) {
@@ -190,6 +242,14 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
         context.read<BusinessSettingsBloc>().add(LoadBarDetails(barId));
       }
     }
+  }
+
+  @override
+  void dispose() {
+    for (final c in _controllers.values) {
+      c.dispose();
+    }
+    super.dispose();
   }
 
   void _populateFromBarDetails(BarDetails details) {
@@ -221,6 +281,17 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
       _form.countryCode = details.country ?? 'BR';
       _form.latitude = details.latitude ?? 0;
       _form.longitude = details.longitude ?? 0;
+      _form.businessId = details.businessId ?? '';
+      _form.coverImageUrl = details.coverImageUrl;
+      _form.logoUrl = details.logoUrl;
+      // Sync controllers with new values from API
+      for (final entry in _controllers.entries) {
+        final formValue = _getFormValueForField(entry.key);
+        if (formValue != null && entry.value.text != formValue) {
+          entry.value.text = formValue;
+          entry.value.selection = TextSelection.collapsed(offset: formValue.length);
+        }
+      }
       _initial = _FormData(
         barName: _form.barName,
         description: _form.description,
@@ -233,7 +304,7 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
         countryCode: _form.countryCode,
         latitude: _form.latitude,
         longitude: _form.longitude,
-        businessId: _form.businessId,
+         businessId: _form.businessId,
         businessIdType: _form.businessIdType,
         stateRegistration: _form.stateRegistration,
         verification: _form.verification,
@@ -243,24 +314,29 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
         hours: {for (final e in _form.hours.entries) e.key: _DayHours(open: e.value.open, close: e.value.close, closed: e.value.closed)},
         locationMethod: _form.locationMethod,
         spots: List.from(_form.spots),
+        coverImageUrl: _form.coverImageUrl,
+        logoUrl: _form.logoUrl,
       );
     });
   }
 
   void _handleBack() {
     if (_dirty) {
-      _showDiscardDialog(context);
+      _showUnsavedBottomSheet(context);
     } else {
       Navigator.pop(context);
     }
   }
 
   Future<void> _handleSave() async {
+    if (_saving) return;
+    setState(() => _saving = true);
+    final bloc = context.read<BusinessSettingsBloc>();
     final sessionState = context.read<SessionBloc>().state;
     if (sessionState is SessionReady) {
       final barId = sessionState.session.activeBar?.barId;
       if (barId != null) {
-        final data = {
+        final data = <String, dynamic>{
           'bar_name': _form.barName,
           'description': _form.description,
           'category': _form.category,
@@ -271,7 +347,56 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
           'latitude': _form.latitude,
           'longitude': _form.longitude,
         };
-        context.read<BusinessSettingsBloc>().add(UpdateBarDetails(barId, data));
+        if (_form.businessId.isNotEmpty) {
+          data['business_id'] = _form.businessId.replaceAll(RegExp(r'[^0-9]'), '');
+        }
+        if (_form.coverImageUrl != null) {
+          data['cover_image_url'] = _form.coverImageUrl;
+        }
+        if (_form.logoUrl != null) {
+          data['logo_url'] = _form.logoUrl;
+        }
+        bloc.add(UpdateBarDetails(barId, data));
+      }
+    }
+  }
+
+  Future<void> _pickAndUploadImage({required bool isCover}) async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 2048,
+      maxHeight: 2048,
+      imageQuality: 85,
+    );
+    if (picked == null) return;
+
+    final bytes = await picked.readAsBytes();
+    if (mounted) {
+      final sessionState = context.read<SessionBloc>().state;
+      if (sessionState is SessionReady) {
+        final barId = sessionState.session.activeBar?.barId;
+        if (barId == null) return;
+        context.read<BusinessSettingsBloc>().add(
+          UploadBarImage(barId, imageBytes: bytes, fileName: picked.name),
+        );
+        // Listen for the URL via a post-frame callback
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          final bloc = context.read<BusinessSettingsBloc>();
+          final sub = bloc.stream.listen((state) {
+            if (state.uploadedImageUrl != null && mounted) {
+              setState(() {
+                if (isCover) {
+                  _form.coverImageUrl = state.uploadedImageUrl;
+                } else {
+                  _form.logoUrl = state.uploadedImageUrl;
+                }
+              });
+            }
+          });
+          // Cancel after 30s to avoid leaks
+          Future.delayed(const Duration(seconds: 30), () => sub.cancel());
+        });
       }
     }
   }
@@ -286,7 +411,7 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
   Widget _sectionHeader(String label) {
     final mutedColor = context.dobarColors.labelSecondary;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 40, 24, 12),
+      padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
       child: Text(
         label.toUpperCase(),
         style: TextStyle(
@@ -330,11 +455,18 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
     bool large = false,
     TextInputType? keyboardType,
     int? maxLength,
+    String? fieldKey,
   }) {
     final dobar = context.dobarColors;
     final theme = Theme.of(context);
+    final controller = _ctrl(fieldKey ?? 'unnamed', value);
+    // Sync controller text when value changes externally (e.g. API load)
+    if (controller.text != value) {
+      controller.text = value;
+      controller.selection = TextSelection.collapsed(offset: value.length);
+    }
     return TextField(
-      controller: TextEditingController(text: value),
+      controller: controller,
       onChanged: (v) => setState(() => onChanged(v)),
       keyboardType: keyboardType,
       maxLength: maxLength,
@@ -384,17 +516,56 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
 
     return BlocListener<BusinessSettingsBloc, BusinessSettingsState>(
       listenWhen: (previous, current) =>
-          current.barDetails != null && current.isLoading == false,
+          current.barDetails != null && current.isLoading == false ||
+          (previous.isProcessing && !current.isProcessing),
       listener: (context, state) {
-        if (state.barDetails != null) {
+        if (state.barDetails != null && !state.isLoading) {
           _populateFromBarDetails(state.barDetails!);
+        }
+        // Handle save completion
+        if (state.isProcessing == false && _saving) {
+          setState(() {
+            _saving = false;
+            if (state.error == null) {
+              _saved = true;
+            }
+          });
+          if (state.error == null) {
+            // Update initial state to match current form so _dirty becomes false
+            _initial = _FormData(
+              barName: _form.barName,
+              description: _form.description,
+              category: _form.category,
+              phone: _form.phone,
+              email: _form.email,
+              address: _form.address,
+              city: _form.city,
+              state: _form.state,
+              countryCode: _form.countryCode,
+              latitude: _form.latitude,
+              longitude: _form.longitude,
+              businessId: _form.businessId,
+              businessIdType: _form.businessIdType,
+              stateRegistration: _form.stateRegistration,
+              verification: _form.verification,
+              photoUrls: List.from(_form.photoUrls),
+              sameHours: _form.sameHours,
+              generalHours: _DayHours(open: _form.generalHours.open, close: _form.generalHours.close, closed: _form.generalHours.closed),
+              hours: {for (final e in _form.hours.entries) e.key: _DayHours(open: e.value.open, close: e.value.close, closed: e.value.closed)},
+              locationMethod: _form.locationMethod,
+              spots: List.from(_form.spots),
+            );
+            Future.delayed(const Duration(seconds: 2), () {
+              if (mounted) setState(() => _saved = false);
+            });
+          }
         }
       },
       child: PopScope(
         canPop: !_dirty,
         onPopInvokedWithResult: (didPop, _) {
           if (!didPop && _dirty) {
-            _showDiscardDialog(context);
+            _showUnsavedBottomSheet(context);
           }
         },
         child: Scaffold(
@@ -517,31 +688,72 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Container(
-                                height: 176,
-                                decoration: BoxDecoration(
-                                  color: dobar.surface,
-                                  borderRadius: BorderRadius.circular(16),
-                                  border: Border.all(color: borderColor),
-                                ),
-                                child: Center(
-                                  child: Icon(LucideIcons.camera,
-                                      size: 36, color: mutedColor),
+                              GestureDetector(
+                                onTap: () => _pickAndUploadImage(isCover: true),
+                                child: Container(
+                                  height: 176,
+                                  decoration: BoxDecoration(
+                                    color: dobar.surface,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(color: borderColor),
+                                  ),
+                                  child: _form.coverImageUrl != null
+                                      ? Center(
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(16),
+                                            child: Stack(
+                                              fit: StackFit.expand,
+                                              children: [
+                                                Image.network(_form.coverImageUrl!, fit: BoxFit.cover),
+                                                Positioned(
+                                                  bottom: 8,
+                                                  right: 8,
+                                                  child: Container(
+                                                    padding: const EdgeInsets.all(6),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.black.withValues(alpha: 0.5),
+                                                      shape: BoxShape.circle,
+                                                    ),
+                                                    child: const Icon(LucideIcons.camera, size: 16, color: Colors.white),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        )
+                                      : Center(
+                                          child: Column(
+                                            mainAxisAlignment: MainAxisAlignment.center,
+                                            children: [
+                                              Icon(LucideIcons.camera, size: 36, color: mutedColor),
+                                              const SizedBox(height: 4),
+                                              Text('COVER PHOTO', style: TextStyle(color: mutedColor, fontFamily: 'Courier', fontSize: 10, letterSpacing: 1)),
+                                            ],
+                                          ),
+                                        ),
                                 ),
                               ).animate().fadeIn(duration: 400.ms).slideY(begin: 0.1, end: 0),
                               Transform.translate(
                                 offset: const Offset(24, -40),
-                                child: Container(
-                                  width: 96,
-                                  height: 96,
-                                  decoration: BoxDecoration(
-                                    color: dobar.surface,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: borderColor, width: 4),
-                                  ),
-                                  child: Center(
-                                    child: Icon(LucideIcons.store,
-                                        size: 28, color: mutedColor),
+                                child: GestureDetector(
+                                  onTap: () => _pickAndUploadImage(isCover: false),
+                                  child: Container(
+                                    width: 96,
+                                    height: 96,
+                                    decoration: BoxDecoration(
+                                      color: dobar.surface,
+                                      shape: BoxShape.circle,
+                                      border: Border.all(color: borderColor, width: 4),
+                                    ),
+                                    child: _form.logoUrl != null
+                                        ? Center(
+                                            child: ClipOval(
+                                              child: Image.network(_form.logoUrl!, fit: BoxFit.cover),
+                                            ),
+                                          )
+                                        : Center(
+                                            child: Icon(LucideIcons.store, size: 28, color: mutedColor),
+                                          ),
                                   ),
                                 ),
                               ).animate().fadeIn(delay: 200.ms).scale(
@@ -559,11 +771,12 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
                               value: _form.barName,
                               onChanged: (v) => _form.barName = v,
                               large: true,
+                              fieldKey: 'barName',
                             ),
                             const SizedBox(height: 16),
                             _fieldLabel(LucideIcons.fileText, l10n.details_description),
                             TextField(
-                              controller: TextEditingController(text: _form.description),
+                              controller: _ctrl('description', _form.description),
                               onChanged: (v) => setState(() => _form.description = v),
                               maxLength: 500,
                               maxLines: 4,
@@ -620,6 +833,7 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
                                         value: _form.phone,
                                         onChanged: (v) => _form.phone = v,
                                         keyboardType: TextInputType.phone,
+                                        fieldKey: 'phone',
                                       ),
                                     ],
                                   ),
@@ -632,6 +846,7 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
                               value: _form.email,
                               onChanged: (v) => _form.email = v,
                               keyboardType: TextInputType.emailAddress,
+                              fieldKey: 'email',
                             ),
                           ],
                           delay: 50,
@@ -643,6 +858,7 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
                             _inputField(
                               value: _form.address,
                               onChanged: (v) => _form.address = v,
+                              fieldKey: 'address',
                             ),
                             const SizedBox(height: 16),
                             Row(
@@ -655,6 +871,7 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
                                       _inputField(
                                         value: _form.city,
                                         onChanged: (v) => _form.city = v,
+                                        fieldKey: 'city',
                                       ),
                                     ],
                                   ),
@@ -668,6 +885,7 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
                                       _inputField(
                                         value: _form.state,
                                         onChanged: (v) => _form.state = v,
+                                        fieldKey: 'state',
                                       ),
                                     ],
                                   ),
@@ -764,6 +982,7 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
                                   child: _inputField(
                                     value: _form.businessId,
                                     onChanged: (v) => _form.businessId = v,
+                                    fieldKey: 'businessId',
                                   ),
                                 ),
                                 const SizedBox(width: 8),
@@ -796,6 +1015,7 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
                             _inputField(
                               value: _form.stateRegistration,
                               onChanged: (v) => _form.stateRegistration = v,
+                              fieldKey: 'stateRegistration',
                             ),
                             const SizedBox(height: 16),
                             _fieldLabel(LucideIcons.checkCircle, l10n.details_verification_status),
@@ -863,19 +1083,22 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
                         _sectionHeader(l10n.operating_hours),
                         _buildSection(
                           children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Text(l10n.details_same_hours,
-                                    style: TextStyle(color: textColor, fontSize: 14)),
-                                Switch.adaptive(
-                                  value: _form.sameHours,
-                                  onChanged: (v) =>
-                                      setState(() => _form.sameHours = v),
-                                  activeTrackColor: barzGold.withValues(alpha: 0.4),
-                                  activeThumbColor: barzGold,
-                                ),
-                              ],
+                            Padding(
+                              padding: const EdgeInsets.only(left: 10, right: 12),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(l10n.details_same_hours,
+                                      style: TextStyle(color: textColor, fontSize: 14)),
+                                  Switch.adaptive(
+                                    value: _form.sameHours,
+                                    onChanged: (v) =>
+                                        setState(() => _form.sameHours = v),
+                                    activeTrackColor: barzGold.withValues(alpha: 0.4),
+                                    activeThumbColor: barzGold,
+                                  ),
+                                ],
+                              ),
                             ),
                             const SizedBox(height: 12),
                             if (_form.sameHours)
@@ -955,6 +1178,7 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
                                         value: _newSpot,
                                         onChanged: (v) => _newSpot = v,
                                         hint: l10n.details_new_spot_hint,
+                                        fieldKey: 'newSpot',
                                       ),
                                     ),
                                   ),
@@ -997,29 +1221,114 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
     );
   }
 
-  void _showDiscardDialog(BuildContext context) {
+  void _showUnsavedBottomSheet(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
+    final dobar = context.dobarColors;
+
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: context.dobarColors.surface,
-        title: Text(l10n.details_discard_title),
-        content: Text(l10n.details_discard_msg),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(l10n.cancel,
-                style: TextStyle(color: context.dobarColors.labelSecondary)),
+      backgroundColor: dobar.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Handle bar
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: dobar.labelSecondary.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                l10n.details_discard_title,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: dobar.labelPrimary,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'You have unsaved changes that will be lost.',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: dobar.labelSecondary,
+                ),
+              ),
+              const SizedBox(height: 24),
+              // Leave & Save
+              SizedBox(
+                height: 48,
+                child: ElevatedButton(
+                  onPressed: () async {
+                    Navigator.pop(ctx);
+                    await _handleSave();
+                    if (context.mounted) Navigator.pop(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: barzGold,
+                    foregroundColor: barzDark,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Leave & Save',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              // Leave & Discard
+              SizedBox(
+                height: 48,
+                child: OutlinedButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    Navigator.pop(context);
+                  },
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: errorRed,
+                    side: const BorderSide(color: errorRed),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text(
+                    'Leave & Discard',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              // Cancel
+              SizedBox(
+                height: 48,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(
+                    l10n.cancel,
+                    style: TextStyle(
+                      color: dobar.labelSecondary,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(ctx);
-              Navigator.pop(context);
-            },
-            style: TextButton.styleFrom(foregroundColor: errorRed),
-            child: Text(l10n.discard),
-          ),
-        ],
+        ),
       ),
     );
   }

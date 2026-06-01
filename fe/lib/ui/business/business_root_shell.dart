@@ -32,6 +32,9 @@ class _BusinessRootShellState extends State<BusinessRootShell> {
         if (state is SessionLoggedOut) {
           AppRoute.login.go(context);
         }
+        if (state is SessionReady && state.forceClientMode) {
+          context.go(AppRoute.home.path);
+        }
       },
       child: BlocBuilder<SessionBloc, SessionState>(
         builder: (context, state) {
@@ -471,6 +474,12 @@ class _BusinessSideNavState extends State<_BusinessSideNav> {
                     padding: const EdgeInsets.all(12),
                     child: Column(
                       children: [
+                        _buildActionRow(
+                          icon: LucideIcons.user,
+                          label: 'Client Mode',
+                          onTap: widget.onSwitchToClientMode,
+                        ),
+                        const SizedBox(height: 4),
                         _buildActionRow(
                           icon: Icons.logout,
                           label: 'Logout',

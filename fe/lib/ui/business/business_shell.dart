@@ -1,5 +1,7 @@
+import 'package:barz/core/router/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:barz/core/rbac/rbac.dart';
 import 'package:barz/core/design/design_system.dart';
@@ -74,78 +76,88 @@ class _BusinessShellState extends State<BusinessShell> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<SessionBloc, SessionState>(
-      builder: (context, state) {
-        if (state is! SessionReady) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+    return BlocListener<SessionBloc, SessionState>(
+      listener: (context, state) {
+        if (state is SessionLoggedOut) {
+          AppRoute.login.go(context);
         }
-
-        final session = state.session;
-        final activeBar = session.activeBar;
-
-        // New business user with no bars - show onboarding
-        if (session.barAccess.isEmpty) {
-          return const BusinessOnboardingView();
+        if (state is SessionReady && state.forceClientMode) {
+          context.go(AppRoute.home.path);
         }
-
-        // Has bars but none selected - auto-select first or show selector
-        if (activeBar == null && session.barAccess.isNotEmpty) {
-          // Auto-select first bar
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            context.read<SessionBloc>().add(
-              SessionEvent.switchActiveBar(
-                barId: session.barAccess.first.barId,
-              ),
-            );
-          });
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        }
-
-        if (activeBar == null) {
-          return const BusinessOnboardingView();
-        }
-
-        // Build navigation items based on permissions
-        final navItems = _buildNavItems(context, activeBar);
-        _currentNavItems = navItems;
-
-        // Ensure selected index is valid
-        if (_selectedIndex >= navItems.length) {
-          _selectedIndex = 0;
-        }
-
-        // Wrap in BusinessNavigation for child widgets to access navigation
-        return BusinessNavigation(
-          navigateToTab: navigateToTab,
-          currentIndex: _selectedIndex,
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final isWebLayout =
-                  constraints.maxWidth >= kBusinessWebBreakpoint;
-
-              if (isWebLayout) {
-                return _buildWebLayout(
-                  context,
-                  session.barAccess,
-                  activeBar,
-                  navItems,
-                );
-              } else {
-                return _buildMobileLayout(
-                  context,
-                  session.barAccess,
-                  activeBar,
-                  navItems,
-                );
-              }
-            },
-          ),
-        );
       },
+      child: BlocBuilder<SessionBloc, SessionState>(
+        builder: (context, state) {
+          if (state is! SessionReady) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          final session = state.session;
+          final activeBar = session.activeBar;
+
+          // New business user with no bars - show onboarding
+          if (session.barAccess.isEmpty) {
+            return const BusinessOnboardingView();
+          }
+
+          // Has bars but none selected - auto-select first or show selector
+          if (activeBar == null && session.barAccess.isNotEmpty) {
+            // Auto-select first bar
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              context.read<SessionBloc>().add(
+                SessionEvent.switchActiveBar(
+                  barId: session.barAccess.first.barId,
+                ),
+              );
+            });
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          if (activeBar == null) {
+            return const BusinessOnboardingView();
+          }
+
+          // Build navigation items based on permissions
+          final navItems = _buildNavItems(context, activeBar);
+          _currentNavItems = navItems;
+
+          // Ensure selected index is valid
+          if (_selectedIndex >= navItems.length) {
+            _selectedIndex = 0;
+          }
+
+          // Wrap in BusinessNavigation for child widgets to access navigation
+          return BusinessNavigation(
+            navigateToTab: navigateToTab,
+            currentIndex: _selectedIndex,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final isWebLayout =
+                    constraints.maxWidth >= kBusinessWebBreakpoint;
+
+                if (isWebLayout) {
+                  return _buildWebLayout(
+                    context,
+                    session.barAccess,
+                    activeBar,
+                    navItems,
+                  );
+                } else {
+                  return _buildMobileLayout(
+                    context,
+                    session.barAccess,
+                    activeBar,
+                    navItems,
+                  );
+                }
+              },
+            ),
+          );
+        },
+      ),
     );
   }
 

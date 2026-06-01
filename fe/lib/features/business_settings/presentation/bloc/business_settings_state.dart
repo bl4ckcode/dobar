@@ -14,6 +14,7 @@ abstract class BusinessSettingsState with _$BusinessSettingsState {
     ContactSettings? contactSettings,
     @Default(false) bool isLoading,
     @Default(false) bool isProcessing,
+    String? uploadedImageUrl,
     String? error,
     DeleteResult? deleteResult,
     DeactivateResult? deactivateResult,

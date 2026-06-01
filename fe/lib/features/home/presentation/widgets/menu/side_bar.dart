@@ -126,6 +126,7 @@ class _SideBarState extends State<SideBar> {
                   press: () => _handleMenuTap(menu),
                 ),
               ),
+              _buildBusinessModeButton(),
               const Spacer(),
               Padding(
                 padding: const EdgeInsets.all(24),
@@ -154,6 +155,48 @@ class _SideBarState extends State<SideBar> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildBusinessModeButton() {
+    return BlocBuilder<SessionBloc, SessionState>(
+      builder: (context, state) {
+        if (state is! SessionReady) return const SizedBox.shrink();
+
+        final session = state.session;
+        if (session.barAccess.isNotEmpty && state.forceClientMode) {
+          return Column(
+            children: [
+              const Padding(
+                padding: EdgeInsets.only(left: 24),
+                child: Divider(color: Colors.white24, height: 1),
+              ),
+              ListTile(
+                onTap: () {
+                  context.read<SessionBloc>().add(
+                    const SessionEvent.switchToBusinessMode(),
+                  );
+                  Navigator.pop(context);
+                },
+                leading: const SizedBox(
+                  height: 36,
+                  width: 36,
+                  child: Icon(
+                    CupertinoIcons.briefcase,
+                    color: Colors.white,
+                    size: 24,
+                  ),
+                ),
+                title: const Text(
+                  'Business Mode',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          );
+        }
+        return const SizedBox.shrink();
+      },
     );
   }
 

@@ -59,11 +59,8 @@ class _AppShellState extends State<AppShell> {
                 return const _LoadingView();
               }
 
-              if (forceClientMode) {
-                return const WireframeShell();
-              }
-
-              if (session.isBusiness || session.barAccess.isNotEmpty) {
+              if ((session.isBusiness || session.barAccess.isNotEmpty) &&
+                  !forceClientMode) {
                 return const _LoadingView();
               }
 

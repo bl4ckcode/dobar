@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:dartz/dartz.dart';
 import 'package:barz/core/network/error/failures.dart';
 import 'package:barz/features/business_settings/domain/models/bar_details.dart';
@@ -52,5 +53,13 @@ class BusinessSettingsUsecase {
 
   Future<Either<Failure, ReactivateResult>> reactivateAccount(int barId) {
     return _repository.reactivateAccount(barId);
+  }
+
+  Future<Either<Failure, ({String url, int expiration})>> uploadBarImage(
+    int barId, {
+    required Uint8List imageBytes,
+    required String fileName,
+  }) {
+    return _repository.uploadBarImage(barId, imageBytes: imageBytes, fileName: fileName);
   }
 }

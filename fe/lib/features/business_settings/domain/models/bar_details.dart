@@ -1,6 +1,7 @@
 class BarDetails {
   final int barId;
   final String barName;
+  final String? businessId;
   final String? description;
   final String? category;
   final String? address;
@@ -18,6 +19,7 @@ class BarDetails {
   BarDetails({
     required this.barId,
     required this.barName,
+    this.businessId,
     this.description,
     this.category,
     this.address,
@@ -36,6 +38,7 @@ class BarDetails {
   factory BarDetails.fromJson(Map<String, dynamic> json) => BarDetails(
         barId: json['bar_id'] as int,
         barName: json['bar_name'] as String,
+        businessId: json['business_id'] as String?,
         description: json['description'] as String?,
         category: json['category'] as String?,
         address: json['address'] as String?,
@@ -53,11 +56,13 @@ class BarDetails {
 
   Map<String, dynamic> toJson() => {
         'bar_name': barName,
+        if (businessId != null) 'business_id': businessId,
         if (description != null) 'description': description,
         if (category != null) 'category': category,
         if (address != null) 'address': address,
         if (city != null) 'city': city,
         if (state != null) 'state': state,
+        if (country != null) 'country': country,
         if (latitude != null) 'latitude': latitude,
         if (longitude != null) 'longitude': longitude,
         if (coverImageUrl != null) 'cover_image_url': coverImageUrl,

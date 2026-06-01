@@ -29,7 +29,6 @@ enum AppRoute {
   businessMenu('/business/menu'),
   businessMenuReader('/business/menu-reader'),
   businessCampaigns('/business/campaigns'),
-  businessCampaignAnalytics('/business/campaign/:campaignId/analytics'),
   businessStaff('/business/staff'),
   businessSubscriptionPlans('/business/subscription-plans'),
   businessSettings('/business/settings'),
@@ -69,10 +68,6 @@ enum AppRoute {
 
   static void pushOrderDetail(BuildContext context, int orderId) {
     context.push('/order_detail/$orderId');
-  }
-
-  static void pushCampaignAnalytics(BuildContext context, int campaignId) {
-    context.push('/business/campaign/$campaignId/analytics');
   }
 
   static void pushFind(BuildContext context, {String? category}) {

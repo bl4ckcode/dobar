@@ -17,7 +17,6 @@ import 'package:barz/ui/business/menu_management_page.dart';
 import 'package:barz/ui/business/staff_management_page.dart';
 import 'package:barz/features/advertising/presentation/pages/campaigns_page.dart';
 import 'package:barz/features/bars/presentation/pages/create_bar/create_bar_page.dart';
-import 'package:barz/features/advertising/presentation/pages/campaign_analytics_page.dart';
 import 'package:barz/features/advertising/presentation/pages/subscription_plans_page.dart';
 import 'package:barz/features/bars/presentation/pages/bar_detail_page.dart';
 import 'package:barz/features/promotions/presentation/pages/promotion_detail_page.dart';
@@ -189,15 +188,6 @@ final appRouter = GoRouter(
           path: AppRoute.businessCampaigns.path,
           name: AppRoute.businessCampaigns.name,
           builder: (context, state) => const CampaignsPage(),
-        ),
-        GoRoute(
-          path: AppRoute.businessCampaignAnalytics.path,
-          name: AppRoute.businessCampaignAnalytics.name,
-          builder: (context, state) {
-            final campaignId = int.parse(state.pathParameters['campaignId']!);
-            final barId = int.parse(state.uri.queryParameters['bar_id'] ?? '0');
-            return CampaignAnalyticsPage(campaignId: campaignId, barId: barId);
-          },
         ),
         GoRoute(
           path: AppRoute.businessStaff.path,

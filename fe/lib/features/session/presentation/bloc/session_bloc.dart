@@ -36,13 +36,23 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     InitializeSession event,
     Emitter<SessionState> emit,
   ) async {
+    final currentForceClientMode = state.maybeMap(
+      ready: (s) => s.forceClientMode,
+      orElse: () => false,
+    );
+
     emit(const SessionState.loading());
 
     final result = await _sessionUsecase.initializeSession();
 
     result.fold(
       (failure) => emit(SessionState.error(message: failure.errorMessage)),
-      (session) => emit(SessionState.ready(session: session)),
+      (session) => emit(
+        SessionState.ready(
+          session: session,
+          forceClientMode: currentForceClientMode,
+        ),
+      ),
     );
   }
 
