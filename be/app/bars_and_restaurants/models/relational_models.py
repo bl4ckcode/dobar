@@ -52,6 +52,10 @@ class Bar(Base):
     # 🆕 Subscription caching for fast search weighting
     subscription_tier = Column(String(20), default="regular", index=True)  # regular, master, vip
     
+    # 🆕 Geolocation fields
+    city = Column(String(100), nullable=True)
+    state = Column(String(100), nullable=True)
+    
     # 🆕 Business Profile fields
     description = Column(Text, nullable=True)  # Bar description / about us
     website = Column(String(255), nullable=True)

@@ -17,6 +17,8 @@ from ..models.relational_models import Bar as BarModel
 from ..models.cart_models import OrderItem, Cart, CartItem
 from ..models.relational_models import Order, Menu, MenuItem, Promotion, BundlePromotion, Notification
 from ...advertising.models import AdvertisingCampaign, AdvertisingImpression, AdvertisingInvoice, AdvertisingSubscription
+from ..models.nosql_models import bars_collection
+from ..services.image_upload import generate_presigned_url, extract_s3_key
 from ...errors import APIError
 
 
@@ -38,8 +40,13 @@ class BarDetailsResponse(BaseModel):
     longitude: Optional[float] = None
     cover_image_url: Optional[str] = None
     logo_url: Optional[str] = None
+    image_url: Optional[str] = None
+    image_url_expiration: Optional[int] = None
     timezone: Optional[str] = None
     operating_hours: Optional[dict] = None
+    city: Optional[str] = None
+    state: Optional[str] = None
+    business_id: Optional[str] = None
     status: str = "active"
     rating: float = 0.0
     created_at: Optional[datetime] = None
@@ -51,8 +58,6 @@ class BarDetailsUpdate(BaseModel):
     description: Optional[str] = Field(None, max_length=2000)
     category: Optional[str] = None
     address: Optional[str] = None
-    city: Optional[str] = None
-    state: Optional[str] = None
     latitude: Optional[float] = None
     longitude: Optional[float] = None
     cover_image_url: Optional[str] = None
@@ -116,6 +121,37 @@ async def _get_bar(bar_id: int) -> dict:
     return dict(bar)
 
 
+async def _enrich_with_mongo(bar: dict) -> dict:
+    """Merge MongoDB fields (lat/lng, image_url) into bar dict."""
+    try:
+        mongo_bar = await bars_collection.find_one({"bar_id": bar["id"]})
+        if mongo_bar:
+            # Prefer MongoDB lat/lng (more accurate from geospatial queries)
+            if mongo_bar.get("latitude"):
+                bar["latitude"] = mongo_bar["latitude"]
+            if mongo_bar.get("longitude"):
+                bar["longitude"] = mongo_bar["longitude"]
+            # Generate presigned image URL from MongoDB
+            if mongo_bar.get("image_url"):
+                s3_key = extract_s3_key(mongo_bar["image_url"])
+                bar["image_url"] = generate_presigned_url(s3_key)
+                bar["image_url_expiration"] = int(datetime.utcnow().timestamp()) + 3600
+    except Exception:
+        pass
+    return bar
+
+
+def _extract_city_state(bar: dict) -> dict:
+    """Extract city and state from address if not already set."""
+    if not bar.get("city") and bar.get("address"):
+        import re
+        match = re.search(r' - (\w[\w\s]+), (\w{2}), \d{5}', bar["address"])
+        if match:
+            bar["city"] = match.group(1).strip()
+            bar["state"] = match.group(2).strip()
+    return bar
+
+
 def _bar_to_details(bar: dict) -> BarDetailsResponse:
     return BarDetailsResponse(
         bar_id=bar["id"],
@@ -123,11 +159,16 @@ def _bar_to_details(bar: dict) -> BarDetailsResponse:
         description=bar.get("description"),
         category=bar.get("category"),
         address=bar.get("address"),
+        city=bar.get("city"),
+        state=bar.get("state"),
         country=bar.get("country_code", "BR"),
+        business_id=bar.get("business_id"),
         latitude=bar.get("latitude"),
         longitude=bar.get("longitude"),
         cover_image_url=bar.get("cover_url"),
         logo_url=bar.get("logo_url"),
+        image_url=bar.get("image_url"),
+        image_url_expiration=bar.get("image_url_expiration"),
         timezone=bar.get("timezone", "America/Sao_Paulo"),
         operating_hours=bar.get("operating_hours"),
         status=bar.get("status", "active"),
@@ -162,6 +203,8 @@ async def get_business_details(
 ):
     """Get full business profile details."""
     bar = await _get_bar(bar_id)
+    bar = await _enrich_with_mongo(bar)
+    bar = _extract_city_state(bar)
     return _bar_to_details(bar)
 
 
@@ -180,8 +223,6 @@ async def update_business_details(
         "description": "description",
         "category": "category",
         "address": "address",
-        "city": "city",
-        "state": "state",
         "latitude": "latitude",
         "longitude": "longitude",
         "cover_image_url": "cover_url",
@@ -196,6 +237,8 @@ async def update_business_details(
             values[db_field] = val
     
     if not values:
+        bar = await _enrich_with_mongo(bar)
+        bar = _extract_city_state(bar)
         return _bar_to_details(bar)
     
     values["updated_at"] = datetime.utcnow()
@@ -207,6 +250,8 @@ async def update_business_details(
     )
     
     updated_bar = await _get_bar(bar_id)
+    updated_bar = await _enrich_with_mongo(updated_bar)
+    updated_bar = _extract_city_state(updated_bar)
     return _bar_to_details(updated_bar)
 
 
