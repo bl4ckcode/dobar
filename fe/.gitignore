@@ -98,5 +98,3 @@ lib/l10n/app_localizations.dart
 lib/l10n/app_localizations_*.dart
 android/android/FakeDependency.jar
 android/jdks/CACHEDIR.TAG
-
-docs/

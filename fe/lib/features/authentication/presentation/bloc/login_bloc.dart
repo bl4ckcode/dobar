@@ -199,13 +199,6 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
       );
       final result = await loginUseCase.loginWithGoogle(params);
       await _processLoginResult(result, emit, email: event.key);
-      await _processLoginResult(
-        Right(
-          result.fold((l) => null, (r) => r),
-        ), // Convert output to match helper if needed, but actually usecase returns Either<Failure, AuthResponse?> so just use result directly if type matches
-        emit,
-        email: event.key,
-      );
     } catch (e) {
       emit(LoginState.failure(error: e.toString()));
     }

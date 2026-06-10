@@ -562,6 +562,67 @@ The following contact fields should be editable in this form:
 
 ---
 
+### Menu Reader Page Redesign
+"Build a premium, high-tech Menu Reader page for bar owners and staff in the **Dobar/Barz** business app.
+
+**CONTEXT:**
+Bar owners use this tool to digitize their physical menus. They can scan a paper menu using their camera, upload an image from their gallery/PC, or provide a URL (e.g., to a PDF or Instagram menu). The backend uses AI to extract products, prices, and descriptions.
+
+**OVERALL VIBE:** High-tech, precise, and premium. Industrial Modern aesthetic: deep blacks (#0A0A0A) for dark mode and soft cream/white (#FFFDE7) for light mode, with electric gold (#FFDE59) accents. The UI should feel like an advanced scanner/vision tool.
+
+**PAGE STRUCTURE:**
+
+1. **HEADER:**
+   - Title: 'Import Menu' or 'Menu AI Scanner'.
+   - Subtle back button.
+   - Use Lucide icons: `ScanLine`, `Maximize`.
+
+2. **INITIAL STATE (Input Selection):**
+   - **Hero Area:** A stylized, high-end scanner icon (Lucide `ScanEye` or `Sparkles`) with a soft gold radial glow.
+   - **Main Heading:** 'How would you like to digitize your menu?'
+   - **Action Cards:** Three large, modern cards for the main input methods:
+     - **Camera:** 'Scan Physical Menu' — uses `Camera` icon.
+     - **Gallery/PC:** 'Upload Image' — uses `ImagePlus` icon.
+     - **URL Link:** 'Import from URL' — uses `Link2` icon.
+   - Each card should feel premium, with a subtle gold border on hover and a clear description.
+
+3. **URL INPUT VIEW:**
+   - If URL is selected, show a sleek input field within a dark/light card.
+   - Input: Gold focus border, `Globe` icon prefix.
+   - Subtext: 'Supports Instagram, PDF links, and website menus.'
+   - CTA: 'Analyze Menu' — gold gradient button.
+
+4. **IMAGE PREVIEW VIEW:**
+   - Once a photo is taken or selected, show it in a large, rounded container with 'scanning' artifacts (e.g., animated gold corner brackets).
+   - Primary CTA: 'Extract Menu Data' (Gold background).
+   - Secondary: 'Retake Photo' (Ghost button).
+
+5. **ANALYZING STATE (Loading):**
+   - A sophisticated 'AI Analysis' screen.
+   - Animation: A golden beam sweeping across a document icon or a pulse effect.
+   - Text: 'Our AI is reading your menu... this usually takes 10-20 seconds.'
+   - Lucide icon: `BrainCircuit` or `Sparkles`.
+
+6. **TIPS SECTION (Bottom):**
+   - A 'Pro Tips for Best Results' section with a lightbulb icon.
+   - Tips: 'Ensure good lighting', 'Keep the menu flat', 'Avoid glare'.
+   - Design: Minimalist list with small gold bullet points.
+
+**ANIMATIONS & MICRO-INTERACTIONS:**
+- Staggered entrance for the selection cards.
+- When an image is being 'analyzed', show a scanner beam animation (top to bottom) over the preview.
+- Smooth transitions between the option cards and the input views.
+- Buttons scale down slightly on press.
+
+**TECHNICAL NOTE:**
+- Support both **Light** and **Dark** themes.
+- Use our design tokens: `barzGold` (#FFDE59), `barzDark` (#0A0A0A), `barzDarkLight` (#121212).
+- Use Lucide icon library.
+- Preserves the existing functionality: camera capture, gallery selection, and URL input.
+- Match the naming conventions from the existing implementation: `ExtractMenuFromImage`, `ExtractMenuFromUrl`."
+
+---
+
 ### Cart Best Prompt We Made So Far
 "Build me a premium shopping cart component for a bar/nightlife ordering app.
 
