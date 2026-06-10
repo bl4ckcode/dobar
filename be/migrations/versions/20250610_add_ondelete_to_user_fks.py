@@ -13,7 +13,7 @@ import sqlalchemy as sa
 
 # revision identifiers, used by Alembic.
 revision: str = "20250610_add_ondelete_to_user_fks"
-down_revision: Union[str, None] = "20250531_add_city_state_to_bars"
+down_revision: Union[str, None] = "20250531_city_state"
 branch_labels: Union[str, None] = None
 depends_on: Union[str, None] = None
 
