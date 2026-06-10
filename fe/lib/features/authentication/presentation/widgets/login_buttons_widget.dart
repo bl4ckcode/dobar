@@ -74,12 +74,7 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
     // Initialize (no clientId needed for mobile platforms)
     try {
       await signIn.initialize();
-      // Try lightweight auth first - this can fail on web with FedCM timeout
-      // That's okay, user can still click the button to sign in
-      await signIn.attemptLightweightAuthentication();
     } catch (e) {
-      // This is expected on web when FedCM times out or user dismisses
-      // Also happens when user hasn't signed in before
       debugPrint("Google Sign-In init (non-fatal): $e");
     }
   }

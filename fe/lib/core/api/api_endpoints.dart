@@ -12,7 +12,7 @@ class ApiEndpoints {
   static const String authMfaChallenge = '/auth/mfa/challenge';
   static const String authRecoveryInitiate = '/auth/recovery/initiate';
   static const String authRecoveryVerify = '/auth/recovery/verify';
-  static const String home = '/home';
+  static const String home = '/home/';
   static const String updateCountry = '/me/update-country';
 
   static const String bars = '/bars/';
