@@ -432,6 +432,51 @@ Response 200:
 Status: **✅ COMPLETE**
 Priority: HIGH - User Preferences & Privacy
 
+### Onboarding Flow (IMPORTANT)
+
+**New user detection:**
+The backend returns `"is_new_user": true` in the `/auth/phone-login`, `/auth/google-login`, and `/auth/apple-login` responses whenever a user logs in for the first time.
+
+**What the frontend MUST do with `is_new_user: true`:**
+
+1. After login, immediately navigate to the **Onboarding Screen** — do NOT go to the Home/Dashboard.
+2. On the onboarding screen, collect:
+   - **User Type**: `"client"` (bar-goer) or `"business"` (bar owner/staff)
+   - **Country Code**: ISO 3166-1 alpha-2 (use `GET /me/available-countries` for the picker)
+3. Call `POST /me/onboarding` with those two fields.
+4. Onboarding implicitly accepts Terms of Service and Privacy Policy.
+5. After onboarding, the user may still need to view legal documents (see `GET /legal/` endpoints).
+
+**Why this matters:**
+If the frontend calls `GET /me/profile` before onboarding, the response will have `"user_type": null` and `"country_code": null`. These are intentionally `null` until the user completes onboarding, so the frontend **cannot** skip the onboarding step by reading defaults from the profile. Always use the `is_new_user` flag from the login response to decide whether to show onboarding.
+
+If the frontend ignores `is_new_user` and proceeds directly to the home screen:
+- `GET /me/profile` will return `user_type: null` and `country_code: null`
+- The `/home` endpoint may return unexpected or empty results
+- Payment gateway routing will have no country to use
+- The user will not have accepted Terms or Privacy Policy (legal/compliance issue)
+
+**Recommended approach:**
+```dart
+// After login response:
+if (loginResponse.isNewUser) {
+  Navigator.pushReplacement(context, OnboardingScreen());
+} else {
+  Navigator.pushReplacement(context, HomeScreen());
+}
+
+// Onboarding screen:
+Future<void> completeOnboarding(String userType, String countryCode) async {
+  await dio.post('/me/onboarding', data: {
+    'user_type': userType,
+    'country_code': countryCode,
+  });
+  // Optionally show legal documents before proceeding
+  Navigator.pushReplacement(context, HomeScreen());
+}
+```
+
+
 ### Update Profile Fields
 
 Allows updating the user's phone number and avatar URL (previously only name and email).

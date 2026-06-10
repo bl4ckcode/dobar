@@ -13,7 +13,7 @@ class Cart(Base):
     __tablename__ = "carts"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), index=True, unique=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True, unique=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -64,7 +64,7 @@ class OrderStatusHistory(Base):
     order_id = Column(Integer, ForeignKey("orders.id"), index=True)
     status = Column(String)
     timestamp = Column(DateTime, default=datetime.utcnow)
-    updated_by_user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    updated_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     updated_by_owner_id = Column(Integer, ForeignKey("bar_owners.id"), nullable=True)
     notes = Column(String, nullable=True)
 

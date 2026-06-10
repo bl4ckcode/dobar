@@ -132,7 +132,7 @@ class ProfileResponse(BaseModel):
     avatar_url: Optional[str] = None
     terms_accepted: bool = False
     privacy_accepted: bool = False
-    user_type: str = "client"
+    user_type: Optional[str] = None
     country_code: Optional[str] = None
     subscription_tier: str = "regular"
     is_pro: bool = False
@@ -209,6 +209,10 @@ async def get_profile(current_user: AuthUser = Depends(get_current_user)):
     user_query = User.__table__.select().where(User.id == current_user.id)
     user = await database.fetch_one(user_query)
     
+    # User has onboarded if they've explicitly accepted terms or privacy policy
+    # If neither has been accepted, this is a new user and defaults should not be exposed
+    has_onboarded = profile.get("terms_accepted", False) or profile.get("privacy_accepted", False)
+    
     return ProfileResponse(
         display_name=profile.get("display_name"),
         email=user["email"] if user else None,
@@ -216,8 +220,8 @@ async def get_profile(current_user: AuthUser = Depends(get_current_user)):
         avatar_url=profile.get("avatar_url"),
         terms_accepted=profile.get("terms_accepted", False) or False,
         privacy_accepted=profile.get("privacy_accepted", False) or False,
-        user_type=profile.get("user_type", "client") or "client",
-        country_code=(user["country_code"] if user and user["country_code"] else profile.get("country_code")) or "BR",
+        user_type=profile.get("user_type") if has_onboarded else None,
+        country_code=(user["country_code"] if user and user["country_code"] else profile.get("country_code")) if has_onboarded else None,
         subscription_tier=(dict(user).get("subscription_tier") or "regular") if user else "regular",
         is_pro=dict(user).get("subscription_tier") == "pro" if user else False
     )
@@ -348,6 +352,9 @@ async def complete_onboarding(
     - user_type: "client" (bar-goer) or "business" (bar owner/staff)
     - country_code: Payment gateway routing based on country
     
+    Onboarding implicitly accepts terms and privacy policy since the user
+    is actively setting up their profile for the first time.
+    
     Call this after phone/social login when is_new_user=true.
     """
     await get_or_create_profile(current_user.id)
@@ -358,6 +365,10 @@ async def complete_onboarding(
         .values(
             user_type=data.user_type,
             country_code=data.country_code,
+            terms_accepted=True,
+            terms_accepted_at=datetime.utcnow(),
+            privacy_accepted=True,
+            privacy_accepted_at=datetime.utcnow(),
             updated_at=datetime.utcnow()
         )
     )

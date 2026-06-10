@@ -8,7 +8,7 @@ class RecoveryToken(Base):
     __tablename__ = "recovery_tokens"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     token = Column(String, unique=True, nullable=False, index=True)
     method = Column(String, nullable=False)
     expires_at = Column(DateTime(timezone=True), nullable=False)

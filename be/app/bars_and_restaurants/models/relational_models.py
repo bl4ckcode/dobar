@@ -126,7 +126,7 @@ class Order(Base):
     __tablename__ = "orders"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), index=True)
     bar_id = Column(Integer, ForeignKey("bars.id"), index=True)
     status = Column(String, nullable=True, default="pending")  # pending, confirmed, preparing, ready, completed, cancelled
     total_price = Column(Float, nullable=True)

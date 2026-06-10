@@ -145,7 +145,7 @@ class UserProfile(Base):
     __tablename__ = "user_profiles"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), unique=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, index=True)
     
     display_name = Column(String(100), nullable=True)
     avatar_url = Column(String(500), nullable=True)
@@ -195,7 +195,7 @@ class BarStaff(Base):
     __tablename__ = "bar_staff"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True)
     bar_id = Column(Integer, ForeignKey("bars.id"), index=True)
     
     # Role at this bar
@@ -214,7 +214,7 @@ class BarStaff(Base):
     accepted_at = Column(DateTime, nullable=True)
     
     # Who invited this person
-    invited_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    invited_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -246,7 +246,7 @@ class StaffInvitation(Base):
     expires_at = Column(DateTime, nullable=False)
     
     # Who sent it
-    invited_by_id = Column(Integer, ForeignKey("users.id"), nullable=True)
+    invited_by_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
     
     # Timestamps
     created_at = Column(DateTime, default=datetime.utcnow)

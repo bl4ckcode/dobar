@@ -329,7 +329,12 @@ class TestProfileEndpoints:
     
     @pytest.mark.asyncio
     async def test_get_profile(self, client: AsyncClient, mock_firebase_token):
-        """Test getting user profile after login."""
+        """Test getting user profile after login.
+        
+        New users who haven't accepted terms/privacy should have
+        user_type and country_code as null (not defaults like "client"/"BR").
+        This ensures the frontend shows onboarding when is_new_user=true.
+        """
         with patch("app.auth.routes.firebase_auth.verify_id_token") as mock_verify:
             mock_verify.return_value = mock_firebase_token
             login_response = await client.post(
@@ -338,6 +343,7 @@ class TestProfileEndpoints:
             )
         
         assert login_response.status_code == 200
+        assert login_response.json()["is_new_user"] == True
         token = login_response.json()["access_token"]
         headers = {"Authorization": f"Bearer {token}"}
         
@@ -348,7 +354,13 @@ class TestProfileEndpoints:
         assert "display_name" in data
         assert "terms_accepted" in data
         assert "privacy_accepted" in data
-        assert "user_type" in data
+        
+        # New user without onboarding: user_type and country_code must be null
+        # so the frontend knows to show the onboarding screen
+        assert data["user_type"] is None, "New users should not get a default user_type"
+        assert data["country_code"] is None, "New users should not get a default country_code"
+        assert data["terms_accepted"] is False
+        assert data["privacy_accepted"] is False
     
     @pytest.mark.asyncio
     async def test_update_profile(self, client: AsyncClient, mock_firebase_token):

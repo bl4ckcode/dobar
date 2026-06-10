@@ -33,7 +33,7 @@ class Token(Base):
     __tablename__ = "tokens"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), index=True)  # Foreign key to User
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True)  # Foreign key to User
     token = Column(String, unique=True, index=True)  # Authentication token
     expiry_date = Column(Integer)  # Expiry date in timestamp format
 
@@ -48,7 +48,7 @@ class RefreshToken(Base):
     __tablename__ = "refresh_tokens"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, ForeignKey("users.id"), nullable=False, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     token = Column(String, unique=True, index=True, nullable=False)  # Unique refresh token
     expires_at = Column(DateTime(timezone=True), nullable=False)  # When the refresh token expires
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
