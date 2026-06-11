@@ -48,15 +48,15 @@ jobs:
           git checkout main
           git pull origin main
           
-          # Delete old migration files but keep the 20 most recent ones
+          # Delete old migration files but keep the 10 most recent ones
           # to ensure the migration chain remains intact and the head is never deleted.
-          ls -rt migrations/versions/*.py | head -n -20 | xargs git rm 2>/dev/null || echo "No old migration files to delete"
+          ls -rt migrations/versions/*.py | head -n -10 | xargs git rm 2>/dev/null || echo "No old migration files to delete"
           
           # Commit and push if there are changes
           if git diff --staged --quiet; then
             echo "No changes to commit"
           else
-            git commit -m "chore: remove applied migrations (keeping recent 5) [skip ci]"
+            git commit -m "chore: remove applied migrations (keeping recent 10) [skip ci]"
             git push "https://${{ secrets.GH_PAT_WRITE_ACCESS }}@github.com/${{ github.repository }}.git" main
             echo "✅ Deleted old applied migrations from repository"
           fi

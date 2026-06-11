@@ -1,7 +1,7 @@
 """Add ondelete cascade/set_null to user FK constraints
 
-Revision ID: 20250610_add_ondelete_to_user_fks
-Revises: 20250531_add_city_state_to_bars
+Revision ID: 20250610_add_ondelete
+Revises: 20250531_city_state
 Create Date: 2026-06-10 08:56:00.000000
 
 """
@@ -12,7 +12,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = "20250610_add_ondelete_to_user_fks"
+revision: str = "20250610_add_ondelete"
 down_revision: Union[str, None] = "20250531_city_state"
 branch_labels: Union[str, None] = None
 depends_on: Union[str, None] = None
