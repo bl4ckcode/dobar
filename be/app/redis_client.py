@@ -1,8 +1,7 @@
 import os
 import json
 import redis.asyncio as redis
-from typing import Optional, Any, Callable
-from functools import wraps
+from typing import Optional, Any
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 TESTING = os.getenv("TESTING", "false").lower() == "true"

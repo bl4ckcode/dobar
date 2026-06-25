@@ -9,12 +9,12 @@ from typing import Optional, List, Dict, Any
 import hashlib
 
 from app.database import database
-from app.redis_client import redis
+from app.redis_client import get_redis
 from app.errors import APIError
-from sqlalchemy import func, cast, Date, select
+from sqlalchemy import func, select
 from app.advertising.models import (
     AdvertisingCampaign, AdvertisingImpression,
-    CampaignStatus, CampaignType, AdAction, BudgetType
+    CampaignStatus, AdAction
 )
 from app.advertising.schemas import (
     CampaignCreate, CampaignUpdate, CampaignStatusEnum,
@@ -418,7 +418,7 @@ class CampaignService:
                 query = "SELECT bar_id FROM advertising_campaigns WHERE id = :idx"
                 campaign_rec = await database.fetch_one(query, {"idx": campaign_id})
                 if campaign_rec:
-                    await redis.set(
+                    await get_redis().set(
                         f"user:{user_id}:campaign_click:{campaign_rec['bar_id']}", 
                         str(campaign_id), 
                         ex=86400  # 24 hours

@@ -1,13 +1,11 @@
 import math
-from datetime import datetime, timezone
-from sqlalchemy import select, and_, func
+from sqlalchemy import select, and_
 
 from app.database import database
-from app.redis_client import redis
+from app.redis_client import get_redis
 from app.push_queue import PushQueue
 from app.advertising.models import AdvertisingCampaign, CampaignStatus, CampaignType
 from app.bars_and_restaurants.models.relational_models import Bar
-from app.auth.rbac_models import UserProfile
 
 class ProximityService:
     
@@ -89,7 +87,7 @@ class ProximityService:
             if distance <= radius_meters:
                 # User is inside Geofence!
                 lock_key = f"user:{user_id}:geofence_lock:{campaign_id}"
-                is_locked = await redis.get(lock_key)
+                is_locked = await get_redis().get(lock_key)
                 
                 if not is_locked:
                     # Dispatch to native redis queue
@@ -100,7 +98,7 @@ class ProximityService:
                     )
                     
                     # Lock for 24 hours so they don't get spammed if they hang around the bar bounds
-                    await redis.set(lock_key, "1", ex=86400)
+                    await get_redis().set(lock_key, "1", ex=86400)
                     
                     # A single batch ping should usually only trigger 1 campaign at a time to be safe
                     # But we'll let it process multiple if they overlap precisely
