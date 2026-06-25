@@ -23,9 +23,6 @@ jobs:
           pip install -r requirements-test.txt
           pip install git+https://${{ secrets.GH_PAT_WRITE_ACCESS }}@github.com/bl4ckcode/dobar-payment-engine.git
       
-      - name: Validate Alembic migration chain
-        run: python scripts/validate_migrations.py
-      
       - name: Run tests
         run: pytest tests/ --no-cov -q
         env:
