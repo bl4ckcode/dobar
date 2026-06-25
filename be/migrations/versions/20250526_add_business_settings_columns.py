@@ -2,7 +2,7 @@
 Add business settings columns to bars table
 
 Revision ID: 20250526_business_settings
-Revises: xyz_add_plan_features
+Revises: 967fcf155de3
 Create Date: 2026-05-26 00:00:00.000000
 """
 from alembic import op
@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSON
 
 revision = '20250526_business_settings'
-down_revision = None
+down_revision = '967fcf155de3'
 branch_labels = None
 depends_on = None
 
