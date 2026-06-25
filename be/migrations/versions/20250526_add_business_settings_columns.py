@@ -10,7 +10,7 @@ import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import JSON
 
 revision = '20250526_business_settings'
-down_revision = 'xyz_add_plan_features'
+down_revision = None
 branch_labels = None
 depends_on = None
 
