@@ -30,9 +30,10 @@ kill_timeout = "10s"
   path = "/health"
 
 [[vm]]
-  memory = '1gb'
-  cpu_kind = 'shared'
-  cpus = 2
+  cpu_kind = "shared"
+  cpus = 1
+  memory = "512mb"
+  memory_mb = 512
 
 [metrics]
   port = 9091
