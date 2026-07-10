@@ -2,6 +2,9 @@
 
 This document details the development workflow, package management, and testing guidelines for the Dobar back-end application.
 
+## Clean Code
+- **No comments or docstrings**: Code should be self-explanatory. Use clear variable and function names.
+
 ## 📦 Package Management
 - **Tool**: Standard `pip` utilizing `requirements.txt` for production/application dependencies and `requirements-test.txt` for development/testing dependencies.
 - **Virtual Environment**: Use a Python virtual environment (`venv`) for local development.

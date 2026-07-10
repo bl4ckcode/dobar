@@ -109,6 +109,11 @@ class CheckoutResponse(BaseModel):
     total: float
     estimated_ready_time: Optional[datetime] = None
     message: str = "Order created successfully"
+    
+    # PIX payment fields (for async payment confirmation)
+    pix_qr_code: Optional[str] = None
+    pix_copia_e_cola: Optional[str] = None
+    pix_expires_at: Optional[datetime] = None
 
 
 class PromotionApplied(BaseModel):

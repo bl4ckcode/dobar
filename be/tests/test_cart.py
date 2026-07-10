@@ -144,3 +144,49 @@ class TestCheckout:
         assert response.status_code == 400
         assert response.json()["error_code"] == "BAD_REQUEST"
         assert "same bar" in response.json()["message"].lower()
+
+    async def test_checkout_pix_returns_pix_fields(self, auth_client, test_bar_in_db):
+        """Test that PIX checkout returns pix_qr_code, pix_copia_e_cola, and pix_expires_at fields."""
+        client, headers, user = auth_client
+        
+        # Add item to cart
+        await client.post("/cart/items", json={
+            "menu_item_id": 200,
+            "bar_id": test_bar_in_db["id"],
+            "menu_item_name": "PIX Test Item",
+            "quantity": 1,
+            "unit_price": 10.00
+        }, headers=headers)
+        
+        # Mock DPE client to return PIX payment data
+        class MockDPEClient:
+            async def charge(self, **kwargs):
+                return {
+                    "status": "succeeded",
+                    "payment_id": "pay_pix_test_123",
+                    "gateway": "pagarme",
+                    "gateway_id": "ch_pix_123",
+                    "amount": 10.00,
+                    "currency": "BRL",
+                    "created_at": "2026-01-01T00:00:00Z",
+                    "pix_qr_code": "00020126...PIX_CODE...6304XXXX",
+                    "pix_copia_e_cola": "00020126...PIX_COPIA_E_COLA...6304XXXX",
+                    "pix_qr_code_url": "https://api.pagarme.com/pix/qr/123.png",
+                    "pix_expires_at": "2026-01-01T01:00:00Z",
+                }
+        
+        from unittest.mock import patch
+        with patch("app.bars_and_restaurants.routes.cart.get_dpe_client", return_value=MockDPEClient()):
+            checkout_data = {
+                "order_type": "pickup",
+                "payment_method": "pix"
+            }
+            response = await client.post("/cart/checkout", json=checkout_data, headers=headers)
+        
+        assert response.status_code == 201
+        data = response.json()
+        assert data["payment_status"] == "pending"  # PIX stays pending until webhook confirms
+        assert data["pix_qr_code"] == "00020126...PIX_CODE...6304XXXX"
+        assert data["pix_copia_e_cola"] == "00020126...PIX_COPIA_E_COLA...6304XXXX"
+        assert data["pix_expires_at"] == "2026-01-01T01:00:00Z"
+        assert data["payment_id"] == "pay_pix_test_123"

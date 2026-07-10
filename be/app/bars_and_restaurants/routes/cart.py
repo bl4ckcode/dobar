@@ -7,8 +7,8 @@ from sqlalchemy import and_
 from typing import List, Optional
 from decimal import Decimal
 from datetime import datetime, timedelta
+import uuid
 
-from app.auth.middleware import get_optional_user
 from app.auth.rbac_middleware import get_current_user, AuthUser
 from app.errors import APIError
 from ..models.cart_models import Cart as CartModel, CartItem as CartItemModel, OrderItem as OrderItemModel, OrderStatusHistory as OrderStatusHistoryModel
@@ -16,6 +16,7 @@ from ..models.relational_models import Order as OrderModel, Promotion as Promoti
 from ..schemas.cart import Cart, CartItem, CartItemCreate, CartItemUpdate, CheckoutRequest, CheckoutResponse, CartCalculateRequest, CartSyncRequest, CartResponse
 from app.database import database
 from app.payment import get_payment_gateway, PaymentGateway
+from app.payment import get_dpe_client
 
 cart_router = APIRouter(prefix="/cart", tags=["Cart"])
 
@@ -285,7 +286,6 @@ async def checkout(
 ):
     from app.redis_client import WalletLock
     from ..services.connection_manager import manager
-    import uuid
     
     idempotency_key = str(uuid.uuid4())
     
@@ -352,9 +352,14 @@ async def checkout(
         
         total = subtotal + tax + tip + delivery_fee - discount
         
-        estimated_ready_time = datetime.utcnow() + timedelta(minutes=30)
-        payment_gateway = get_payment_gateway()
+        # Normalize payment method - handle both "pix" and "__pix__" formats
+        payment_method_normalized = checkout_request.payment_method
+        if payment_method_normalized == "__pix__":
+            payment_method_normalized = "pix"
         
+        estimated_ready_time = datetime.utcnow() + timedelta(minutes=30)
+        
+        # Create order with pending payment status
         async with database.transaction():
             try:
                 order_data = {
@@ -369,7 +374,7 @@ async def checkout(
                     "delivery_fee": float(delivery_fee),
                     "discount": float(discount),
                     "total_price": float(total),
-                    "payment_method": checkout_request.payment_method,
+                    "payment_method": payment_method_normalized,
                     "payment_status": "pending",
                     "estimated_ready_time": estimated_ready_time,
                     "delivery_address": checkout_request.delivery_address,
@@ -413,66 +418,7 @@ async def checkout(
                     }
                     await database.execute(OrderItemModel.__table__.insert().values(**order_item_data))
                 
-                payment_result = None
-                payment_error = None
-                
-                try:
-                    payment_amount = int(total * 100)
-                    
-                    payment_result = payment_gateway.create_charge(
-                        amount=payment_amount,
-                        currency="usd",
-                        customer={
-                            "email": current_user.email,
-                            "phone": current_user.phone_number,
-                            "name": current_user.display_name
-                        },
-                        payment_method=checkout_request.payment_details or {}
-                    )
-                    
-                    if payment_result.get("status") == "succeeded":
-                        update_data = {
-                            "payment_status": "completed",
-                            "payment_id": payment_result.get("id"),
-                            "status": "confirmed",
-                            "updated_at": datetime.utcnow()
-                        }
-                        
-                        # Insert status history for "confirmed" after successful payment
-                        confirmed_history = {
-                            "order_id": order_id,
-                            "status": "confirmed",
-                            "updated_by_user_id": current_user.id,
-                            "notes": "Payment completed"
-                        }
-                        await database.execute(OrderStatusHistoryModel.__table__.insert().values(**confirmed_history))
-                    else:
-                        update_data = {
-                            "payment_status": "failed",
-                            "payment_id": payment_result.get("id"),
-                            "updated_at": datetime.utcnow()
-                        }
-                        payment_error = payment_result.get("message", "Payment failed")
-                    
-                    await database.execute(
-                        OrderModel.__table__
-                        .update()
-                        .where(OrderModel.id == order_id)
-                        .values(**update_data)
-                    )
-                    
-                except Exception as e:
-                    await database.execute(
-                        OrderModel.__table__
-                        .update()
-                        .where(OrderModel.id == order_id)
-                        .values(payment_status="failed", updated_at=datetime.utcnow())
-                    )
-                    payment_error = str(e)
-                
-                if payment_error:
-                    raise APIError.payment_declined(message=payment_error)
-                
+                # Clear cart after order creation
                 await database.execute(
                     CartItemModel.__table__.delete().where(CartItemModel.cart_id == cart["id"])
                 )
@@ -482,13 +428,126 @@ async def checkout(
             except Exception as e:
                 raise APIError.server_error(f"Checkout failed: {str(e)}")
                 
-        # Transaction committed automatically here
+        # Process payment via DPE (outside transaction to allow webhook to update status)
+        pix_qr_code = None
+        pix_copia_e_cola = None
+        pix_expires_at = None
+        payment_id = None
+        payment_status = "pending"
         
+        try:
+            dpe = get_dpe_client()
+            dpe_idempotency_key = f"ord_{order_id}_{int(datetime.utcnow().timestamp())}"
+            
+            # Build customer info for DPE
+            customer_info = {
+                "name": current_user.display_name or "Customer",
+                "email": current_user.email or "",
+                "document": await _get_user_document(current_user.id),
+            }
+            
+            # Determine payment method type for DPE
+            is_pix = payment_method_normalized == "pix"
+            
+            dpe_payment_method = {
+                "type": "pix" if is_pix else "card",
+            }
+            
+            # For card payments, use the payment details token
+            if not is_pix and checkout_request.payment_details:
+                dpe_payment_method["token"] = checkout_request.payment_details.get("card_token")
+                dpe_payment_method["provider"] = checkout_request.payment_details.get("provider", "saved")
+            
+            # Call DPE charge endpoint
+            payment_result = await dpe.charge(
+                order_id=order_id,
+                user_id=current_user.id,
+                bar_id=bar_id,
+                amount=float(total),
+                currency="BRL",
+                country="BR",
+                payment_method=dpe_payment_method,
+                customer_info=customer_info,
+                idempotency_key=dpe_idempotency_key,
+                metadata={"order_id": str(order_id), "bar_id": str(bar_id)}
+            )
+            
+            payment_id = payment_result.get("payment_id")
+            
+            # Handle PIX payment response
+            if is_pix:
+                pix_qr_code = payment_result.get("pix_qr_code")
+                pix_copia_e_cola = payment_result.get("pix_copia_e_cola")
+                pix_expires_at = payment_result.get("pix_expires_at")
+                
+                # Update order with payment_id but keep status pending for PIX
+                # (webhook will confirm when paid)
+                await database.execute(
+                    OrderModel.__table__
+                    .update()
+                    .where(OrderModel.id == order_id)
+                    .values(
+                        payment_id=payment_id,
+                        payment_status="pending",
+                        updated_at=datetime.utcnow()
+                    )
+                )
+            # Handle card payment response
+            elif payment_result.get("status") == "succeeded":
+                payment_status = "paid"
+                await database.execute(
+                    OrderModel.__table__
+                    .update()
+                    .where(OrderModel.id == order_id)
+                    .values(
+                        payment_id=payment_id,
+                        payment_status="paid",
+                        status="confirmed",
+                        updated_at=datetime.utcnow()
+                    )
+                )
+                
+                # Insert status history for "confirmed" after successful card payment
+                confirmed_history = {
+                    "order_id": order_id,
+                    "status": "confirmed",
+                    "updated_by_user_id": current_user.id,
+                    "notes": "Payment completed"
+                }
+                await database.execute(OrderStatusHistoryModel.__table__.insert().values(**confirmed_history))
+            else:
+                payment_status = "failed"
+                await database.execute(
+                    OrderModel.__table__
+                    .update()
+                    .where(OrderModel.id == order_id)
+                    .values(
+                        payment_id=payment_id,
+                        payment_status="failed",
+                        updated_at=datetime.utcnow()
+                    )
+                )
+                
+        except Exception as payment_error:
+            # Payment failed - keep order as pending but log error
+            print(f"Payment processing failed for order {order_id}: {payment_error}")
+            await database.execute(
+                OrderModel.__table__
+                .update()
+                .where(OrderModel.id == order_id)
+                .values(
+                    payment_status="failed",
+                    updated_at=datetime.utcnow()
+                )
+            )
+        
+        # Fetch final order record
         order_record = await database.fetch_one(
             OrderModel.__table__.select().where(OrderModel.id == order_id)
         )
         order = dict(order_record)
         
+        # Generate cashback (non-critical, don't fail checkout on error)
         try:
             from app.bars_and_restaurants.services.wallet_service import WalletService
             from app.bars_and_restaurants.schemas.wallet import EarnCashbackRequest
@@ -517,10 +576,42 @@ async def checkout(
             order_id=order["id"],
             status=order["status"],
             payment_status=order["payment_status"],
-            payment_id=order["payment_id"],
+            payment_id=order.get("payment_id"),
             total=order["total_price"],
-            estimated_ready_time=order["estimated_ready_time"]
+            estimated_ready_time=order["estimated_ready_time"],
+            pix_qr_code=pix_qr_code,
+            pix_copia_e_cola=pix_copia_e_cola,
+            pix_expires_at=pix_expires_at
         )
+
+
+async def _get_user_document(user_id: int) -> Optional[str]:
+    """Fetch user's CPF document for PIX payments."""
+    from app.auth.rbac_models import UserProfile
+    
+    try:
+        from app.bars_and_restaurants.models.relational_models import UserDocument
+        
+        query = UserDocument.__table__.select().where(
+            UserDocument.user_id == user_id
+        ).order_by(UserDocument.created_at.desc()).limit(1)
+        
+        doc = await database.fetch_one(query)
+        if doc:
+            return doc["number"]
+        
+        # Fallback: check UserProfile for document
+        profile_query = UserProfile.__table__.select().where(
+            UserProfile.user_id == user_id
+        )
+        profile = await database.fetch_one(profile_query)
+        if profile and profile.get("document"):
+            return profile["document"]
+            
+    except Exception:
+        pass
+    
+    return None
 
 @cart_router.post("/sync", response_model=CartResponse)
 async def sync_cart(
