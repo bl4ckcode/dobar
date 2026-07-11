@@ -116,9 +116,7 @@ class TestCampaignCreation:
     @pytest.mark.asyncio
     async def test_create_campaign_with_goal(self):
         """Campaign should be created with campaign_goal"""
-        with patch("app.advertising.services.campaign_service.database") as mock_db, \
-             patch("app.advertising.services.campaign_service.CacheService") as mock_cache:
-            
+        with patch("app.advertising.services.campaign_service.database") as mock_db:
             mock_db.execute = AsyncMock(return_value=1)
             mock_db.fetch_one = AsyncMock(return_value={
                 "id": 1, "bar_id": 16, "name": "Test Campaign",
@@ -133,7 +131,6 @@ class TestCampaignCreation:
                 "budget_optimizer_enabled": False,
                 "estimated_performance": None
             })
-            mock_cache.invalidate = AsyncMock()
             
             campaign_data = CampaignCreate(
                 campaign_goal=CampaignGoalEnum.DISCOVERY,
@@ -148,9 +145,11 @@ class TestCampaignCreation:
                 budget_optimizer_enabled=False
             )
             
-            result = await CampaignService.create_campaign(
-                bar_id=16, subscription_id=1, data=campaign_data
-            )
+            with patch.object(CacheService, 'delete_pattern', new_callable=AsyncMock), \
+                 patch.object(CacheService, 'delete', new_callable=AsyncMock):
+                result = await CampaignService.create_campaign(
+                    bar_id=16, subscription_id=1, data=campaign_data
+                )
             
             assert result["campaign_goal"] == "discovery"
     
@@ -221,18 +220,17 @@ class TestCampaignPublish:
     @pytest.mark.asyncio
     async def test_publish_draft_campaign(self):
         """Draft campaign should be publishable to active/scheduled"""
-        with patch("app.advertising.services.campaign_service.database") as mock_db, \
-             patch("app.advertising.services.campaign_service.CacheService") as mock_cache:
-            
+        with patch("app.advertising.services.campaign_service.database") as mock_db:
             mock_db.fetch_one = AsyncMock(return_value={
                 "id": 1, "bar_id": 16, "status": "draft",
                 "start_time": datetime.now(timezone.utc) - timedelta(hours=1),
                 "estimated_performance": {"daily_reach": 1000, "estimated_clicks": 50, "estimated_impressions": 2000}
             })
             mock_db.execute = AsyncMock()
-            mock_cache.invalidate = AsyncMock()
             
-            result = await CampaignService.publish_campaign(1, 16)
+            with patch.object(CacheService, 'delete_pattern', new_callable=AsyncMock), \
+                 patch.object(CacheService, 'delete', new_callable=AsyncMock):
+                result = await CampaignService.publish_campaign(1, 16)
             
             assert result["status"] == "active"
             assert result["id"] == 1
@@ -240,18 +238,17 @@ class TestCampaignPublish:
     @pytest.mark.asyncio
     async def test_publish_scheduled_campaign(self):
         """Draft campaign with future start_time should become scheduled"""
-        with patch("app.advertising.services.campaign_service.database") as mock_db, \
-             patch("app.advertising.services.campaign_service.CacheService") as mock_cache:
-            
+        with patch("app.advertising.services.campaign_service.database") as mock_db:
             mock_db.fetch_one = AsyncMock(return_value={
                 "id": 1, "bar_id": 16, "status": "draft",
                 "start_time": datetime.now(timezone.utc) + timedelta(days=1),
                 "estimated_performance": None
             })
             mock_db.execute = AsyncMock()
-            mock_cache.invalidate = AsyncMock()
             
-            result = await CampaignService.publish_campaign(1, 16)
+            with patch.object(CacheService, 'delete_pattern', new_callable=AsyncMock), \
+                 patch.object(CacheService, 'delete', new_callable=AsyncMock):
+                result = await CampaignService.publish_campaign(1, 16)
             
             assert result["status"] == "scheduled"
 

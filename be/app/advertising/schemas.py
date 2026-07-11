@@ -216,7 +216,7 @@ class CampaignCreate(BaseModel):
     """Request to create a new campaign"""
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     campaign_type: Optional[CampaignTypeEnum] = None  # Optional for multi-placement campaigns
-    campaign_goal: CampaignGoalEnum
+    campaign_goal: Optional[CampaignGoalEnum] = None  # Optional, inferred from campaign_type if not provided
     budget_type: BudgetTypeEnum = BudgetTypeEnum.FIXED
     budget_amount: Decimal = Field(..., gt=0)
     start_time: datetime

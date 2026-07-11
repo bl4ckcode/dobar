@@ -20,7 +20,7 @@ from app.advertising.schemas import (
     CampaignCreate, CampaignUpdate, CampaignStatusEnum,
     FeaturedAd, SearchAd, MapSpotlight,
     DashboardAnalytics, CampaignAnalytics, DailyAnalytics,
-    EstimatedPerformance
+    EstimatedPerformance, CampaignGoalEnum
 )
 
 class CampaignService:
@@ -96,6 +96,18 @@ class CampaignService:
         # Draft campaigns remain in draft status
         initial_status = CampaignStatus.DRAFT.value
         
+        # Infer campaign_goal from campaign_type if not provided (backward compatibility)
+        campaign_goal = data.campaign_goal
+        if campaign_goal is None and data.campaign_type is not None:
+            goal_mapping = {
+                "featured": "discovery",
+                "search": "foot_traffic",
+                "map": "foot_traffic",
+                "promo_boost": "promotion",
+                "banner": "promotion"
+            }
+            campaign_goal = CampaignGoalEnum(goal_mapping.get(data.campaign_type.value, "discovery"))
+        
         # Prepare targeting (use ExtendedTargeting structure)
         targeting = data.targeting.model_dump() if data.targeting else {
             "radius_km": 5,
@@ -119,6 +131,9 @@ class CampaignService:
         estimated_performance = None
         if data.is_smart_distribution or data.distribution:
             estimated_performance = CampaignService._estimate_performance(data.budget_amount, data.distribution or [])
+        elif data.campaign_type is not None:
+            # Generate estimated performance for single-placement campaigns too
+            estimated_performance = CampaignService._estimate_performance(data.budget_amount, [])
         
         # Generate campaign name if not provided
         campaign_name = data.name or f"Campaign {now.strftime('%Y-%m-%d')}"
@@ -140,7 +155,7 @@ class CampaignService:
             "conversions": 0,
             "created_at": now,
             "updated_at": now,
-            "campaign_goal": data.campaign_goal.value if data.campaign_goal else None,
+            "campaign_goal": campaign_goal.value if campaign_goal else None,
             "distribution": distribution,
             "is_smart_distribution": data.is_smart_distribution,
             "budget_optimizer_enabled": data.budget_optimizer_enabled,
@@ -156,8 +171,8 @@ class CampaignService:
         campaign_id = await database.execute(insert_query)
         
         # Invalidate cache for this bar's campaigns
-        await CacheService.invalidate(f"campaigns:{bar_id}:*")
-        await CacheService.invalidate(f"campaigns:analytics:summary:{bar_id}")
+        await CacheService.delete_pattern(f"campaigns:{bar_id}:*")
+        await CacheService.delete(f"campaigns:analytics:summary:{bar_id}")
         
         return await CampaignService.get_campaign(campaign_id, bar_id)
     
@@ -251,7 +266,7 @@ class CampaignService:
         await database.execute(update_query)
         
         # Invalidate cache
-        await CacheService.invalidate(f"campaigns:{bar_id}:*")
+        await CacheService.delete_pattern(f"campaigns:{bar_id}:*")
         
         return await CampaignService.get_campaign(campaign_id, bar_id)
     
@@ -281,8 +296,8 @@ class CampaignService:
         await database.execute(update_query)
         
         # Invalidate cache
-        await CacheService.invalidate(f"campaigns:{bar_id}:*")
-        await CacheService.invalidate(f"campaigns:analytics:summary:{bar_id}")
+        await CacheService.delete_pattern(f"campaigns:{bar_id}:*")
+        await CacheService.delete(f"campaigns:analytics:summary:{bar_id}")
         
         # Return with estimated performance
         estimated = existing.get("estimated_performance") or {"daily_reach": 0, "estimated_clicks": 0, "estimated_impressions": 0}
