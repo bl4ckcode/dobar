@@ -1,7 +1,7 @@
 """add_user_documents_table
 
 Revision ID: a3f1d2e4b5c6
-Revises: cacfd7f5927b
+Revises: 20250531_add_city_state_to_bars
 Create Date: 2026-04-22 09:30:00.000000
 
 """

@@ -1,8 +1,8 @@
 """Add campaign goal, distribution, targeting, and draft support columns
 
-Revision ID: dob_82_campaign_extensions
-Revises: a3f1d2e4b5c6
-Create Date: 2026-07-10 21:00:00.000000
+Revision ID: 20250711_campaign_extensions
+Revises: 20250610_add_ondelete
+Create Date: 2026-07-11 21:00:00.000000
 
 """
 from typing import Sequence, Union
@@ -11,8 +11,8 @@ import sqlalchemy as sa
 from sqlalchemy.dialects import postgresql
 
 # revision identifiers, used by Alembic.
-revision: str = 'dob_82_campaign_extensions'
-down_revision: Union[str, None] = 'a3f1d2e4b5c6'
+revision: str = '20250711_campaign_extensions'
+down_revision: Union[str, None] = '20250610_add_ondelete'
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
