@@ -30,7 +30,10 @@ from .schemas import (
     FeaturedAd, SearchAd, MapSpotlight, AdTrackEvent,
     DashboardAnalytics, CampaignAnalytics,
     InvoiceResponse, InvoiceListResponse,
-    RegionPricingResponse, BudgetTypeEnum
+    RegionPricingResponse, BudgetTypeEnum,
+    ExtendedCampaignResponse, CampaignPublishResponse, CampaignSummaryResponse,
+    CampaignsAnalyticsSummaryResponse, TrendAnalytics,
+    CampaignGoalEnum, ExtendedTargeting, PlacementDistribution, EstimatedPerformance
 )
 from .services.subscription_service import SubscriptionService
 from .services.campaign_service import CampaignService
@@ -193,11 +196,13 @@ async def get_credits(
 @advertising_router.get("/campaigns", response_model=CampaignListResponse)
 async def list_campaigns(
     bar_id: int = Query(..., description="Bar ID"),
-    campaign_status: Optional[CampaignStatusEnum] = Query(None, description="Filter by status"),
+    status: Optional[str] = Query(None, description="Filter by status: draft, active, paused, completed, all"),
+    sort: Optional[str] = Query(None, description="Sort by: created_at, budget_amount, performance"),
+    search: Optional[str] = Query(None, description="Search by campaign name"),
     auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_MANAGE))
 ):
-    """List all advertising campaigns for the bar."""
-    campaigns = await CampaignService.list_campaigns(bar_id, campaign_status)
+    """List all advertising campaigns for the bar with optional filtering and sorting."""
+    campaigns = await CampaignService.list_campaigns(bar_id, status, sort, search)
     return CampaignListResponse(
         campaigns=[_campaign_to_response(c) for c in campaigns],
         total=len(campaigns)
@@ -210,23 +215,85 @@ async def create_campaign(
     bar_id: int = Query(..., description="Bar ID"),
     auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_MANAGE))
 ):
-    """Create a new advertising campaign."""
+    """Create a new advertising campaign. For multi-placement campaigns, use campaign_goal and distribution."""
     subscription = await SubscriptionService.get_subscription(bar_id)
     if not subscription:
         raise APIError.forbidden("No active subscription. Please subscribe first.")
     
-    tier = subscription["tier"]
-    campaign_type = campaign.campaign_type.value
+    # For multi-placement campaigns (no campaign_type specified), skip type validation
+    # but still validate distribution placements against allowed types
+    if campaign.campaign_type is not None:
+        tier = subscription["tier"]
+        allowed_types = _get_allowed_campaign_types(tier)
+        if campaign.campaign_type.value not in allowed_types:
+            raise APIError.forbidden(f"Campaign type '{campaign.campaign_type.value}' requires a higher subscription tier.")
     
-    allowed_types = _get_allowed_campaign_types(tier)
-    if campaign_type not in allowed_types:
-        raise APIError.forbidden(f"Campaign type '{campaign_type}' requires a higher subscription tier.")
+    # Validate distribution minimum budgets if provided
+    if campaign.distribution:
+        await _validate_distribution_minimums(bar_id, campaign.distribution)
     
     new_campaign = await CampaignService.create_campaign(
         bar_id=bar_id, subscription_id=subscription["id"], data=campaign
     )
     
     return _campaign_to_response(new_campaign)
+
+
+@advertising_router.get("/campaigns/summary", response_model=dict)
+async def get_campaigns_summary(
+    bar_id: int = Query(..., description="Bar ID"),
+    auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_MANAGE))
+):
+    """Get aggregated stats for all campaigns of a bar."""
+    return await CampaignService.get_campaigns_summary(bar_id)
+
+
+@advertising_router.get("/campaigns/analytics-summary", response_model=CampaignsAnalyticsSummaryResponse)
+async def get_campaigns_analytics_summary(
+    bar_id: int = Query(..., description="Bar ID"),
+    auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_MANAGE))
+):
+    """Get aggregated analytics summary for all campaigns of a bar (DOB-83)."""
+    return await CampaignService.get_campaigns_analytics_summary(bar_id)
+
+
+@advertising_router.put("/campaigns/{campaign_id}", response_model=CampaignResponse)
+async def update_campaign(
+    campaign_id: int,
+    updates: CampaignUpdate,
+    bar_id: int = Query(..., description="Bar ID"),
+    auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_MANAGE))
+):
+    """
+    Update campaign settings.
+    Can update draft campaigns and republish them.
+    Can reallocate budget distribution.
+    """
+    # Validate distribution minimums if being updated
+    if updates.distribution:
+        await _validate_distribution_minimums(bar_id, updates.distribution)
+    
+    updated_campaign = await CampaignService.update_campaign(campaign_id, bar_id, updates)
+    if not updated_campaign:
+        raise APIError.not_found("Campaign not found")
+    return _campaign_to_response(updated_campaign)
+
+
+@advertising_router.post("/campaigns/{campaign_id}/publish", response_model=CampaignPublishResponse)
+async def publish_campaign(
+    campaign_id: int,
+    bar_id: int = Query(..., description="Bar ID"),
+    auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_MANAGE))
+):
+    """
+    Convert draft → active.
+    Trigger budget reservation.
+    Return estimated_performance.
+    """
+    published = await CampaignService.publish_campaign(campaign_id, bar_id)
+    if not published:
+        raise APIError.not_found("Campaign not found or cannot be published")
+    return published
 
 
 @advertising_router.get("/campaigns/{campaign_id}", response_model=CampaignResponse)
@@ -438,7 +505,7 @@ def _campaign_to_response(campaign: dict) -> CampaignResponse:
     
     return CampaignResponse(
         id=campaign["id"], bar_id=campaign["bar_id"], name=campaign["name"],
-        campaign_type=CampaignTypeEnum(campaign["campaign_type"]),
+        campaign_type=CampaignTypeEnum(campaign["campaign_type"]) if campaign.get("campaign_type") else None,
         status=CampaignStatusEnum(campaign["status"]),
         budget_type=BudgetTypeEnum(campaign["budget_type"]),
         budget_amount=campaign["budget_amount"], budget_spent=campaign["budget_spent"],
@@ -451,3 +518,30 @@ def _campaign_to_response(campaign: dict) -> CampaignResponse:
         created_at=campaign.get("created_at") or datetime.now(timezone.utc),
         updated_at=campaign.get("updated_at") or datetime.now(timezone.utc)
     )
+
+
+async def _validate_distribution_minimums(bar_id: int, distribution: List[PlacementDistribution]) -> None:
+    """Validate that each placement in distribution meets minimum budget requirements."""
+    # Minimum daily budgets per placement type (BRL)
+    MIN_BUDGETS = {
+        "featured": Decimal("40.00"),
+        "search": Decimal("20.00"),
+        "map_pin": Decimal("25.00"),
+        "promo": Decimal("15.00"),
+        "banner": Decimal("30.00"),
+    }
+    
+    # Calculate total budget to determine daily budget
+    total_budget = sum(d.budget for d in distribution)
+    # Assuming 7-day campaigns as default
+    daily_budget = total_budget / Decimal(7)
+    
+    for dist in distribution:
+        min_budget = MIN_BUDGETS.get(dist.placement, Decimal("15.00"))
+        # Check if daily budget meets minimum for this placement
+        daily_placement_budget = dist.budget / Decimal(7)
+        if daily_placement_budget < min_budget:
+            raise APIError.bad_request(
+                f"Placement '{dist.placement}' requires minimum daily budget of R$ {min_budget}. "
+                f"Current allocation: R$ {daily_placement_budget:.2f}/day"
+            )

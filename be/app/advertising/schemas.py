@@ -45,6 +45,13 @@ class CampaignStatusEnum(str, Enum):
     CANCELLED = "cancelled"
 
 
+class CampaignGoalEnum(str, Enum):
+    DISCOVERY = "discovery"
+    FOOT_TRAFFIC = "foot_traffic"
+    PROMOTION = "promotion"
+    FULL_PRESENCE = "full_presence"
+
+
 class BudgetTypeEnum(str, Enum):
     HOURLY = "hourly"
     CPC = "cpc"
@@ -111,9 +118,11 @@ class PaymentMethodType(str, Enum):
     CARD = "card"
     PIX = "pix"
 
+
 class PaymentMethodSchema(BaseModel):
     type: PaymentMethodType = Field(..., description="Payment method type (card or pix)")
     token: Optional[str] = Field(None, description="Payment token for cards")
+
 
 class CustomerInfo(BaseModel):
     """Customer information for payment processing (required for PIX)"""
@@ -123,12 +132,14 @@ class CustomerInfo(BaseModel):
     phone: Optional[str] = None
     type: str = Field(default="individual", pattern="^(individual|company)$")
 
+
 class SubscribeRequest(BaseModel):
     """Request to subscribe to a plan"""
     tier: SubscriptionTierEnum
     payment_method: PaymentMethodSchema
     billing_cycle: str = Field(default="monthly", pattern="^(monthly|annual)$")
     customer_info: Optional[CustomerInfo] = Field(None, description="Required for PIX payments. CPF/CNPJ document needed.")
+
 
 class PixSubscriptionResponse(BaseModel):
     """Response returned when PIX is selected for subscription"""
@@ -165,29 +176,69 @@ class CampaignTargeting(BaseModel):
         return v.lower()
 
 
+class AgeRange(BaseModel):
+    """Age range targeting"""
+    min: int = Field(default=18, ge=18, le=65)
+    max: int = Field(default=45, ge=18, le=65)
+
+
+class ExtendedTargeting(BaseModel):
+    """Extended targeting options for multi-placement campaigns"""
+    radius_km: int = Field(default=5, ge=1, le=50)
+    peak_hours_only: bool = False
+    age_range: Optional[AgeRange] = None
+
+
+class PlacementDistribution(BaseModel):
+    """Budget distribution for a single placement"""
+    placement: str  # "featured", "search", "map_pin", "promo", "banner"
+    percentage: int = Field(ge=0, le=100)
+    budget: Decimal = Field(ge=0)
+
+
 class CampaignCreative(BaseModel):
     """Creative assets for a campaign"""
     logo_url: Optional[str] = None
-    tagline: Optional[str] = Field(None, max_length=100)
+    tagline: Optional[str] = Field(None, max_length=60)
     banner_url: Optional[str] = None
     animation_url: Optional[str] = None
+    promoted_item_id: Optional[int] = None  # Menu item or promotion to highlight
+
+
+class EstimatedPerformance(BaseModel):
+    """Estimated performance metrics"""
+    daily_reach: int = 0
+    estimated_clicks: int = 0
+    estimated_impressions: int = 0
 
 
 class CampaignCreate(BaseModel):
     """Request to create a new campaign"""
-    name: str = Field(..., min_length=1, max_length=100)
-    campaign_type: CampaignTypeEnum
-    budget_type: BudgetTypeEnum
+    name: Optional[str] = Field(None, min_length=1, max_length=100)
+    campaign_type: Optional[CampaignTypeEnum] = None  # Optional for multi-placement campaigns
+    campaign_goal: CampaignGoalEnum
+    budget_type: BudgetTypeEnum = BudgetTypeEnum.FIXED
     budget_amount: Decimal = Field(..., gt=0)
     start_time: datetime
     end_time: Optional[datetime] = None
-    targeting: Optional[CampaignTargeting] = None
+    targeting: Optional[ExtendedTargeting] = None
     creative: Optional[CampaignCreative] = None
+    distribution: Optional[List[PlacementDistribution]] = None
+    is_smart_distribution: bool = False
+    budget_optimizer_enabled: bool = False
     
     @validator("end_time")
     def end_after_start(cls, v, values):
         if v and "start_time" in values and v <= values["start_time"]:
             raise ValueError("end_time must be after start_time")
+        return v
+    
+    @validator("distribution")
+    def validate_distribution_total(cls, v):
+        if v is not None:
+            total = sum(d.percentage for d in v)
+            if total != 100:
+                raise ValueError(f"Distribution percentages must total 100%, got {total}%")
         return v
 
 
@@ -196,8 +247,19 @@ class CampaignUpdate(BaseModel):
     name: Optional[str] = Field(None, min_length=1, max_length=100)
     budget_amount: Optional[Decimal] = Field(None, gt=0)
     end_time: Optional[datetime] = None
-    targeting: Optional[CampaignTargeting] = None
+    targeting: Optional[ExtendedTargeting] = None
     creative: Optional[CampaignCreative] = None
+    distribution: Optional[List[PlacementDistribution]] = None
+    campaign_goal: Optional[CampaignGoalEnum] = None
+    budget_optimizer_enabled: Optional[bool] = None
+    
+    @validator("distribution")
+    def validate_distribution_total(cls, v):
+        if v is not None:
+            total = sum(d.percentage for d in v)
+            if total != 100:
+                raise ValueError(f"Distribution percentages must total 100%, got {total}%")
+        return v
 
 
 class CampaignResponse(BaseModel):
@@ -205,7 +267,7 @@ class CampaignResponse(BaseModel):
     id: int
     bar_id: int
     name: str
-    campaign_type: CampaignTypeEnum
+    campaign_type: Optional[CampaignTypeEnum] = None
     status: CampaignStatusEnum
     budget_type: BudgetTypeEnum
     budget_amount: Decimal
@@ -230,6 +292,92 @@ class CampaignListResponse(BaseModel):
     """List of campaigns"""
     campaigns: List[CampaignResponse]
     total: int
+
+
+# =============================================================================
+# EXTENDED CAMPAIGN SCHEMAS (DOB-82)
+# =============================================================================
+
+class ExtendedCampaignResponse(BaseModel):
+    """Extended campaign details response with distribution and estimated performance"""
+    id: int
+    bar_id: int
+    name: str
+    campaign_type: Optional[CampaignTypeEnum] = None
+    campaign_goal: Optional[CampaignGoalEnum] = None
+    status: CampaignStatusEnum
+    budget_type: BudgetTypeEnum
+    budget_amount: Decimal
+    budget_spent: Decimal
+    budget_remaining: Decimal
+    start_time: datetime
+    end_time: Optional[datetime]
+    targeting: ExtendedTargeting
+    creative: CampaignCreative
+    distribution: Optional[List[PlacementDistribution]] = None
+    is_smart_distribution: bool = False
+    budget_optimizer_enabled: bool = False
+    estimated_performance: Optional[EstimatedPerformance] = None
+    impressions: int
+    clicks: int
+    conversions: int
+    ctr: float
+    created_at: datetime
+    updated_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class CampaignPublishResponse(BaseModel):
+    """Response after publishing a draft campaign"""
+    id: int
+    status: CampaignStatusEnum
+    estimated_performance: EstimatedPerformance
+    message: str = "Campaign published successfully"
+
+
+class CampaignSummaryResponse(BaseModel):
+    """Campaign summary for listing with minimal fields"""
+    id: int
+    bar_id: int
+    name: str
+    campaign_goal: Optional[CampaignGoalEnum] = None
+    status: CampaignStatusEnum
+    budget_amount: Decimal
+    budget_spent: Decimal
+    budget_remaining: Decimal
+    start_time: datetime
+    end_time: Optional[datetime]
+    distribution: Optional[List[PlacementDistribution]] = None
+    estimated_performance: Optional[EstimatedPerformance] = None
+    created_at: datetime
+
+
+# =============================================================================
+# ANALYTICS SUMMARY SCHEMAS (DOB-83)
+# =============================================================================
+
+class TrendAnalytics(BaseModel):
+    """Trend data for a single day"""
+    date: str  # ISO date YYYY-MM-DD
+    impressions: int = 0
+    clicks: int = 0
+    spend: Decimal = Decimal("0.00")
+
+
+class CampaignsAnalyticsSummaryResponse(BaseModel):
+    """Aggregated analytics summary for all campaigns of a bar"""
+    total_impressions: int
+    total_clicks: int
+    average_ctr: float
+    total_spent: Decimal
+    active_campaigns: int
+    total_campaigns: int
+    budget_remaining: Decimal
+    daily_avg_spend: Decimal
+    best_performing_placement: Optional[str] = None
+    trend: List[TrendAnalytics] = []
 
 
 # =============================================================================

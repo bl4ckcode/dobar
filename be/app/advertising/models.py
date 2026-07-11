@@ -37,6 +37,14 @@ class SubscriptionStatus(str, enum.Enum):
     EXPIRED = "expired"
 
 
+class CampaignGoal(str, enum.Enum):
+    """Campaign objective/goal types"""
+    DISCOVERY = "discovery"           # New bar wanting to get discovered
+    FOOT_TRAFFIC = "foot_traffic"     # Want to increase foot traffic
+    PROMOTION = "promotion"           # Running a special offer
+    FULL_PRESENCE = "full_presence"   # All placements combined
+
+
 class CampaignType(str, enum.Enum):
     """Types of advertising campaigns"""
     FEATURED = "featured"      # Featured Home placement
@@ -181,6 +189,9 @@ class AdvertisingCampaign(Base):
     start_time = Column(DateTime(timezone=True), nullable=False)
     end_time = Column(DateTime(timezone=True), nullable=True)
     
+    # Campaign goal (objective for the campaign)
+    campaign_goal = Column(String(50), nullable=True)  # discovery, foot_traffic, promotion, full_presence
+    
     # Targeting (flexible JSON structure)
     targeting = Column(JSON, default={
         "radius_km": 10,
@@ -198,6 +209,18 @@ class AdvertisingCampaign(Base):
         "banner_url": None,
         "animation_url": None
     })
+    
+    # Distribution across placements (for multi-placement campaigns)
+    distribution = Column(JSON, default=[])  # [{"placement": "featured", "percentage": 40, "budget": 200.00}, ...]
+    
+    # Smart distribution flag
+    is_smart_distribution = Column(Boolean, default=False, server_default='false')
+    
+    # Budget optimizer flag
+    budget_optimizer_enabled = Column(Boolean, default=False, server_default='false')
+    
+    # Estimated performance (pre-launch estimates)
+    estimated_performance = Column(JSON, default={})  # {"daily_reach": 1200, "estimated_clicks": 85, "estimated_impressions": 4500}
     
     # Performance metrics (denormalized for fast dashboard queries)
     impressions = Column(Integer, default=0)

@@ -9,7 +9,7 @@ from typing import Optional, List, Dict, Any
 import hashlib
 
 from app.database import database
-from app.redis_client import get_redis
+from app.redis_client import get_redis, CacheService
 from app.errors import APIError
 from sqlalchemy import func, select
 from app.advertising.models import (
@@ -19,9 +19,9 @@ from app.advertising.models import (
 from app.advertising.schemas import (
     CampaignCreate, CampaignUpdate, CampaignStatusEnum,
     FeaturedAd, SearchAd, MapSpotlight,
-    DashboardAnalytics, CampaignAnalytics, DailyAnalytics
+    DashboardAnalytics, CampaignAnalytics, DailyAnalytics,
+    EstimatedPerformance
 )
-
 
 class CampaignService:
     """Service for managing advertising campaigns"""
@@ -33,17 +33,43 @@ class CampaignService:
     @staticmethod
     async def list_campaigns(
         bar_id: int,
-        status: Optional[CampaignStatusEnum] = None
+        status: Optional[str] = None,
+        sort: Optional[str] = None,
+        search: Optional[str] = None
     ) -> List[Dict[str, Any]]:
-        """List all campaigns for a bar"""
+        """List all campaigns for a bar with optional filtering and sorting."""
         query = AdvertisingCampaign.__table__.select().where(
             AdvertisingCampaign.bar_id == bar_id
         )
         
-        if status:
-            query = query.where(AdvertisingCampaign.status == status.value)
+        # Filter by status
+        if status and status != "all":
+            # Map status values to handle both the enum values and "all"
+            status_map = {
+                "draft": "draft",
+                "scheduled": "scheduled",
+                "active": "active",
+                "paused": "paused",
+                "completed": "completed",
+                "cancelled": "cancelled"
+            }
+            query_status = status_map.get(status)
+            if query_status:
+                query = query.where(AdvertisingCampaign.status == query_status)
         
-        query = query.order_by(AdvertisingCampaign.created_at.desc())
+        # Search by name
+        if search:
+            query = query.where(AdvertisingCampaign.name.ilike(f"%{search}%"))
+        
+        # Sorting
+        if sort == "budget_amount":
+            query = query.order_by(AdvertisingCampaign.budget_amount.desc())
+        elif sort == "performance":
+            # Sort by clicks (as a proxy for performance)
+            query = query.order_by(AdvertisingCampaign.clicks.desc())
+        else:
+            # Default: sort by created_at descending
+            query = query.order_by(AdvertisingCampaign.created_at.desc())
         
         results = await database.fetch_all(query)
         return [dict(r) for r in results]
@@ -64,65 +90,113 @@ class CampaignService:
         subscription_id: int,
         data: CampaignCreate
     ) -> Dict[str, Any]:
-        """Create a new campaign"""
+        """Create a new campaign with support for multi-placement campaigns."""
         now = datetime.now(timezone.utc)
         
-        # Determine initial status
-        if data.start_time <= now:
-            initial_status = CampaignStatus.ACTIVE.value
-        else:
-            initial_status = CampaignStatus.SCHEDULED.value
+        # Draft campaigns remain in draft status
+        initial_status = CampaignStatus.DRAFT.value
         
-        # Prepare targeting and creative
+        # Prepare targeting (use ExtendedTargeting structure)
         targeting = data.targeting.model_dump() if data.targeting else {
-            "radius_km": 10,
-            "days": ["mon", "tue", "wed", "thu", "fri", "sat", "sun"],
-            "hours_start": 0,
-            "hours_end": 24,
-            "categories": [],
-            "keywords": []
+            "radius_km": 5,
+            "peak_hours_only": False,
+            "age_range": None
         }
         
+        # Prepare creative
         creative = data.creative.model_dump() if data.creative else {
             "logo_url": None,
             "tagline": None,
             "banner_url": None,
-            "animation_url": None
+            "animation_url": None,
+            "promoted_item_id": None
         }
         
-        insert_query = AdvertisingCampaign.__table__.insert().values(
-            subscription_id=subscription_id,
-            bar_id=bar_id,
-            name=data.name,
-            campaign_type=data.campaign_type.value,
-            status=initial_status,
-            budget_type=data.budget_type.value,
-            budget_amount=data.budget_amount,
-            budget_spent=Decimal("0.00"),
-            start_time=data.start_time,
-            end_time=data.end_time,
-            targeting=targeting,
-            creative=creative,
-            impressions=0,
-            clicks=0,
-            conversions=0,
-            created_at=now,
-            updated_at=now
-        )
+        # Prepare distribution
+        distribution = [d.model_dump() for d in data.distribution] if data.distribution else []
+        
+        # Generate estimated performance
+        estimated_performance = None
+        if data.is_smart_distribution or data.distribution:
+            estimated_performance = CampaignService._estimate_performance(data.budget_amount, data.distribution or [])
+        
+        # Generate campaign name if not provided
+        campaign_name = data.name or f"Campaign {now.strftime('%Y-%m-%d')}"
+        
+        insert_values = {
+            "subscription_id": subscription_id,
+            "bar_id": bar_id,
+            "name": campaign_name,
+            "status": initial_status,
+            "budget_type": data.budget_type.value,
+            "budget_amount": data.budget_amount,
+            "budget_spent": Decimal("0.00"),
+            "start_time": data.start_time,
+            "end_time": data.end_time,
+            "targeting": targeting,
+            "creative": creative,
+            "impressions": 0,
+            "clicks": 0,
+            "conversions": 0,
+            "created_at": now,
+            "updated_at": now,
+            "campaign_goal": data.campaign_goal.value if data.campaign_goal else None,
+            "distribution": distribution,
+            "is_smart_distribution": data.is_smart_distribution,
+            "budget_optimizer_enabled": data.budget_optimizer_enabled,
+            "estimated_performance": estimated_performance.model_dump() if estimated_performance else None
+        }
+        
+        # Add campaign_type only if specified (for backward compatibility with single-type campaigns)
+        if data.campaign_type:
+            insert_values["campaign_type"] = data.campaign_type.value
+        
+        insert_query = AdvertisingCampaign.__table__.insert().values(**insert_values)
         
         campaign_id = await database.execute(insert_query)
         
-        # 🔔 If it's a push notification campaign, trigger the broadcast asynchronously
-        if data.campaign_type.value == "push_notification":
-            from app.push_queue import PushQueue
-            await PushQueue.publish_campaign_launch(
-                campaign_id=campaign_id,
-                bar_id=bar_id,
-                targeting=targeting,
-                creative=creative
-            )
+        # Invalidate cache for this bar's campaigns
+        await CacheService.invalidate(f"campaigns:{bar_id}:*")
+        await CacheService.invalidate(f"campaigns:analytics:summary:{bar_id}")
         
         return await CampaignService.get_campaign(campaign_id, bar_id)
+    
+    @staticmethod
+    def _estimate_performance(budget_amount: Decimal, distribution: List) -> EstimatedPerformance:
+        """Estimate performance based on budget and distribution."""
+        # Simple estimation logic based on campaign_creation_strategy.md
+        # Assumes 7-day campaign period
+        daily_budget = float(budget_amount) / 7
+        
+        # Rough estimates per placement type (impressions/clicks per BRL)
+        estimates = {
+            "featured": {"impressions": 1500, "clicks": 40},
+            "search": {"impressions": 800, "clicks": 80},
+            "map_pin": {"impressions": 2000, "clicks": 30},
+            "promo": {"impressions": 600, "clicks": 60},
+            "banner": {"impressions": 1000, "clicks": 25}
+        }
+        
+        total_impressions = 0
+        total_clicks = 0
+        
+        for dist in distribution:
+            # Handle both dict and Pydantic model
+            if hasattr(dist, "model_dump"):
+                placement = dist.placement
+                pct = dist.percentage / 100
+            else:
+                placement = dist.get("placement", "")
+                pct = dist.get("percentage", 0) / 100
+            if placement in estimates:
+                total_impressions += int(estimates[placement]["impressions"] * daily_budget * pct / 40)
+                total_clicks += int(estimates[placement]["clicks"] * daily_budget * pct / 20)
+        
+        return EstimatedPerformance(
+            daily_reach=total_impressions // 2,
+            estimated_clicks=total_clicks,
+            estimated_impressions=total_impressions
+        )
     
     @staticmethod
     async def update_campaign(
@@ -143,7 +217,7 @@ class CampaignService:
             update_values["name"] = updates.name
         
         if updates.budget_amount is not None:
-            if updates.budget_amount < existing["budget_spent"]:
+            if float(updates.budget_amount) < float(existing["budget_spent"]):
                 raise APIError.bad_request("New budget cannot be less than amount already spent")
             update_values["budget_amount"] = updates.budget_amount
         
@@ -156,6 +230,19 @@ class CampaignService:
         if updates.creative is not None:
             update_values["creative"] = updates.creative.model_dump()
         
+        if updates.distribution is not None:
+            update_values["distribution"] = [d.model_dump() for d in updates.distribution]
+            # Recalculate estimated performance
+            from app.advertising.schemas import EstimatedPerformance
+            est = CampaignService._estimate_performance(existing["budget_amount"], update_values["distribution"])
+            update_values["estimated_performance"] = est.model_dump()
+        
+        if updates.campaign_goal is not None:
+            update_values["campaign_goal"] = updates.campaign_goal.value
+        
+        if updates.budget_optimizer_enabled is not None:
+            update_values["budget_optimizer_enabled"] = updates.budget_optimizer_enabled
+        
         update_query = AdvertisingCampaign.__table__.update().where(
             AdvertisingCampaign.id == campaign_id,
             AdvertisingCampaign.bar_id == bar_id
@@ -163,7 +250,164 @@ class CampaignService:
         
         await database.execute(update_query)
         
+        # Invalidate cache
+        await CacheService.invalidate(f"campaigns:{bar_id}:*")
+        
         return await CampaignService.get_campaign(campaign_id, bar_id)
+    
+    @staticmethod
+    async def publish_campaign(campaign_id: int, bar_id: int) -> Optional[Dict[str, Any]]:
+        """Convert draft to active and trigger budget reservation."""
+        existing = await CampaignService.get_campaign(campaign_id, bar_id)
+        
+        if not existing:
+            return None
+        
+        if existing["status"] != "draft":
+            raise APIError.bad_request("Only draft campaigns can be published")
+        
+        now = datetime.now(timezone.utc)
+        
+        # Determine target status based on start_time
+        target_status = CampaignStatus.ACTIVE.value if existing["start_time"] <= now else CampaignStatus.SCHEDULED.value
+        
+        update_query = AdvertisingCampaign.__table__.update().where(
+            AdvertisingCampaign.id == campaign_id
+        ).values(
+            status=target_status,
+            updated_at=now
+        )
+        
+        await database.execute(update_query)
+        
+        # Invalidate cache
+        await CacheService.invalidate(f"campaigns:{bar_id}:*")
+        await CacheService.invalidate(f"campaigns:analytics:summary:{bar_id}")
+        
+        # Return with estimated performance
+        estimated = existing.get("estimated_performance") or {"daily_reach": 0, "estimated_clicks": 0, "estimated_impressions": 0}
+        
+        return {
+            "id": campaign_id,
+            "status": target_status,
+            "estimated_performance": estimated
+        }
+    
+    @staticmethod
+    async def get_campaigns_summary(bar_id: int) -> Dict[str, Any]:
+        """Get aggregated stats for all campaigns of a bar."""
+        query = AdvertisingCampaign.__table__.select().where(
+            AdvertisingCampaign.bar_id == bar_id
+        )
+        campaigns = await database.fetch_all(query)
+        
+        total_campaigns = len(campaigns)
+        active_campaigns = sum(1 for c in campaigns if c["status"] == "active")
+        scheduled_campaigns = sum(1 for c in campaigns if c["status"] == "scheduled")
+        draft_campaigns = sum(1 for c in campaigns if c["status"] == "draft")
+        completed_campaigns = sum(1 for c in campaigns if c["status"] == "completed")
+        
+        total_spent = sum(Decimal(str(c["budget_spent"])) for c in campaigns)
+        total_budget = sum(Decimal(str(c["budget_amount"])) for c in campaigns)
+        total_remaining = total_budget - total_spent
+        
+        total_impressions = sum(c["impressions"] or 0 for c in campaigns)
+        total_clicks = sum(c["clicks"] or 0 for c in campaigns)
+        
+        return {
+            "total_campaigns": total_campaigns,
+            "active_campaigns": active_campaigns,
+            "scheduled_campaigns": scheduled_campaigns,
+            "draft_campaigns": draft_campaigns,
+            "completed_campaigns": completed_campaigns,
+            "total_spent": float(total_spent),
+            "total_remaining": float(total_remaining),
+            "total_impressions": total_impressions,
+            "total_clicks": total_clicks
+        }
+    
+    @staticmethod
+    async def get_campaigns_analytics_summary(bar_id: int) -> Dict[str, Any]:
+        """Get aggregated analytics summary for all campaigns of a bar (DOB-83)."""
+        now = datetime.now(timezone.utc)
+        
+        # Try cache first
+        cache_key = f"campaigns:analytics:summary:{bar_id}"
+        cached = await CacheService.get(cache_key)
+        if cached:
+            return cached
+        
+        # Get campaigns for performance metrics
+        campaigns_query = AdvertisingCampaign.__table__.select().where(
+            AdvertisingCampaign.bar_id == bar_id
+        )
+        campaigns = await database.fetch_all(campaigns_query)
+        
+        campaign_ids = [c["id"] for c in campaigns]
+        
+        total_impressions = sum(c["impressions"] or 0 for c in campaigns)
+        total_clicks = sum(c["clicks"] or 0 for c in campaigns)
+        total_spent = sum(Decimal(str(c["budget_spent"])) for c in campaigns)
+        budget_remaining = sum(Decimal(str(c["budget_amount"])) - Decimal(str(c["budget_spent"])) for c in campaigns)
+        
+        # Calculate average CTR
+        average_ctr = (total_clicks / total_impressions * 100) if total_impressions > 0 else 0.0
+        
+        # Determine best performing placement by distribution percentage
+        best_placement = None
+        highest_percentage = 0
+        for campaign in campaigns:
+            distribution = campaign.get("distribution") or []
+            for dist in distribution:
+                if dist.get("percentage", 0) > highest_percentage:
+                    highest_percentage = dist.get("percentage", 0)
+                    best_placement = dist.get("placement")
+        
+        # Get 7-day trend using raw SQL for simpler aggregation
+        if campaign_ids:
+            trend_query = """
+                SELECT 
+                    DATE(timestamp) as day,
+                    COUNT(CASE WHEN action = 'impression' THEN 1 END) as impressions,
+                    COUNT(CASE WHEN action = 'click' THEN 1 END) as clicks
+                FROM advertising_impressions 
+                WHERE campaign_id = ANY(%s) 
+                GROUP BY DATE(timestamp)
+                ORDER BY day ASC
+            """
+            trend_results = await database.fetch_all(trend_query, [campaign_ids])
+        else:
+            trend_results = []
+        
+        trend = []
+        for row in trend_results:
+            day_val = row["day"]
+            day_str = day_val.isoformat() if hasattr(day_val, 'isoformat') else str(day_val)
+            clicks_count = int(row["clicks"] or 0)
+            trend.append({
+                "date": day_str,
+                "impressions": int(row["impressions"] or 0),
+                "clicks": clicks_count,
+                "spend": float(Decimal(str(clicks_count)) * Decimal("0.50"))
+            })
+        
+        result = {
+            "total_impressions": total_impressions,
+            "total_clicks": total_clicks,
+            "average_ctr": round(average_ctr, 2),
+            "total_spent": float(total_spent),
+            "active_campaigns": sum(1 for c in campaigns if c["status"] == "active"),
+            "total_campaigns": len(campaigns),
+            "budget_remaining": float(budget_remaining),
+            "daily_avg_spend": float(total_spent / 7) if total_spent > 0 else 0.0,
+            "best_performing_placement": best_placement,
+            "trend": trend
+        }
+        
+        # Cache for 5 minutes
+        await CacheService.set(cache_key, result, ttl=300)
+        
+        return result
     
     @staticmethod
     async def pause_campaign(campaign_id: int, bar_id: int) -> None:
