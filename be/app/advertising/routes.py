@@ -33,7 +33,8 @@ from .schemas import (
     RegionPricingResponse, BudgetTypeEnum,
     ExtendedCampaignResponse, CampaignPublishResponse, CampaignSummaryResponse,
     CampaignsAnalyticsSummaryResponse, TrendAnalytics,
-    CampaignGoalEnum, ExtendedTargeting, PlacementDistribution, EstimatedPerformance
+    CampaignGoalEnum, ExtendedTargeting, PlacementDistribution, EstimatedPerformance,
+    PauseCampaignResponse, ResumeCampaignResponse, CancelCampaignResponse
 )
 from .services.subscription_service import SubscriptionService
 from .services.campaign_service import CampaignService
@@ -309,13 +310,13 @@ async def get_campaign(
     return _campaign_to_response(campaign)
 
 
-@advertising_router.post("/campaigns/{campaign_id}/pause")
+@advertising_router.post("/campaigns/{campaign_id}/pause", response_model=PauseCampaignResponse)
 async def pause_campaign(
     campaign_id: int,
     bar_id: Optional[int] = Query(None, description="Bar ID"),
     auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_MANAGE))
 ):
-    """Pause an active campaign."""
+    """Pause an active campaign with pro-ration tracking."""
     if not bar_id:
         query = select(AdvertisingCampaign.bar_id).where(AdvertisingCampaign.id == campaign_id)
         result = await database.fetch_one(query)
@@ -323,17 +324,17 @@ async def pause_campaign(
             raise APIError.not_found("Campaign not found")
         bar_id = result.bar_id
         
-    await CampaignService.pause_campaign(campaign_id, bar_id)
-    return {"message": "Campaign paused successfully"}
+    result = await CampaignService.pause_campaign(campaign_id, bar_id)
+    return PauseCampaignResponse(**result)
 
 
-@advertising_router.post("/campaigns/{campaign_id}/resume")
+@advertising_router.post("/campaigns/{campaign_id}/resume", response_model=ResumeCampaignResponse)
 async def resume_campaign(
     campaign_id: int,
     bar_id: Optional[int] = Query(None, description="Bar ID"),
     auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_MANAGE))
 ):
-    """Resume a paused campaign."""
+    """Resume a paused campaign (auto-extends end_time)."""
     if not bar_id:
         query = select(AdvertisingCampaign.bar_id).where(AdvertisingCampaign.id == campaign_id)
         result = await database.fetch_one(query)
@@ -341,11 +342,11 @@ async def resume_campaign(
             raise APIError.not_found("Campaign not found")
         bar_id = result.bar_id
         
-    await CampaignService.resume_campaign(campaign_id, bar_id)
-    return {"message": "Campaign resumed successfully"}
+    result = await CampaignService.resume_campaign(campaign_id, bar_id)
+    return ResumeCampaignResponse(**result)
 
 
-@advertising_router.delete("/campaigns/{campaign_id}")
+@advertising_router.delete("/campaigns/{campaign_id}", response_model=CancelCampaignResponse)
 async def cancel_campaign(
     campaign_id: int,
     bar_id: Optional[int] = Query(None, description="Bar ID"),
@@ -360,7 +361,7 @@ async def cancel_campaign(
         bar_id = result.bar_id
         
     refund = await CampaignService.cancel_campaign(campaign_id, bar_id)
-    return {"message": "Campaign cancelled", "refunded_amount": refund.get("amount", 0)}
+    return CancelCampaignResponse(**refund)
 
 
 # =============================================================================

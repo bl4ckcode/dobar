@@ -298,6 +298,27 @@ class CampaignListResponse(BaseModel):
 # EXTENDED CAMPAIGN SCHEMAS (DOB-82)
 # =============================================================================
 
+class PauseCampaignResponse(BaseModel):
+    """Response after pausing a campaign"""
+    message: str
+    paused_at: str
+    active_hours: float = 0
+    budget_spent: float = 0
+    budget_remaining: float = 0
+
+
+class ResumeCampaignResponse(BaseModel):
+    """Response after resuming a campaign"""
+    message: str
+    end_time: Optional[datetime] = None
+
+
+class CancelCampaignResponse(BaseModel):
+    """Response after cancelling a campaign"""
+    amount: float = 0
+    credits: Dict[str, float] = {}
+
+
 class ExtendedCampaignResponse(BaseModel):
     """Extended campaign details response with distribution and estimated performance"""
     id: int
@@ -310,8 +331,10 @@ class ExtendedCampaignResponse(BaseModel):
     budget_amount: Decimal
     budget_spent: Decimal
     budget_remaining: Decimal
+    budget_spent_per_placement: Optional[Dict[str, float]] = None
     start_time: datetime
     end_time: Optional[datetime]
+    paused_at: Optional[datetime] = None
     targeting: ExtendedTargeting
     creative: CampaignCreative
     distribution: Optional[List[PlacementDistribution]] = None
@@ -347,8 +370,10 @@ class CampaignSummaryResponse(BaseModel):
     budget_amount: Decimal
     budget_spent: Decimal
     budget_remaining: Decimal
+    budget_spent_per_placement: Optional[Dict[str, float]] = None
     start_time: datetime
     end_time: Optional[datetime]
+    paused_at: Optional[datetime] = None
     distribution: Optional[List[PlacementDistribution]] = None
     estimated_performance: Optional[EstimatedPerformance] = None
     created_at: datetime

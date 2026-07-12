@@ -184,10 +184,12 @@ class AdvertisingCampaign(Base):
     )
     budget_amount = Column(Numeric(10, 2), nullable=False)
     budget_spent = Column(Numeric(10, 2), default=Decimal("0.00"))
+    budget_spent_per_placement = Column(JSON, default={})  # {"featured": 50.00, "search": 30.00}
     
     # Schedule
     start_time = Column(DateTime(timezone=True), nullable=False)
     end_time = Column(DateTime(timezone=True), nullable=True)
+    paused_at = Column(DateTime(timezone=True), nullable=True)  # Pro-ration timestamp
     
     # Campaign goal (objective for the campaign)
     campaign_goal = Column(String(50), nullable=True)  # discovery, foot_traffic, promotion, full_presence

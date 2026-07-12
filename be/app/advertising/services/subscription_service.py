@@ -49,6 +49,33 @@ class SubscriptionService:
         return data
     
     @staticmethod
+    async def get_subscription_by_id(subscription_id: int) -> Optional[Dict[str, Any]]:
+        """Get subscription by its ID (used by CampaignService for credit restoration)"""
+        query = AdvertisingSubscription.__table__.select().where(
+            AdvertisingSubscription.id == subscription_id
+        )
+        result = await database.fetch_one(query)
+        if not result:
+            return None
+            
+        data = dict(result)
+        # Convert enums to strings for Pydantic
+        if hasattr(data.get("tier"), "value"):
+            data["tier"] = data["tier"].value
+        if hasattr(data.get("status"), "value"):
+            data["status"] = data["status"].value
+            
+        # Ensure credits is a dict
+        if isinstance(data.get("credits"), str):
+            import json
+            try:
+                data["credits"] = json.loads(data["credits"])
+            except:
+                data["credits"] = {"featured_hours": 0, "search_clicks": 0, "map_hours": 0, "boost_impressions": 0}
+                
+        return data
+    
+    @staticmethod
     async def create_default_subscription(bar_id: int, region_code: str = "BR") -> Dict[str, Any]:
         """Create a default REGULAR (free) subscription for a bar"""
         # Get region pricing for commission rate

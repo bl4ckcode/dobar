@@ -13,7 +13,7 @@ from app.redis_client import get_redis, CacheService
 from app.errors import APIError
 from sqlalchemy import func, select
 from app.advertising.models import (
-    AdvertisingCampaign, AdvertisingImpression,
+    AdvertisingCampaign, AdvertisingImpression, AdvertisingSubscription,
     CampaignStatus, AdAction
 )
 from app.advertising.schemas import (
@@ -425,8 +425,15 @@ class CampaignService:
         return result
     
     @staticmethod
-    async def pause_campaign(campaign_id: int, bar_id: int) -> None:
-        """Pause an active campaign"""
+    async def pause_campaign(campaign_id: int, bar_id: int) -> Dict[str, Any]:
+        """
+        Pause an active campaign and store paused_at for pro-ration.
+        
+        Pro-ration is calculated based on the time the campaign was active
+        vs. the total scheduled duration. When resumed, the end_time will
+        be extended to compensate for paused time, ensuring the bar owner
+        gets the full value of their budget.
+        """
         existing = await CampaignService.get_campaign(campaign_id, bar_id)
         
         if not existing:
@@ -435,18 +442,40 @@ class CampaignService:
         if existing["status"] != "active":
             raise APIError.bad_request("Only active campaigns can be paused")
         
+        now = datetime.now(timezone.utc)
+        
         update_query = AdvertisingCampaign.__table__.update().where(
             AdvertisingCampaign.id == campaign_id
         ).values(
             status=CampaignStatus.PAUSED.value,
-            updated_at=datetime.now(timezone.utc)
+            paused_at=now,
+            updated_at=now
         )
         
         await database.execute(update_query)
+        
+        # Calculate how long the campaign was active (for pro-ration reporting)
+        active_duration = None
+        start_time = existing["start_time"]
+        if start_time and start_time < now:
+            active_duration = (now - start_time).total_seconds() / 3600  # in hours
+        
+        return {
+            "message": "Campaign paused successfully",
+            "paused_at": now.isoformat(),
+            "active_hours": round(active_duration, 2) if active_duration else 0,
+            "budget_spent": float(existing["budget_spent"]),
+            "budget_remaining": float(Decimal(str(existing["budget_amount"])) - Decimal(str(existing["budget_spent"])))
+        }
     
     @staticmethod
-    async def resume_campaign(campaign_id: int, bar_id: int) -> None:
-        """Resume a paused campaign"""
+    async def resume_campaign(campaign_id: int, bar_id: int) -> Dict[str, Any]:
+        """
+        Resume a paused campaign.
+        
+        When resuming, the end_time is automatically extended by the
+        duration the campaign was paused, ensuring the full budget value.
+        """
         existing = await CampaignService.get_campaign(campaign_id, bar_id)
         
         if not existing:
@@ -456,21 +485,50 @@ class CampaignService:
             raise APIError.bad_request("Only paused campaigns can be resumed")
         
         # Check if budget is exhausted
-        if existing["budget_spent"] >= existing["budget_amount"]:
+        if Decimal(str(existing["budget_spent"])) >= Decimal(str(existing["budget_amount"])):
             raise APIError.bad_request("Campaign budget is exhausted. Add more budget to resume.")
+        
+        now = datetime.now(timezone.utc)
+        
+        # Calculate pause duration to extend end_time (pro-ration)
+        paused_at = existing.get("paused_at")
+        update_values = {
+            "status": CampaignStatus.ACTIVE.value,
+            "updated_at": now
+        }
+        
+        if paused_at:
+            pause_duration = now - paused_at
+            # Extend end_time by pause duration if end_time exists
+            existing_end = existing.get("end_time")
+            if existing_end:
+                new_end_time = existing_end + pause_duration
+                update_values["end_time"] = new_end_time
+        
+        # Clear paused_at
+        update_values["paused_at"] = None
         
         update_query = AdvertisingCampaign.__table__.update().where(
             AdvertisingCampaign.id == campaign_id
-        ).values(
-            status=CampaignStatus.ACTIVE.value,
-            updated_at=datetime.now(timezone.utc)
-        )
+        ).values(**update_values)
         
         await database.execute(update_query)
+        
+        return {
+            "message": "Campaign resumed successfully",
+            "end_time": update_values.get("end_time", existing.get("end_time"))
+        }
     
     @staticmethod
     async def cancel_campaign(campaign_id: int, bar_id: int) -> Dict[str, Any]:
-        """Cancel campaign and calculate refund"""
+        """
+        Cancel campaign and calculate refund.
+        
+        Refund is calculated on a pro-rated basis:
+        - For fixed-budget campaigns: refund = unused budget
+        - For hourly campaigns: refund = remaining hours * hourly rate
+        - For credit campaigns: refund = remaining credits back to subscription
+        """
         existing = await CampaignService.get_campaign(campaign_id, bar_id)
         
         if not existing:
@@ -479,23 +537,65 @@ class CampaignService:
         if existing["status"] in ["completed", "cancelled"]:
             raise APIError.bad_request("Campaign is already completed or cancelled")
         
-        # Calculate refund
-        budget_remaining = Decimal(str(existing["budget_amount"])) - Decimal(str(existing["budget_spent"]))
+        now = datetime.now(timezone.utc)
+        budget_amount = Decimal(str(existing["budget_amount"]))
+        budget_spent = Decimal(str(existing["budget_spent"]))
+        budget_remaining = budget_amount - budget_spent
+        
+        # Calculate refund and credit restoration
+        credits_refunded = {}
+        if existing["budget_type"] == "credits":
+            # For credit campaigns, restore credits based on distribution
+            distribution = existing.get("distribution") or []
+            if distribution:
+                for dist in distribution:
+                    placement = dist.get("placement", "")
+                    spent_on_placement = Decimal(str(existing.get("budget_spent_per_placement", {}).get(placement, 0)))
+                    allocated = Decimal(str(dist.get("budget", 0)))
+                    remaining_for_placement = allocated - spent_on_placement
+                    if remaining_for_placement > 0:
+                        # Map placement back to credit type
+                        credit_map = {
+                            "featured": "featured_hours",
+                            "search": "search_clicks",
+                            "map_pin": "map_hours",
+                            "promo": "boost_impressions",
+                            "banner": "boost_impressions"
+                        }
+                        credit_type = credit_map.get(placement)
+                        if credit_type:
+                            credits_refunded[credit_type] = float(remaining_for_placement)
         
         update_query = AdvertisingCampaign.__table__.update().where(
             AdvertisingCampaign.id == campaign_id
         ).values(
             status=CampaignStatus.CANCELLED.value,
-            updated_at=datetime.now(timezone.utc)
+            updated_at=now
         )
         
         await database.execute(update_query)
         
-        # TODO: Process refund via payment gateway or restore credits
+        # If credit campaign, restore credits to subscription
+        if credits_refunded and existing.get("subscription_id"):
+            try:
+                from app.advertising.services.subscription_service import SubscriptionService
+                sub = await SubscriptionService.get_subscription_by_id(existing["subscription_id"])
+                if sub:
+                    current_credits = sub.get("credits", {})
+                    for credit_type, amount in credits_refunded.items():
+                        if credit_type in current_credits:
+                            current_credits[credit_type] = current_credits.get(credit_type, 0) + int(amount)
+                    # Restore credits
+                    update_credits_query = AdvertisingSubscription.__table__.update().where(
+                        AdvertisingSubscription.id == existing["subscription_id"]
+                    ).values(credits=current_credits, updated_at=now)
+                    await database.execute(update_credits_query)
+            except Exception:
+                pass  # Credit restoration is best-effort
         
         return {
             "amount": float(budget_remaining),
-            "credits": {}  # TODO: Return refunded credits if budget_type was credits
+            "credits": credits_refunded
         }
     
     # =========================================================================
@@ -700,8 +800,8 @@ class CampaignService:
         await database.execute(query, {"campaign_id": campaign_id, "now": datetime.now(timezone.utc)})
     
     @staticmethod
-    async def _process_click_billing(campaign_id: int) -> None:
-        """Process billing for CPC campaigns"""
+    async def _process_click_billing(campaign_id: int, placement: Optional[str] = None) -> None:
+        """Process billing for CPC campaigns with per-placement tracking"""
         # Get campaign
         query = AdvertisingCampaign.__table__.select().where(
             AdvertisingCampaign.id == campaign_id
@@ -711,18 +811,163 @@ class CampaignService:
         if not campaign or campaign["budget_type"] != "cpc":
             return
         
-        # TODO: Get CPC rate from region pricing
-        cpc_rate = Decimal("0.50")  # Placeholder
+        # Get CPC rate from region pricing if available
+        cpc_rate = Decimal("0.50")  # Default fallback
         
+        try:
+            bar_id = campaign["bar_id"]
+            from app.advertising.models import AdvertisingSubscription, RegionPricing
+            sub_query = AdvertisingSubscription.__table__.select().where(
+                AdvertisingSubscription.bar_id == bar_id
+            )
+            sub = await database.fetch_one(sub_query)
+            if sub:
+                region = sub["region_code"]
+                pricing_query = RegionPricing.__table__.select().where(
+                    RegionPricing.region_code == region
+                )
+                pricing = await database.fetch_one(pricing_query)
+                if pricing:
+                    # Use the average of min and max CPC
+                    cpc_rate = (Decimal(str(pricing["search_cpc_min"])) + Decimal(str(pricing["search_cpc_max"]))) / Decimal("2")
+        except Exception:
+            pass  # Fall back to default CPC rate
+        
+        now = datetime.now(timezone.utc)
         new_spent = Decimal(str(campaign["budget_spent"])) + cpc_rate
+        update_values = {
+            "budget_spent": new_spent,
+            "updated_at": now
+        }
         
-        # Update budget spent
+        # Track per-placement budget if placement is known
+        actual_placement = placement or "click"
+        if actual_placement:
+            budget_spent_per_placement = dict(campaign.get("budget_spent_per_placement") or {})
+            current_placement_spent = Decimal(str(budget_spent_per_placement.get(actual_placement, 0)))
+            budget_spent_per_placement[actual_placement] = float(current_placement_spent + cpc_rate)
+            update_values["budget_spent_per_placement"] = budget_spent_per_placement
+        
         update_query = AdvertisingCampaign.__table__.update().where(
             AdvertisingCampaign.id == campaign_id
-        ).values(
-            budget_spent=new_spent,
-            updated_at=datetime.now(timezone.utc)
+        ).values(**update_values)
+        await database.execute(update_query)
+        
+        # Check if budget exhausted
+        if new_spent >= Decimal(str(campaign["budget_amount"])):
+            await CampaignService._exhaust_campaign(campaign_id)
+    
+    @staticmethod
+    async def _process_hourly_billing(campaign_id: int) -> None:
+        """Process billing for CPH (hourly) campaigns - called by scheduler"""
+        query = AdvertisingCampaign.__table__.select().where(
+            AdvertisingCampaign.id == campaign_id
         )
+        campaign = await database.fetch_one(query)
+        
+        if not campaign or campaign["budget_type"] != "hourly":
+            return
+        
+        # Get hourly rate from region pricing
+        hourly_rate = Decimal("10.00")  # Default fallback
+        placement = campaign.get("campaign_type", "featured")
+        
+        try:
+            bar_id = campaign["bar_id"]
+            from app.advertising.models import AdvertisingSubscription, RegionPricing
+            sub_query = AdvertisingSubscription.__table__.select().where(
+                AdvertisingSubscription.bar_id == bar_id
+            )
+            sub = await database.fetch_one(sub_query)
+            if sub:
+                region = sub["region_code"]
+                pricing_query = RegionPricing.__table__.select().where(
+                    RegionPricing.region_code == region
+                )
+                pricing = await database.fetch_one(pricing_query)
+                if pricing:
+                    if placement == "featured":
+                        hourly_rate = Decimal(str(pricing["featured_cph"]))
+                    elif placement == "map":
+                        hourly_rate = Decimal(str(pricing["map_cph"]))
+        except Exception:
+            pass
+        
+        now = datetime.now(timezone.utc)
+        new_spent = Decimal(str(campaign["budget_spent"])) + hourly_rate
+        update_values = {
+            "budget_spent": new_spent,
+            "updated_at": now
+        }
+        
+        # Track per-placement budget
+        budget_spent_per_placement = dict(campaign.get("budget_spent_per_placement") or {})
+        current_placement_spent = Decimal(str(budget_spent_per_placement.get(placement, 0)))
+        budget_spent_per_placement[placement] = float(current_placement_spent + hourly_rate)
+        update_values["budget_spent_per_placement"] = budget_spent_per_placement
+        
+        update_query = AdvertisingCampaign.__table__.update().where(
+            AdvertisingCampaign.id == campaign_id
+        ).values(**update_values)
+        await database.execute(update_query)
+        
+        # Check if budget exhausted
+        if new_spent >= Decimal(str(campaign["budget_amount"])):
+            await CampaignService._exhaust_campaign(campaign_id)
+    
+    @staticmethod
+    async def _process_cpm_billing(campaign_id: int, impressions_since_last_bill: int = 1000) -> None:
+        """Process billing for CPM campaigns (per 1000 impressions)"""
+        query = AdvertisingCampaign.__table__.select().where(
+            AdvertisingCampaign.id == campaign_id
+        )
+        campaign = await database.fetch_one(query)
+        
+        if not campaign or campaign["budget_type"] != "cpm":
+            return
+        
+        # Get CPM rate from region pricing
+        cpm_rate = Decimal("15.00")  # Default fallback
+        placement = campaign.get("campaign_type", "featured")
+        
+        try:
+            bar_id = campaign["bar_id"]
+            from app.advertising.models import AdvertisingSubscription, RegionPricing
+            sub_query = AdvertisingSubscription.__table__.select().where(
+                AdvertisingSubscription.bar_id == bar_id
+            )
+            sub = await database.fetch_one(sub_query)
+            if sub:
+                region = sub["region_code"]
+                pricing_query = RegionPricing.__table__.select().where(
+                    RegionPricing.region_code == region
+                )
+                pricing = await database.fetch_one(pricing_query)
+                if pricing:
+                    if placement == "promo_boost":
+                        cpm_rate = Decimal(str(pricing["boost_cpm"]))
+        except Exception:
+            pass
+        
+        # Calculate cost: rate * (impressions / 1000)
+        cost = cpm_rate * Decimal(str(impressions_since_last_bill)) / Decimal("1000")
+        
+        now = datetime.now(timezone.utc)
+        new_spent = Decimal(str(campaign["budget_spent"])) + cost
+        update_values = {
+            "budget_spent": new_spent,
+            "updated_at": now
+        }
+        
+        # Track per-placement budget
+        budget_spent_per_placement = dict(campaign.get("budget_spent_per_placement") or {})
+        current_placement_spent = Decimal(str(budget_spent_per_placement.get(placement, 0)))
+        budget_spent_per_placement[placement] = float(current_placement_spent + cost)
+        update_values["budget_spent_per_placement"] = budget_spent_per_placement
+        
+        update_query = AdvertisingCampaign.__table__.update().where(
+            AdvertisingCampaign.id == campaign_id
+        ).values(**update_values)
         await database.execute(update_query)
         
         # Check if budget exhausted
