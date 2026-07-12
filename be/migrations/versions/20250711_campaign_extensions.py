@@ -35,10 +35,7 @@ def upgrade() -> None:
     # Estimated performance as JSON
     op.add_column('advertising_campaigns', sa.Column('estimated_performance', postgresql.JSONB(astext_type=sa.Text()), nullable=True, server_default='{}'))
     
-    # Update targeting column to include age_range if it doesn't exist
-    # The column already exists as JSON, we just need to update the default structure in code
-    
-    # Add index on bar_id + status for filtered queries (already exists but let's ensure it covers our needs)
+    # Add index on bar_id + status for filtered queries
     op.create_index('idx_campaign_bar_status_goal', 'advertising_campaigns', ['bar_id', 'status', 'campaign_goal'], unique=False)
 
 
