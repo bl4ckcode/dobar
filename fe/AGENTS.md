@@ -11,5 +11,4 @@ A production Flutter application for dobar owners and clients connecting venues 
 - [**Architecture, Tech Stack & State Management**](docs/agents/architecture.md)
 - [**Development Workflow**](docs/agents/development_workflow.md)
 - [**Direct communication with back-end**](docs/agents/FE_BE_COMMUNICATION.md)
-- [**Domain knowledge (External)**](../barz-backend/.docs/business)
-- [**Dobar payment engine (External)**](../dobar-payment-engine/.docs)
+- [**Domain knowledge**](docs/business)

@@ -30,6 +30,11 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
     on<PauseCampaign>(_onPauseCampaign);
     on<ResumeCampaign>(_onResumeCampaign);
     on<LoadAnalytics>(_onLoadAnalytics);
+
+    // UI events
+    on<SetFilter>(_onSetFilter);
+    on<SetSort>(_onSetSort);
+    on<SetSearch>(_onSetSearch);
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
@@ -355,5 +360,21 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
     } catch (e) {
       emit(state.copyWith(isLoadingAnalytics: false, error: e.toString()));
     }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // UI HANDLERS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  void _onSetFilter(SetFilter event, Emitter<AdvertisingState> emit) {
+    emit(state.copyWith(filterStatus: event.status));
+  }
+
+  void _onSetSort(SetSort event, Emitter<AdvertisingState> emit) {
+    emit(state.copyWith(sortBy: event.sortBy));
+  }
+
+  void _onSetSearch(SetSearch event, Emitter<AdvertisingState> emit) {
+    emit(state.copyWith(searchQuery: event.query));
   }
 }

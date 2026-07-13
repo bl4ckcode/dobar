@@ -111,4 +111,16 @@ sealed class AdvertisingEvent with _$AdvertisingEvent {
     required int campaignId,
     required int barId,
   }) = LoadAnalytics;
+
+  // UI EVENTS (Campaigns Page)
+
+  /// Set campaign filter (all, active, paused, completed, draft).
+  const factory AdvertisingEvent.setFilter({String? status}) = SetFilter;
+
+  /// Set sort order (recent, budget-desc, budget-asc, performance).
+  const factory AdvertisingEvent.setSort({required String sortBy}) = SetSort;
+
+  /// Set search query for campaign filtering.
+  const factory AdvertisingEvent.setSearch({required String query}) =
+      SetSearch;
 }

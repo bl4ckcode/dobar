@@ -78,107 +78,119 @@ class DobarProgressTracker extends StatelessWidget {
   }
 
   Widget _buildHorizontal(BuildContext context, DobarColors colors, int currentIndex) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 20),
-      child: Column(
-        children: [
-          Stack(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final trackWidth = constraints.maxWidth - 80; // 40 left + 40 right padding
+        final maxWidth = trackWidth > 0 ? trackWidth : 400; // Fallback for edge cases
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 20),
+          child: Column(
             children: [
-              // Background track
-              Positioned(
-                top: 24,
-                left: 40,
-                right: 40,
-                child: Container(
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: colors.labelPrimary.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(2),
+              Stack(
+                children: [
+                  // Background track
+                  Positioned(
+                    top: 24,
+                    left: 40,
+                    right: 40,
+                    child: Container(
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: colors.labelPrimary.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
                   ),
-                ),
-              ),
-              // Filled track
-              Positioned(
-                top: 24,
-                left: 40,
-                child: TweenAnimationBuilder<double>(
-                  tween: Tween(
-                    begin: 0.0,
-                    end: currentIndex == -1 ? 0.0 : (currentIndex / (_stages.length - 1)),
-                  ),
-                  duration: const Duration(milliseconds: 1200),
-                  curve: Curves.easeOutCubic,
-                  builder: (context, value, child) {
-                    return FractionallySizedBox(
-                      alignment: Alignment.centerLeft,
-                      // Calculate width based on constraints. We use a proxy here.
-                      // For a real horizontal layout we'd need more complex positioning.
-                      widthFactor: value * 0.8, // Approximation
-                      child: Container(
-                        height: 4,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [barzGold, barzGold.withValues(alpha: 0.7)],
+                  // Filled track - using Container with explicit width instead of FractionallySizedBox
+                  Positioned(
+                    top: 24,
+                    left: 40,
+                    child: TweenAnimationBuilder<double>(
+                      tween: Tween(
+                        begin: 0.0,
+                        end: currentIndex == -1 ? 0.0 : (currentIndex / (_stages.length - 1)),
+                      ),
+                      duration: const Duration(milliseconds: 1200),
+                      curve: Curves.easeOutCubic,
+                      builder: (context, value, child) {
+                        final progressWidth = value * maxWidth * 0.8;
+                        final safeWidth = progressWidth.isNaN || progressWidth.isInfinite
+                            ? 0.0
+                            : (progressWidth < 0 ? 0.0 : progressWidth);
+
+                        return Container(
+                          width: safeWidth,
+                          height: 4,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [barzGold, barzGold.withValues(alpha: 0.7)],
+                            ),
+                            borderRadius: BorderRadius.circular(2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: barzGold.withValues(alpha: 0.3),
+                                blurRadius: 10,
+                                offset: const Offset(0, 2),
+                              ),
+                            ],
                           ),
-                          borderRadius: BorderRadius.circular(2),
-                          boxShadow: [
-                            BoxShadow(
-                              color: barzGold.withValues(alpha: 0.3),
-                              blurRadius: 10,
-                              offset: const Offset(0, 2),
+                        );
+                      },
+                    ),
+                  ).animate().shimmer(duration: const Duration(seconds: 2), color: barzGold.withValues(alpha: 0.2)),
+
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: List.generate(_stages.length, (i) {
+                      final completed = i < currentIndex;
+                      final active = i == currentIndex;
+                      final stage = _stages[i];
+
+                      return Expanded(
+                        child: Column(
+                          children: [
+                            _StageDot(
+                              colors: colors,
+                              completed: completed,
+                              active: active,
+                              icon: stage.icon,
+                              isReady: currentStatus == OrderStatus.ready ||
+                                  currentStatus == OrderStatus.completed,
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              stage.label,
+                              style: TextStyle(
+                                color: active || completed
+                                    ? null
+                                    : colors.labelPrimary.withValues(alpha: 0.6),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                            ),
+                            Text(
+                              active ? 'NOW' : stage.sub,
+                              style: TextStyle(
+                                color: active
+                                    ? barzGold
+                                    : colors.labelPrimary.withValues(alpha: 0.4),
+                                fontSize: 10,
+                                letterSpacing: 1.5,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                    );
-                  },
-                ),
-              ).animate().shimmer(duration: const Duration(seconds: 2), color: barzGold.withValues(alpha: 0.2)),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: List.generate(_stages.length, (i) {
-                  final completed = i < currentIndex;
-                  final active = i == currentIndex;
-                  final stage = _stages[i];
-
-                  return Expanded(
-                    child: Column(
-                      children: [
-                        _StageDot(
-                          colors: colors,
-                          completed: completed,
-                          active: active,
-                          icon: stage.icon,
-                          isReady: currentStatus == OrderStatus.ready || currentStatus == OrderStatus.completed,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          stage.label,
-                          style: TextStyle(
-                            color: active || completed ? null : colors.labelPrimary.withValues(alpha: 0.6),
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                          ),
-                        ),
-                        Text(
-                          active ? 'NOW' : stage.sub,
-                          style: TextStyle(
-                            color: active ? barzGold : colors.labelPrimary.withValues(alpha: 0.4),
-                            fontSize: 10,
-                            letterSpacing: 1.5,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }),
+                      );
+                    }),
+                  ),
+                ],
               ),
             ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -201,7 +213,8 @@ class DobarProgressTracker extends StatelessWidget {
                     completed: completed,
                     active: active,
                     icon: stage.icon,
-                    isReady: currentStatus == OrderStatus.ready || currentStatus == OrderStatus.completed,
+                    isReady: currentStatus == OrderStatus.ready ||
+                        currentStatus == OrderStatus.completed,
                   ),
                   if (!isLast)
                     Expanded(
@@ -209,7 +222,9 @@ class DobarProgressTracker extends StatelessWidget {
                         width: 2,
                         margin: const EdgeInsets.symmetric(vertical: 8),
                         color: colors.labelPrimary.withValues(alpha: 0.1),
-                        child: active ? null : (completed ? Container(color: barzGold) : null),
+                        child: active
+                            ? null
+                            : (completed ? Container(color: barzGold) : null),
                       ),
                     ),
                 ],
@@ -227,22 +242,30 @@ class DobarProgressTracker extends StatelessWidget {
                           Text(
                             stage.label,
                             style: TextStyle(
-                              color: active || completed ? null : colors.labelPrimary.withValues(alpha: 0.6),
+                              color: active || completed
+                                  ? null
+                                  : colors.labelPrimary.withValues(alpha: 0.6),
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
                             ),
                           ),
                           if (active)
                             Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                               decoration: BoxDecoration(
-                                color: (currentStatus == OrderStatus.ready ? Colors.green : barzGold).withValues(alpha: 0.1),
+                                color: (currentStatus == OrderStatus.ready
+                                        ? Colors.green
+                                        : barzGold)
+                                    .withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
                                 'NOW',
                                 style: TextStyle(
-                                color: currentStatus == OrderStatus.ready ? pixGreen : barzGold,
+                                  color: currentStatus == OrderStatus.ready
+                                      ? pixGreen
+                                      : barzGold,
                                   fontSize: 10,
                                   fontWeight: FontWeight.bold,
                                   letterSpacing: 1,
@@ -254,7 +277,9 @@ class DobarProgressTracker extends StatelessWidget {
                       Text(
                         stage.sub,
                         style: TextStyle(
-                          color: active ? colors.labelPrimary.withValues(alpha: 0.8) : colors.labelPrimary.withValues(alpha: 0.4),
+                          color: active
+                              ? colors.labelPrimary.withValues(alpha: 0.8)
+                              : colors.labelPrimary.withValues(alpha: 0.4),
                           fontSize: 12,
                         ),
                       ),

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/features/payments/domain/models/payment_model.dart';
@@ -7,16 +8,30 @@ import 'package:lucide_icons/lucide_icons.dart';
 import 'package:barz/l10n/app_localizations.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
-class PixPaymentModal extends StatelessWidget {
+/// Result of the Pix payment flow
+enum PixPaymentResult {
+  approved,
+  cancelled,
+  timeout,
+}
+
+class PixPaymentModal extends StatefulWidget {
   final PixPaymentResponse pixPayment;
 
   const PixPaymentModal({super.key, required this.pixPayment});
 
-  static void show(BuildContext context, PixPaymentResponse pixPayment) {
-    showGeneralDialog(
+  /// Shows the Pix payment modal and waits for the result.
+  /// Returns PixPaymentResult.approved on successful payment,
+  /// PixPaymentResult.cancelled if user dismisses,
+  /// PixPaymentResult.timeout if polling times out.
+  static Future<PixPaymentResult> show(
+    BuildContext context,
+    PixPaymentResponse pixPayment,
+  ) {
+    return showGeneralDialog<PixPaymentResult>(
       context: context,
-      barrierDismissible: true,
-      barrierLabel: 'Dismiss',
+      barrierDismissible: false, // User must complete or explicitly cancel
+      barrierLabel: 'Pix Payment',
       barrierColor: Colors.black.withValues(alpha: 0.7),
       transitionDuration: const Duration(milliseconds: 300),
       pageBuilder: (ctx, anim1, anim2) => Align(
@@ -41,12 +56,47 @@ class PixPaymentModal extends StatelessWidget {
           ),
         );
       },
-    );
+    ).then((result) => result ?? PixPaymentResult.cancelled);
+  }
+
+  @override
+  State<PixPaymentModal> createState() => _PixPaymentModalState();
+}
+
+class _PixPaymentModalState extends State<PixPaymentModal> {
+  late Duration _remainingTime;
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _remainingTime = widget.pixPayment.expiresAt.difference(DateTime.now());
+    _startCountdown();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startCountdown() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (mounted) {
+        setState(() {
+          _remainingTime = widget.pixPayment.expiresAt.difference(DateTime.now());
+          if (_remainingTime.isNegative) {
+            _timer?.cancel();
+            _timer = null;
+          }
+        });
+      }
+    });
   }
 
   void _copyBrCode(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    Clipboard.setData(ClipboardData(text: pixPayment.copyPaste));
+    Clipboard.setData(ClipboardData(text: widget.pixPayment.copyPaste));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Row(
@@ -68,8 +118,9 @@ class PixPaymentModal extends StatelessWidget {
   Widget build(BuildContext context) {
     final dobar = context.dobarColors;
     final l10n = AppLocalizations.of(context)!;
-    final timeLeft = pixPayment.expiresAt.difference(DateTime.now());
-    final minutesLeft = timeLeft.inMinutes.clamp(0, 60);
+    final minutesLeft = _remainingTime.isNegative
+        ? 0
+        : _remainingTime.inMinutes.clamp(0, 60);
 
     return Container(
       width: double.infinity,
@@ -137,7 +188,7 @@ class PixPaymentModal extends StatelessWidget {
                 const Spacer(),
                 IconButton(
                   icon: Icon(LucideIcons.x, color: dobar.labelSecondary),
-                  onPressed: () => Navigator.of(context).pop(),
+                  onPressed: () => Navigator.of(context).pop(PixPaymentResult.cancelled),
                 ),
               ],
             ),
@@ -163,7 +214,7 @@ class PixPaymentModal extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'R\$ ${pixPayment.amount.toStringAsFixed(2)}',
+                    'R\$ ${widget.pixPayment.amount.toStringAsFixed(2)}',
                     style: const TextStyle(
                       color: barzGold,
                       fontSize: 32,
@@ -190,7 +241,7 @@ class PixPaymentModal extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: QrImageView(
-                      data: pixPayment.qrCode,
+                      data: widget.pixPayment.qrCode,
                       version: QrVersions.auto,
                       size: 220,
                       backgroundColor: Colors.white,
@@ -211,7 +262,7 @@ class PixPaymentModal extends StatelessWidget {
                       border: Border.all(color: dobar.surfaceElevated),
                     ),
                     child: Text(
-                      pixPayment.copyPaste,
+                      widget.pixPayment.copyPaste,
                       style: TextStyle(
                         color: dobar.labelSecondary,
                         fontSize: 11,

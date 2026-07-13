@@ -30,6 +30,11 @@ abstract class AdvertisingState with _$AdvertisingState {
     CampaignAnalytics? analytics,
     @Default(false) bool isLoadingAnalytics,
 
+    // UI STATE (Campaigns Page)
+    String? filterStatus,
+    String? sortBy,
+    @Default('') String searchQuery,
+
     // COMMON STATE
     String? error,
     String? successMessage,

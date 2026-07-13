@@ -83,6 +83,7 @@ class PixPaymentResponse {
   final String copyPaste;
   final DateTime expiresAt;
   final double amount;
+  final int? orderId;
 
   PixPaymentResponse({
     required this.paymentId,
@@ -90,6 +91,7 @@ class PixPaymentResponse {
     required this.copyPaste,
     required this.expiresAt,
     required this.amount,
+    this.orderId,
   });
 
   factory PixPaymentResponse.fromJson(Map<String, dynamic> json) {
@@ -103,6 +105,7 @@ class PixPaymentResponse {
               ? DateTime.parse(json['expires_at'])
               : DateTime.now().add(const Duration(minutes: 30))),
       amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
+      orderId: json['order_id'] as int?,
     );
   }
 }

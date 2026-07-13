@@ -773,7 +773,7 @@ class _PromoteCampaignCard extends StatelessWidget {
                 key: const ValueKey('promote_btn_wrapper'),
                 width: isNarrow ? double.infinity : null,
                 child: FilledButton.icon(
-                  onPressed: () => CreateCampaignSheet.show(context),
+                  onPressed: () => context.go(AppRoute.businessCampaigns.path),
                   style: FilledButton.styleFrom(
                     backgroundColor: barzDark,
                     foregroundColor: barzGold,

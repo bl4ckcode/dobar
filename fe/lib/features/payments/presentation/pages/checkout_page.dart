@@ -10,6 +10,7 @@ import 'package:barz/features/payments/domain/models/payment_method.dart';
 import 'package:barz/features/payments/presentation/bloc/payment_bloc.dart';
 import 'package:barz/features/payments/presentation/bloc/payment_event.dart';
 import 'package:barz/features/payments/presentation/bloc/payment_state.dart';
+import 'package:barz/features/payments/presentation/widgets/pix_payment_modal.dart';
 import 'package:barz/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -30,7 +31,6 @@ import '../widgets/payment_methods_card.dart';
 import '../widgets/payment_options_grid.dart';
 import 'package:barz/core/theme/theme_cubit.dart';
 import '../widgets/security_indicators.dart';
-import '../widgets/pix_payment_modal.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:lucide_icons/lucide_icons.dart';
@@ -75,6 +75,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
   int? _cachedBarId;
   Timer? _pixPollTimer;
   int _pixPollCount = 0;
+  PixPaymentResponse? _currentPixPayment;
+  int? _currentPixOrderId;
 
   SavedCard _fromPaymentMethod(PaymentMethod m) {
     CardBrand brand = CardBrand.visa;
@@ -188,96 +190,96 @@ class _CheckoutPageState extends State<CheckoutPage> {
               _buildHeader(context, l10n, isDark),
               Expanded(
                 child: BlocBuilder<PaymentBloc, PaymentState>(
-                  builder: (context, paymentState) {
-                    final savedCards = paymentState.savedCards
-                        .map(_fromPaymentMethod)
-                        .toList();
+                    builder: (context, paymentState) {
+                      final savedCards = paymentState.savedCards
+                          .map(_fromPaymentMethod)
+                          .toList();
 
-                    if (_selectedCardId == null && savedCards.isNotEmpty) {
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (mounted) {
-                          setState(() => _selectedCardId = savedCards.first.id);
-                        }
-                      });
-                    }
+                      if (_selectedCardId == null && savedCards.isNotEmpty) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted) {
+                            setState(() => _selectedCardId = savedCards.first.id);
+                          }
+                        });
+                      }
 
-                    return SingleChildScrollView(
-                      padding: const EdgeInsets.only(bottom: 120),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 24),
-                          CheckoutOrderSummary(
-                                items: orderItems,
-                                subtotal: args.subtotal,
-                                discount: orderDiscount,
-                                cashback: cashback,
-                                total: args.total,
-                                isPro: isPro,
-                              )
-                              .animate()
-                              .fadeIn(duration: 600.ms)
-                              .slideY(begin: 0.1, end: 0),
+                      return SingleChildScrollView(
+                        padding: const EdgeInsets.only(bottom: 120),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 24),
+                            CheckoutOrderSummary(
+                                  items: orderItems,
+                                  subtotal: args.subtotal,
+                                  discount: orderDiscount,
+                                  cashback: cashback,
+                                  total: args.total,
+                                  isPro: isPro,
+                                )
+                                .animate()
+                                .fadeIn(duration: 600.ms)
+                                .slideY(begin: 0.1, end: 0),
 
-                          const SizedBox(height: 32),
+                            const SizedBox(height: 32),
 
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 24),
-                            child: Text(
-                              l10n.payment_methods_title,
-                              style: GoogleFonts.spaceGrotesk(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: isDark ? Colors.white : Colors.black,
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(height: 16),
-
-                          PaymentMethodsCard(
-                            savedCards: savedCards,
-                            selectedCardId: _selectedCardId,
-                            onSelectCard: (id) =>
-                                setState(() => _selectedCardId = id),
-                            onAddCardComplete: _onAddCardComplete,
-                            paymentOptions: [
-                              PaymentOptionItem(
-                                label: l10n.payment_method_pix,
-                                icon: LucideIcons.qrCode,
-                                iconColor: const Color(0xFF32BCAD),
-                                onTap: () =>
-                                    setState(() => _selectedCardId = '__pix__'),
-                              ),
-                              PaymentOptionItem(
-                                label: 'Nubank Pay',
-                                icon: LucideIcons.wallet,
-                                iconColor: const Color(0xFF8A05BE),
-                                onTap: () => setState(
-                                  () => _selectedCardId = '__nubank__',
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 24),
+                              child: Text(
+                                l10n.payment_methods_title,
+                                style: GoogleFonts.spaceGrotesk(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white : Colors.black,
                                 ),
                               ),
-                            ],
-                            onApplePay: () =>
-                                setState(() => _selectedCardId = '__apple__'),
-                            onGooglePay: () =>
-                                setState(() => _selectedCardId = '__google__'),
-                            isDark: isDark,
-                            isLoadingCards: paymentState.isLoading,
-                          ).animate().fadeIn(delay: 200.ms),
-
-                          const Padding(
-                            padding: EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 24,
                             ),
-                            child: SecurityIndicators(),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
+
+                            const SizedBox(height: 16),
+
+                            PaymentMethodsCard(
+                              savedCards: savedCards,
+                              selectedCardId: _selectedCardId,
+                              onSelectCard: (id) =>
+                                  setState(() => _selectedCardId = id),
+                              onAddCardComplete: _onAddCardComplete,
+                              paymentOptions: [
+                                PaymentOptionItem(
+                                  label: l10n.payment_method_pix,
+                                  icon: LucideIcons.qrCode,
+                                  iconColor: const Color(0xFF32BCAD),
+                                  onTap: () =>
+                                      setState(() => _selectedCardId = '__pix__'),
+                                ),
+                                PaymentOptionItem(
+                                  label: 'Nubank Pay',
+                                  icon: LucideIcons.wallet,
+                                  iconColor: const Color(0xFF8A05BE),
+                                  onTap: () => setState(
+                                    () => _selectedCardId = '__nubank__',
+                                  ),
+                                ),
+                              ],
+                              onApplePay: () =>
+                                  setState(() => _selectedCardId = '__apple__'),
+                              onGooglePay: () =>
+                                  setState(() => _selectedCardId = '__google__'),
+                              isDark: isDark,
+                              isLoadingCards: paymentState.isLoading,
+                            ).animate().fadeIn(delay: 200.ms),
+
+                            const Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 24,
+                              ),
+                              child: SecurityIndicators(),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
               ),
             ],
           ),
@@ -478,9 +480,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
     }
   }
 
-  void _startPixPolling(String paymentId) {
+  void _startPixPolling(String paymentId, int orderId) {
     _pixPollTimer?.cancel();
     _pixPollCount = 0;
+
+    // Store payment and order info for later use
+    _currentPixPayment = null; // Will be set when pixPayment event fires
+    _currentPixOrderId = orderId;
 
     _pixPollTimer = Timer.periodic(const Duration(seconds: 3), (timer) {
       _pixPollCount++;
@@ -488,12 +494,15 @@ class _CheckoutPageState extends State<CheckoutPage> {
         // Timeout after ~90 seconds (30 polls × 3 seconds)
         timer.cancel();
         if (mounted) {
+          // Dismiss modal and show timeout error
+          Navigator.of(context).pop(PixPaymentResult.timeout);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('PIX payment timed out. Please try again.'),
               backgroundColor: Colors.orange,
             ),
           );
+          context.read<PaymentBloc>().add(const ClearPixPayment());
         }
         return;
       }
@@ -507,34 +516,54 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   void _listenToPaymentState(BuildContext context, PaymentState state) {
     // Handle approved transaction (credit card or PIX confirmed via polling)
-    if (state.currentTransaction != null && state.currentTransaction!.status == TransactionStatus.approved) {
+    if (state.currentTransaction != null && 
+        state.currentTransaction!.status == TransactionStatus.approved &&
+        _currentPixPayment != null) {
       _pixPollTimer?.cancel();
       if (mounted) setState(() => _isProcessing = false);
       
-      // Clear cart on success FIRST
+      // Dismiss modal on success
+      Navigator.of(context).pop(PixPaymentResult.approved);
+      
+      // Clear pix payment state
+      context.read<PaymentBloc>().add(const ClearPixPayment());
+      
+      // Clear cart AFTER successful payment
       context.read<CartBloc>().add(cart_event.ClearCart());
       
-      // Then navigate to tracking page
-      final orderId = state.currentTransaction!.orderId ?? 0;
+      // Navigate to tracking page
+      final orderId = _currentPixOrderId ?? state.currentTransaction!.orderId ?? 0;
       AppRoute.goOrder(context, orderId);
       return;
     }
     
     // Handle PIX payment initiated - show QR code modal and start polling
-    if (state.pixPayment != null) {
+    if (state.pixPayment != null && _currentPixPayment == null) {
       _pixPollTimer?.cancel();
-      if (mounted) setState(() => _isProcessing = false);
       
-      // Clear cart for PIX
-      context.read<CartBloc>().add(cart_event.ClearCart());
-
-      // Show PIX QR code modal
-      if (mounted) {
-        PixPaymentModal.show(context, state.pixPayment!);
+      // Store the pix payment for later reference
+      _currentPixPayment = state.pixPayment;
+      
+      // Store the orderId for navigation
+      if (state.pixPayment!.orderId != null) {
+        _currentPixOrderId = state.pixPayment!.orderId!;
       }
+      
+      // Set up polling before showing modal
+      _startPixPolling(state.pixPayment!.paymentId, _currentPixOrderId ?? 0);
 
-      // Start polling for payment status
-      _startPixPolling(state.pixPayment!.paymentId);
+      // Show PIX QR code modal (await it to handle result)
+      if (mounted) {
+        PixPaymentModal.show(context, state.pixPayment!).then((result) {
+          // Handle modal dismissal result
+          if (!mounted) return;
+          if (result == PixPaymentResult.cancelled && _currentPixPayment != null) {
+            // User cancelled - clean up
+            _pixPollTimer?.cancel();
+            context.read<PaymentBloc>().add(const ClearPixPayment());
+          }
+        });
+      }
       return;
     }
     
@@ -542,6 +571,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
     if (state.error != null) {
       _pixPollTimer?.cancel();
       if (mounted) setState(() => _isProcessing = false);
+      
+      // Dismiss any open modal
+      if (Navigator.canPop(context)) {
+        Navigator.of(context).pop(PixPaymentResult.cancelled);
+      }
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(state.error!), backgroundColor: Colors.red),
       );

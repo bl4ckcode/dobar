@@ -5,14 +5,69 @@ import 'package:intl/intl.dart';
 import 'package:lucide_icons/lucide_icons.dart';
 import 'package:barz/l10n/app_localizations.dart';
 
+/// Placement icon mapping matching the React Native CampaignsPage.
+IconData _placementIcon(CampaignType type) {
+  return switch (type) {
+    CampaignType.featured => LucideIcons.star,
+    CampaignType.search => LucideIcons.search,
+    CampaignType.map => LucideIcons.mapPin,
+    CampaignType.promoBoost => LucideIcons.flame,
+    CampaignType.banner => LucideIcons.image,
+  };
+}
+
+/// Status visual metadata matching the React Native design.
+Color _statusColor(CampaignStatus status) {
+  return switch (status) {
+    CampaignStatus.active => pixGreen,
+    CampaignStatus.paused => const Color(0xFFFFD93D),
+    CampaignStatus.completed => const Color(0xFF9E9E9E),
+    CampaignStatus.pending => const Color(0xFF9E9E9E),
+    CampaignStatus.cancelled => const Color(0xFF9E9E9E),
+  };
+}
+
+String _statusLabel(CampaignStatus status, AppLocalizations l10n) {
+  return switch (status) {
+    CampaignStatus.active => l10n.campaign_status_active,
+    CampaignStatus.paused => l10n.campaign_status_paused,
+    CampaignStatus.pending => l10n.campaign_status_pending,
+    CampaignStatus.completed => l10n.campaign_status_completed,
+    CampaignStatus.cancelled => 'Cancelada',
+  };
+}
+
+String _formatCompact(int number) {
+  if (number >= 1000000) {
+    return '${(number / 1000000).toStringAsFixed(1)}M';
+  } else if (number >= 1000) {
+    return '${(number / 1000).toStringAsFixed(number >= 10000 ? 0 : 1)}k';
+  }
+  return number.toString();
+}
+
+String _formatBrl(double amount) {
+  return NumberFormat.currency(
+    symbol: 'R\$',
+    decimalDigits: 2,
+    locale: 'pt_BR',
+  ).format(amount);
+}
+
 class CampaignCard extends StatefulWidget {
   final AdCampaign campaign;
   final VoidCallback onAnalytics;
+  final VoidCallback? onToggle;
+  final VoidCallback? onDelete;
+  final VoidCallback? onDuplicate;
 
   const CampaignCard({
     super.key,
     required this.campaign,
     required this.onAnalytics,
+    this.onToggle,
+    this.onDelete,
+    this.onDuplicate,
   });
 
   @override
@@ -22,332 +77,399 @@ class CampaignCard extends StatefulWidget {
 class _CampaignCardState extends State<CampaignCard>
     with SingleTickerProviderStateMixin {
   bool _isHovered = false;
-  bool _isAnalyticsHovered = false;
-  late final AnimationController _pulseController;
-
-  @override
-  void initState() {
-    super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _pulseController.dispose();
-    super.dispose();
-  }
-
-  String _formatNumber(int number) {
-    if (number >= 1000000) {
-      return '${(number / 1000000).toStringAsFixed(1)}M';
-    } else if (number >= 1000) {
-      return '${(number / 1000).toStringAsFixed(1)}K';
-    }
-    return number.toString();
-  }
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final dobar = context.dobarColors;
     final l10n = AppLocalizations.of(context)!;
-    final isDark = context.isDark;
+    final c = widget.campaign;
 
-    final budgetTotal = widget.campaign.budgetAmount;
-    final budgetSpent = widget.campaign.budgetSpent;
+    final budgetTotal = c.budgetAmount;
+    final budgetSpent = c.budgetSpent;
     final budgetPercent = budgetTotal > 0
         ? (budgetSpent / budgetTotal).clamp(0.0, 1.0)
         : 0.0;
-    final budgetPercentText = (budgetPercent * 100).toStringAsFixed(0);
+    final pct = (budgetPercent * 100).round();
+    final isHot = pct >= 90;
+    final ctr =
+        c.impressions > 0 ? (c.clicks / c.impressions) * 100 : 0.0;
 
-    final status = widget.campaign.status.name;
-    final isActive = status == 'active';
-    final isPaused = status == 'paused';
-
-    Color statusColor = dobar.labelSecondary;
-    Color statusBg = Colors.transparent;
-
-    if (isActive) {
-      statusColor = successGreen;
-      statusBg = successGreen.withValues(alpha: 0.15);
-    } else if (isPaused) {
-      statusColor = warningOrange;
-      statusBg = warningOrange.withValues(alpha: 0.15);
-    } else {
-      statusBg = dobar.navBackground;
-    }
-
-    final currencyFormat = NumberFormat.currency(
-      symbol: r'$',
-      decimalDigits: 0,
-    );
+    final placements = <CampaignType>[c.campaignType];
+    final statusColor = _statusColor(c.status);
+    final isActive = c.status == CampaignStatus.active;
 
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0.0, end: 1.0),
-      duration: const Duration(milliseconds: 400),
-      curve: Curves.easeOutCubic,
+      duration: const Duration(milliseconds: 500),
+      curve: const Cubic(0.22, 1.0, 0.36, 1.0),
       builder: (context, value, child) {
         return Transform.translate(
           offset: Offset(0, 20 * (1 - value)),
-          child: Opacity(
-            opacity: value,
-            child: MouseRegion(
-              onEnter: (_) => setState(() => _isHovered = true),
-              onExit: (_) => setState(() => _isHovered = false),
-              cursor: SystemMouseCursors.click,
-              child: GestureDetector(
-                onTap: widget.onAnalytics,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  curve: Curves.easeOutCubic,
-                  transform: Matrix4.translationValues(
-                    0,
-                    _isHovered ? -2 : 0,
-                    0,
-                  ),
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: dobar.surface,
-                    borderRadius: BorderRadius.circular(BarzRadii.md),
-                    border: Border.all(
-                      color: _isHovered
-                          ? barzGold.withValues(alpha: 0.3)
-                          : dobar.surfaceElevated,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(
-                          alpha: _isHovered ? 0.15 : (isDark ? 0.05 : 0.08),
-                        ),
-                        blurRadius: _isHovered ? 12 : 8,
-                        offset: Offset(0, _isHovered ? 6 : 4),
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Status Header
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  widget.campaign.name,
-                                  style: theme.textTheme.titleMedium
-                                      ?.copyWith(
-                                        fontWeight: FontWeight.bold,
-                                        color: dobar.labelPrimary,
-                                      ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 8),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 8,
-                                    vertical: 4,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: statusBg,
-                                    borderRadius: BorderRadius.circular(
-                                      BarzRadii.full,
-                                    ),
-                                    border: Border.all(
-                                      color: statusColor.withValues(alpha: 0.3),
-                                    ),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      if (isActive) ...[
-                                        FadeTransition(
-                                          opacity: _pulseController,
-                                          child: Container(
-                                            width: 6,
-                                            height: 6,
-                                            decoration: BoxDecoration(
-                                              color: statusColor,
-                                              shape: BoxShape.circle,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 6),
-                                      ],
-                                      Text(
-                                        _statusLabel(widget.campaign.status, l10n),
-                                        style: theme.textTheme.labelSmall
-                                            ?.copyWith(
-                                              fontWeight: FontWeight.bold,
-                                              color: statusColor,
-                                            ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          AnimatedOpacity(
-                            duration: const Duration(milliseconds: 200),
-                            opacity: _isHovered ? 1.0 : 0.0,
-                            child: MouseRegion(
-                              onEnter: (_) =>
-                                  setState(() => _isAnalyticsHovered = true),
-                              onExit: (_) =>
-                                  setState(() => _isAnalyticsHovered = false),
-                              child: GestureDetector(
-                                onTap: widget.onAnalytics,
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 200),
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: _isAnalyticsHovered
-                                        ? barzGold.withValues(alpha: 0.1)
-                                        : Colors.transparent,
-                                    borderRadius: BorderRadius.circular(
-                                      BarzRadii.sm,
-                                    ),
-                                  ),
-                                  child: Icon(
-                                    LucideIcons.barChart3,
-                                    size: 16,
-                                    color: _isAnalyticsHovered
-                                        ? barzGold
-                                        : dobar.labelSecondary,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // Metrics Grid
-                      Wrap(
-                        spacing: 24,
-                        runSpacing: 16,
-                        children: [
-                           _buildMetricColumn(
-                            icon: LucideIcons.eye,
-                            label: l10n.campaign_metric_impressions,
-                            value: _formatNumber(widget.campaign.impressions),
-                            dobar: dobar,
-                            theme: theme.textTheme,
-                          ),
-                           _buildMetricColumn(
-                            icon: LucideIcons.mousePointerClick,
-                            label: l10n.campaign_metric_clicks,
-                            value: _formatNumber(widget.campaign.clicks),
-                            dobar: dobar,
-                            theme: theme.textTheme,
-                          ),
-                           _buildMetricColumn(
-                            icon: LucideIcons.dollarSign,
-                            label: l10n.campaign_metric_budget,
-                            value: currencyFormat.format(budgetTotal),
-                            dobar: dobar,
-                            theme: theme.textTheme,
-                          ),
-                        ],
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // Progress Bar
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                           Text(
-                            l10n.campaign_spent_label(budgetPercentText),
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              fontSize: 10,
-                              color: dobar.labelSecondary,
-                            ),
-                          ),
-                          Text(
-                            l10n.campaign_total_label(
-                              currencyFormat.format(budgetTotal),
-                            ),
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              fontSize: 10,
-                              color: dobar.labelSecondary,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(2),
-                        child: LinearProgressIndicator(
-                          value: budgetPercent,
-                          minHeight: 4,
-                          backgroundColor: dobar.navBackground,
-                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
+          child: Opacity(opacity: value, child: child),
         );
       },
+      child: MouseRegion(
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        cursor: SystemMouseCursors.click,
+        child: GestureDetector(
+          onTap: widget.onAnalytics,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOutCubic,
+            transform: Matrix4.translationValues(
+              0,
+              _isHovered ? -2 : 0,
+              0,
+            ),
+            decoration: BoxDecoration(
+              color: barzDarkCard,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: _isHovered
+                    ? barzGold.withValues(alpha: 0.5)
+                    : const Color(0xFF2C2C2C),
+              ),
+              boxShadow: _isHovered
+                  ? [
+                      BoxShadow(
+                        color: barzGold.withValues(alpha: 0.15),
+                        blurRadius: 20,
+                        offset: const Offset(0, 20),
+                      ),
+                    ]
+                  : null,
+            ),
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header row: placement icons + status badge
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Placement type icons row
+                          Wrap(
+                            spacing: 4,
+                            runSpacing: 4,
+                            children: placements.map((p) {
+                              return Container(
+                                width: 24,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.03),
+                                  borderRadius: BorderRadius.circular(4),
+                                  border: Border.all(
+                                    color: Colors.white.withValues(alpha: 0.06),
+                                  ),
+                                ),
+                                child: Icon(
+                                  _placementIcon(p),
+                                  size: 14,
+                                  color: dobar.labelSecondary,
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                          const SizedBox(height: 12),
+                          // Campaign name
+                          Text(
+                            c.name,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    // Status badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: statusColor.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 6,
+                            height: 6,
+                            decoration: BoxDecoration(
+                              color: statusColor,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _statusLabel(c.status, l10n),
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: statusColor,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 20),
+
+                // Budget progress bar
+                Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                text: _formatBrl(budgetSpent),
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                              TextSpan(
+                                text: ' de ${_formatBrl(budgetTotal)}',
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white38,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Text(
+                          '$pct%',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: isHot ? errorRed : barzGold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: TweenAnimationBuilder<double>(
+                        tween: Tween(begin: 0.0, end: budgetPercent),
+                        duration: const Duration(milliseconds: 1200),
+                        curve: const Cubic(0.22, 1.0, 0.36, 1.0),
+                        builder: (context, value, _) {
+                          return LinearProgressIndicator(
+                            value: value,
+                            minHeight: 6,
+                            backgroundColor:
+                                Colors.white.withValues(alpha: 0.06),
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              isHot
+                                  ? const Color(0xFFFF6B6B)
+                                  : const Color(0xFFFFDE59),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // Metrics row
+                Row(
+                  children: [
+                    _buildMetricChip(
+                      '${_formatCompact(c.impressions)} impressões',
+                      dobar,
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 6),
+                      child:
+                          Text('·', style: TextStyle(color: Colors.white24)),
+                    ),
+                    _buildMetricChip(
+                      '${_formatCompact(c.clicks)} cliques',
+                      dobar,
+                    ),
+                    const Padding(
+                      padding: EdgeInsets.symmetric(horizontal: 6),
+                      child:
+                          Text('·', style: TextStyle(color: Colors.white24)),
+                    ),
+                    _buildMetricChip(
+                      '${ctr.toStringAsFixed(1)}% CTR',
+                      dobar,
+                      bold: true,
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // Divider + Action buttons
+                Container(
+                    height: 1,
+                    color: Colors.white.withValues(alpha: 0.06)),
+                const SizedBox(height: 16),
+
+                Row(
+                  children: [
+                    // Analytics button
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: widget.onAnalytics,
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.03),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                LucideIcons.barChart3,
+                                size: 16,
+                                color: dobar.labelSecondary,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Analytics',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: dobar.labelSecondary,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // More options menu
+                    PopupMenuButton<String>(
+                      offset: const Offset(0, 40),
+                      color: barzDarkCard,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        side: const BorderSide(color: Color(0xFF2C2C2C)),
+                      ),
+                      onSelected: (value) {
+                        switch (value) {
+                          case 'toggle':
+                            widget.onToggle?.call();
+                          case 'duplicate':
+                            widget.onDuplicate?.call();
+                          case 'delete':
+                            widget.onDelete?.call();
+                        }
+                      },
+                      itemBuilder: (context) => [
+                        if (isActive)
+                          PopupMenuItem(
+                            value: 'toggle',
+                            child: _menuItem(LucideIcons.pauseCircle, 'Pausar',
+                                dobar),
+                          )
+                        else
+                          PopupMenuItem(
+                            value: 'toggle',
+                            child: _menuItem(LucideIcons.playCircle, 'Retomar',
+                                dobar),
+                          ),
+                        PopupMenuItem(
+                          value: 'duplicate',
+                          child: _menuItem(
+                              LucideIcons.copy, 'Duplicar', dobar),
+                        ),
+                        const PopupMenuDivider(),
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: _menuItem(LucideIcons.trash2, 'Excluir',
+                              dobar,
+                              color: errorRed),
+                        ),
+                      ],
+                      child: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.03),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          LucideIcons.moreHorizontal,
+                          size: 16,
+                          color: dobar.labelSecondary,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
-  String _statusLabel(CampaignStatus status, AppLocalizations l10n) {
-    return switch (status) {
-      CampaignStatus.active => l10n.campaign_status_active,
-      CampaignStatus.paused => l10n.campaign_status_paused,
-      CampaignStatus.pending => l10n.campaign_status_pending,
-      CampaignStatus.completed => l10n.campaign_status_completed,
-      CampaignStatus.cancelled => l10n.campaign_status_cancelled,
-    };
+  Widget _buildMetricChip(
+    String text,
+    DobarColors dobar, {
+    bool bold = false,
+  }) {
+    return Text(
+      text,
+      style: TextStyle(
+        fontSize: 12,
+        color:
+            bold ? Colors.white.withValues(alpha: 0.8) : dobar.labelSecondary,
+        fontWeight: bold ? FontWeight.w600 : FontWeight.normal,
+      ),
+    );
   }
 
-  Widget _buildMetricColumn({
-    required IconData icon,
-    required String label,
-    required String value,
-    required DobarColors dobar,
-    required TextTheme theme,
+  Widget _menuItem(
+    IconData icon,
+    String label,
+    DobarColors dobar, {
+    Color? color,
   }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
       children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(icon, size: 12, color: dobar.labelSecondary),
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: theme.labelSmall?.copyWith(
-                fontSize: 9,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.5,
-                color: dobar.labelSecondary,
-              ),
-            ),
-          ],
+        Icon(
+          icon,
+          size: 16,
+          color: color ?? dobar.labelSecondary,
         ),
-        const SizedBox(height: 4),
+        const SizedBox(width: 10),
         Text(
-          value,
-          style: theme.titleLarge?.copyWith(
-            fontWeight: FontWeight.bold,
-            fontFamily: 'SF Pro Display',
-            color: dobar.labelPrimary,
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            color: color ?? Colors.white,
           ),
         ),
       ],
