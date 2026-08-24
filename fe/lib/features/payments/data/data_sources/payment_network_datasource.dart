@@ -344,7 +344,7 @@ class PaymentNetworkDatasource implements PaymentDatasource {
         data: {
           'amount': amount,
           'payment_type': paymentType.name,
-          if (paymentMethodId != null) 'payment_method_id': paymentMethodId,
+          'payment_method_id': ?paymentMethodId,
         },
         options: Options(headers: {'X-Idempotency-Key': key}),
       );

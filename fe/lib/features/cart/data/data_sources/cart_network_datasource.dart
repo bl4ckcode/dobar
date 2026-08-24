@@ -59,11 +59,9 @@ class CartNetworkDataSource {
       final data = {
         'order_type': orderType,
         'payment_method': paymentMethod,
-        if (tableNumber != null) 'location_identifier': tableNumber,
-        if (specialInstructions != null)
-          'special_instructions': specialInstructions,
-        if (activePromotionIds != null)
-          'active_promotion_ids': activePromotionIds,
+        'location_identifier': ?tableNumber,
+        'special_instructions': ?specialInstructions,
+        'active_promotion_ids': ?activePromotionIds,
       };
 
       final response = await dio.post(

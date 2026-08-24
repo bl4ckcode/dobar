@@ -8,7 +8,7 @@ import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
 import 'package:barz/features/session/presentation/bloc/session_event.dart';
 import 'package:barz/features/session/domain/models/bar_access.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'widgets/business_onboarding_view.dart';
 
 const double kBusinessWebBreakpoint = 768.0;

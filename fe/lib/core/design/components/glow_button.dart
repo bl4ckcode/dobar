@@ -82,7 +82,7 @@ class GlowButton extends StatelessWidget {
                 ],
               ],
             ),
-            if (trailing != null) trailing!,
+            ?trailing,
           ],
         ),
       ),

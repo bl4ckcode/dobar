@@ -146,7 +146,7 @@ class WebSocketService {
 
   /// Send a typed action (convenience method)
   void sendAction(String action, {Map<String, dynamic>? payload}) {
-    final message = {'action': action, if (payload != null) ...payload};
+    final message = {'action': action, ...?payload};
     send(message);
   }
 

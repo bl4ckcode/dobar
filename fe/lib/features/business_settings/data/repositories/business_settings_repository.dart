@@ -92,8 +92,8 @@ class BusinessSettingsRepository implements BusinessSettingsRepositoryInterface 
       final res = await _dio.post(
         ApiEndpoints.barDeactivate(barId),
         data: {
-          if (reason != null) 'reason': reason,
-          if (estimatedReturnDate != null) 'estimated_return_date': estimatedReturnDate,
+          'reason': ?reason,
+          'estimated_return_date': ?estimatedReturnDate,
         },
       );
       return Right(DeactivateResult.fromJson(res.data));

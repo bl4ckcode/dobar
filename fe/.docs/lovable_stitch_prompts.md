@@ -659,3 +659,214 @@ BOTTOM AREA:
 - Big gold "Checkout" or "Proceed to Payment" button
 
 Make it support both light and dark mode. The aesthetic should feel premium and modern, like a high-end fintech app meets nightlife energy."
+
+---
+
+### Subscription Plans Page — Premium Refinement (NEW)
+"Build me a premium, animated subscription plans page for bar owners in the Dobar/Barz nightlife ordering app. This is the business-facing 'Choose Your Plan' page where bar owners pick their subscription tier (Regular, Master, VIP) to unlock advertising features, lower commission rates, and marketing tools.
+
+I want a dark luxury nightlife aesthetic — think high-end fintech meets VIP club. Use these exact colors:
+- Background: #0A0A0A (dark mode deep black)
+- Card surfaces: #121212 (matte dark gray), #1A1A1A (card dark)
+- Gold accent: #FFDE59 (for prices, CTAs, highlights, active states)
+- Gold gradient: #FFFFDF73 → #FFFFC000
+- Success green: #00B37E (for checkmarks, active status)
+- Error red: #FF4B4B (for destructive actions)
+- Text primary: #FFFFFF (white)
+- Text secondary: #B0B0B0 (muted gray)
+- Icons: Lucide icon library
+
+The page should have these sections:
+
+1. **HEADER:**
+   - Page title 'Subscription Plans' in bold white
+   - Back button (chevron-left)
+   - Right action: 'Try Pro Free' ghost gold text button (opens the free trial modal)
+   - Subtle gold gradient underline below the header
+
+2. **CURRENT PLAN STATUS CARD (if user has active subscription):**
+   - Dark card (#121212) with rounded corners (12px)
+   - Green check-circle icon + 'Your Current Plan' label
+   - Plan name badge in gold pill on the right (e.g. 'MASTER')
+   - Valid until date in muted text
+   - Animated border: subtle gold pulse on the card edge when near renewal
+
+3. **TRIAL STATUS CARD (if user has active trial):**
+   - Dark card (#121212) with a subtle gold left border accent (3px)
+   - 'Free Trial Active' heading
+   - Trial end date in muted text
+   - 'Capture Payment' button — gold outlined, becomes primary when trial is about to expire
+   - Countdown timer showing days remaining in trial (e.g. '3 days left' in gold, 'Expired' in red)
+
+4. **PLANS LIST — THREE TIER CARDS (Regular, Master, VIP):**
+   Each plan card should be a dark card (#1A1A1A) with rounded corners (16px) and subtle border (#2C2C2C). The VIP card should have a gold border (2px) and a 'Most Popular' gold banner at the top.
+
+   Each card layout:
+   - **Top banner** (only for VIP): 'MOST POPULAR' in gold background, black bold text — slight shimmer animation
+   - **Plan name** in bold white (20px) — left side
+   - **Price** in gold bold (24px) + '/mo' in muted text — right side
+   - **Commission rate** in muted text below price (e.g. 'Commission: 5%')
+   - **Feature list** with gold check-mark icons:
+     - Each feature on its own row
+     - Green check-circle icon on the left (18px)
+     - Feature text in white on the right
+     - Subtle staggered entrance animation (each feature fades in with 50ms delay)
+   - **Annual pricing toggle**: When toggled, show 'R$ XX/mês (billed annually)' — highlight savings with a green 'Save 20%' badge.
+   - **CTA button** at bottom:
+     - If current plan: disabled outlined button showing 'Current Plan'
+     - If not current: full-width gold gradient button (for VIP) or dark button (for Master/Regular) with white text
+     - Button text: 'Choose {Plan Name}' or 'Upgrade to {Plan Name}' if upgrading
+
+5. **PLAN COMPARISON SECTION** (expandable below the cards):
+   - Collapsed state: 'Compare all features' text link with chevron-down icon
+   - Expanded state: a table comparing all 3 tiers side by side
+   - Rows: commission rate, advertising credits, support level, search boost, map spotlight, dedicated manager
+   - Each cell: checkmark (green) or dash (gray)
+   - Animated expand/collapse with smooth height transition (300ms)
+
+6. **PRO UPSEL BANNER** (for non-subscribed users):
+   - Full-width gradient banner (gold gradient)
+   - 'Unlock the full power of Dobar' heading in black text
+   - 'Boost your bar's visibility, lower your costs, and attract more customers.' subtitle
+   - 'View Plans' ghost button (dark background, white text)
+
+7. **FREE TRIAL MODAL** (full-screen bottom sheet):
+   - Slides up with spring animation (bouncy iOS-style)
+   - Sheet handle: thin gray pill at top
+   - Hero area: Gold gradient crown icon with 'Try Dobar Pro Free' heading
+   - Plan selector: horizontal pill toggle — 'Master' | 'VIP' (gold active state)
+   - Payment method section:
+     - 'Payment Method' label
+     - Card input row: saved cards dropdown (if any) or 'Add New Card' option
+     - PIX option with QR code generation (when selected, show a PIX QR code placeholder with 'Pay via PIX' label)
+     - Credit/Debit card option with card number, expiry, CVV fields in dark card style
+   - Terms acceptance: small checkbox + 'I agree to the Terms of Service and authorize the card validation' text
+   - Primary CTA: 'Start 7-Day Free Trial' — full-width gold gradient button, 56px height, black text
+   - Subtext: 'No charge today. Your card will only be validated, not charged.'
+   - Bottom links: 'Restore Purchase' · 'Terms & Privacy' in small muted text
+
+8. **UPGRADE CONFIRMATION MODAL** (when selecting a higher tier):
+   - Slide-up bottom sheet (not a dialog)
+   - 'Upgrade Plan' title
+   - Current plan info row (muted) with arrow icon pointing to new plan (gold)
+   - Proration credit calculation breakdown:
+     - Remaining days in current cycle
+     - Prorated credit amount in green (e.g. '-R$ 33,30')
+     - New plan price
+     - Final amount due in bold gold
+   - Payment method selector (same as trial modal)
+   - 'Confirm Upgrade' gold gradient CTA button
+   - 'Cancel' ghost text link
+
+9. **PAYMENT REQUIRED DIALOG** (error state when payment is needed):
+   - Dark bottom sheet with alert icon in red circle
+   - 'Payment Required' heading
+   - Error description
+   - 'Update Payment Method' gold button
+   - 'Retry' ghost button
+   - 'Close' text link
+
+**ANIMATIONS & MICRO-INTERACTIONS (CRITICAL):**
+- Plan cards should stagger-animate in from bottom on page load (100ms delay per card)
+- VIP card should have a subtle gold shimmer sweeping across the 'Most Popular' banner on a loop (3s cycle)
+- Price toggle (monthly/annual): crossfade animation when switching (200ms)
+- Feature items: fade in from left with staggered delay (50ms each)
+- Trial countdown: animate number changes with a flip animation when days decrease
+- Plan selection: selected card scales up 1.02x with a soft gold glow border
+- Buttons: scale down 0.97x on press, spring back on release (250ms spring)
+- Modal transitions: slide-up with spring animation, background overlay fades in (300ms)
+- Upgrade proration: numbers should count up/down with an animated counter
+- Payment method toggle: crossfade between card form and PIX QR code (300ms)
+- Success state after upgrade/subscription: brief checkmark animation + confetti burst (gold particles)
+- All micro-interactions should feel premium and polished — like a fintech app (Nubank, Revolut) meets nightlife energy
+
+**ADDITIONAL DETAILS:**
+- Support both **PIX** and **Credit/Debit Card** as payment methods — show them as horizontal pill toggles with icons (PIX icon + CreditCard icon)
+- When PIX is selected, show a full-width QR code placeholder with 'Copia e Cola' text input below
+- When Card is selected, show a modern card input form (card number masked, expiry, CVV) in dark card style
+- Show a small 'saved cards' row if the user has previously saved payment methods — each as a small pill with last 4 digits and brand icon
+- The page should feel like a premium checkout experience, not a basic settings form
+- Use Lucide icons: `Crown`, `Star`, `Award`, `Zap`, `Check`, `CreditCard`, `QrCode`, `ChevronLeft`, `ChevronDown`, `ChevronUp`, `ArrowRight`, `Clock`, `Shield`, `Lock`, `Sparkles`, `Wallet`, `TrendingUp`, `BadgeCheck`, `Percent`, `Calendar`, `AlertCircle`, `CheckCircle`
+
+Make it bright and eye-catching. The aesthetic should feel like upgrading to a premium nightlife experience — exclusive, powerful, and worth every cent."
+
+---
+
+### Campaigns Management Page (List + Analytics)
+"Build a premium, high-impact Campaigns Management page for bar owners and administrators in the **Dobar/Barz** business app.
+
+**CONTEXT:**
+Dobar/Barz is a nightlife ordering platform where bar owners can run advertising campaigns to promote their venues. This page is the **mission control center** for all their campaigns — they list active and past campaigns, view performance at a glance, and tap into individual campaign analytics. The current implementation uses a simple bottom sheet for campaign creation; we are replacing that with a full multi-step campaign creation flow (see Prompt 2).
+
+**OVERALL VIBE:** Professional, data-driven, and authoritative. Industrial Modern design: deep blacks (#0A0A0A), matte gray cards (#121212), sharp electric gold (#FFDE59) accents. Should feel like a high-end ad dashboard (think: Meta Ads Manager meets Google Analytics) but with nightlife energy.
+
+**PAGE STRUCTURE:**
+
+### 1. HEADER SECTION
+- **Left**: Container with megaphone icon in gold gradient background + 'Campanhas' title + 'Gerencie suas campanhas de marketing' subtitle
+- **Right (desktop) / Bottom (mobile)**: Account balance / credits chip showing available budget (e.g., 'Saldo: R$ 1.200,00')
+
+### 2. VIP UPSELL BANNER (existing component, keep as-is)
+- The VIP upsell banner for non-subscribed bars stays exactly where it is
+
+### 3. CAMPAIGN FILTERS & ACTIONS BAR
+- **Search**: Text input with search icon, placeholder 'Buscar campanhas...'
+- **Filter chips**: Horizontal scrollable row — 'Todas' (default), 'Ativas', 'Pausadas', 'Concluídas', 'Rascunhos'
+- **Sort**: Dropdown — 'Mais recentes', 'Orçamento (maior)', 'Orçamento (menor)', 'Performance'
+- **Create Campaign CTA**: Gold gradient button 'Nova Campanha' with Plus icon (replaces the FAB on mobile, desktop has both)
+
+### 4. CAMPAIGN GRID / LIST
+Each campaign card shows:
+- **Status badge** at top-right: green pill '● Ativa', yellow '● Pausada', gray '● Concluída', purple '● Rascunho'
+- **Campaign name** in bold white text, 18px
+- **Campaign type icons row**: small icons representing which placements are active (Star for featured, Search for search boost, MapPin for map, Flame for promo boost, Image for banner)
+- **Budget progress bar**: thin animated bar showing % spent — gold fill for healthy, red fill if over 90% spent
+- **Key metrics row** in small muted text: '1.2k impressões · 89 cliques · 4.2% CTR'
+- **Two action buttons**: 'Analytics' ghost button with BarChart3 icon + '...' more options dropdown (Pause/Resume/Duplicate/Delete)
+- **Card background**: #1A1A1A with rounded corners 12px, subtle border #2C2C2C
+- **Hover state**: slight gold glow border
+- **Empty state**: Large megaphone icon in gold (60% opacity), 'Nenhuma campanha ativa', subtitle 'Crie sua primeira campanha e comece a atrair mais clientes!', gold ghost CTA 'Criar Campanha'
+
+### 5. EMPTY STATE (if no campaigns)
+- Full-width illustration: large megaphone icon in gold, 80px
+- 'Nenhuma campanha ainda' heading
+- 'Crie sua primeira campanha para aparecer em destaque para milhares de clientes.' subtitle
+- Gold gradient CTA button 'Criar Primeira Campanha'
+
+### 6. ANALYTICS OVERVIEW SECTION (collapsible, below campaign list)
+- Quick stats row: 4 metric cards in a row:
+  - Total de impressões (large number, gold)
+  - Total de cliques (number, white)
+  - CTR médio (% , white)
+  - Total investido (R$, gold)
+- Each stat card: dark surface #121212, rounded 10px, small label in muted text below number
+
+**INTERACTIONS:**
+- Tapping a campaign card navigates to the campaign details/analytics view
+- Tapping 'Nova Campanha' opens the multi-step campaign creation flow (Prompt 2)
+- Status filter chips should animate active state with gold underline
+- Empty state has a subtle floating animation on the megaphone icon (3s loop)
+- Grid: responsive — 2 columns on wide screens, single column on narrow
+
+**ANIMATIONS:**
+- Cards stagger-fade in from bottom on load (80ms delay between cards)
+- Budget progress bar animates from 0 to current value on mount
+- Status badge has a subtle pulse animation when active
+- Filter chips slide in from left on filter change
+
+**ICONS (Lucide):** `Megaphone`, `Star`, `Search`, `MapPin`, `Flame`, `Image`, `BarChart3`, `MoreHorizontal`, `PauseCircle`, `PlayCircle`, `Copy`, `Trash2`, `Plus`, `Filter`, `Search`
+
+**DESIGN TOKENS:**
+```
+Background:      #0A0A0A (barzDark)
+Card Surfaces:   #121212 (barzDarkLight), #1A1A1A (barzDarkCard)
+Gold Accent:     #FFDE59 (barzGold)
+Gold Grad:       #FFFFDF73 -> #FFFFC000
+Active Green:    #00B37E (pixGreen)
+Paused Yellow:   #FFD93D
+Draft Purple:    #7C3AED
+Error:           #FF4B4B
+Text Primary:    #FFFFFF
+Text Secondary:  #B0B0B0
+Font:            Space Grotesk (headings), system (body)
+Icons:           Lucide icon library

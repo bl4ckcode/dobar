@@ -1802,6 +1802,7 @@ Auth: Required
 ---
 
 Previous versions archived in git history.
+
 ---
 
 ## PLAN FEATURES & INTERNATIONALIZATION (i18n) [MAY 25, 2026 - NEW]
@@ -2174,6 +2175,52 @@ The user tested with `tier: master` (multiple times) and `tier: vip` — all fai
 - **Issue:** The `/home` endpoint currently returns only ONE bar in the `nearby_bars` list, even when many more bars are available within proximity (as seen in `/bars` endpoint).
 - **Impact:** The "Meet our partners" section (horizontal carousel) only shows the single closest bar, making the Home screen feel empty.
 - **Request:** Investigate if there's a hard limit (limit=1) or a filtering bug on the backend for the `/home` result set.
+
+---
+
+## 5. 🚨 Plan Descriptions Returning Wrong/Misleading Content (NEW - JUL 2026)
+
+**Issue:** The `GET /advertising/plans?bar_id={bar_id}` endpoint returns incorrect or misleading descriptions for PRO subscription tiers (Master, VIP). The `plan.name`, `plan.commission_rate`, and `plan.features` arrays are returning wrong data per tier.
+
+**Observed Behavior:**
+- Plan names are mixing up tier labels (e.g., VIP showing "Master" name or vice versa)
+- Commission rates are swapped between tiers
+- Feature keys (`features` array in the response) are either incomplete or belong to the wrong tier — e.g., Regular tier features showing up in VIP plan
+- The `annual_price` field may be returning 0 or null for some tiers
+
+**Root Cause (Suspected):**
+- The `region_pricing` database table seed data has incorrect mappings between `tier` enum values and their associated feature/price rows
+- The JSON columns for `features` might have been populated with wrong key-value pairs during the i18n migration (MAY 25, 2026)
+- The commission rate logic in `app/advertising/services.py` may be using hardcoded fallback values instead of pulling from the database
+
+**Expected vs Actual (Example):**
+
+| Field | Regular (Expected) | Regular (Actual) | Master (Expected) | Master (Actual) | VIP (Expected) | VIP (Actual) |
+|-------|-------------------|-------------------|-------------------|-----------------|----------------|--------------|
+| name | "Regular" | ✅ | "Master" | ❌ "VIP" | "VIP" | ❌ "Master" |
+| commission_rate | 8% | ✅ | 5% | ❌ 3% | 3% | ❌ 5% |
+| features count | 3 | ✅ | 6 | ❌ 4 | 9 | ❌ 6 |
+| annual_price | null | ✅ | R$ 479,40 | ❌ null | R$ 719,40 | ❌ R$ 479,40 |
+
+**Backend Action Required:**
+1. Verify the `region_pricing` seed data in the database — ensure each `tier` (regular, master, vip) has the correct:
+   - `monthly_price` and `annual_price`
+   - `commission_rate` (float percentage)
+   - `features` JSON array with correct i18n keys
+2. Run the SQL migration again or manually patch the rows:
+   ```sql
+   -- Check current state
+   SELECT tier, monthly_price, annual_price, commission_rate, features 
+   FROM region_pricing WHERE country_code = 'BR';
+   ```
+3. Ensure the `/advertising/plans` endpoint returns plans ordered by tier priority (regular → master → vip) so the frontend can display them in the correct order
+4. The frontend's `_PlanCard` widget (in `subscription_plans_page.dart`) relies on `plan.name`, `plan.commissionRate`, and `plan.features` being accurate per tier. Any mismatch causes wrong pricing display and incorrect feature lists for the bar owner.
+
+**Impact:** High. Bar owners see wrong pricing, commission rates, and feature lists when choosing a subscription plan. This directly affects conversion rates for paid tier upgrades.
+
+**Frontend Workaround (None):** The frontend cannot fix this alone since it renders what the backend returns. The i18n translation layer is working correctly — the problem is the source data.
+
+**See Also:** `lib/features/advertising/presentation/pages/subscription_plans_page.dart` → `_PlanCard` widget render `plan.name`, `plan.price`, `plan.commissionRate`, and `plan.features` directly from `GET /advertising/plans` response.
 
 ---
 

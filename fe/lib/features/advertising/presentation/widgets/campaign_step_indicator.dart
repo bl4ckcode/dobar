@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:barz/core/design/design_system.dart';
 
 /// Step data for the campaign creation indicator.
@@ -10,21 +10,21 @@ class CampaignStep {
   const CampaignStep({required this.label, required this.icon});
 
   static const List<CampaignStep> steps = [
-    CampaignStep(label: 'Goal', icon: LucideIcons.goal),
-    CampaignStep(label: 'Budget', icon: LucideIcons.wallet),
-    CampaignStep(label: 'Creative', icon: LucideIcons.image),
-    CampaignStep(label: 'Targeting', icon: LucideIcons.target),
-    CampaignStep(label: 'Review', icon: LucideIcons.checkSquare),
+    CampaignStep(label: 'Objetivo', icon: LucideIcons.goal),
+    CampaignStep(label: 'Orçamento', icon: LucideIcons.wallet),
+    CampaignStep(label: 'Criativo', icon: LucideIcons.image),
+    CampaignStep(label: 'Segmentação', icon: LucideIcons.target),
+    CampaignStep(label: 'Revisão', icon: LucideIcons.checkSquare),
   ];
 }
 
 /// Horizontal 5-step progress indicator for the campaign creation flow.
 ///
-/// Matches the design spec:
-/// - Current step: filled gold circle with white number
-/// - Completed steps: green checkmark circle
-/// - Future steps: dark gray circle (#2C2C2C)
-/// - Connecting lines: gold for completed, dark gray for future
+/// Matches the Lovable design spec exactly:
+/// - Current step: filled gold circle with step icon, gold label text, glow ring
+/// - Completed steps: green circle with check icon, gray label text
+/// - Future steps: dark gray circle (#1A1A1A) with gray icon, muted gray label
+/// - Connecting lines: green for completed, dark gray for future
 class CampaignStepIndicator extends StatelessWidget {
   final int currentStep;
   final ValueChanged<int>? onStepTapped;
@@ -37,6 +37,8 @@ class CampaignStepIndicator extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       child: Column(
@@ -44,7 +46,7 @@ class CampaignStepIndicator extends StatelessWidget {
         children: [
           // Step circles with connecting lines
           SizedBox(
-            height: 32,
+            height: 36,
             child: Row(
               children: List.generate(
                 CampaignStep.steps.length * 2 - 1,
@@ -56,53 +58,59 @@ class CampaignStepIndicator extends StatelessWidget {
                     return Expanded(
                       child: Container(
                         height: 2,
-                        color: isCompleted
-                            ? barzGold
-                            : const Color(0xFF2C2C2C),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(1),
+                          color: isCompleted
+                              ? pixGreen  // Green for completed segments
+                              : (isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE7E5DE)),
+                        ),
                       ),
                     );
                   }
                   // Step circle
                   final stepIndex = index ~/ 2;
-                  final step = CampaignStep.steps[stepIndex];
                   final isCompleted = stepIndex < currentStep;
                   final isCurrent = stepIndex == currentStep;
+                  final step = CampaignStep.steps[stepIndex];
 
                   return GestureDetector(
-                    onTap: isCompleted || isCurrent
+                    onTap: (isCompleted || isCurrent)
                         ? () => onStepTapped?.call(stepIndex)
                         : null,
                     child: Container(
-                      width: 32,
-                      height: 32,
+                      width: 36,
+                      height: 36,
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: isCurrent
-                            ? barzGold
+                            ? barzGold  // Gold for current
                             : isCompleted
-                                ? pixGreen
-                                : const Color(0xFF2C2C2C),
-                        border: isCurrent
-                            ? Border.all(color: barzGold, width: 2)
+                                ? pixGreen  // Green for completed
+                                : (isDark ? const Color(0xFF1A1A1A) : const Color(0xFFF0EFEA)),  // Dark for future
+                        boxShadow: isCurrent
+                            ? [
+                                BoxShadow(
+                                  color: barzGold.withValues(alpha: 0.25),
+                                  blurRadius: 8,
+                                  spreadRadius: 1,
+                                ),
+                              ]
                             : null,
                       ),
                       child: Center(
                         child: isCompleted
                             ? const Icon(
                                 LucideIcons.check,
-                                size: 16,
-                                color: Colors.white,
+                                size: 18,
+                                color: Colors.black,
+                                // Lovable uses black icon on green/gold backgrounds
                               )
-                            : Text(
-                                '${stepIndex + 1}',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold,
-                                  color: isCurrent
-                                      ? Colors.black
-                                      : Colors.white38,
-                                  fontFamily: 'Space Grotesk',
-                                ),
+                            : Icon(
+                                step.icon,
+                                size: 16,
+                                color: isCurrent
+                                    ? Colors.black  // Black icon on gold
+                                    : (isDark ? const Color(0xFFB0B0B0) : const Color(0xFF9C9C9C)),
                               ),
                       ),
                     ),
@@ -125,14 +133,13 @@ class CampaignStepIndicator extends StatelessWidget {
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 10,
-                    fontWeight: isCurrent
-                        ? FontWeight.w600
-                        : FontWeight.w400,
-                    color: isCompleted
-                        ? barzGold.withValues(alpha: 0.7)
-                        : isCurrent
-                            ? barzGold
-                            : Colors.white38,
+                    fontWeight:
+                        isCurrent ? FontWeight.w700 : FontWeight.w500,
+                    color: isCurrent
+                        ? barzGold  // Gold for current label
+                        : isCompleted
+                            ? (isDark ? const Color(0xFFB0B0B0) : const Color(0xFF6B6B6B))  // Muted for completed
+                            : (isDark ? const Color(0xFF666666) : const Color(0xFF9C9C9C)),  // Light gray for future
                     fontFamily: 'Space Grotesk',
                   ),
                 ),

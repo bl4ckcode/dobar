@@ -17,7 +17,7 @@ import 'package:barz/features/authentication/presentation/bloc/login_bloc.dart';
 import 'package:barz/features/authentication/presentation/bloc/login_event.dart';
 import 'package:barz/features/authentication/presentation/bloc/login_state.dart';
 import 'package:barz/features/authentication/domain/usecases/login_usecase.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'login_sms_validation_page.dart';
 

@@ -19,7 +19,7 @@ class TokenStorageService {
     if (!kIsWeb) {
       // Mobile: Use default secure storage with accessibility options
       _storage = const FlutterSecureStorage(
-        aOptions: AndroidOptions(encryptedSharedPreferences: true),
+        aOptions: AndroidOptions(),
         iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
       );
     }

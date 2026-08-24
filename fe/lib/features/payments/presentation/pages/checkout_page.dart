@@ -33,7 +33,7 @@ import 'package:barz/core/theme/theme_cubit.dart';
 import '../widgets/security_indicators.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:barz/core/design/tokens/dobar_colors.dart';
 
 class CheckoutArguments {
@@ -557,7 +557,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
         PixPaymentModal.show(context, state.pixPayment!).then((result) {
           // Handle modal dismissal result
           if (!mounted) return;
-          if (result == PixPaymentResult.cancelled && _currentPixPayment != null) {
+          if (result == PixPaymentResult.cancelled && _currentPixPayment != null && context.mounted) {
             // User cancelled - clean up
             _pixPollTimer?.cancel();
             context.read<PaymentBloc>().add(const ClearPixPayment());

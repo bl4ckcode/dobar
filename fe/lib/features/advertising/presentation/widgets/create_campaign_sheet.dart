@@ -4,7 +4,7 @@ import 'package:barz/core/design/design_system.dart';
 import 'package:barz/features/advertising/domain/models/models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:barz/l10n/app_localizations.dart';

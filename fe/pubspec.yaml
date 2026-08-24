@@ -19,7 +19,7 @@ publish_to: 'none' # Remove this line if you wish to publish to pub.dev
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.8.0
+  sdk: ^3.12.2
 
 # Dependencies - UPDATED TO LATEST SECURE VERSIONS FOR PAYMENTS APP
 # Last updated: January 2026
@@ -49,11 +49,11 @@ dependencies:
   
   # --- STORAGE (CRITICAL FOR PAYMENTS) ---
   shared_preferences: ^2.5.3
-  flutter_secure_storage: ^9.2.4    # Encrypted storage for tokens
+  flutter_secure_storage: ^11.0.0    # Encrypted storage for tokens
   hive: ^2.2.3                      # Local NoSQL database for offline cache
   hive_flutter: ^1.1.0              # Hive Flutter integration
-  connectivity_plus: ^6.1.4         # Network connectivity detection
-  workmanager: ^0.9.0               # Background task scheduling
+  connectivity_plus: ^7.3.1         # Network connectivity detection
+  workmanager: ^0.10.9               # Background task scheduling
   
   # --- JSON & SERIALIZATION ---
   json_annotation: ^4.9.0
@@ -69,10 +69,10 @@ dependencies:
   webview_flutter: ^4.11.0          # Updated for security
   velocity_x: ^4.2.1
   flutter_svg: ^2.0.17              # Updated
-  google_fonts: ^6.2.1
+  google_fonts: ^8.2.0
   flutter_animate: ^4.5.2
   loading_animation_widget: ^1.3.0  # Added from openfisio
-  confetti: ^0.7.0
+  confetti: ^0.8.0
   flutter_web_plugins:              # For web URL strategy
     sdk: flutter
   flutter_form_builder: ^10.2.0     # Form building with validation
@@ -83,11 +83,11 @@ dependencies:
   # --- GOOGLE MAPS & LOCATION ---
   google_maps_flutter: ^2.12.0      # Updated
   # google_places_api_flutter removed - using our backend proxy instead
-  location: ^8.0.0
-  geolocator: ^13.0.2
+  location: ^10.0.2
+  geolocator: ^14.0.3
 
   flutter_polyline_points: ^3.1.0   # Updated
-  map_launcher: ^4.4.3              # Launch external map apps
+  map_launcher: ^6.0.0              # Launch external map apps
 
   # --- FIREBASE (CRITICAL - UPDATED) ---
   firebase_core: ^4.5.0             # Latest stable
@@ -96,24 +96,24 @@ dependencies:
   # --- SOCIAL LOGIN ---
   google_sign_in: ^7.2.0            # Updated
   google_sign_in_web: ^1.1.0        # Explicit import for web-only renderButton()
-  sign_in_with_apple: ^7.0.1
+  sign_in_with_apple: ^8.1.0
 
   # --- PAYMENTS SPECIFIC ---
   pinput: ^6.0.1                    # Updated for OTP/PIN
   sms_autofill: ^2.4.1
-  permission_handler: ^12.0.1       # Updated
+  permission_handler: ^13.0.1       # Updated
   
   # --- CAMERA & IMAGE ---
   image_picker: ^1.2.1              # Camera and gallery image selection
-  image_cropper: ^8.0.2             # Crop images before upload
+  image_cropper: ^12.2.1             # Crop images before upload
   
   # --- MISC ---
   pretty_animated_buttons: ^0.0.2
   image: ^4.5.3
-  go_router: ^16.0.0                # Added for proper routing
-  app_links: ^6.4.0                 # Added for deep links
+  go_router: ^17.3.0                # Added for proper routing
+  app_links: ^7.2.1                 # Added for deep links
   firebase_messaging: ^16.1.0
-  flutter_local_notifications: ^19.5.0
+  flutter_local_notifications: ^22.1.0
   cached_network_image: ^3.4.1
   animated_text_kit: ^4.3.0
   palette_generator: ^0.3.3+4
@@ -121,7 +121,7 @@ dependencies:
   rxdart: ^0.28.0
   local_auth: ^3.0.1
   url_launcher: ^6.3.2
-  lucide_icons: ^0.257.0
+  lucide_icons_flutter: ^3.1.17
   qr_flutter: ^4.1.0
   bloc_concurrency: ^0.3.0
 

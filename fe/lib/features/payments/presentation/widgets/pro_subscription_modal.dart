@@ -2,7 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:barz/core/design/tokens/dobar_colors.dart';
 import 'package:barz/core/design/tokens/colors.dart';
 import 'package:barz/l10n/app_localizations.dart';

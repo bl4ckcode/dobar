@@ -123,8 +123,8 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
         queryParameters: {
           'latitude': latitude,
           'longitude': longitude,
-          if (query != null) 'query': query,
-          if (category != null) 'category': category,
+          'query': ?query,
+          'category': ?category,
           'limit': limit,
         },
       );
@@ -149,7 +149,7 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
         queryParameters: {
           'latitude': latitude,
           'longitude': longitude,
-          if (zoomLevel != null) 'zoom_level': zoomLevel,
+          'zoom_level': ?zoomLevel,
           'limit': limit,
         },
       );
@@ -176,10 +176,10 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
         data: {
           'campaign_id': campaignId,
           'action': action,
-          if (placement != null) 'placement': placement,
-          if (sessionId != null) 'session_id': sessionId,
-          if (latitude != null) 'latitude': latitude,
-          if (longitude != null) 'longitude': longitude,
+          'placement': ?placement,
+          'session_id': ?sessionId,
+          'latitude': ?latitude,
+          'longitude': ?longitude,
         },
       );
     } on DioException {
@@ -192,7 +192,7 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
     try {
       final response = await dio.get(
         '${ApiEndpoints.baseUrl}${ApiEndpoints.adPlans}',
-        queryParameters: {if (regionCode != null) 'region_code': regionCode},
+        queryParameters: {'region_code': ?regionCode},
       );
       return PlansResponse.fromJson(response.data);
     } on DioException catch (e) {

@@ -67,12 +67,8 @@ class _SearchHomePageState extends State<SearchHomePage> {
           CameraPosition(
             zoom: 13.5,
             target: LatLng(
-              newLocation.latitude ??
-                  currentLocation?.latitude ??
-                  brasiliaLatLng.latitude,
-              newLocation.longitude ??
-                  currentLocation?.latitude ??
-                  brasiliaLatLng.latitude,
+              newLocation.latitude,
+              newLocation.longitude,
             ),
           ),
         ),

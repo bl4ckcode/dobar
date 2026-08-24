@@ -247,7 +247,7 @@ class NotificationService {
     );
 
     await _localNotifications?.initialize(
-      initSettings,
+      settings: initSettings,
       onDidReceiveNotificationResponse: (response) {
         // Handle local notification tap
         if (response.payload != null) {
@@ -327,11 +327,11 @@ class NotificationService {
     );
 
     await _localNotifications?.show(
-      notification.hashCode,
-      notification.title,
-      notification.body,
-      details,
+      id: notification.hashCode,
+      title: notification.title,
+      body: notification.body,
       payload: jsonEncode(notification.data),
+      notificationDetails: details,
     );
   }
 

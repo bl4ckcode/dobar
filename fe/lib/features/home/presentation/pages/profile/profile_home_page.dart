@@ -17,7 +17,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:barz/core/router/app_routes.dart';
 import 'package:intl/intl.dart';
 
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:barz/features/payments/presentation/widgets/pro_subscription_modal.dart';
 
@@ -472,7 +472,7 @@ class _ProfileHomePageState extends State<ProfileHomePage> {
                 ],
               ),
             ),
-            if (trailing != null) trailing,
+            ?trailing,
             if (trailing == null)
               const Icon(Icons.chevron_right, color: textTertiary),
           ],

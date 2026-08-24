@@ -17,8 +17,8 @@ class OrderNetworkDataSource {
     try {
       final queryParams = {
         'limit': limit,
-        if (cursor != null) 'cursor': cursor,
-        if (status != null) 'status': status,
+        'cursor': ?cursor,
+        'status': ?status,
       };
       final response = await dio.get(
         '${ApiEndpoints.baseUrl}${ApiEndpoints.myOrders}',

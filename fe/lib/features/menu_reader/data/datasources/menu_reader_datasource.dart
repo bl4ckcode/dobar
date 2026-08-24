@@ -35,7 +35,7 @@ class MenuReaderNetworkDatasource implements MenuReaderDatasource {
       final formData = FormData.fromMap({
         'image': MultipartFile.fromBytes(imageBytes, filename: fileName),
         'bar_id': barId,
-        if (languageHint != null) 'language_hint': languageHint,
+        'language_hint': ?languageHint,
       });
 
       final response = await dio.post(
@@ -66,7 +66,7 @@ class MenuReaderNetworkDatasource implements MenuReaderDatasource {
         data: {
           'menu_url': menuUrl,
           'bar_id': barId,
-          if (languageHint != null) 'language_hint': languageHint,
+          'language_hint': ?languageHint,
         },
         options: Options(
           sendTimeout: const Duration(seconds: 90),

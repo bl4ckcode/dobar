@@ -648,7 +648,8 @@ class FindConnectedViewState extends State<FindConnectedView>
       return;
     }
 
-    final availableMaps = await ml.MapLauncher.installedMaps;
+    const myMaps = [ml.MapApp.apple, ml.MapApp.google, ml.MapApp.waze];
+    final availableMaps = await ml.MapLauncher.marker(ml.Location.coords(bar.latitude!, bar.longitude!, title: bar.name)).getSupportedMaps(myMaps);
     if (availableMaps.isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -695,19 +696,15 @@ class FindConnectedViewState extends State<FindConnectedView>
             ...availableMaps.map(
               (map) => ListTile(
                 leading: Icon(
-                  _getMapIcon(map.mapType),
+                  _getMapIcon(map),
                   color: colors.labelSelected,
                 ),
                 title: Text(
-                  map.mapName,
+                  map.name,
                   style: TextStyle(color: colors.labelPrimary),
                 ),
                 onTap: () {
-                  map.showMarker(
-                    coords: ml.Coords(bar.latitude!, bar.longitude!),
-                    title: bar.name,
-                    description: bar.address,
-                  );
+                  map.show();
                 },
               ),
             ),
@@ -718,16 +715,16 @@ class FindConnectedViewState extends State<FindConnectedView>
     );
   }
 
-  IconData _getMapIcon(ml.MapType mapType) {
-    switch (mapType) {
-      case ml.MapType.waze:
+  IconData _getMapIcon(ml.SupportedMap mapType) {
+    switch (mapType.map) {
+      case ml.MapApp.waze:
         return Icons.navigation;
-      case ml.MapType.google:
-        return Icons.map;
-      case ml.MapType.apple:
-        return Icons.map_outlined;
+      case ml.MapApp.google:
+      return Icons.map;
+      case ml.MapApp.apple:
+      return Icons.map_outlined;
       default:
-        return Icons.directions;
+      return Icons.directions;
     }
   }
 

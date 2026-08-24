@@ -4,7 +4,7 @@ import 'package:barz/core/design/tokens/dobar_colors.dart';
 import 'package:barz/features/orders/domain/models/order_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 class OrderSummaryCard extends StatelessWidget {
   final OrderModel order;

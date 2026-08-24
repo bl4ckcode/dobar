@@ -148,16 +148,15 @@ class BarNetworkDataSource {
           'phone_number': phoneNumber,
           'email': email,
           'country_code': countryCode,
-          if (businessId != null) 'business_id': businessId,
-          if (businessIdType != null) 'business_id_type': businessIdType,
-          if (stateRegistration != null)
-            'state_registration': stateRegistration,
-          if (logoUrl != null) 'logo_url': logoUrl,
-          if (coverUrl != null) 'cover_url': coverUrl,
+          'business_id': ?businessId,
+          'business_id_type': ?businessIdType,
+          'state_registration': ?stateRegistration,
+          'logo_url': ?logoUrl,
+          'cover_url': ?coverUrl,
           if (photoUrls != null && photoUrls.isNotEmpty)
             'photo_urls': photoUrls,
-          if (operatingHours != null) 'operating_hours': operatingHours,
-          if (bankAccount != null) 'bank_account': bankAccount,
+          'operating_hours': ?operatingHours,
+          'bank_account': ?bankAccount,
         },
       );
       return BarModel.fromJson(response.data);
@@ -261,7 +260,7 @@ class BarNetworkDataSource {
     try {
       final response = await dio.post(
         '${ApiEndpoints.baseUrl}${ApiEndpoints.barStatusToggle(barId)}',
-        data: {'is_open': isOpen, if (reason != null) 'reason': reason},
+        data: {'is_open': isOpen, 'reason': ?reason},
       );
       return BarStatus.fromJson(response.data);
     } on DioException catch (e) {
@@ -315,8 +314,8 @@ class BarNetworkDataSource {
         data: {
           'name': name,
           'price': price,
-          if (description != null) 'description': description,
-          if (category != null) 'category': category,
+          'description': ?description,
+          'category': ?category,
         },
       );
     } on DioException catch (e) {

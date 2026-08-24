@@ -110,8 +110,8 @@ class AdTrackingService {
           'campaign_id': campaignId,
           'action': action.value,
           'placement': placement.value,
-          if (latitude != null) 'latitude': latitude,
-          if (longitude != null) 'longitude': longitude,
+          'latitude': ?latitude,
+          'longitude': ?longitude,
         },
       );
       debugPrint(

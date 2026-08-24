@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:ui';
 import 'dart:math' as math;
 import 'package:barz/core/design/design_system.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:barz/features/advertising/domain/models/models.dart';
 import 'package:barz/features/advertising/presentation/bloc/advertising_bloc.dart';
 import 'package:barz/features/advertising/presentation/bloc/advertising_event.dart';

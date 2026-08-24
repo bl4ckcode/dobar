@@ -14,7 +14,7 @@ import 'package:barz/features/payments/presentation/pages/checkout_page.dart';
 import 'package:barz/features/payments/presentation/widgets/pro_subscription_modal.dart';
 import 'package:barz/ui/business/widgets/pro_plan_sheet.dart';
 import 'package:barz/core/design/tokens/dobar_colors.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../primitives/barz_app_bar.dart';
 import '../primitives/barz_card.dart';
 import '../../core/utils/constant/styles.dart';
@@ -367,7 +367,7 @@ class _ProfileWireframeState extends State<ProfileWireframe> {
               ],
             ),
           ),
-          if (trailing != null) trailing,
+          ?trailing,
           if (trailing == null) Icon(Icons.chevron_right, color: textTertiary),
         ],
       ),

@@ -10,7 +10,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/core/design/tokens/dobar_colors.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:barz/features/bars/domain/models/bar_model.dart';
 import 'package:barz/features/location/presentation/bloc/location_cubit.dart';
 

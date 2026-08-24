@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lucide_icons/lucide_icons.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/ui/business/widgets/business_toolbars.dart';
 import 'package:barz/core/router/app_routes.dart';
