@@ -4,8 +4,7 @@ import 'package:barz/features/orders/domain/models/order_model.dart';
 class OrderLocalDataSource {
   final HiveStorageService _storage;
 
-  OrderLocalDataSource({required HiveStorageService storage})
-    : _storage = storage;
+  OrderLocalDataSource({required this._storage});
 
   Future<void> cacheOrder(OrderModel order) async {
     await _storage.cacheOrder(order.id, order.toJson());

@@ -24,8 +24,7 @@ class VersionMigrationService {
   late final SharedPreferences _prefs;
   bool _initialized = false;
 
-  VersionMigrationService({required TokenStorageService tokenStorage})
-    : _tokenStorage = tokenStorage;
+  VersionMigrationService({required this._tokenStorage});
 
   void _debugLog(String message) {
     if (kDebugMode) {

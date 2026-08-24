@@ -14,8 +14,8 @@ class LoginNetworkDataSource {
 
   LoginNetworkDataSource({
     required this.dio,
-    required FirebaseAuth firebaseAuth,
-  }) : _firebaseAuth = firebaseAuth;
+    required this._firebaseAuth,
+  });
 
   Future<ApiResponse<AuthResponse>> loginWithGoogle(LoginParams params) async {
     try {

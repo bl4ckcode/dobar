@@ -17,11 +17,9 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
   final LoginUsecase _loginUsecase;
 
   SessionBloc({
-    required SessionUsecase sessionUsecase,
-    required LoginUsecase loginUsecase,
-  }) : _sessionUsecase = sessionUsecase,
-       _loginUsecase = loginUsecase,
-       super(const SessionState.initial()) {
+    required this._sessionUsecase,
+    required this._loginUsecase,
+  }) : super(const SessionState.initial()) {
     on<InitializeSession>(_onInitialize);
     on<RefreshBarAccess>(_onRefreshBarAccess);
     on<SwitchActiveBar>(_onSwitchActiveBar);

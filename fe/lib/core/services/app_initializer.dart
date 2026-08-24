@@ -12,12 +12,10 @@ class AppInitializer {
   final Dio _dio;
 
   AppInitializer({
-    required VersionMigrationService versionMigrationService,
-    required NotificationNavigationHandler notificationNavigationHandler,
-    required Dio dio,
-  }) : _versionMigrationService = versionMigrationService,
-       _notificationNavigationHandler = notificationNavigationHandler,
-       _dio = dio;
+    required this._versionMigrationService,
+    required this._notificationNavigationHandler,
+    required this._dio,
+  });
 
   void _debugLog(String message) {
     if (kDebugMode) {

@@ -11,10 +11,9 @@ class SessionUsecase {
   final UserRepository _userRepository;
 
   SessionUsecase({
-    required SessionRepository sessionRepository,
-    required UserRepository userRepository,
-  }) : _sessionRepository = sessionRepository,
-       _userRepository = userRepository;
+    required this._sessionRepository,
+    required this._userRepository,
+  });
 
   /// Initialize a full user session with profile and bar access
   ///

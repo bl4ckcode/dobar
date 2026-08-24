@@ -14,11 +14,9 @@ class CheckinBloc extends Bloc<CheckinEvent, CheckinState> {
   static const String _activeCheckinKey = 'active_checkin';
 
   CheckinBloc({
-    required BarUsecase barUsecase,
-    required SharedPreferences prefs,
-  }) : _barUsecase = barUsecase,
-       _prefs = prefs,
-       super(const CheckinState()) {
+    required this._barUsecase,
+    required this._prefs,
+  }) : super(const CheckinState()) {
     on<LoadActiveCheckin>(_onLoadActiveCheckin);
     on<StartQrScan>(_onStartQrScan);
     on<QrCodeScanned>(_onQrCodeScanned);
