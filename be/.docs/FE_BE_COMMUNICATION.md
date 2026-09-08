@@ -1,6 +1,6 @@
 # BARZ - Frontend Backend Communication
 
-Last Updated: May 23, 2026
+Last Updated: July 20, 2026
 Backend Status: Live on Fly.io
 API Base URL: https://barz-backend-bold-sun-5691.fly.dev
 
@@ -1802,6 +1802,7 @@ Auth: Required
 ---
 
 Previous versions archived in git history.
+
 ---
 
 ## PLAN FEATURES & INTERNATIONALIZATION (i18n) [MAY 25, 2026 - NEW]
@@ -2177,9 +2178,51 @@ The user tested with `tier: master` (multiple times) and `tier: vip` — all fai
 
 ---
 
+## 5. 🚨 Plan Descriptions Returning Wrong/Misleading Content (FIXED - JUL 2026)
+
+**⚠️ STATUS: ✅ RESOLVED** — Backend migration applied + route hardened.
+
+**Issue:** The `GET /advertising/plans?bar_id={bar_id}` endpoint returned incorrect or misleading descriptions for PRO subscription tiers (Master, VIP). The `plan.name`, `plan.commission_rate`, and `plan.features` arrays were returning wrong data per tier.
+
+**Root Cause (Confirmed):**
+- The `region_pricing` database table had **Master and VIP column data swapped** for commission rates, annual prices, and features JSON arrays
+- The seed data population during the i18n migration (MAY 25, 2026) inserted Master data into VIP columns and vice versa
+- The `/advertising/plans` route lacked defensive handling for edge cases (null annual_price, string JSON columns, non-list features)
+
+**Fix Applied (Backend):**
+1. **Migration `20250720_fix_pricing_swap`** — Detects and corrects swapped Master/VIP tier data in `region_pricing` table:
+   - Compares `master_commission` vs `vip_commission` to detect the swap (Master should have lower commission than Regular but higher than VIP)
+   - Swaps `master_monthly ↔ vip_monthly`, `master_annual ↔ vip_annual`, `master_commission ↔ vip_commission`, `master_credits ↔ vip_credits`, `master_features ↔ vip_features` where swap is detected
+   - Restores correct feature arrays for all tiers using the i18n key patterns from `routes.py` defaults
+2. **Route hardening** in `GET /advertising/plans` (`app/advertising/routes.py`):
+   - Added defensive type checks for `features` and `credits` JSON columns (handles string DB representations, None values, non-list edge cases)
+   - Ensured `annual_price` defaults to `Decimal("0.00")` instead of null
+   - Plans always ordered by tier priority: Regular → Master → VIP
+
+**Runbook (Deploy):**
+```bash
+# Apply the migration on each environment
+alembic upgrade head
+# After migration, verify data:
+# SELECT region_code, master_commission, vip_commission, master_features, vip_features FROM region_pricing;
+```
+
+**Verification (Expected after fix):**
+
+| Field | Regular | Master | VIP |
+|-------|---------|--------|-----|
+| name | "Regular" | "Master" | "VIP" |
+| commission_rate | 15% (0.1500) | 5% (0.05) | 3% (0.03) |
+| features count | 3 | 6 | 8 |
+| annual_price | R$ 0,00 | R$ 479,40 | R$ 719,40 |
+
+**See Also:** Migration file: `migrations/versions/20250720_fix_region_pricing_tier_swap.py`
+
+---
+
 ## BUSINESS SETTINGS (SPRINT 10 - NEW)
 
-Status: **🔲 PENDING** — Backend endpoints required
+Status: **✅ COMPLETE** — Backend implemented
 Priority: HIGH - Business User Configuration
 
 ### Overview

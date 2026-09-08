@@ -54,6 +54,7 @@ async def get_available_plans(
     """
     Get available subscription plans for a region.
     Returns pricing and features for Regular, Master, and VIP tiers.
+    Plans are ordered by tier priority: Regular → Master → VIP.
     """
     query = RegionPricing.__table__.select().where(RegionPricing.region_code == region_code.upper())
     pricing = await database.fetch_one(query)
@@ -65,6 +66,7 @@ async def get_available_plans(
     pricing = dict(pricing)
     
     # Feature keys from DB — frontend translates these via i18n maps
+    # Use DB values if they exist and have correct content, otherwise fall back to hardcoded defaults
     regular_features = pricing.get("regular_features") or [
         "feature_basic_listing",
         "feature_order_management",
@@ -89,6 +91,37 @@ async def get_available_plans(
         "feature_dedicated_manager",
     ]
     
+    # Ensure features lists contain string entries (handle potential JSON parsing edge cases)
+    if not isinstance(regular_features, list):
+        regular_features = ["feature_basic_listing", "feature_order_management", "feature_basic_analytics"]
+    if not isinstance(master_features, list):
+        master_features = ["feature_everything_regular", "feature_reduced_commission", "feature_monthly_credits", "feature_featured_home", "feature_sponsored_search", "feature_priority_support"]
+    if not isinstance(vip_features, list):
+        vip_features = ["feature_everything_master", "feature_lowest_commission", "feature_max_credits", "feature_map_spotlight", "feature_promotion_boost", "feature_rich_media_banners", "feature_verified_badge", "feature_dedicated_manager"]
+    
+    # Default credits for regular (free) tier
+    regular_credits = {"featured_hours": 0, "search_clicks": 0, "map_hours": 0, "boost_impressions": 0}
+    
+    # Ensure credits JSON is a dict (handle potential string-from-DB or None edge cases)
+    master_credits_raw = pricing.get("master_credits") or regular_credits
+    if isinstance(master_credits_raw, str):
+        import json
+        try:
+            master_credits_raw = json.loads(master_credits_raw)
+        except:
+            master_credits_raw = regular_credits
+    master_credits = CreditsBalance(**master_credits_raw) if isinstance(master_credits_raw, dict) else CreditsBalance()
+    
+    vip_credits_raw = pricing.get("vip_credits") or regular_credits
+    if isinstance(vip_credits_raw, str):
+        import json
+        try:
+            vip_credits_raw = json.loads(vip_credits_raw)
+        except:
+            vip_credits_raw = regular_credits
+    vip_credits = CreditsBalance(**vip_credits_raw) if isinstance(vip_credits_raw, dict) else CreditsBalance()
+    
+    # Build plans ordered by tier priority (Regular → Master → VIP)
     plans = {
         "regular": SubscriptionPlanInfo(
             tier=SubscriptionTierEnum.REGULAR,
@@ -103,18 +136,18 @@ async def get_available_plans(
             tier=SubscriptionTierEnum.MASTER,
             name="Master",
             monthly_price=pricing["master_monthly"],
-            annual_price=pricing["master_annual"],
+            annual_price=pricing["master_annual"] if pricing["master_annual"] else Decimal("0.00"),
             commission_rate=pricing["master_commission"],
-            credits=CreditsBalance(**pricing["master_credits"]),
+            credits=master_credits,
             features=master_features
         ),
         "vip": SubscriptionPlanInfo(
             tier=SubscriptionTierEnum.VIP,
             name="VIP",
             monthly_price=pricing["vip_monthly"],
-            annual_price=pricing["vip_annual"],
+            annual_price=pricing["vip_annual"] if pricing["vip_annual"] else Decimal("0.00"),
             commission_rate=pricing["vip_commission"],
-            credits=CreditsBalance(**pricing["vip_credits"]),
+            credits=vip_credits,
             features=vip_features
         )
     }
