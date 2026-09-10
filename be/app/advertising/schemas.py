@@ -298,21 +298,6 @@ class CampaignListResponse(BaseModel):
 # EXTENDED CAMPAIGN SCHEMAS (DOB-82)
 # =============================================================================
 
-class PauseCampaignResponse(BaseModel):
-    """Response after pausing a campaign"""
-    message: str
-    paused_at: str
-    active_hours: float = 0
-    budget_spent: float = 0
-    budget_remaining: float = 0
-
-
-class ResumeCampaignResponse(BaseModel):
-    """Response after resuming a campaign"""
-    message: str
-    end_time: Optional[datetime] = None
-
-
 class CancelCampaignResponse(BaseModel):
     """Response after cancelling a campaign"""
     amount: float = 0

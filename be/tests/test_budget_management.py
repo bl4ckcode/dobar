@@ -19,11 +19,33 @@ from unittest.mock import AsyncMock, patch, MagicMock
 from app.advertising.schemas import (
     CampaignCreate, CampaignUpdate, CampaignGoalEnum,
     ExtendedTargeting, PlacementDistribution, EstimatedPerformance,
-    PauseCampaignResponse, ResumeCampaignResponse, CancelCampaignResponse
+    CancelCampaignResponse
 )
 from app.advertising.services.campaign_service import CampaignService
 from app.advertising.models import CampaignStatus
 from app.redis_client import CacheService
+
+
+def _make_campaign(**overrides) -> dict:
+    """Build a full campaign dict as returned by the DB row (get_campaign)."""
+    now = datetime.now(timezone.utc)
+    campaign = {
+        "id": 1, "bar_id": 16, "name": "Test Campaign",
+        "campaign_type": "featured", "status": "active",
+        "budget_type": "fixed",
+        "budget_amount": Decimal("100.00"), "budget_spent": Decimal("50.00"),
+        "budget_spent_per_placement": {},
+        "start_time": now - timedelta(hours=2),
+        "end_time": None, "paused_at": None, "campaign_goal": None,
+        "targeting": {"radius_km": 10, "days": ["mon"], "hours_start": 0, "hours_end": 24},
+        "creative": {"logo_url": None, "tagline": None},
+        "distribution": [], "is_smart_distribution": False,
+        "budget_optimizer_enabled": False, "estimated_performance": {},
+        "impressions": 100, "clicks": 10, "conversions": 1,
+        "created_at": now - timedelta(days=1), "updated_at": now - timedelta(days=1),
+    }
+    campaign.update(overrides)
+    return campaign
 
 
 # =============================================================================
@@ -35,45 +57,49 @@ class TestProRatedPauseResume:
     
     @pytest.mark.asyncio
     async def test_pause_stores_paused_at(self):
-        """Pausing a campaign should store paused_at timestamp"""
+        """Pausing a campaign should store paused_at and return a CampaignResponse-shaped dict"""
         now = datetime.now(timezone.utc)
-        
+        campaign = _make_campaign(
+            status="active",
+            budget_amount=Decimal("100.00"), budget_spent=Decimal("50.00"),
+            start_time=now - timedelta(hours=2)
+        )
+
         with patch("app.advertising.services.campaign_service.database") as mock_db:
-            mock_db.fetch_one = AsyncMock(return_value={
-                "id": 1, "bar_id": 16, "status": "active",
-                "budget_amount": "100.00", "budget_spent": "50.00",
-                "start_time": now - timedelta(hours=2)
-            })
+            mock_db.fetch_one = AsyncMock(return_value=campaign)
             mock_db.execute = AsyncMock()
-            
+
             result = await CampaignService.pause_campaign(1, 16)
-            
-            assert "paused_at" in result
-            assert result["message"] == "Campaign paused successfully"
-            assert result["budget_spent"] == 50.0
-            assert result["budget_remaining"] == 50.0
-    
+
+            assert result["status"] == "paused"
+            assert result["paused_at"] is not None
+            assert result["updated_at"] is not None
+            assert result["budget_spent"] == Decimal("50.00")
+            assert result["budget_amount"] == Decimal("100.00")
+
     @pytest.mark.asyncio
     async def test_resume_extends_end_time(self):
         """Resuming a paused campaign should extend end_time by pause duration"""
         now = datetime.now(timezone.utc)
         paused_at = now - timedelta(hours=2)
         original_end = now + timedelta(days=5)
-        
+        campaign = _make_campaign(
+            status="paused",
+            budget_amount=Decimal("100.00"), budget_spent=Decimal("30.00"),
+            paused_at=paused_at, end_time=original_end
+        )
+
         with patch("app.advertising.services.campaign_service.database") as mock_db:
-            mock_db.fetch_one = AsyncMock(return_value={
-                "id": 1, "bar_id": 16, "status": "paused",
-                "budget_amount": "100.00", "budget_spent": "30.00",
-                "paused_at": paused_at,
-                "end_time": original_end
-            })
+            mock_db.fetch_one = AsyncMock(return_value=campaign)
             mock_db.execute = AsyncMock()
-            
+
             result = await CampaignService.resume_campaign(1, 16)
-            
-            assert result["message"] == "Campaign resumed successfully"
+
+            assert result["status"] == "active"
+            assert result["paused_at"] is None
             # End time should be extended by ~2 hours
             assert result["end_time"] is not None
+            assert result["end_time"] > original_end
     
     @pytest.mark.asyncio
     async def test_cannot_pause_non_active_campaign(self):
@@ -104,33 +130,36 @@ class TestProRatedPauseResume:
         now = datetime.now(timezone.utc)
         start_time = now - timedelta(hours=4)
         end_time = now + timedelta(days=3)
-        
+
         with patch("app.advertising.services.campaign_service.database") as mock_db:
             # Initial campaign (active)
-            mock_db.fetch_one = AsyncMock(return_value={
-                "id": 1, "bar_id": 16, "status": "active",
-                "budget_amount": "500.00", "budget_spent": "100.00",
-                "start_time": start_time, "end_time": end_time
-            })
+            campaign = _make_campaign(
+                status="active",
+                budget_amount=Decimal("500.00"), budget_spent=Decimal("100.00"),
+                start_time=start_time, end_time=end_time
+            )
+            mock_db.fetch_one = AsyncMock(return_value=campaign)
             mock_db.execute = AsyncMock()
-            
+
             # Pause
             pause_result = await CampaignService.pause_campaign(1, 16)
-            assert pause_result["budget_spent"] == 100.0
-            assert pause_result["budget_remaining"] == 400.0
-            assert pause_result["active_hours"] > 0
-            
-            # Mock status change to paused
-            mock_db.fetch_one = AsyncMock(return_value={
-                "id": 1, "bar_id": 16, "status": "paused",
-                "budget_amount": "500.00", "budget_spent": "100.00",
-                "paused_at": now - timedelta(hours=1),
-                "end_time": end_time
-            })
-            
+            assert pause_result["status"] == "paused"
+            assert pause_result["paused_at"] is not None
+            assert pause_result["budget_spent"] == Decimal("100.00")
+
+            # Second fetch returns the paused campaign (status changed)
+            paused = _make_campaign(
+                status="paused",
+                budget_amount=Decimal("500.00"), budget_spent=Decimal("100.00"),
+                start_time=start_time, end_time=end_time,
+                paused_at=now - timedelta(hours=1)
+            )
+            mock_db.fetch_one = AsyncMock(return_value=paused)
+
             # Resume after 1 hour paused
             resume_result = await CampaignService.resume_campaign(1, 16)
-            assert resume_result["message"] == "Campaign resumed successfully"
+            assert resume_result["status"] == "active"
+            assert resume_result["paused_at"] is None
 
 
 # =============================================================================
@@ -349,30 +378,7 @@ class TestCancelAndRefund:
 
 class TestBudgetManagementSchemas:
     """Tests for budget management Pydantic schemas"""
-    
-    def test_pause_response_schema(self):
-        """PauseCampaignResponse should validate correctly"""
-        response = PauseCampaignResponse(
-            message="Campaign paused successfully",
-            paused_at="2026-07-12T16:00:00",
-            active_hours=2.5,
-            budget_spent=100.0,
-            budget_remaining=400.0
-        )
-        assert response.message == "Campaign paused successfully"
-        assert response.active_hours == 2.5
-        assert response.budget_remaining == 400.0
-    
-    def test_resume_response_schema(self):
-        """ResumeCampaignResponse should validate correctly"""
-        now = datetime.now(timezone.utc)
-        response = ResumeCampaignResponse(
-            message="Campaign resumed successfully",
-            end_time=now
-        )
-        assert response.message == "Campaign resumed successfully"
-        assert response.end_time is not None
-    
+
     def test_cancel_response_schema(self):
         """CancelCampaignResponse should validate correctly"""
         response = CancelCampaignResponse(

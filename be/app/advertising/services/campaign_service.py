@@ -454,19 +454,12 @@ class CampaignService:
         
         await database.execute(update_query)
         
-        # Calculate how long the campaign was active (for pro-ration reporting)
-        active_duration = None
-        start_time = existing["start_time"]
-        if start_time and start_time < now:
-            active_duration = (now - start_time).total_seconds() / 3600  # in hours
-        
-        return {
-            "message": "Campaign paused successfully",
-            "paused_at": now.isoformat(),
-            "active_hours": round(active_duration, 2) if active_duration else 0,
-            "budget_spent": float(existing["budget_spent"]),
-            "budget_remaining": float(Decimal(str(existing["budget_amount"])) - Decimal(str(existing["budget_spent"])))
-        }
+        # Reflect the pause in the returned campaign so clients get the same
+        # CampaignResponse shape as get_campaign / list_campaigns.
+        existing["status"] = CampaignStatus.PAUSED.value
+        existing["paused_at"] = now
+        existing["updated_at"] = now
+        return existing
     
     @staticmethod
     async def resume_campaign(campaign_id: int, bar_id: int) -> Dict[str, Any]:
@@ -514,10 +507,14 @@ class CampaignService:
         
         await database.execute(update_query)
         
-        return {
-            "message": "Campaign resumed successfully",
-            "end_time": update_values.get("end_time", existing.get("end_time"))
-        }
+        # Reflect the resume in the returned campaign so clients get the same
+        # CampaignResponse shape as get_campaign / list_campaigns.
+        existing["status"] = CampaignStatus.ACTIVE.value
+        existing["updated_at"] = now
+        if "end_time" in update_values:
+            existing["end_time"] = update_values["end_time"]
+        existing["paused_at"] = None
+        return existing
     
     @staticmethod
     async def cancel_campaign(campaign_id: int, bar_id: int) -> Dict[str, Any]:
