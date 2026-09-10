@@ -258,6 +258,83 @@ All middleware and protected routes now strictly implement the unified `AuthUser
 
 ---
 
+## BAR CONTEXT HEADERS (BUSINESS / STAFF UI GATING - NEW)
+
+Status: **✅ COMPLETE (Advertising + already-RBAC routes)**
+Priority: MEDIUM - Lets the front-end decide what to show/hide for the active bar
+
+### Overview
+
+Every bar-scoped **business** endpoint (used by bar owners and their staff) that is protected with
+`require_bar_role(...)` or `require_bar_permission(...)` now echoes three response headers on every
+successful call. The front-end reads these once per request to gate UI elements for the currently
+active bar — no extra API calls needed.
+
+The headers are **purely additive** and the response body is unchanged, so this is fully backward
+compatible.
+
+### Header contract
+
+| Header | Example | Meaning |
+|---|---|---|
+| `X-Bar-Id` | `42` | The bar the request operated on |
+| `X-Bar-Role` | `owner` | User's role at that bar: `owner`, `admin`, `manager`, `cashier`, `staff` |
+| `X-Bar-Permissions` | `ads:view,ads:manage,bar:view,...` | Comma-separated list of permission codes the user has at that bar |
+
+### 1. On login / workspace entry
+
+The front-end already fetches `GET /me/bars`, which returns each bar the user can access with its
+`role` and `permissions`. Use this to build the global feature-flag map per bar.
+
+### 2. On every bar-scoped business call
+
+For the currently selected bar, the response also carries `X-Bar-Id`, `X-Bar-Role` and
+`X-Bar-Permissions`. This lets the front-end switch a role or permission at runtime (e.g. if the
+tab is stale) without a full re-login.
+
+### FE implementation guide
+
+```dart
+final role = response.headers['x-bar-role'];          // 'owner', 'cashier', ...
+final perms = (response.headers['x-bar-permissions'] ?? '').split(',');
+final canManageAds = perms.contains('ads:manage');
+final canViewAds = perms.contains('ads:view');
+
+// Render contextual controls
+if (canManageAds)  showAdsManager();
+if (canViewAds)    showAdsDashboard();
+```
+
+### How to send `bar_id` on advertising routes
+
+The advertising endpoints (`/advertising/*`) currently resolve the bar from the `?bar_id=...` query
+parameter (kept for compatibility). They will also accept the `X-Bar-Id` request header as a
+fallback, so new clients can standardize on the header:
+
+```
+GET /advertising/campaigns
+X-Bar-Id: 42
+X-Bar-Permissions: ads:view
+```
+
+### Permission split (Advertising)
+
+Endpoints raised enforcement to the correct granularity:
+
+- **View (read-only):** `GET /plans` (public), `GET /my-plan`, `GET /credits`,
+  `GET /campaigns`, `GET /campaigns/{id}`, `GET /campaigns/summary`,
+  `GET /campaigns/analytics-summary`, `GET /analytics`, `GET /analytics/{campaign_id}`,
+  `GET /invoices` → require `ads:view`.
+- **Manage (write):** `POST /subscribe`, `POST /campaigns`, `PUT /campaigns/{id}`,
+  `POST /campaigns/{id}/publish`, `POST /campaigns/{id}/pause`,
+  `POST /campaigns/{id}/resume`, `DELETE /campaigns/{id}` → require `ads:manage`.
+
+Roles with these permissions today: **owner** and **admin** (manager and below are read-gated /
+denied). If a manager should see ad analytics but not manage them, grant the `ads:view` custom
+permission to that staff member.
+
+---
+
 
 ## LEGAL DOCUMENTS (NEW)
 

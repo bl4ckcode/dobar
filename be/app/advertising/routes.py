@@ -8,11 +8,9 @@ from datetime import datetime, timezone, date
 from decimal import Decimal
 from typing import Optional, List, Union
 from fastapi import APIRouter, Depends, Query, HTTPException, status, BackgroundTasks, Request
-from sqlalchemy import select, and_, func
-from sqlalchemy.orm import Session
 
-from app.database import database, get_db
-from app.auth.dependencies import get_current_user, get_optional_user
+from app.database import database
+from app.auth.dependencies import get_optional_user
 from app.auth.rbac_middleware import BarAuthContext, require_bar_permission
 from app.auth.rbac_models import Permission
 from app.errors import APIError
@@ -157,10 +155,10 @@ async def get_available_plans(
 
 @advertising_router.get("/my-plan", response_model=SubscriptionResponse)
 async def get_my_plan(
-    bar_id: int = Query(..., description="Bar ID to get subscription for"),
-    auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_MANAGE))
+    auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_VIEW))
 ):
     """Get current bar's subscription details."""
+    bar_id = auth.bar_id
     subscription = await SubscriptionService.get_subscription(bar_id)
     
     if not subscription:
@@ -182,10 +180,10 @@ async def get_my_plan(
 @advertising_router.post("/subscribe", response_model=Union[SubscriptionResponse, PixSubscriptionResponse])
 async def subscribe_to_plan(
     request: SubscribeRequest,
-    bar_id: int = Query(..., description="Bar ID to subscribe"),
     auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_MANAGE))
 ):
     """Subscribe to a plan or upgrade existing subscription."""
+    bar_id = auth.bar_id
     customer_info = request.customer_info.model_dump() if request.customer_info else None
     
     result = await SubscriptionService.subscribe(
@@ -213,10 +211,10 @@ async def subscribe_to_plan(
 
 @advertising_router.get("/credits", response_model=CreditsBalance)
 async def get_credits(
-    bar_id: int = Query(..., description="Bar ID"),
-    auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_MANAGE))
+    auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_VIEW))
 ):
     """Check remaining advertising credits."""
+    bar_id = auth.bar_id
     subscription = await SubscriptionService.get_subscription(bar_id)
     if not subscription:
         return CreditsBalance()
@@ -229,13 +227,13 @@ async def get_credits(
 
 @advertising_router.get("/campaigns", response_model=CampaignListResponse)
 async def list_campaigns(
-    bar_id: int = Query(..., description="Bar ID"),
     status: Optional[str] = Query(None, description="Filter by status: draft, active, paused, completed, all"),
     sort: Optional[str] = Query(None, description="Sort by: created_at, budget_amount, performance"),
     search: Optional[str] = Query(None, description="Search by campaign name"),
-    auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_MANAGE))
+    auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_VIEW))
 ):
     """List all advertising campaigns for the bar with optional filtering and sorting."""
+    bar_id = auth.bar_id
     campaigns = await CampaignService.list_campaigns(bar_id, status, sort, search)
     return CampaignListResponse(
         campaigns=[_campaign_to_response(c) for c in campaigns],
@@ -246,10 +244,10 @@ async def list_campaigns(
 @advertising_router.post("/campaigns", response_model=CampaignResponse, status_code=status.HTTP_201_CREATED)
 async def create_campaign(
     campaign: CampaignCreate,
-    bar_id: int = Query(..., description="Bar ID"),
     auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_MANAGE))
 ):
     """Create a new advertising campaign. For multi-placement campaigns, use campaign_goal and distribution."""
+    bar_id = auth.bar_id
     subscription = await SubscriptionService.get_subscription(bar_id)
     if not subscription:
         raise APIError.forbidden("No active subscription. Please subscribe first.")
@@ -275,27 +273,24 @@ async def create_campaign(
 
 @advertising_router.get("/campaigns/summary", response_model=dict)
 async def get_campaigns_summary(
-    bar_id: int = Query(..., description="Bar ID"),
-    auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_MANAGE))
+    auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_VIEW))
 ):
     """Get aggregated stats for all campaigns of a bar."""
-    return await CampaignService.get_campaigns_summary(bar_id)
+    return await CampaignService.get_campaigns_summary(auth.bar_id)
 
 
 @advertising_router.get("/campaigns/analytics-summary", response_model=CampaignsAnalyticsSummaryResponse)
 async def get_campaigns_analytics_summary(
-    bar_id: int = Query(..., description="Bar ID"),
-    auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_MANAGE))
+    auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_VIEW))
 ):
     """Get aggregated analytics summary for all campaigns of a bar (DOB-83)."""
-    return await CampaignService.get_campaigns_analytics_summary(bar_id)
+    return await CampaignService.get_campaigns_analytics_summary(auth.bar_id)
 
 
 @advertising_router.put("/campaigns/{campaign_id}", response_model=CampaignResponse)
 async def update_campaign(
     campaign_id: int,
     updates: CampaignUpdate,
-    bar_id: int = Query(..., description="Bar ID"),
     auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_MANAGE))
 ):
     """
@@ -303,6 +298,7 @@ async def update_campaign(
     Can update draft campaigns and republish them.
     Can reallocate budget distribution.
     """
+    bar_id = auth.bar_id
     # Validate distribution minimums if being updated
     if updates.distribution:
         await _validate_distribution_minimums(bar_id, updates.distribution)
@@ -316,7 +312,6 @@ async def update_campaign(
 @advertising_router.post("/campaigns/{campaign_id}/publish", response_model=CampaignPublishResponse)
 async def publish_campaign(
     campaign_id: int,
-    bar_id: int = Query(..., description="Bar ID"),
     auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_MANAGE))
 ):
     """
@@ -324,7 +319,7 @@ async def publish_campaign(
     Trigger budget reservation.
     Return estimated_performance.
     """
-    published = await CampaignService.publish_campaign(campaign_id, bar_id)
+    published = await CampaignService.publish_campaign(campaign_id, auth.bar_id)
     if not published:
         raise APIError.not_found("Campaign not found or cannot be published")
     return published
@@ -333,11 +328,10 @@ async def publish_campaign(
 @advertising_router.get("/campaigns/{campaign_id}", response_model=CampaignResponse)
 async def get_campaign(
     campaign_id: int,
-    bar_id: int = Query(..., description="Bar ID"),
-    auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_MANAGE))
+    auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_VIEW))
 ):
     """Get campaign details with performance metrics."""
-    campaign = await CampaignService.get_campaign(campaign_id, bar_id)
+    campaign = await CampaignService.get_campaign(campaign_id, auth.bar_id)
     if not campaign:
         raise APIError.not_found("Campaign not found")
     return _campaign_to_response(campaign)
@@ -346,54 +340,30 @@ async def get_campaign(
 @advertising_router.post("/campaigns/{campaign_id}/pause", response_model=CampaignResponse)
 async def pause_campaign(
     campaign_id: int,
-    bar_id: Optional[int] = Query(None, description="Bar ID"),
-    _auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_MANAGE))
+    auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_MANAGE))
 ):
     """Pause an active campaign with pro-ration tracking."""
-    if not bar_id:
-        query = select(AdvertisingCampaign.bar_id).where(AdvertisingCampaign.id == campaign_id)
-        result = await database.fetch_one(query)
-        if not result:
-            raise APIError.not_found("Campaign not found")
-        bar_id = result.bar_id
-        
-    campaign = await CampaignService.pause_campaign(campaign_id, bar_id)
+    campaign = await CampaignService.pause_campaign(campaign_id, auth.bar_id)
     return _campaign_to_response(campaign)
 
 
 @advertising_router.post("/campaigns/{campaign_id}/resume", response_model=CampaignResponse)
 async def resume_campaign(
     campaign_id: int,
-    bar_id: Optional[int] = Query(None, description="Bar ID"),
-    _auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_MANAGE))
+    auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_MANAGE))
 ):
     """Resume a paused campaign (auto-extends end_time)."""
-    if not bar_id:
-        query = select(AdvertisingCampaign.bar_id).where(AdvertisingCampaign.id == campaign_id)
-        result = await database.fetch_one(query)
-        if not result:
-            raise APIError.not_found("Campaign not found")
-        bar_id = result.bar_id
-        
-    campaign = await CampaignService.resume_campaign(campaign_id, bar_id)
+    campaign = await CampaignService.resume_campaign(campaign_id, auth.bar_id)
     return _campaign_to_response(campaign)
 
 
 @advertising_router.delete("/campaigns/{campaign_id}", response_model=CancelCampaignResponse)
 async def cancel_campaign(
     campaign_id: int,
-    bar_id: Optional[int] = Query(None, description="Bar ID"),
-    _auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_MANAGE))
+    auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_MANAGE))
 ):
     """Cancel campaign and refund unused budget/credits."""
-    if not bar_id:
-        query = select(AdvertisingCampaign.bar_id).where(AdvertisingCampaign.id == campaign_id)
-        result = await database.fetch_one(query)
-        if not result:
-            raise APIError.not_found("Campaign not found")
-        bar_id = result.bar_id
-        
-    refund = await CampaignService.cancel_campaign(campaign_id, bar_id)
+    refund = await CampaignService.cancel_campaign(campaign_id, auth.bar_id)
     return CancelCampaignResponse(**refund)
 
 
@@ -464,11 +434,10 @@ async def track_ad_event(
 async def get_analytics_dashboard(
     start_date: date = Query(..., description="Start date (YYYY-MM-DD)"),
     end_date: date = Query(..., description="End date (YYYY-MM-DD)"),
-    bar_id: int = Query(..., description="Bar ID"),
-    auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_MANAGE))
+    auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_VIEW))
 ):
     """Get aggregated analytics for all campaigns."""
-    return await CampaignService.get_dashboard_analytics(bar_id, start_date, end_date)
+    return await CampaignService.get_dashboard_analytics(auth.bar_id, start_date, end_date)
 
 
 from datetime import timedelta
@@ -476,19 +445,13 @@ from datetime import timedelta
 @advertising_router.get("/analytics/{campaign_id}", response_model=CampaignAnalytics)
 async def get_single_campaign_analytics(
     campaign_id: int,
-    bar_id: Optional[int] = Query(None, description="Bar ID"),
     start_date: Optional[date] = Query(None, description="Start date (YYYY-MM-DD)"),
     end_date: Optional[date] = Query(None, description="End date (YYYY-MM-DD)"),
-    auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_MANAGE))
+    auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_VIEW))
 ):
     """Get analytics for a specific campaign."""
-    if not bar_id:
-        query = select(AdvertisingCampaign.bar_id).where(AdvertisingCampaign.id == campaign_id)
-        result = await database.fetch_one(query)
-        if not result:
-            raise APIError.not_found("Campaign not found")
-        bar_id = result.bar_id
-        
+    bar_id = auth.bar_id
+
     s_date = start_date or (datetime.now(timezone.utc) - timedelta(days=30)).date()
     e_date = end_date or datetime.now(timezone.utc).date()
     
@@ -501,10 +464,10 @@ async def get_single_campaign_analytics(
 
 @advertising_router.get("/invoices", response_model=InvoiceListResponse)
 async def get_invoices(
-    bar_id: int = Query(..., description="Bar ID"),
-    auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_MANAGE))
+    auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_VIEW))
 ):
     """Get billing history for the bar."""
+    bar_id = auth.bar_id
     query = AdvertisingInvoice.__table__.select().where(
         AdvertisingInvoice.bar_id == bar_id
     ).order_by(AdvertisingInvoice.created_at.desc())
