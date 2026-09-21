@@ -28,6 +28,8 @@ jobs:
       
       - name: Setup Fly CLI
         uses: superfly/flyctl-actions/setup-flyctl@master
+        with:
+          version: latest
       
       - name: Deploy to Fly.io
         run: flyctl deploy --remote-only --build-secret GITHUB_TOKEN=${{ secrets.GH_PAT_WRITE_ACCESS }}
