@@ -124,7 +124,7 @@ def upgrade():
             UPDATE region_pricing 
             SET regular_features = :features 
             WHERE regular_features IS NULL 
-               OR regular_features = '[]'::jsonb
+               OR regular_features::jsonb = '[]'::jsonb
                OR jsonb_array_length(regular_features::jsonb) < 3
         """),
         {"features": json.dumps(expected_features["regular"])}
@@ -136,7 +136,7 @@ def upgrade():
             UPDATE region_pricing 
             SET master_features = :features 
             WHERE master_features IS NULL 
-               OR master_features = '[]'::jsonb
+               OR master_features::jsonb = '[]'::jsonb
                OR jsonb_array_length(master_features::jsonb) < 6
         """),
         {"features": json.dumps(expected_features["master"])}
@@ -148,7 +148,7 @@ def upgrade():
             UPDATE region_pricing 
             SET vip_features = :features 
             WHERE vip_features IS NULL 
-               OR vip_features = '[]'::jsonb
+               OR vip_features::jsonb = '[]'::jsonb
                OR jsonb_array_length(vip_features::jsonb) < 8
         """),
         {"features": json.dumps(expected_features["vip"])}
