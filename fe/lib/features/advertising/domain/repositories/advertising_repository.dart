@@ -100,6 +100,9 @@ abstract class AdvertisingRepository {
   /// Resume a campaign.
   Future<AdCampaign> resumeCampaign(int campaignId, int barId);
 
+  /// Delete a campaign.
+  Future<void> deleteCampaign(int campaignId, int barId);
+
   /// Get campaign analytics.
   Future<CampaignAnalytics> getCampaignAnalytics({
     required int campaignId,

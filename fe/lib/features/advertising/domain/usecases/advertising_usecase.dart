@@ -210,6 +210,11 @@ class AdvertisingUsecase {
     return _repository.resumeCampaign(campaignId, barId);
   }
 
+  /// Delete a campaign.
+  Future<void> deleteCampaign(int campaignId, int barId) {
+    return _repository.deleteCampaign(campaignId, barId);
+  }
+
   /// Get campaign analytics.
   Future<CampaignAnalytics> getCampaignAnalytics({
     required int campaignId,

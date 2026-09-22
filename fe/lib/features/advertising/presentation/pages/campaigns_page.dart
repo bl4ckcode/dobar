@@ -104,10 +104,8 @@ List<AdCampaign> _filterCampaigns(
       sorted.sort((a, b) => a.budgetAmount.compareTo(b.budgetAmount));
     case 'performance':
       sorted.sort((a, b) {
-        final ctrA =
-            a.impressions > 0 ? a.clicks / a.impressions : 0.0;
-        final ctrB =
-            b.impressions > 0 ? b.clicks / b.impressions : 0.0;
+        final ctrA = a.impressions > 0 ? a.clicks / a.impressions : 0.0;
+        final ctrB = b.impressions > 0 ? b.clicks / b.impressions : 0.0;
         return ctrB.compareTo(ctrA);
       });
     default:
@@ -223,188 +221,205 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
     return Scaffold(
       backgroundColor: dobar.background,
       body: SafeArea(
-        child: BlocBuilder<AdvertisingBloc, AdvertisingState>(
-          builder: (context, state) {
-            final isLoading = state.isLoadingCampaigns && state.campaigns.isEmpty;
-            final hasError = state.error != null && state.campaigns.isEmpty;
+        child: BlocListener<AdvertisingBloc, AdvertisingState>(
+          // Surface success/error feedback (e.g. after delete, pause, resume)
+          // as snackbars without replacing the list view.
+          listener: (context, state) {
+            final message = state.successMessage;
+            if (message != null) {
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(SnackBar(content: Text(message)));
+            }
+            final error = state.error;
+            if (error != null && state.campaigns.isNotEmpty) {
+              ScaffoldMessenger.of(context)
+                ..hideCurrentSnackBar()
+                ..showSnackBar(
+                  SnackBar(content: Text(error), backgroundColor: errorRed),
+                );
+            }
+          },
+          child: BlocBuilder<AdvertisingBloc, AdvertisingState>(
+            builder: (context, state) {
+              final isLoading =
+                  state.isLoadingCampaigns && state.campaigns.isEmpty;
+              final hasError = state.error != null && state.campaigns.isEmpty;
 
-            // Apply local filtering/sorting
-            final filteredCampaigns = _filterCampaigns(
-              state.campaigns,
-              state.filterStatus,
-              state.searchQuery,
-              state.sortBy,
-            );
-            final totals = _CampaignTotals.from(state.campaigns);
+              // Apply local filtering/sorting
+              final filteredCampaigns = _filterCampaigns(
+                state.campaigns,
+                state.filterStatus,
+                state.searchQuery,
+                state.sortBy,
+              );
+              final totals = _CampaignTotals.from(state.campaigns);
 
-            return Stack(
-              children: [
-                // Ambient glow (top gradient)
-                Positioned(
-                  top: 0,
-                  left: 0,
-                  right: 0,
-                  height: 420,
-                  child: IgnorePointer(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        gradient: RadialGradient(
-                          center: const Alignment(-0.8, -0.5),
-                          radius: 0.8,
-                          colors: [
-                            barzGold.withValues(alpha: 0.18),
-                            Colors.transparent,
-                          ],
+              return Stack(
+                children: [
+                  // Ambient glow (top gradient)
+                  Positioned(
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: 420,
+                    child: IgnorePointer(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: RadialGradient(
+                            center: const Alignment(-0.8, -0.5),
+                            radius: 0.8,
+                            colors: [
+                              barzGold.withValues(alpha: 0.18),
+                              Colors.transparent,
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
 
-                // Floating action button (New Campaign)
-                Positioned(
-                  right: 24,
-                  bottom: 32,
-                  child: _CreateCampaignFab(
-                    onPressed: () => _showCreateCampaignDialog(context),
+                  // Floating action button (New Campaign)
+                  Positioned(
+                    right: 24,
+                    bottom: 32,
+                    child: _CreateCampaignFab(
+                      onPressed: () => _showCreateCampaignDialog(context),
+                    ),
                   ),
-                ),
 
-                // Main scrollable content
-                if (isLoading)
-                  const Center(
-                    child: CircularProgressIndicator(color: barzGold),
-                  )
-                else if (hasError)
-                  _buildErrorState(state.error!)
-                else
-                  RefreshIndicator(
-                    onRefresh: () async => _loadCampaigns(),
-                    color: barzGold,
-                    backgroundColor: dobar.surface,
-                    child: CustomScrollView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      slivers: [
-                        // Main content padding
-                        const SliverPadding(
-                          padding: EdgeInsets.only(top: 32),
-                        ),
-
-                        // Header section
-                        SliverPadding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
+                  // Main scrollable content
+                  if (isLoading)
+                    const Center(
+                      child: CircularProgressIndicator(color: barzGold),
+                    )
+                  else if (hasError)
+                    _buildErrorState(state.error!)
+                  else
+                    RefreshIndicator(
+                      onRefresh: () async => _loadCampaigns(),
+                      color: barzGold,
+                      backgroundColor: dobar.surface,
+                      child: CustomScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        slivers: [
+                          // Main content padding
+                          const SliverPadding(
+                            padding: EdgeInsets.only(top: 32),
                           ),
-                          sliver: SliverToBoxAdapter(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                _buildHeader(context, dobar, state),
-                              ],
-                            ),
-                          ),
-                        ),
 
-                        // VIP Upsell Banner
-                        if (_showVipBanner)
+                          // Header section
                           SliverPadding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 24,
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
                             sliver: SliverToBoxAdapter(
-                              child: _buildVipBanner(context, dobar),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [_buildHeader(context, dobar, state)],
+                              ),
                             ),
-                          )
-                        else
-                          const SliverToBoxAdapter(
-                            child: SizedBox(height: 24),
                           ),
 
-                        // Filters & Actions bar
-                        SliverPadding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 24,
-                          ),
-                          sliver: SliverToBoxAdapter(
-                            child: _buildFiltersAndActions(context, state, dobar),
-                          ),
-                        ),
-
-                        const SliverToBoxAdapter(child: SizedBox(height: 24)),
-
-                        // Campaign List
-                        if (filteredCampaigns.isEmpty)
-                          SliverFillRemaining(
-                            hasScrollBody: false,
-                            child: _buildEmptyState(
-                              context,
-                              dobar,
-                              state.campaigns.isNotEmpty,
+                          // VIP Upsell Banner
+                          if (_showVipBanner)
+                            SliverPadding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 24,
+                              ),
+                              sliver: SliverToBoxAdapter(
+                                child: _buildVipBanner(context, dobar),
+                              ),
+                            )
+                          else
+                            const SliverToBoxAdapter(
+                              child: SizedBox(height: 24),
                             ),
-                          )
-                        else
+
+                          // Filters & Actions bar
                           SliverPadding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            sliver: SliverToBoxAdapter(
+                              child: _buildFiltersAndActions(
+                                context,
+                                state,
+                                dobar,
+                              ),
                             ),
-                            sliver: SliverList(
-                              delegate: SliverChildBuilderDelegate(
-                                (context, index) {
+                          ),
+
+                          const SliverToBoxAdapter(child: SizedBox(height: 24)),
+
+                          // Campaign List
+                          if (filteredCampaigns.isEmpty)
+                            SliverFillRemaining(
+                              hasScrollBody: false,
+                              child: _buildEmptyState(
+                                context,
+                                dobar,
+                                state.campaigns.isNotEmpty,
+                              ),
+                            )
+                          else
+                            SliverPadding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                              ),
+                              sliver: SliverList(
+                                delegate: SliverChildBuilderDelegate((
+                                  context,
+                                  index,
+                                ) {
                                   final campaign = filteredCampaigns[index];
                                   return Padding(
                                     padding: EdgeInsets.only(
-                                      bottom: index < filteredCampaigns.length - 1
+                                      bottom:
+                                          index < filteredCampaigns.length - 1
                                           ? 16
                                           : 0,
                                     ),
                                     child: CampaignCard(
                                       campaign: campaign,
-                                      onAnalytics: () =>
-                                          _showCampaignDetails(
+                                      onAnalytics: () => _showCampaignDetails(
                                         context,
                                         campaign,
                                       ),
-                                      onToggle: () =>
-                                          _toggleCampaign(campaign),
-                                      onDelete: () =>
-                                          _deleteCampaign(campaign),
+                                      onToggle: () => _toggleCampaign(campaign),
+                                      onDelete: () => _deleteCampaign(campaign),
                                       onDuplicate: () =>
                                           _duplicateCampaign(campaign),
                                     ),
                                   );
-                                },
-                                childCount: filteredCampaigns.length,
+                                }, childCount: filteredCampaigns.length),
                               ),
                             ),
-                          ),
 
-                        // Analytics Overview Section
-                        if (state.campaigns.isNotEmpty)
-                          SliverPadding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 24,
-                              vertical: 32,
-                            ),
-                            sliver: SliverToBoxAdapter(
-                              child: _buildAnalyticsOverview(
-                                context,
-                                dobar,
-                                totals,
+                          // Analytics Overview Section
+                          if (state.campaigns.isNotEmpty)
+                            SliverPadding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24,
+                                vertical: 32,
+                              ),
+                              sliver: SliverToBoxAdapter(
+                                child: _buildAnalyticsOverview(
+                                  context,
+                                  dobar,
+                                  totals,
+                                ),
                               ),
                             ),
-                          ),
 
-                        // Bottom padding
-                        const SliverToBoxAdapter(
-                          child: SizedBox(height: 120),
-                        ),
-                      ],
+                          // Bottom padding
+                          const SliverToBoxAdapter(
+                            child: SizedBox(height: 120),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-              ],
-            );
-          },
+                ],
+              );
+            },
+          ),
         ),
       ),
     );
@@ -489,14 +504,9 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: barzGold.withValues(alpha: 0.25),
-        ),
+        border: Border.all(color: barzGold.withValues(alpha: 0.25)),
         gradient: LinearGradient(
-          colors: [
-            barzGold.withValues(alpha: 0.06),
-            Colors.transparent,
-          ],
+          colors: [barzGold.withValues(alpha: 0.06), Colors.transparent],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -510,15 +520,9 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
             decoration: BoxDecoration(
               color: barzGold.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: barzGold.withValues(alpha: 0.3),
-              ),
+              border: Border.all(color: barzGold.withValues(alpha: 0.3)),
             ),
-            child: const Icon(
-              LucideIcons.crown,
-              size: 20,
-              color: barzGold,
-            ),
+            child: const Icon(LucideIcons.crown, size: 20, color: barzGold),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -536,10 +540,7 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
                 const SizedBox(height: 4),
                 Text(
                   'Créditos mensais, prioridade nos destaques e relatórios avançados.',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: dobar.labelSecondary,
-                  ),
+                  style: TextStyle(fontSize: 12, color: dobar.labelSecondary),
                 ),
               ],
             ),
@@ -557,10 +558,7 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
               }
             },
             child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 8,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               decoration: BoxDecoration(
                 color: barzGold,
                 borderRadius: BorderRadius.circular(8),
@@ -580,11 +578,7 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
             onTap: () => setState(() => _showVipBanner = false),
             child: Padding(
               padding: const EdgeInsets.all(4),
-              child: Icon(
-                LucideIcons.x,
-                size: 16,
-                color: dobar.labelSecondary,
-              ),
+              child: Icon(LucideIcons.x, size: 16, color: dobar.labelSecondary),
             ),
           ),
         ],
@@ -620,10 +614,7 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
                 child: TextField(
                   controller: _searchController,
                   onChanged: _onSearchChanged,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                  ),
+                  style: const TextStyle(color: Colors.white, fontSize: 14),
                   decoration: InputDecoration(
                     hintText: 'Buscar campanhas...',
                     hintStyle: TextStyle(
@@ -662,7 +653,11 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   gradient: const LinearGradient(
-                    colors: [Color(0xFFFFFFDF), Color(0xFFFFDE59), Color(0xFFFFC000)],
+                    colors: [
+                      Color(0xFFFFFFDF),
+                      Color(0xFFFFDE59),
+                      Color(0xFFFFC000),
+                    ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -713,9 +708,7 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
               return GestureDetector(
                 onTap: () {
                   bloc.add(
-                    SetFilter(
-                      status: option.id == 'all' ? null : option.id,
-                    ),
+                    SetFilter(status: option.id == 'all' ? null : option.id),
                   );
                 },
                 child: AnimatedContainer(
@@ -742,9 +735,7 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w500,
-                          color: isActive
-                              ? Colors.white
-                              : dobar.labelSecondary,
+                          color: isActive ? Colors.white : dobar.labelSecondary,
                         ),
                       ),
                       if (isActive)
@@ -859,7 +850,11 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(12),
                   gradient: const LinearGradient(
-                    colors: [Color(0xFFFFFFDF), Color(0xFFFFDE59), Color(0xFFFFC000)],
+                    colors: [
+                      Color(0xFFFFFFDF),
+                      Color(0xFFFFDE59),
+                      Color(0xFFFFC000),
+                    ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
@@ -925,9 +920,7 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
                 decoration: BoxDecoration(
                   color: barzGold.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(
-                    color: barzGold.withValues(alpha: 0.3),
-                  ),
+                  border: Border.all(color: barzGold.withValues(alpha: 0.3)),
                 ),
                 child: const Icon(
                   LucideIcons.barChart3,
@@ -949,10 +942,7 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
                   ),
                   Text(
                     'Últimos 30 dias, todas as campanhas',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: dobar.labelSecondary,
-                    ),
+                    style: TextStyle(fontSize: 12, color: dobar.labelSecondary),
                   ),
                 ],
               ),
@@ -1043,9 +1033,8 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
           TextButton(
             onPressed: () {
               Navigator.of(context).pop();
-              // For now just show success - actual delete endpoint TBD
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Campanha excluída')),
+              context.read<AdvertisingBloc>().add(
+                DeleteCampaign(campaignId: campaign.id, barId: campaign.barId),
               );
             },
             style: TextButton.styleFrom(foregroundColor: errorRed),
@@ -1057,9 +1046,9 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
   }
 
   void _duplicateCampaign(AdCampaign campaign) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Duplicando ${campaign.name}...')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('Duplicando ${campaign.name}...')));
     // TODO: Implement actual duplication via bloc when endpoint is ready
   }
 
@@ -1068,9 +1057,9 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
     final sessionState = context.read<SessionBloc>().state;
     if (sessionState is! SessionReady ||
         sessionState.session.activeBar == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.campaigns_select_bar_error)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.campaigns_select_bar_error)));
       return;
     }
 
@@ -1104,9 +1093,10 @@ class _AnimatedMegaphoneState extends State<_AnimatedMegaphone>
       vsync: this,
       duration: const Duration(seconds: 3),
     )..repeat(reverse: true);
-    _floatAnimation = Tween(begin: 0.0, end: -8.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
+    _floatAnimation = Tween(
+      begin: 0.0,
+      end: -8.0,
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
   }
 
   @override
@@ -1142,11 +1132,7 @@ class _AnimatedMegaphoneState extends State<_AnimatedMegaphone>
                 ),
               ],
             ),
-            child: const Icon(
-              LucideIcons.megaphone,
-              size: 48,
-              color: barzGold,
-            ),
+            child: const Icon(LucideIcons.megaphone, size: 48, color: barzGold),
           ),
         );
       },
@@ -1178,11 +1164,7 @@ class _BalanceChip extends StatelessWidget {
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: barzGold.withValues(alpha: 0.4)),
             ),
-            child: const Icon(
-              LucideIcons.wallet,
-              size: 16,
-              color: barzGold,
-            ),
+            child: const Icon(LucideIcons.wallet, size: 16, color: barzGold),
           ),
           const SizedBox(width: 12),
           Column(
@@ -1219,11 +1201,7 @@ class _BalanceChip extends StatelessWidget {
             child: const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  LucideIcons.plus,
-                  size: 12,
-                  color: barzGold,
-                ),
+                Icon(LucideIcons.plus, size: 12, color: barzGold),
                 SizedBox(width: 4),
                 Text(
                   'Adicionar',
@@ -1247,15 +1225,13 @@ class _SortDropdown extends StatelessWidget {
   final String currentSort;
   final ValueChanged<String> onChanged;
 
-  const _SortDropdown({
-    required this.currentSort,
-    required this.onChanged,
-  });
+  const _SortDropdown({required this.currentSort, required this.onChanged});
 
   @override
   Widget build(BuildContext context) {
-    final currentLabel =
-        _sortOptions.firstWhere((o) => o.id == currentSort).label;
+    final currentLabel = _sortOptions
+        .firstWhere((o) => o.id == currentSort)
+        .label;
 
     return PopupMenuButton<String>(
       offset: const Offset(0, 44),
@@ -1287,18 +1263,11 @@ class _SortDropdown extends StatelessWidget {
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(
-              LucideIcons.sparkles,
-              size: 16,
-              color: barzGold,
-            ),
+            const Icon(LucideIcons.sparkles, size: 16, color: barzGold),
             const SizedBox(width: 8),
             Text(
               currentLabel,
-              style: const TextStyle(
-                fontSize: 13,
-                color: Colors.white,
-              ),
+              style: const TextStyle(fontSize: 13, color: Colors.white),
             ),
             const SizedBox(width: 8),
             Icon(

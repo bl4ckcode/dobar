@@ -7,7 +7,10 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../bloc/advertising_bloc.dart';
 import '../bloc/advertising_event.dart';
 import '../bloc/advertising_state.dart';
+import '../utils/plan_feature_labels.dart';
 import '../../domain/models/ad_subscription.dart';
+
+import 'package:barz/l10n/app_localizations.dart';
 
 class SubscriptionPlansSheet extends StatefulWidget {
   final int barId;
@@ -304,6 +307,7 @@ class _PlanCard extends StatelessWidget {
     final isMaster = plan.tier == SubscriptionTier.master;
     final dobar = context.dobarColors;
     final isDark = context.isDark;
+    final l10n = AppLocalizations.of(context)!;
     final accentColor = isVip
         ? barzGold
         : (isMaster ? dobar.labelPrimary : dobar.labelSecondary);
@@ -406,7 +410,9 @@ class _PlanCard extends StatelessWidget {
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  feature,
+                                  // Backend sends opaque keys such as
+                                  // `feature_basic_listing`; never render them raw.
+                                  l10n.planFeatureLabel(feature),
                                   style: TextStyle(
                                     color: textColor,
                                     fontSize: 13,
@@ -416,6 +422,15 @@ class _PlanCard extends StatelessWidget {
                             ],
                           ),
                         ),
+                      ),
+
+                      // Entitlement highlights (commission + bundled credits)
+                      _PlanHighlights(
+                        plan: plan,
+                        accentColor: accentColor,
+                        textColor: textColor,
+                        borderColor: borderColor,
+                        l10n: l10n,
                       ),
                     ],
                   ),
@@ -483,6 +498,83 @@ class _PlanCard extends StatelessWidget {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Compact, benefit-first summary of what a tier actually gives the business:
+/// the commission rate the owner keeps, and the advertising credits included.
+///
+/// Everything here comes straight from `GET /advertising/plans`, so tiers with
+/// no commission and no credits (e.g. Regular) render nothing at all.
+class _PlanHighlights extends StatelessWidget {
+  final SubscriptionPlan plan;
+  final Color accentColor;
+  final Color textColor;
+  final Color borderColor;
+  final AppLocalizations l10n;
+
+  const _PlanHighlights({
+    required this.plan,
+    required this.accentColor,
+    required this.textColor,
+    required this.borderColor,
+    required this.l10n,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final credits = plan.credits;
+
+    final lines = <String>[
+      if (plan.commissionRate > 0)
+        l10n.plan_commission_rate(plan.commissionPercentLabel),
+      if (credits.hasAny)
+        l10n.plan_credits_summary(
+          credits.featuredHours,
+          credits.searchClicks,
+          credits.mapHours,
+          credits.boostImpressions,
+        ),
+    ];
+
+    if (lines.isEmpty) return const SizedBox.shrink();
+
+    return Container(
+      margin: const EdgeInsets.only(top: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: accentColor.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (var i = 0; i < lines.length; i++)
+            Padding(
+              padding: EdgeInsets.only(bottom: i == lines.length - 1 ? 0 : 6),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(LucideIcons.zap, size: 12, color: accentColor),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      lines[i],
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        height: 1.35,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );

@@ -71,6 +71,7 @@ abstract class AdvertisingDatasource {
   Future<AdCampaign> createCampaign(CreateCampaignRequest request);
   Future<AdCampaign> pauseCampaign(int campaignId, int barId);
   Future<AdCampaign> resumeCampaign(int campaignId, int barId);
+  Future<void> deleteCampaign(int campaignId, int barId);
   Future<CampaignAnalytics> getCampaignAnalytics({
     required int campaignId,
     required int barId,
@@ -258,6 +259,14 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
 
       return AdSubscription.fromJson(response.data);
     } on DioException catch (e) {
+      // On web a blocked/refused request surfaces as Dio's generic
+      // "The XMLHttpRequest onError callback was called" text, which
+      // misleadingly points at CORS. Surface something actionable instead.
+      if (e.type == DioExceptionType.connectionError) {
+        throw NetworkException.connectionError(
+          'Could not reach the server. Check your connection and try again.',
+        );
+      }
       throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
     }
   }
@@ -398,16 +407,30 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
 
   @override
   Future<AdCampaign> createCampaign(CreateCampaignRequest request) async {
+    // `bar_id` is sent as a query parameter (per the documented contract) and
+    // also kept in the body for compatibility with backends that still read it
+    // from the payload.
+    //
+    // Budget and date keys are sent in BOTH spellings because the published
+    // contract (`budget`, `start_time`, `end_time`) and the campaign response
+    // model (`budget_amount`) disagree. FastAPI ignores unknown fields, so the
+    // duplicate keys are harmless. Remove the duplicates once the backend
+    // confirms the canonical payload — see docs/FE_BE_COMMUNICATION.md.
     try {
       final response = await dio.post(
         '${ApiEndpoints.baseUrl}${ApiEndpoints.campaigns}',
+        queryParameters: {'bar_id': request.barId},
         data: {
           'bar_id': request.barId,
           'name': request.name,
-          'campaign_type': request.campaignType.name,
+          'campaign_type': request.campaignType.wireName,
           'budget_type': request.budgetType.name,
+          'budget': request.budgetAmount,
           'budget_amount': request.budgetAmount,
+          'start_time': request.startDate.toIso8601String(),
           'start_date': request.startDate.toIso8601String(),
+          if (request.endDate != null)
+            'end_time': request.endDate!.toIso8601String(),
           if (request.endDate != null)
             'end_date': request.endDate!.toIso8601String(),
           if (request.targeting != null)
@@ -416,14 +439,31 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
                 'radius_km': request.targeting!.radiusKm,
               if (request.targeting!.targetAudience != null)
                 'target_audience': request.targeting!.targetAudience,
+              if (request.targeting!.ageMin != null)
+                'age_min': request.targeting!.ageMin,
+              if (request.targeting!.ageMax != null)
+                'age_max': request.targeting!.ageMax,
+              if (request.targeting!.peakHoursOnly != null)
+                'peak_hours_only': request.targeting!.peakHoursOnly,
+              if (request.targeting!.budgetOptimizerEnabled != null)
+                'budget_optimizer_enabled':
+                    request.targeting!.budgetOptimizerEnabled,
             },
           if (request.creative != null)
             'creative': {
+              if (request.creative!.title != null)
+                'title': request.creative!.title,
               if (request.creative!.tagline != null)
                 'tagline': request.creative!.tagline,
+              if (request.creative!.cta != null) 'cta': request.creative!.cta,
+              if (request.creative!.promoteHappyHour != null)
+                'promote_happy_hour': request.creative!.promoteHappyHour,
               if (request.creative!.imageUrl != null)
                 'image_url': request.creative!.imageUrl,
             },
+          if (request.placementDistribution != null &&
+              request.placementDistribution!.isNotEmpty)
+            'placement_distribution': request.placementDistribution,
         },
       );
       return AdCampaign.fromJson(response.data);
@@ -457,6 +497,20 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
         }
       );
       return AdCampaign.fromJson(response.data);
+    } on DioException catch (e) {
+      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
+    }
+  }
+
+  @override
+  Future<void> deleteCampaign(int campaignId, int barId) async {
+    try {
+      await dio.delete(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.campaign(campaignId)}',
+        queryParameters: {
+          'bar_id': barId,
+        },
+      );
     } on DioException catch (e) {
       throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
     }

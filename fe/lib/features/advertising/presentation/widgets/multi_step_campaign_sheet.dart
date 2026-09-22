@@ -1,12 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:barz/core/design/design_system.dart';
-import 'package:barz/features/advertising/domain/models/campaign_creation_models.dart';
 import 'package:barz/features/advertising/domain/models/models.dart';
 import 'package:barz/features/advertising/presentation/bloc/advertising_bloc.dart';
+import 'package:barz/features/advertising/presentation/bloc/advertising_event.dart';
+import 'package:barz/features/advertising/presentation/bloc/advertising_state.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
 import 'campaign_step_indicator.dart';
@@ -49,6 +52,10 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
   int _currentStep = 0;
   bool _isLaunching = false;
 
+  /// Watches campaign-creation outcomes so the success dialog is only shown
+  /// once the backend has actually answered.
+  StreamSubscription<AdvertisingState>? _advertisingSubscription;
+
   // Step 1: Goal
   CampaignGoal _selectedGoal = CampaignGoal.footTraffic;
   final _nameController = TextEditingController();
@@ -84,6 +91,10 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
     _slideController.value = 1.0;
     _initBarName();
     _applySmartDistribution();
+    _advertisingSubscription = context
+        .read<AdvertisingBloc>()
+        .stream
+        .listen(_onAdvertisingStateChanged);
   }
 
   void _initBarName() {
@@ -121,6 +132,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
 
   @override
   void dispose() {
+    _advertisingSubscription?.cancel();
     _pageController.dispose();
     _slideController.dispose();
     _nameController.dispose();
@@ -293,15 +305,124 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
     });
   }
 
+  /// Dispatches a real `POST /advertising/campaigns` request.
+  ///
+  /// The celebration dialog is only shown once the backend has answered —
+  /// see [_onAdvertisingStateChanged].
   void _launchCampaign() {
     if (!_validateCurrentStep()) return;
-    setState(() => _isLaunching = true);
 
-    Future.delayed(const Duration(milliseconds: 1500), () {
-      if (!mounted) return;
-      setState(() => _isLaunching = false);
-      _showLaunchSuccess();
-    });
+    final barId = _activeBarId;
+    if (barId == null) {
+      _showLaunchError(
+        'Selecione um estabelecimento antes de lançar a campanha.',
+      );
+      return;
+    }
+
+    setState(() => _isLaunching = true);
+    context.read<AdvertisingBloc>().add(
+      AdvertisingEvent.createCampaign(request: _buildCampaignRequest(barId)),
+    );
+  }
+
+  int? get _activeBarId {
+    final sessionState = context.read<SessionBloc>().state;
+    if (sessionState is SessionReady) {
+      return sessionState.session.activeBar?.barId;
+    }
+    return null;
+  }
+
+  /// Resolves the in-flight create-campaign request.
+  void _onAdvertisingStateChanged(AdvertisingState state) {
+    if (!mounted || !_isLaunching || state.isLoadingCampaign) return;
+
+    setState(() => _isLaunching = false);
+
+    final error = state.error;
+    if (error != null) {
+      _showLaunchError(error);
+      return;
+    }
+
+    _showLaunchSuccess();
+  }
+
+  void _showLaunchError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(content: Text(message), backgroundColor: errorRed),
+      );
+  }
+
+  /// Maps the wizard state onto the backend create-campaign contract.
+  ///
+  /// The API accepts a single `campaign_type`, so the placement carrying the
+  /// largest share of the budget drives it while the full split travels
+  /// alongside it in `placement_distribution`.
+  CreateCampaignRequest _buildCampaignRequest(int barId) {
+    final placements = _distribution.isNotEmpty
+        ? _distribution
+        : _selectedGoal.smartRecommendations(_totalBudget);
+    final primary = placements.reduce(
+      (a, b) => b.percentage > a.percentage ? b : a,
+    );
+    final name = _nameController.text.trim();
+    final tagline = _taglineController.text.trim();
+
+    return CreateCampaignRequest(
+      barId: barId,
+      name: name,
+      campaignType: _campaignTypeFor(primary.placement),
+      budgetType: BudgetType.cash,
+      budgetAmount: _totalBudget,
+      startDate: _startDate,
+      endDate: _endDate,
+      targeting: CampaignTargeting(
+        radiusKm: _radiusKm,
+        ageMin: _ageMin.round(),
+        ageMax: _ageMax.round(),
+        peakHoursOnly: _peakHoursOnly,
+        budgetOptimizerEnabled: _budgetOptimizerEnabled,
+      ),
+      creative: CampaignCreative(
+        title: name,
+        tagline: tagline.isEmpty ? null : tagline,
+        cta: _selectedCta,
+        promoteHappyHour: _promoteHappyHour,
+      ),
+      placementDistribution: {
+        for (final distribution in placements)
+          _placementWireName(distribution.placement): distribution.percentage,
+      },
+    );
+  }
+
+  static CampaignType _campaignTypeFor(CampaignPlacement placement) {
+    return switch (placement) {
+      CampaignPlacement.featured => CampaignType.featured,
+      CampaignPlacement.search => CampaignType.search,
+      CampaignPlacement.mapPin => CampaignType.map,
+      CampaignPlacement.promo => CampaignType.promoBoost,
+      CampaignPlacement.banner => CampaignType.banner,
+    };
+  }
+
+  /// Backend wire name for a placement (`/advertising/campaigns`).
+  ///
+  /// `CampaignPlacement.name` is not usable directly: the API expects `map`
+  /// and `promo_boost` rather than `mapPin` and `promo`.
+  static String _placementWireName(CampaignPlacement placement) {
+    return switch (placement) {
+      CampaignPlacement.featured => 'featured',
+      CampaignPlacement.search => 'search',
+      CampaignPlacement.mapPin => 'map',
+      CampaignPlacement.promo => 'promo_boost',
+      CampaignPlacement.banner => 'banner',
+    };
   }
 
   void _showLaunchSuccess() {
@@ -339,14 +460,19 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
     );
   }
 
+  /// There is no draft endpoint in the backend contract yet, so a draft is kept
+  /// in the open wizard rather than persisted — we deliberately do not close it,
+  /// otherwise the user's work would be lost. Server-side drafts are tracked in
+  /// `docs/FE_BE_COMMUNICATION.md`.
   void _saveDraft() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Campanha salva como rascunho!'),
+        content: Text(
+          'Rascunho mantido nesta tela. Salvar no servidor ainda não está disponível.',
+        ),
         backgroundColor: pixGreen,
       ),
     );
-    Navigator.of(context).pop();
   }
 
   String get _stepHeaderTitle {

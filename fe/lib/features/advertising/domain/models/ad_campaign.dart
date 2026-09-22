@@ -17,6 +17,14 @@ double? _doubleOrNullFromJson(dynamic value) {
   return null;
 }
 
+int? _intOrNullFromJson(dynamic value) {
+  if (value == null) return null;
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value);
+  return null;
+}
+
 /// Campaign type enum
 enum CampaignType {
   featured,
@@ -30,6 +38,20 @@ enum CampaignType {
 /// Campaign status enum
 enum CampaignStatus { pending, active, paused, completed, cancelled }
 
+/// Backend wire name for a campaign type.
+///
+/// `CampaignType.name` cannot be used directly: it would send `promoBoost`
+/// where the API expects `promo_boost`.
+extension CampaignTypeWire on CampaignType {
+  String get wireName => switch (this) {
+    CampaignType.featured => 'featured',
+    CampaignType.search => 'search',
+    CampaignType.map => 'map',
+    CampaignType.promoBoost => 'promo_boost',
+    CampaignType.banner => 'banner',
+  };
+}
+
 /// Budget type enum
 enum BudgetType { credits, cash, mixed }
 
@@ -40,6 +62,10 @@ abstract class CampaignTargeting with _$CampaignTargeting {
     @JsonKey(name: 'radius_km', fromJson: _doubleOrNullFromJson)
     double? radiusKm,
     @JsonKey(name: 'target_audience') List<String>? targetAudience,
+    @JsonKey(name: 'age_min', fromJson: _intOrNullFromJson) int? ageMin,
+    @JsonKey(name: 'age_max', fromJson: _intOrNullFromJson) int? ageMax,
+    @JsonKey(name: 'peak_hours_only') bool? peakHoursOnly,
+    @JsonKey(name: 'budget_optimizer_enabled') bool? budgetOptimizerEnabled,
   }) = _CampaignTargeting;
 
   factory CampaignTargeting.fromJson(Map<String, dynamic> json) =>
@@ -50,7 +76,10 @@ abstract class CampaignTargeting with _$CampaignTargeting {
 @freezed
 abstract class CampaignCreative with _$CampaignCreative {
   const factory CampaignCreative({
+    String? title,
     String? tagline,
+    String? cta,
+    @JsonKey(name: 'promote_happy_hour') bool? promoteHappyHour,
     @JsonKey(name: 'image_url') String? imageUrl,
   }) = _CampaignCreative;
 
@@ -105,6 +134,9 @@ abstract class CreateCampaignRequest with _$CreateCampaignRequest {
     @JsonKey(name: 'end_time') DateTime? endDate,
     CampaignTargeting? targeting,
     CampaignCreative? creative,
+    /// Share of the budget assigned to each `CampaignPlacement`, keyed by the
+    /// backend placement name (e.g. `{"featured": 40.0, "search": 60.0}`).
+    @JsonKey(name: 'placement_distribution') Map<String, double>? placementDistribution,
   }) = _CreateCampaignRequest;
 
   factory CreateCampaignRequest.fromJson(Map<String, dynamic> json) =>

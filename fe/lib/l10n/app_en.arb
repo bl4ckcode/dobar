@@ -790,22 +790,101 @@
   },
   "business_campaign_card_desc": "Create a campaign and reach more customers in your area!",
 
-  "feature_basic_listing": "Basic listing in app",
-  "feature_order_management": "Order management",
-  "feature_basic_analytics": "Basic analytics",
+  "feature_basic_listing": "Your bar listed in the Barz app",
+  "@feature_basic_listing": {
+    "description": "Plan feature: bar appears in the app listing. Key returned by GET /advertising/plans."
+  },
+  "feature_order_management": "Live order management for your team",
+  "@feature_order_management": {
+    "description": "Plan feature: order management. Key returned by GET /advertising/plans."
+  },
+  "feature_basic_analytics": "Basic campaign analytics",
+  "@feature_basic_analytics": {
+    "description": "Plan feature: basic analytics. Key returned by GET /advertising/plans."
+  },
   "feature_everything_regular": "Everything in Regular",
-  "feature_reduced_commission": "Reduced commission rate",
-  "feature_monthly_credits": "Monthly advertising credits",
-  "feature_featured_home": "Featured Home placement",
-  "feature_sponsored_search": "Sponsored Search",
-  "feature_priority_support": "Priority support",
+  "@feature_everything_regular": {
+    "description": "Plan feature: inherits the Regular tier. Key returned by GET /advertising/plans."
+  },
+  "feature_reduced_commission": "Reduced commission on every order",
+  "@feature_reduced_commission": {
+    "description": "Plan feature: lower commission. Key returned by GET /advertising/plans."
+  },
+  "feature_monthly_credits": "Monthly advertising credits included",
+  "@feature_monthly_credits": {
+    "description": "Plan feature: recurring monthly credits. Key returned by GET /advertising/plans."
+  },
+  "feature_featured_home": "Featured placement on the home screen",
+  "@feature_featured_home": {
+    "description": "Plan feature: home screen placement. Key returned by GET /advertising/plans."
+  },
+  "feature_sponsored_search": "Sponsored result in search",
+  "@feature_sponsored_search": {
+    "description": "Plan feature: sponsored search placement. Key returned by GET /advertising/plans."
+  },
+  "feature_priority_support": "Priority customer support",
+  "@feature_priority_support": {
+    "description": "Plan feature: priority support. Key returned by GET /advertising/plans."
+  },
   "feature_everything_master": "Everything in Master",
-  "feature_lowest_commission": "Lowest commission rate",
-  "feature_max_credits": "Maximum advertising credits",
-  "feature_map_spotlight": "Map Spotlight",
-  "feature_promotion_boost": "Promotion Boost",
-  "feature_rich_media_banners": "Rich Media Banners",
+  "@feature_everything_master": {
+    "description": "Plan feature: inherits the Master tier. Key returned by GET /advertising/plans."
+  },
+  "feature_lowest_commission": "Lowest commission rate on the platform",
+  "@feature_lowest_commission": {
+    "description": "Plan feature: lowest commission. Key returned by GET /advertising/plans."
+  },
+  "feature_max_credits": "Maximum monthly advertising credits",
+  "@feature_max_credits": {
+    "description": "Plan feature: maximum credits. Key returned by GET /advertising/plans."
+  },
+  "feature_map_spotlight": "Spotlight pin on the map",
+  "@feature_map_spotlight": {
+    "description": "Plan feature: map spotlight. Key returned by GET /advertising/plans."
+  },
+  "feature_promotion_boost": "Automatic boost for your promotions",
+  "@feature_promotion_boost": {
+    "description": "Plan feature: promotion boost. Key returned by GET /advertising/plans."
+  },
+  "feature_rich_media_banners": "Rich media banners with images",
+  "@feature_rich_media_banners": {
+    "description": "Plan feature: rich media banners. Key returned by GET /advertising/plans."
+  },
+  "feature_verified_badge": "Verified badge on your profile",
+  "@feature_verified_badge": {
+    "description": "Plan feature: verified badge. Key returned by GET /advertising/plans."
+  },
   "feature_dedicated_manager": "Dedicated account manager",
+  "@feature_dedicated_manager": {
+    "description": "Plan feature: dedicated account manager. Key returned by GET /advertising/plans."
+  },
+  "plan_commission_rate": "{rate}% commission on orders",
+  "@plan_commission_rate": {
+    "description": "Commission rate shown on a subscription plan card. `rate` is a pre-formatted percentage number.",
+    "placeholders": {
+      "rate": {
+        "type": "String"
+      }
+    }
+  },
+  "plan_credits_summary": "{featuredHours}h featured · {searchClicks} search clicks · {mapHours}h map · {boostImpressions} boost impressions",
+  "@plan_credits_summary": {
+    "description": "Included advertising credits summary shown on a subscription plan card.",
+    "placeholders": {
+      "featuredHours": {
+        "type": "int"
+      },
+      "searchClicks": {
+        "type": "int"
+      },
+      "mapHours": {
+        "type": "int"
+      },
+      "boostImpressions": {
+        "type": "int"
+      }
+    }
+  },
   "business_status_completed": "Completed",
   "business_status_live": "LIVE",
   "menu_reader_title": "Menu Reader AI",

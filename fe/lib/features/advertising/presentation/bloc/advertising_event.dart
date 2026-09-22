@@ -106,6 +106,12 @@ sealed class AdvertisingEvent with _$AdvertisingEvent {
   const factory AdvertisingEvent.resumeCampaign({required int campaignId, required int barId}) =
       ResumeCampaign;
 
+  /// Delete a campaign.
+  const factory AdvertisingEvent.deleteCampaign({
+    required int campaignId,
+    required int barId,
+  }) = DeleteCampaign;
+
   /// Load campaign analytics.
   const factory AdvertisingEvent.loadAnalytics({
     required int campaignId,

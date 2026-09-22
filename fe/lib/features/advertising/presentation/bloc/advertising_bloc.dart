@@ -29,6 +29,7 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
     on<CreateCampaignEvent>(_onCreateCampaign);
     on<PauseCampaign>(_onPauseCampaign);
     on<ResumeCampaign>(_onResumeCampaign);
+    on<DeleteCampaign>(_onDeleteCampaign);
     on<LoadAnalytics>(_onLoadAnalytics);
 
     // UI events
@@ -339,6 +340,30 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
           selectedCampaign: campaign,
           isLoadingCampaign: false,
           successMessage: 'Campaign resumed',
+        ),
+      );
+    } catch (e) {
+      emit(state.copyWith(isLoadingCampaign: false, error: e.toString()));
+    }
+  }
+
+  Future<void> _onDeleteCampaign(
+    DeleteCampaign event,
+    Emitter<AdvertisingState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingCampaign: true, error: null));
+    try {
+      await _usecase.deleteCampaign(event.campaignId, event.barId);
+      final updatedCampaigns =
+          state.campaigns.where((c) => c.id != event.campaignId).toList();
+      emit(
+        state.copyWith(
+          campaigns: updatedCampaigns,
+          selectedCampaign: state.selectedCampaign?.id == event.campaignId
+              ? null
+              : state.selectedCampaign,
+          isLoadingCampaign: false,
+          successMessage: 'Campaign deleted',
         ),
       );
     } catch (e) {

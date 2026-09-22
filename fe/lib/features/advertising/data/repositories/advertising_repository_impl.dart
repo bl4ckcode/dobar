@@ -182,6 +182,11 @@ class AdvertisingRepositoryImpl implements AdvertisingRepository {
   }
 
   @override
+  Future<void> deleteCampaign(int campaignId, int barId) {
+    return _datasource.deleteCampaign(campaignId, barId);
+  }
+
+  @override
   Future<CampaignAnalytics> getCampaignAnalytics({
     required int campaignId,
     required int barId,
