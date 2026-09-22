@@ -201,13 +201,13 @@ class AdvertisingUsecase {
   }
 
   /// Pause a campaign.
-  Future<AdCampaign> pauseCampaign(int campaignId) {
-    return _repository.pauseCampaign(campaignId);
+  Future<AdCampaign> pauseCampaign(int campaignId, int barId) {
+    return _repository.pauseCampaign(campaignId, barId);
   }
 
   /// Resume a campaign.
-  Future<AdCampaign> resumeCampaign(int campaignId) {
-    return _repository.resumeCampaign(campaignId);
+  Future<AdCampaign> resumeCampaign(int campaignId, int barId) {
+    return _repository.resumeCampaign(campaignId, barId);
   }
 
   /// Get campaign analytics.

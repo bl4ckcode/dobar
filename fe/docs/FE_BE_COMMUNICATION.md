@@ -1,6 +1,6 @@
 # BARZ - Frontend Backend Communication
 
-Last Updated: May 23, 2026
+Last Updated: July 20, 2026
 Backend Status: Live on Fly.io
 API Base URL: https://barz-backend-bold-sun-5691.fly.dev
 
@@ -255,6 +255,83 @@ New `PUSH_NOTIFICATION` campaign type gated exclusively for Business Master and 
 ### 3. Auth & RBAC Stabilization
 
 All middleware and protected routes now strictly implement the unified `AuthUser` dataclass. The backend is fully stable using dot-notation (`.id`) instead of legacy dictionary access.
+
+---
+
+## BAR CONTEXT HEADERS (BUSINESS / STAFF UI GATING - NEW)
+
+Status: **✅ COMPLETE (Advertising + already-RBAC routes)**
+Priority: MEDIUM - Lets the front-end decide what to show/hide for the active bar
+
+### Overview
+
+Every bar-scoped **business** endpoint (used by bar owners and their staff) that is protected with
+`require_bar_role(...)` or `require_bar_permission(...)` now echoes three response headers on every
+successful call. The front-end reads these once per request to gate UI elements for the currently
+active bar — no extra API calls needed.
+
+The headers are **purely additive** and the response body is unchanged, so this is fully backward
+compatible.
+
+### Header contract
+
+| Header | Example | Meaning |
+|---|---|---|
+| `X-Bar-Id` | `42` | The bar the request operated on |
+| `X-Bar-Role` | `owner` | User's role at that bar: `owner`, `admin`, `manager`, `cashier`, `staff` |
+| `X-Bar-Permissions` | `ads:view,ads:manage,bar:view,...` | Comma-separated list of permission codes the user has at that bar |
+
+### 1. On login / workspace entry
+
+The front-end already fetches `GET /me/bars`, which returns each bar the user can access with its
+`role` and `permissions`. Use this to build the global feature-flag map per bar.
+
+### 2. On every bar-scoped business call
+
+For the currently selected bar, the response also carries `X-Bar-Id`, `X-Bar-Role` and
+`X-Bar-Permissions`. This lets the front-end switch a role or permission at runtime (e.g. if the
+tab is stale) without a full re-login.
+
+### FE implementation guide
+
+```dart
+final role = response.headers['x-bar-role'];          // 'owner', 'cashier', ...
+final perms = (response.headers['x-bar-permissions'] ?? '').split(',');
+final canManageAds = perms.contains('ads:manage');
+final canViewAds = perms.contains('ads:view');
+
+// Render contextual controls
+if (canManageAds)  showAdsManager();
+if (canViewAds)    showAdsDashboard();
+```
+
+### How to send `bar_id` on advertising routes
+
+The advertising endpoints (`/advertising/*`) currently resolve the bar from the `?bar_id=...` query
+parameter (kept for compatibility). They will also accept the `X-Bar-Id` request header as a
+fallback, so new clients can standardize on the header:
+
+```
+GET /advertising/campaigns
+X-Bar-Id: 42
+X-Bar-Permissions: ads:view
+```
+
+### Permission split (Advertising)
+
+Endpoints raised enforcement to the correct granularity:
+
+- **View (read-only):** `GET /plans` (public), `GET /my-plan`, `GET /credits`,
+  `GET /campaigns`, `GET /campaigns/{id}`, `GET /campaigns/summary`,
+  `GET /campaigns/analytics-summary`, `GET /analytics`, `GET /analytics/{campaign_id}`,
+  `GET /invoices` → require `ads:view`.
+- **Manage (write):** `POST /subscribe`, `POST /campaigns`, `PUT /campaigns/{id}`,
+  `POST /campaigns/{id}/publish`, `POST /campaigns/{id}/pause`,
+  `POST /campaigns/{id}/resume`, `DELETE /campaigns/{id}` → require `ads:manage`.
+
+Roles with these permissions today: **owner** and **admin** (manager and below are read-gated /
+denied). If a manager should see ad analytics but not manage them, grant the `ads:view` custom
+permission to that staff member.
 
 ---
 
@@ -2178,55 +2255,51 @@ The user tested with `tier: master` (multiple times) and `tier: vip` — all fai
 
 ---
 
-## 5. 🚨 Plan Descriptions Returning Wrong/Misleading Content (NEW - JUL 2026)
+## 5. 🚨 Plan Descriptions Returning Wrong/Misleading Content (FIXED - JUL 2026)
 
-**Issue:** The `GET /advertising/plans?bar_id={bar_id}` endpoint returns incorrect or misleading descriptions for PRO subscription tiers (Master, VIP). The `plan.name`, `plan.commission_rate`, and `plan.features` arrays are returning wrong data per tier.
+**⚠️ STATUS: ✅ RESOLVED** — Backend migration applied + route hardened.
 
-**Observed Behavior:**
-- Plan names are mixing up tier labels (e.g., VIP showing "Master" name or vice versa)
-- Commission rates are swapped between tiers
-- Feature keys (`features` array in the response) are either incomplete or belong to the wrong tier — e.g., Regular tier features showing up in VIP plan
-- The `annual_price` field may be returning 0 or null for some tiers
+**Issue:** The `GET /advertising/plans?bar_id={bar_id}` endpoint returned incorrect or misleading descriptions for PRO subscription tiers (Master, VIP). The `plan.name`, `plan.commission_rate`, and `plan.features` arrays were returning wrong data per tier.
 
-**Root Cause (Suspected):**
-- The `region_pricing` database table seed data has incorrect mappings between `tier` enum values and their associated feature/price rows
-- The JSON columns for `features` might have been populated with wrong key-value pairs during the i18n migration (MAY 25, 2026)
-- The commission rate logic in `app/advertising/services.py` may be using hardcoded fallback values instead of pulling from the database
+**Root Cause (Confirmed):**
+- The `region_pricing` database table had **Master and VIP column data swapped** for commission rates, annual prices, and features JSON arrays
+- The seed data population during the i18n migration (MAY 25, 2026) inserted Master data into VIP columns and vice versa
+- The `/advertising/plans` route lacked defensive handling for edge cases (null annual_price, string JSON columns, non-list features)
 
-**Expected vs Actual (Example):**
+**Fix Applied (Backend):**
+1. **Migration `20250720_fix_pricing_swap`** — Detects and corrects swapped Master/VIP tier data in `region_pricing` table:
+   - Compares `master_commission` vs `vip_commission` to detect the swap (Master should have lower commission than Regular but higher than VIP)
+   - Swaps `master_monthly ↔ vip_monthly`, `master_annual ↔ vip_annual`, `master_commission ↔ vip_commission`, `master_credits ↔ vip_credits`, `master_features ↔ vip_features` where swap is detected
+   - Restores correct feature arrays for all tiers using the i18n key patterns from `routes.py` defaults
+2. **Route hardening** in `GET /advertising/plans` (`app/advertising/routes.py`):
+   - Added defensive type checks for `features` and `credits` JSON columns (handles string DB representations, None values, non-list edge cases)
+   - Ensured `annual_price` defaults to `Decimal("0.00")` instead of null
+   - Plans always ordered by tier priority: Regular → Master → VIP
 
-| Field | Regular (Expected) | Regular (Actual) | Master (Expected) | Master (Actual) | VIP (Expected) | VIP (Actual) |
-|-------|-------------------|-------------------|-------------------|-----------------|----------------|--------------|
-| name | "Regular" | ✅ | "Master" | ❌ "VIP" | "VIP" | ❌ "Master" |
-| commission_rate | 8% | ✅ | 5% | ❌ 3% | 3% | ❌ 5% |
-| features count | 3 | ✅ | 6 | ❌ 4 | 9 | ❌ 6 |
-| annual_price | null | ✅ | R$ 479,40 | ❌ null | R$ 719,40 | ❌ R$ 479,40 |
+**Runbook (Deploy):**
+```bash
+# Apply the migration on each environment
+alembic upgrade head
+# After migration, verify data:
+# SELECT region_code, master_commission, vip_commission, master_features, vip_features FROM region_pricing;
+```
 
-**Backend Action Required:**
-1. Verify the `region_pricing` seed data in the database — ensure each `tier` (regular, master, vip) has the correct:
-   - `monthly_price` and `annual_price`
-   - `commission_rate` (float percentage)
-   - `features` JSON array with correct i18n keys
-2. Run the SQL migration again or manually patch the rows:
-   ```sql
-   -- Check current state
-   SELECT tier, monthly_price, annual_price, commission_rate, features 
-   FROM region_pricing WHERE country_code = 'BR';
-   ```
-3. Ensure the `/advertising/plans` endpoint returns plans ordered by tier priority (regular → master → vip) so the frontend can display them in the correct order
-4. The frontend's `_PlanCard` widget (in `subscription_plans_page.dart`) relies on `plan.name`, `plan.commissionRate`, and `plan.features` being accurate per tier. Any mismatch causes wrong pricing display and incorrect feature lists for the bar owner.
+**Verification (Expected after fix):**
 
-**Impact:** High. Bar owners see wrong pricing, commission rates, and feature lists when choosing a subscription plan. This directly affects conversion rates for paid tier upgrades.
+| Field | Regular | Master | VIP |
+|-------|---------|--------|-----|
+| name | "Regular" | "Master" | "VIP" |
+| commission_rate | 15% (0.1500) | 5% (0.05) | 3% (0.03) |
+| features count | 3 | 6 | 8 |
+| annual_price | R$ 0,00 | R$ 479,40 | R$ 719,40 |
 
-**Frontend Workaround (None):** The frontend cannot fix this alone since it renders what the backend returns. The i18n translation layer is working correctly — the problem is the source data.
-
-**See Also:** `lib/features/advertising/presentation/pages/subscription_plans_page.dart` → `_PlanCard` widget render `plan.name`, `plan.price`, `plan.commissionRate`, and `plan.features` directly from `GET /advertising/plans` response.
+**See Also:** Migration file: `migrations/versions/20250720_fix_region_pricing_tier_swap.py`
 
 ---
 
 ## BUSINESS SETTINGS (SPRINT 10 - NEW)
 
-Status: **🔲 PENDING** — Backend endpoints required
+Status: **✅ COMPLETE** — Backend implemented
 Priority: HIGH - Business User Configuration
 
 ### Overview

@@ -99,11 +99,11 @@ sealed class AdvertisingEvent with _$AdvertisingEvent {
   }) = CreateCampaignEvent;
 
   /// Pause a campaign.
-  const factory AdvertisingEvent.pauseCampaign({required int campaignId}) =
+  const factory AdvertisingEvent.pauseCampaign({required int campaignId, required int barId}) =
       PauseCampaign;
 
   /// Resume a campaign.
-  const factory AdvertisingEvent.resumeCampaign({required int campaignId}) =
+  const factory AdvertisingEvent.resumeCampaign({required int campaignId, required int barId}) =
       ResumeCampaign;
 
   /// Load campaign analytics.

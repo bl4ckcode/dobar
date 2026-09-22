@@ -69,8 +69,8 @@ abstract class AdvertisingDatasource {
   Future<List<AdCampaign>> getCampaigns(int barId);
   Future<AdCampaign> getCampaign(int campaignId);
   Future<AdCampaign> createCampaign(CreateCampaignRequest request);
-  Future<AdCampaign> pauseCampaign(int campaignId);
-  Future<AdCampaign> resumeCampaign(int campaignId);
+  Future<AdCampaign> pauseCampaign(int campaignId, int barId);
+  Future<AdCampaign> resumeCampaign(int campaignId, int barId);
   Future<CampaignAnalytics> getCampaignAnalytics({
     required int campaignId,
     required int barId,
@@ -433,10 +433,13 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
   }
 
   @override
-  Future<AdCampaign> pauseCampaign(int campaignId) async {
+  Future<AdCampaign> pauseCampaign(int campaignId, int barId) async {
     try {
       final response = await dio.post(
         '${ApiEndpoints.baseUrl}${ApiEndpoints.pauseCampaign(campaignId)}',
+        queryParameters: {
+          'bar_id': barId,
+        }
       );
       return AdCampaign.fromJson(response.data);
     } on DioException catch (e) {
@@ -445,10 +448,13 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
   }
 
   @override
-  Future<AdCampaign> resumeCampaign(int campaignId) async {
+  Future<AdCampaign> resumeCampaign(int campaignId, int barId) async {
     try {
       final response = await dio.post(
         '${ApiEndpoints.baseUrl}${ApiEndpoints.resumeCampaign(campaignId)}',
+        queryParameters: {
+          'bar_id': barId,
+        }
       );
       return AdCampaign.fromJson(response.data);
     } on DioException catch (e) {

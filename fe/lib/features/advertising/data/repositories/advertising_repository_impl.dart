@@ -172,13 +172,13 @@ class AdvertisingRepositoryImpl implements AdvertisingRepository {
   }
 
   @override
-  Future<AdCampaign> pauseCampaign(int campaignId) {
-    return _datasource.pauseCampaign(campaignId);
+  Future<AdCampaign> pauseCampaign(int campaignId, int barId) {
+    return _datasource.pauseCampaign(campaignId, barId);
   }
 
   @override
-  Future<AdCampaign> resumeCampaign(int campaignId) {
-    return _datasource.resumeCampaign(campaignId);
+  Future<AdCampaign> resumeCampaign(int campaignId, int barId) {
+    return _datasource.resumeCampaign(campaignId, barId);
   }
 
   @override

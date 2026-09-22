@@ -306,7 +306,7 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
   ) async {
     emit(state.copyWith(isLoadingCampaign: true, error: null));
     try {
-      final campaign = await _usecase.pauseCampaign(event.campaignId);
+      final campaign = await _usecase.pauseCampaign(event.campaignId, event.barId);
       final updatedCampaigns = state.campaigns
           .map((c) => c.id == campaign.id ? campaign : c)
           .toList();
@@ -329,7 +329,7 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
   ) async {
     emit(state.copyWith(isLoadingCampaign: true, error: null));
     try {
-      final campaign = await _usecase.resumeCampaign(event.campaignId);
+      final campaign = await _usecase.resumeCampaign(event.campaignId, event.barId);
       final updatedCampaigns = state.campaigns
           .map((c) => c.id == campaign.id ? campaign : c)
           .toList();

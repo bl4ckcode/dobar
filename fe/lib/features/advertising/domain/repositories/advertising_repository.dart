@@ -95,10 +95,10 @@ abstract class AdvertisingRepository {
   Future<AdCampaign> createCampaign(CreateCampaignRequest request);
 
   /// Pause a campaign.
-  Future<AdCampaign> pauseCampaign(int campaignId);
+  Future<AdCampaign> pauseCampaign(int campaignId, int barId);
 
   /// Resume a campaign.
-  Future<AdCampaign> resumeCampaign(int campaignId);
+  Future<AdCampaign> resumeCampaign(int campaignId, int barId);
 
   /// Get campaign analytics.
   Future<CampaignAnalytics> getCampaignAnalytics({

@@ -1011,9 +1011,9 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
   void _toggleCampaign(AdCampaign campaign) {
     final bloc = context.read<AdvertisingBloc>();
     if (campaign.status == CampaignStatus.active) {
-      bloc.add(PauseCampaign(campaignId: campaign.id));
+      bloc.add(PauseCampaign(campaignId: campaign.id, barId: campaign.barId));
     } else if (campaign.status == CampaignStatus.paused) {
-      bloc.add(ResumeCampaign(campaignId: campaign.id));
+      bloc.add(ResumeCampaign(campaignId: campaign.id, barId: campaign.barId));
     }
   }
 
