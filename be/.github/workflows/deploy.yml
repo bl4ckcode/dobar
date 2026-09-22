@@ -49,9 +49,11 @@ jobs:
       - name: Check for migration files
         id: check
         run: |
-          # If migration files exist in the folder, we need to migrate
-          # The logic: Successful migrations are deleted from repo. 
-          # So any file remaining in migrations/versions/ is PENDING (or failed previously).
+          # If migration files exist in the folder, we need to migrate.
+          # Migration files are always kept in the repo (applied migrations
+          # are never deleted), so this gate always returns should_migrate=true.
+          # This is safe: `alembic upgrade head` is idempotent and is a fast
+          # no-op when the database is already at head.
           
           if ls migrations/versions/*.py 1> /dev/null 2>&1; then
             echo "🔄 Found pending migration files."
