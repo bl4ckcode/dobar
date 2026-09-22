@@ -2,7 +2,7 @@
 Fix region_pricing tier data swap between Master and VIP tiers.
 
 Revision ID: 20250720_fix_pricing_swap
-Revises: dob_82_budget_management_extensions
+Revises: dob_82_budget_management
 Create Date: 2026-07-20 22:00:00.000000
 
 Detects and corrects swapped Master/VIP pricing data in region_pricing table.
@@ -15,7 +15,7 @@ import sqlalchemy as sa
 from sqlalchemy.sql import text
 
 revision = '20250720_fix_pricing_swap'
-down_revision = 'dob_82_budget_management_extensions'
+down_revision = 'dob_82_budget_management'
 branch_labels = None
 depends_on = None
 
@@ -36,8 +36,8 @@ def upgrade():
         r = dict(row._mapping)
         region = r["region_code"]
         
-        # Detect swap: Master's annual_price should be HIGHER than Regular (R$0) but LOWER than VIP
-        # If Master annual is null/0 or lower than regular logic suggests a swap
+        # Detect swap: correct data has Master annual < VIP annual and Master commission > VIP commission
+        # If either is inverted, the Master/VIP columns were swapped by bad seed data
         master_annual = r.get("master_annual") or 0
         vip_annual = r.get("vip_annual") or 0
         master_commission = float(r.get("master_commission") or 0)
@@ -46,14 +46,14 @@ def upgrade():
         
         needs_swap = False
         
-        # Detection heuristic: 
-        # Master should have LOWER commission than Regular, VIP should have LOWER than Master
-        # If Master commission > VIP commission, they're swapped
-        if master_commission > vip_commission and vip_commission > 0:
+        # Detection heuristic:
+        # Correct order: Regular > Master > VIP (higher tiers get lower commission)
+        # If Master commission < VIP commission, they're swapped
+        if master_commission < vip_commission and master_commission > 0:
             needs_swap = True
         
-        # Also detect: if Master annual is less than Regular's (should be 0) or unrealistically low
-        if not needs_swap and master_annual < (vip_annual * 0.5) and vip_annual > 0:
+        # Also detect: if Master annual > VIP annual (correct: Master < VIP in price)
+        if not needs_swap and master_annual > vip_annual and vip_annual > 0:
             needs_swap = True
         
         if needs_swap:
@@ -72,16 +72,16 @@ def upgrade():
                 """),
                 {
                     "id": r["id"],
-                    "vip_m": r["master_monthly"],
-                    "vip_a": r["master_annual"],
-                    "master_m": r["vip_monthly"],
-                    "master_a": r["vip_annual"],
-                    "vip_c": r["master_commission"],
-                    "master_c": r["vip_commission"],
-                    "vip_cred": r["master_credits"],
-                    "master_cred": r["vip_credits"],
-                    "vip_feat": r["master_features"],
-                    "master_feat": r["vip_features"],
+                    "vip_m": r["vip_monthly"],
+                    "vip_a": r["vip_annual"],
+                    "master_m": r["master_monthly"],
+                    "master_a": r["master_annual"],
+                    "vip_c": r["vip_commission"],
+                    "master_c": r["master_commission"],
+                    "vip_cred": r["vip_credits"],
+                    "master_cred": r["master_credits"],
+                    "vip_feat": r["vip_features"],
+                    "master_feat": r["master_features"],
                 }
             )
             print(f"Fixed region_pricing for {region}")
