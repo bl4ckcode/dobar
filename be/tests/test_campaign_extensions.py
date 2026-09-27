@@ -13,7 +13,7 @@ from decimal import Decimal
 from unittest.mock import AsyncMock, patch, MagicMock
 
 from app.advertising.schemas import (
-    CampaignCreate, CampaignUpdate, CampaignGoalEnum,
+    CampaignCreate, BudgetTypeEnum, CampaignGoalEnum,
     ExtendedTargeting, PlacementDistribution, EstimatedPerformance
 )
 from app.advertising.services.campaign_service import CampaignService
@@ -161,7 +161,7 @@ class TestCampaignCreation:
             mock_db.fetch_one = AsyncMock(return_value={
                 "id": 1, "bar_id": 16, "name": "Multi-Placement Campaign",
                 "campaign_type": None, "status": "draft",
-                "budget_type": "fixed", "budget_amount": "490.00",
+                "budget_type": "fixed", "budget_amount": "500.00",
                 "budget_spent": "0.00", "impressions": 0, "clicks": 0,
                 "conversions": 0, "created_at": datetime.now(timezone.utc),
                 "updated_at": datetime.now(timezone.utc),
@@ -186,8 +186,8 @@ class TestCampaignCreation:
             
             campaign_data = CampaignCreate(
                 campaign_goal=CampaignGoalEnum.FULL_PRESENCE,
-                budget_type="fixed",
-                budget_amount=Decimal("490.00"),
+                budget_type=BudgetTypeEnum.FIXED,
+                budget_amount=Decimal("500.00"),
                 start_time=datetime.now(timezone.utc) + timedelta(days=1),
                 end_time=None,
                 targeting=ExtendedTargeting(radius_km=5),

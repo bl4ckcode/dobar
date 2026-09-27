@@ -196,6 +196,11 @@ def normalize_distribution(raw: Any, budget_amount: Any = None) -> Any:
         return raw
 
     for key, entry in iterable:
+        if hasattr(entry, 'model_dump'):
+            entry = entry.model_dump()
+        elif hasattr(entry, 'dict'):
+            entry = entry.dict()
+        
         if isinstance(entry, dict):
             placement = normalize_placement(entry.get("placement", key)) or entry.get("placement", key)
             percentage = entry.get("percentage", entry.get("share"))
