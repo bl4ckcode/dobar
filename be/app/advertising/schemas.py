@@ -7,8 +7,22 @@ Based on: docs/business/ADVERTISING_BACKEND.md
 from datetime import datetime
 from decimal import Decimal
 from typing import Optional, List, Dict, Any
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, root_validator, validator
 from enum import Enum
+
+from .pricing import (
+    CAMPAIGN_TYPE_BY_PLACEMENT,
+    CREDIT_BUCKET_BY_PLACEMENT,
+    CREDIT_UNIT_BY_BUCKET,
+    DEFAULT_MIN_DAILY_BUDGET,
+    DEFAULT_REGION_CODE,
+    MIN_DAILY_BUDGETS,
+    PLACEMENTS,
+    PRICING_MODEL_BY_PLACEMENT,
+    RATE_UNIT_BY_PRICING_MODEL,
+    normalize_distribution,
+    normalize_placement,
+)
 
 
 # =============================================================================
@@ -26,6 +40,8 @@ class SubscriptionStatusEnum(str, Enum):
     PAUSED = "paused"
     CANCELLED = "cancelled"
     EXPIRED = "expired"
+    TRIAL = "trial"
+    PAST_DUE = "past_due"
 
 
 class CampaignTypeEnum(str, Enum):
@@ -34,6 +50,7 @@ class CampaignTypeEnum(str, Enum):
     MAP = "map"
     PROMO_BOOST = "promo_boost"
     BANNER = "banner"
+    PUSH_NOTIFICATION = "push_notification"
 
 
 class CampaignStatusEnum(str, Enum):
@@ -100,15 +117,15 @@ class SubscriptionResponse(BaseModel):
     """Current subscription details"""
     id: int
     bar_id: int
-    tier: SubscriptionTierEnum
-    status: SubscriptionStatusEnum
-    region_code: str
-    monthly_fee: Decimal
-    commission_rate: Decimal
-    credits: CreditsBalance
-    billing_cycle_start: datetime
-    next_billing_date: Optional[datetime]
-    created_at: datetime
+    tier: SubscriptionTierEnum = SubscriptionTierEnum.REGULAR
+    status: SubscriptionStatusEnum = SubscriptionStatusEnum.ACTIVE
+    region_code: str = "BR"
+    monthly_fee: Decimal = Decimal("0.00")
+    commission_rate: Decimal = Decimal("0.1500")
+    credits: CreditsBalance = CreditsBalance()
+    billing_cycle_start: Optional[datetime] = None
+    next_billing_date: Optional[datetime] = None
+    created_at: Optional[datetime] = None
     
     class Config:
         from_attributes = True
@@ -159,6 +176,12 @@ class ChangePlanRequest(BaseModel):
 # CAMPAIGN SCHEMAS
 # =============================================================================
 
+class AgeRange(BaseModel):
+    """Age range targeting"""
+    min: int = Field(default=18, ge=18, le=65)
+    max: int = Field(default=45, ge=18, le=65)
+
+
 class CampaignTargeting(BaseModel):
     """Targeting options for a campaign"""
     radius_km: int = Field(default=10, ge=1, le=100)
@@ -167,6 +190,8 @@ class CampaignTargeting(BaseModel):
     hours_end: int = Field(default=24, ge=1, le=24)
     categories: List[str] = []
     keywords: List[str] = []
+    peak_hours_only: bool = False
+    age_range: Optional["AgeRange"] = None
     
     @validator("days", each_item=True)
     def validate_days(cls, v):
@@ -176,33 +201,59 @@ class CampaignTargeting(BaseModel):
         return v.lower()
 
 
-class AgeRange(BaseModel):
-    """Age range targeting"""
-    min: int = Field(default=18, ge=18, le=65)
-    max: int = Field(default=45, ge=18, le=65)
-
-
 class ExtendedTargeting(BaseModel):
     """Extended targeting options for multi-placement campaigns"""
     radius_km: int = Field(default=5, ge=1, le=50)
     peak_hours_only: bool = False
     age_range: Optional[AgeRange] = None
 
+    @root_validator(pre=True, allow_reuse=True)
+    def normalize_age_inputs(cls, values):
+        if not isinstance(values, dict):
+            return values
+
+        values = dict(values)
+        age_min = values.pop("age_min", None)
+        age_max = values.pop("age_max", None)
+
+        if values.get("age_range") is None and (age_min is not None or age_max is not None):
+            values["age_range"] = {
+                "min": age_min if age_min is not None else 18,
+                "max": age_max if age_max is not None else 65
+            }
+        return values
+
 
 class PlacementDistribution(BaseModel):
     """Budget distribution for a single placement"""
     placement: str  # "featured", "search", "map_pin", "promo", "banner"
-    percentage: int = Field(ge=0, le=100)
+    percentage: float = Field(ge=0, le=100)
     budget: Decimal = Field(ge=0)
+
+    @validator("placement", pre=True, allow_reuse=True)
+    def normalize_placement_name(cls, v):
+        normalized = normalize_placement(v)
+        if normalized is None:
+            raise ValueError(f"Invalid placement '{v}'. Allowed: {', '.join(PLACEMENTS)}")
+        return normalized
 
 
 class CampaignCreative(BaseModel):
     """Creative assets for a campaign"""
     logo_url: Optional[str] = None
+    title: Optional[str] = Field(None, max_length=100)
     tagline: Optional[str] = Field(None, max_length=60)
+    cta: Optional[str] = Field(None, max_length=40)
     banner_url: Optional[str] = None
     animation_url: Optional[str] = None
     promoted_item_id: Optional[int] = None  # Menu item or promotion to highlight
+
+    @root_validator(pre=True, allow_reuse=True)
+    def normalize_cta_alias(cls, values):
+        if isinstance(values, dict) and "cta" not in values and "cta_type" in values:
+            values = dict(values)
+            values["cta"] = values.pop("cta_type")
+        return values
 
 
 class EstimatedPerformance(BaseModel):
@@ -210,6 +261,40 @@ class EstimatedPerformance(BaseModel):
     daily_reach: int = 0
     estimated_clicks: int = 0
     estimated_impressions: int = 0
+
+
+def _normalize_campaign_aliases(values: Any) -> Any:
+    if not isinstance(values, dict):
+        return values
+
+    values = dict(values)
+    budget_amount = values.get("budget_amount")
+
+    if "placement_distribution" in values:
+        placement_distribution = values.pop("placement_distribution")
+        if values.get("distribution") is None:
+            values["distribution"] = placement_distribution
+
+    if values.get("distribution") is not None:
+        values["distribution"] = normalize_distribution(values["distribution"], budget_amount)
+
+    targeting = values.get("targeting")
+    if isinstance(targeting, dict) and "budget_optimizer_enabled" in targeting:
+        targeting = dict(targeting)
+        optimizer_enabled = targeting.pop("budget_optimizer_enabled")
+        if values.get("budget_optimizer_enabled") is None:
+            values["budget_optimizer_enabled"] = bool(optimizer_enabled)
+        values["targeting"] = targeting
+
+    return values
+
+
+def _validate_distribution_percentages(distribution):
+    if distribution is not None:
+        total = sum(d.percentage for d in distribution)
+        if abs(total - 100) > 0.5:
+            raise ValueError(f"Distribution percentages must total 100%, got {total}%")
+    return distribution
 
 
 class CampaignCreate(BaseModel):
@@ -227,6 +312,10 @@ class CampaignCreate(BaseModel):
     is_smart_distribution: bool = False
     budget_optimizer_enabled: bool = False
     
+    @root_validator(pre=True, allow_reuse=True)
+    def normalize_fe_aliases(cls, values):
+        return _normalize_campaign_aliases(values)
+    
     @validator("end_time")
     def end_after_start(cls, v, values):
         if v and "start_time" in values and v <= values["start_time"]:
@@ -235,11 +324,7 @@ class CampaignCreate(BaseModel):
     
     @validator("distribution")
     def validate_distribution_total(cls, v):
-        if v is not None:
-            total = sum(d.percentage for d in v)
-            if total != 100:
-                raise ValueError(f"Distribution percentages must total 100%, got {total}%")
-        return v
+        return _validate_distribution_percentages(v)
 
 
 class CampaignUpdate(BaseModel):
@@ -253,13 +338,13 @@ class CampaignUpdate(BaseModel):
     campaign_goal: Optional[CampaignGoalEnum] = None
     budget_optimizer_enabled: Optional[bool] = None
     
+    @root_validator(pre=True, allow_reuse=True)
+    def normalize_fe_aliases(cls, values):
+        return _normalize_campaign_aliases(values)
+    
     @validator("distribution")
     def validate_distribution_total(cls, v):
-        if v is not None:
-            total = sum(d.percentage for d in v)
-            if total != 100:
-                raise ValueError(f"Distribution percentages must total 100%, got {total}%")
-        return v
+        return _validate_distribution_percentages(v)
 
 
 class CampaignResponse(BaseModel):
@@ -506,6 +591,33 @@ class InvoiceListResponse(BaseModel):
 # =============================================================================
 # REGION PRICING SCHEMAS
 # =============================================================================
+
+class PlacementRateCard(BaseModel):
+    """Rate card entry for a single ad placement"""
+    placement: str
+    campaign_type: str
+    pricing_model: str
+    rate: Decimal
+    rate_max: Optional[Decimal] = None
+    rate_unit: str
+    credit_bucket: Optional[str] = None
+    credit_unit: Optional[str] = None
+    credit_backed: bool
+    min_daily_budget: Decimal
+    allowed_budget_types: List[str]
+
+
+class AdRateCardResponse(BaseModel):
+    """Region rate card consumed by the bar campaign wizard"""
+    region_code: str
+    currency: str
+    tier: SubscriptionTierEnum
+    placements: Dict[str, PlacementRateCard]
+    credit_buckets: List[str]
+    credits_by_tier: Dict[str, CreditsBalance]
+    credits_available: CreditsBalance
+    generated_at: datetime
+
 
 class RegionPricingResponse(BaseModel):
     """Region-specific pricing configuration"""

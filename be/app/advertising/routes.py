@@ -32,9 +32,15 @@ from .schemas import (
     ExtendedCampaignResponse, CampaignPublishResponse, CampaignSummaryResponse,
     CampaignsAnalyticsSummaryResponse, TrendAnalytics,
     CampaignGoalEnum, ExtendedTargeting, PlacementDistribution, EstimatedPerformance,
-    CancelCampaignResponse
+    CancelCampaignResponse, AdRateCardResponse, PlacementRateCard
 )
-from .services.subscription_service import SubscriptionService
+from .pricing import (
+    CAMPAIGN_TYPE_BY_PLACEMENT, CREDIT_BUCKETS, CREDIT_UNIT_BY_BUCKET, DEFAULT_MIN_DAILY_BUDGET,
+    DEFAULT_REGION_CODE, ESTIMATION_DAYS, MIN_DAILY_BUDGETS, PRICING_MODEL_BY_PLACEMENT,
+    RATE_UNIT_BY_PRICING_MODEL, REGION_RATE_FIELDS, as_decimal,
+    credit_bucket_for_placement, ensure_credits, infer_campaign_type, normalize_placement
+)
+from .services.subscription_service import SubscriptionService, build_default_subscription
 from .services.campaign_service import CampaignService
 
 
@@ -157,24 +163,18 @@ async def get_available_plans(
 async def get_my_plan(
     auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_VIEW))
 ):
-    """Get current bar's subscription details."""
+    """
+    Get current bar's subscription details.
+    Auto-provisions the free Regular tier when the bar has no subscription row yet,
+    so this endpoint always answers 200 instead of failing on sparse legacy rows.
+    """
     bar_id = auth.bar_id
     subscription = await SubscriptionService.get_subscription(bar_id)
     
     if not subscription:
         subscription = await SubscriptionService.create_default_subscription(bar_id)
     
-    return SubscriptionResponse(
-        id=subscription["id"], bar_id=subscription["bar_id"],
-        tier=SubscriptionTierEnum(subscription["tier"]),
-        status=SubscriptionStatusEnum(subscription["status"]),
-        region_code=subscription["region_code"], monthly_fee=subscription["monthly_fee"],
-        commission_rate=subscription["commission_rate"],
-        credits=CreditsBalance(**subscription["credits"]),
-        billing_cycle_start=subscription["billing_cycle_start"],
-        next_billing_date=subscription["next_billing_date"],
-        created_at=subscription["created_at"]
-    )
+    return _subscription_to_response(subscription, bar_id)
 
 
 @advertising_router.post("/subscribe", response_model=Union[SubscriptionResponse, PixSubscriptionResponse])
@@ -196,17 +196,7 @@ async def subscribe_to_plan(
         return PixSubscriptionResponse(**result)
     
     # Otherwise return the standard SubscriptionResponse
-    return SubscriptionResponse(
-        id=result["id"], bar_id=result["bar_id"],
-        tier=SubscriptionTierEnum(result["tier"]),
-        status=SubscriptionStatusEnum(result["status"]),
-        region_code=result["region_code"], monthly_fee=result["monthly_fee"],
-        commission_rate=result["commission_rate"],
-        credits=CreditsBalance(**result["credits"]),
-        billing_cycle_start=result["billing_cycle_start"],
-        next_billing_date=result["next_billing_date"],
-        created_at=result["created_at"]
-    )
+    return _subscription_to_response(result, bar_id)
 
 
 @advertising_router.get("/credits", response_model=CreditsBalance)
@@ -216,9 +206,69 @@ async def get_credits(
     """Check remaining advertising credits."""
     bar_id = auth.bar_id
     subscription = await SubscriptionService.get_subscription(bar_id)
+    return CreditsBalance(**ensure_credits((subscription or {}).get("credits")))
+
+
+@advertising_router.get("/rates", response_model=AdRateCardResponse)
+async def get_rate_card(
+    auth: BarAuthContext = Depends(require_bar_permission(Permission.ADS_VIEW))
+):
+    """
+    Rate card for the active bar: CPC / CPM / CPH rates, minimum daily budgets,
+    credit buckets consumed per placement and the bar's current credit balances.
+    """
+    bar_id = auth.bar_id
+    subscription = await SubscriptionService.get_subscription(bar_id)
     if not subscription:
-        return CreditsBalance()
-    return CreditsBalance(**subscription["credits"])
+        subscription = await SubscriptionService.create_default_subscription(bar_id)
+    subscription = subscription or build_default_subscription(bar_id)
+
+    region_code = (subscription.get("region_code") or DEFAULT_REGION_CODE).upper()
+    pricing = await database.fetch_one(
+        RegionPricing.__table__.select().where(RegionPricing.region_code == region_code)
+    )
+    pricing = dict(pricing) if pricing else {}
+
+    placements = {}
+    for placement, (rate_field, rate_max_field) in REGION_RATE_FIELDS.items():
+        pricing_model = PRICING_MODEL_BY_PLACEMENT[placement]
+        credit_bucket = credit_bucket_for_placement(placement)
+        rate = as_decimal(pricing.get(rate_field))
+        rate_max = as_decimal(pricing.get(rate_max_field)) if rate_max_field else None
+
+        allowed_budget_types = ["fixed"]
+        if rate > 0:
+            allowed_budget_types.insert(0, pricing_model)
+        if credit_bucket:
+            allowed_budget_types.insert(0, "credits")
+
+        placements[placement] = PlacementRateCard(
+            placement=placement,
+            campaign_type=CAMPAIGN_TYPE_BY_PLACEMENT[placement],
+            pricing_model=pricing_model,
+            rate=rate,
+            rate_max=rate_max,
+            rate_unit=RATE_UNIT_BY_PRICING_MODEL[pricing_model],
+            credit_bucket=credit_bucket,
+            credit_unit=CREDIT_UNIT_BY_BUCKET.get(credit_bucket) if credit_bucket else None,
+            credit_backed=bool(credit_bucket),
+            min_daily_budget=MIN_DAILY_BUDGETS.get(placement, DEFAULT_MIN_DAILY_BUDGET),
+            allowed_budget_types=allowed_budget_types,
+        )
+
+    return AdRateCardResponse(
+        region_code=region_code,
+        currency=pricing.get("currency") or "BRL",
+        tier=_safe_enum(SubscriptionTierEnum, subscription.get("tier"), SubscriptionTierEnum.REGULAR),
+        placements=placements,
+        credit_buckets=list(CREDIT_BUCKETS),
+        credits_by_tier={
+            "master": CreditsBalance(**ensure_credits(pricing.get("master_credits"))),
+            "vip": CreditsBalance(**ensure_credits(pricing.get("vip_credits"))),
+        },
+        credits_available=CreditsBalance(**ensure_credits(subscription.get("credits"))),
+        generated_at=datetime.now(timezone.utc),
+    )
 
 
 # =============================================================================
@@ -250,19 +300,25 @@ async def create_campaign(
     bar_id = auth.bar_id
     subscription = await SubscriptionService.get_subscription(bar_id)
     if not subscription:
-        raise APIError.forbidden("No active subscription. Please subscribe first.")
+        subscription = await SubscriptionService.create_default_subscription(bar_id)
+    subscription = subscription or build_default_subscription(bar_id)
     
-    # For multi-placement campaigns (no campaign_type specified), skip type validation
-    # but still validate distribution placements against allowed types
-    if campaign.campaign_type is not None:
-        tier = subscription["tier"]
-        allowed_types = _get_allowed_campaign_types(tier)
-        if campaign.campaign_type.value not in allowed_types:
-            raise APIError.forbidden(f"Campaign type '{campaign.campaign_type.value}' requires a higher subscription tier.")
+    # Multi-placement campaigns derive their gating type from the primary placement
+    effective_campaign_type = (
+        campaign.campaign_type.value if campaign.campaign_type else infer_campaign_type(campaign.distribution)
+    )
+    if effective_campaign_type is not None:
+        allowed_types = _get_allowed_campaign_types(subscription["tier"])
+        if effective_campaign_type not in allowed_types:
+            raise APIError.forbidden(
+                f"Campaign type '{effective_campaign_type}' requires a higher subscription tier."
+            )
     
-    # Validate distribution minimum budgets if provided
+    # Validate distribution minimum budgets if provided (cash budgets only)
     if campaign.distribution:
-        await _validate_distribution_minimums(bar_id, campaign.distribution)
+        await _validate_distribution_minimums(
+            campaign.distribution, campaign.budget_type, campaign.start_time, campaign.end_time
+        )
     
     new_campaign = await CampaignService.create_campaign(
         bar_id=bar_id, subscription_id=subscription["id"], data=campaign
@@ -299,9 +355,15 @@ async def update_campaign(
     Can reallocate budget distribution.
     """
     bar_id = auth.bar_id
-    # Validate distribution minimums if being updated
+    # Validate distribution minimums if being updated (cash budgets only)
     if updates.distribution:
-        await _validate_distribution_minimums(bar_id, updates.distribution)
+        existing = await CampaignService.get_campaign(campaign_id, bar_id)
+        if not existing:
+            raise APIError.not_found("Campaign not found")
+        await _validate_distribution_minimums(
+            updates.distribution, existing.get("budget_type"),
+            existing.get("start_time"), updates.end_time or existing.get("end_time")
+        )
     
     updated_campaign = await CampaignService.update_campaign(campaign_id, bar_id, updates)
     if not updated_campaign:
@@ -483,6 +545,34 @@ async def get_invoices(
 # HELPER FUNCTIONS
 # =============================================================================
 
+def _safe_enum(enum_cls, value, fallback=None):
+    if value is None:
+        return fallback
+    try:
+        return enum_cls(value)
+    except ValueError:
+        return fallback
+
+
+def _subscription_to_response(subscription: Optional[dict], bar_id: Optional[int] = None) -> SubscriptionResponse:
+    if not subscription:
+        subscription = build_default_subscription(bar_id or 0)
+
+    return SubscriptionResponse(
+        id=subscription.get("id") or 0,
+        bar_id=subscription.get("bar_id") or bar_id or 0,
+        tier=_safe_enum(SubscriptionTierEnum, subscription.get("tier"), SubscriptionTierEnum.REGULAR),
+        status=_safe_enum(SubscriptionStatusEnum, subscription.get("status"), SubscriptionStatusEnum.ACTIVE),
+        region_code=subscription.get("region_code") or DEFAULT_REGION_CODE,
+        monthly_fee=as_decimal(subscription.get("monthly_fee")),
+        commission_rate=as_decimal(subscription.get("commission_rate"), Decimal("0.1500")),
+        credits=CreditsBalance(**ensure_credits(subscription.get("credits"))),
+        billing_cycle_start=subscription.get("billing_cycle_start"),
+        next_billing_date=subscription.get("next_billing_date"),
+        created_at=subscription.get("created_at"),
+    )
+
+
 def _get_allowed_campaign_types(tier: str) -> List[str]:
     """Get allowed campaign types for a subscription tier"""
     if tier == "vip":
@@ -495,50 +585,65 @@ def _get_allowed_campaign_types(tier: str) -> List[str]:
 
 def _campaign_to_response(campaign: dict) -> CampaignResponse:
     """Convert database campaign to response schema"""
-    budget_remaining = Decimal(str(campaign["budget_amount"])) - Decimal(str(campaign["budget_spent"]))
-    impressions = campaign.get("impressions", 0) or 0
-    clicks = campaign.get("clicks", 0) or 0
+    budget_amount = as_decimal(campaign.get("budget_amount"))
+    budget_spent = as_decimal(campaign.get("budget_spent"))
+    impressions = campaign.get("impressions") or 0
+    clicks = campaign.get("clicks") or 0
     ctr = (clicks / impressions * 100) if impressions > 0 else 0.0
-    
+
+    targeting = campaign.get("targeting") if isinstance(campaign.get("targeting"), dict) else {}
+    creative = campaign.get("creative") if isinstance(campaign.get("creative"), dict) else {}
+
     return CampaignResponse(
-        id=campaign["id"], bar_id=campaign["bar_id"], name=campaign["name"],
-        campaign_type=CampaignTypeEnum(campaign["campaign_type"]) if campaign.get("campaign_type") else None,
-        status=CampaignStatusEnum(campaign["status"]),
-        budget_type=BudgetTypeEnum(campaign["budget_type"]),
-        budget_amount=campaign["budget_amount"], budget_spent=campaign["budget_spent"],
-        budget_remaining=budget_remaining, start_time=campaign["start_time"],
+        id=campaign["id"], bar_id=campaign["bar_id"], name=campaign.get("name") or "",
+        campaign_type=_safe_enum(CampaignTypeEnum, campaign.get("campaign_type")),
+        status=_safe_enum(CampaignStatusEnum, campaign.get("status"), CampaignStatusEnum.DRAFT),
+        budget_type=_safe_enum(BudgetTypeEnum, campaign.get("budget_type"), BudgetTypeEnum.FIXED),
+        budget_amount=budget_amount, budget_spent=budget_spent,
+        budget_remaining=budget_amount - budget_spent, start_time=campaign["start_time"],
         end_time=campaign.get("end_time"),
-        targeting=CampaignTargeting(**campaign.get("targeting", {})),
-        creative=CampaignCreative(**campaign.get("creative", {})),
+        targeting=CampaignTargeting(**targeting),
+        creative=CampaignCreative(**creative),
         impressions=impressions, clicks=clicks,
-        conversions=campaign.get("conversions", 0) or 0, ctr=ctr,
+        conversions=campaign.get("conversions") or 0, ctr=ctr,
         created_at=campaign.get("created_at") or datetime.now(timezone.utc),
         updated_at=campaign.get("updated_at") or datetime.now(timezone.utc)
     )
 
 
-async def _validate_distribution_minimums(bar_id: int, distribution: List[PlacementDistribution]) -> None:
-    """Validate that each placement in distribution meets minimum budget requirements."""
-    # Minimum daily budgets per placement type (BRL)
-    MIN_BUDGETS = {
-        "featured": Decimal("40.00"),
-        "search": Decimal("20.00"),
-        "map_pin": Decimal("25.00"),
-        "promo": Decimal("15.00"),
-        "banner": Decimal("30.00"),
-    }
-    
-    # Calculate total budget to determine daily budget
-    total_budget = sum(d.budget for d in distribution)
-    # Assuming 7-day campaigns as default
-    daily_budget = total_budget / Decimal(7)
-    
+def _campaign_duration_days(start_time, end_time) -> Decimal:
+    if not start_time or not end_time:
+        return Decimal(str(ESTIMATION_DAYS))
+    try:
+        days = (end_time - start_time).days
+    except TypeError:
+        return Decimal(str(ESTIMATION_DAYS))
+    return Decimal(str(max(days, 1)))
+
+
+async def _validate_distribution_minimums(
+    distribution: List[PlacementDistribution],
+    budget_type=None,
+    start_time=None,
+    end_time=None
+) -> None:
+    """
+    Validate that each placement in distribution meets minimum daily budget requirements.
+    Credit campaigns are expressed in credits (not currency), so the currency minimums
+    only apply to cash-funded budget types.
+    """
+    budget_type_value = budget_type.value if hasattr(budget_type, "value") else budget_type
+    if str(budget_type_value).lower() == "credits":
+        return
+
+    days = _campaign_duration_days(start_time, end_time)
+
     for dist in distribution:
-        min_budget = MIN_BUDGETS.get(dist.placement, Decimal("15.00"))
-        # Check if daily budget meets minimum for this placement
-        daily_placement_budget = dist.budget / Decimal(7)
+        placement = normalize_placement(dist.placement) or dist.placement
+        min_budget = MIN_DAILY_BUDGETS.get(placement, DEFAULT_MIN_DAILY_BUDGET)
+        daily_placement_budget = as_decimal(dist.budget) / days
         if daily_placement_budget < min_budget:
             raise APIError.bad_request(
-                f"Placement '{dist.placement}' requires minimum daily budget of R$ {min_budget}. "
+                f"Placement '{placement}' requires minimum daily budget of R$ {min_budget}. "
                 f"Current allocation: R$ {daily_placement_budget:.2f}/day"
             )

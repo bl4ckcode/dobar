@@ -22,6 +22,7 @@ from app.advertising.schemas import (
     DashboardAnalytics, CampaignAnalytics, DailyAnalytics,
     EstimatedPerformance, CampaignGoalEnum
 )
+from app.advertising.pricing import credit_bucket_for_placement, distribution_to_storage
 
 class CampaignService:
     """Service for managing advertising campaigns"""
@@ -125,7 +126,7 @@ class CampaignService:
         }
         
         # Prepare distribution
-        distribution = [d.model_dump() for d in data.distribution] if data.distribution else []
+        distribution = distribution_to_storage(data.distribution)
         
         # Generate estimated performance
         estimated_performance = None
@@ -246,7 +247,7 @@ class CampaignService:
             update_values["creative"] = updates.creative.model_dump()
         
         if updates.distribution is not None:
-            update_values["distribution"] = [d.model_dump() for d in updates.distribution]
+            update_values["distribution"] = distribution_to_storage(updates.distribution)
             # Recalculate estimated performance
             from app.advertising.schemas import EstimatedPerformance
             est = CampaignService._estimate_performance(existing["budget_amount"], update_values["distribution"])
@@ -552,14 +553,7 @@ class CampaignService:
                     remaining_for_placement = allocated - spent_on_placement
                     if remaining_for_placement > 0:
                         # Map placement back to credit type
-                        credit_map = {
-                            "featured": "featured_hours",
-                            "search": "search_clicks",
-                            "map_pin": "map_hours",
-                            "promo": "boost_impressions",
-                            "banner": "boost_impressions"
-                        }
-                        credit_type = credit_map.get(placement)
+                        credit_type = credit_bucket_for_placement(placement)
                         if credit_type:
                             credits_refunded[credit_type] = float(remaining_for_placement)
         

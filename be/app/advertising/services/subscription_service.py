@@ -6,6 +6,8 @@ Handles subscription lifecycle, billing, and credit management.
 from datetime import datetime, timezone, timedelta
 from decimal import Decimal
 from typing import Optional, Dict, Any
+import json
+import logging
 
 from app.database import database
 from app.errors import APIError
@@ -14,8 +16,70 @@ from app.advertising.models import (
     SubscriptionTier, SubscriptionStatus,
     AdvertisingInvoice, InvoiceStatus
 )
+from app.advertising.pricing import (
+    CREDIT_BUCKETS, DEFAULT_CREDITS, DEFAULT_REGION_CODE, as_decimal
+)
 from app.bars_and_restaurants.models.relational_models import Bar
 from app.payment.dpe_client import get_dpe_client
+
+
+logger = logging.getLogger(__name__)
+
+
+def normalize_subscription_row(result: Any) -> Dict[str, Any]:
+    if result is None:
+        return None
+
+    data = dict(result)
+
+    for enum_field in ("tier", "status"):
+        value = data.get(enum_field)
+        if hasattr(value, "value"):
+            data[enum_field] = value.value
+
+    credits = data.get("credits")
+    if isinstance(credits, str):
+        try:
+            credits = json.loads(credits)
+        except (TypeError, ValueError):
+            credits = None
+
+    if isinstance(credits, dict):
+        normalized = dict(credits)
+        for bucket in CREDIT_BUCKETS:
+            try:
+                normalized[bucket] = int(normalized.get(bucket) or 0)
+            except (TypeError, ValueError):
+                normalized[bucket] = 0
+        data["credits"] = normalized
+    else:
+        data["credits"] = dict(DEFAULT_CREDITS)
+
+    data["monthly_fee"] = as_decimal(data.get("monthly_fee"))
+    data["commission_rate"] = as_decimal(data.get("commission_rate"), Decimal("0.1500"))
+    if not data.get("region_code"):
+        data["region_code"] = DEFAULT_REGION_CODE
+
+    return data
+
+
+def build_default_subscription(bar_id: int, region_code: str = DEFAULT_REGION_CODE) -> Dict[str, Any]:
+    now = datetime.now(timezone.utc)
+    return {
+        "id": 0,
+        "bar_id": bar_id,
+        "tier": SubscriptionTier.REGULAR.value,
+        "status": SubscriptionStatus.ACTIVE.value,
+        "region_code": region_code or DEFAULT_REGION_CODE,
+        "monthly_fee": Decimal("0.00"),
+        "commission_rate": Decimal("0.1500"),
+        "credits": dict(DEFAULT_CREDITS),
+        "billing_cycle_start": None,
+        "next_billing_date": None,
+        "created_at": None,
+        "updated_at": now,
+        "is_default": True,
+    }
 
 
 class SubscriptionService:
@@ -28,25 +92,7 @@ class SubscriptionService:
             AdvertisingSubscription.bar_id == bar_id
         )
         result = await database.fetch_one(query)
-        if not result:
-            return None
-            
-        data = dict(result)
-        # Convert enums to strings for Pydantic
-        if hasattr(data.get("tier"), "value"):
-            data["tier"] = data["tier"].value
-        if hasattr(data.get("status"), "value"):
-            data["status"] = data["status"].value
-            
-        # Ensure credits is a dict
-        if isinstance(data.get("credits"), str):
-            import json
-            try:
-                data["credits"] = json.loads(data["credits"])
-            except:
-                data["credits"] = {"featured_hours": 0, "search_clicks": 0, "map_hours": 0, "boost_impressions": 0}
-                
-        return data
+        return normalize_subscription_row(result)
     
     @staticmethod
     async def get_subscription_by_id(subscription_id: int) -> Optional[Dict[str, Any]]:
@@ -55,30 +101,13 @@ class SubscriptionService:
             AdvertisingSubscription.id == subscription_id
         )
         result = await database.fetch_one(query)
-        if not result:
-            return None
-            
-        data = dict(result)
-        # Convert enums to strings for Pydantic
-        if hasattr(data.get("tier"), "value"):
-            data["tier"] = data["tier"].value
-        if hasattr(data.get("status"), "value"):
-            data["status"] = data["status"].value
-            
-        # Ensure credits is a dict
-        if isinstance(data.get("credits"), str):
-            import json
-            try:
-                data["credits"] = json.loads(data["credits"])
-            except:
-                data["credits"] = {"featured_hours": 0, "search_clicks": 0, "map_hours": 0, "boost_impressions": 0}
-                
-        return data
+        return normalize_subscription_row(result)
     
     @staticmethod
-    async def create_default_subscription(bar_id: int, region_code: str = "BR") -> Dict[str, Any]:
+    async def create_default_subscription(bar_id: int, region_code: str = DEFAULT_REGION_CODE) -> Dict[str, Any]:
         """Create a default REGULAR (free) subscription for a bar"""
-        # Get region pricing for commission rate
+        region_code = region_code or DEFAULT_REGION_CODE
+
         pricing_query = RegionPricing.__table__.select().where(
             RegionPricing.region_code == region_code
         )
@@ -86,7 +115,7 @@ class SubscriptionService:
         
         commission_rate = Decimal("0.1500")  # Default 15%
         if pricing:
-            commission_rate = pricing["regular_commission"]
+            commission_rate = as_decimal(dict(pricing).get("regular_commission"), commission_rate)
         
         now = datetime.now(timezone.utc)
         
@@ -97,22 +126,26 @@ class SubscriptionService:
             region_code=region_code,
             monthly_fee=Decimal("0.00"),
             commission_rate=commission_rate,
-            credits={
-                "featured_hours": 0,
-                "search_clicks": 0,
-                "map_hours": 0,
-                "boost_impressions": 0
-            },
+            credits=dict(DEFAULT_CREDITS),
             billing_cycle_start=now,
             next_billing_date=None,  # No billing for free tier
             created_at=now,
             updated_at=now
         )
         
-        subscription_id = await database.execute(insert_query)
+        try:
+            await database.execute(insert_query)
+        except Exception as exc:
+            logger.warning(
+                "Could not persist default subscription for bar %s, serving in-memory default: %s",
+                bar_id, exc
+            )
+            return build_default_subscription(bar_id, region_code)
         
-        # Fetch and return the created subscription
-        return await SubscriptionService.get_subscription(bar_id)
+        subscription = await SubscriptionService.get_subscription(bar_id)
+        if subscription is None:
+            return build_default_subscription(bar_id, region_code)
+        return subscription
     
     @staticmethod
     async def subscribe(

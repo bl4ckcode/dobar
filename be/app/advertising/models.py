@@ -35,6 +35,8 @@ class SubscriptionStatus(str, enum.Enum):
     PAUSED = "paused"
     CANCELLED = "cancelled"
     EXPIRED = "expired"
+    TRIAL = "trial"          # Legacy value present in production databases
+    PAST_DUE = "past_due"    # Legacy value present in production databases
 
 
 class CampaignGoal(str, enum.Enum):
@@ -72,6 +74,8 @@ class BudgetType(str, enum.Enum):
     CPM = "cpm"          # Cost per 1000 impressions
     FIXED = "fixed"      # One-time payment
     CREDITS = "credits"  # Use subscription credits
+    CASH = "cash"        # Legacy value present in production databases
+    MIXED = "mixed"      # Legacy value present in production databases
 
 
 class AdAction(str, enum.Enum):
@@ -167,9 +171,10 @@ class AdvertisingCampaign(Base):
     name = Column(String(100), nullable=False)
     # Use create_constraint=False since the enum already exists in the database
     # Use values_callable to use enum values (lowercase) instead of names (UPPERCASE)
+    # Nullable because multi-placement campaigns are described by `distribution` + `campaign_goal`
     campaign_type = Column(
         SQLEnum(CampaignType, values_callable=lambda x: [e.value for e in x], create_constraint=False, native_enum=True),
-        nullable=False
+        nullable=True
     )
     status = Column(
         SQLEnum(CampaignStatus, values_callable=lambda x: [e.value for e in x], create_constraint=False, native_enum=True),

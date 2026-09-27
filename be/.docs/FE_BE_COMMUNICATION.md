@@ -1400,8 +1400,8 @@ Body:
 {
   "name": "Happy Hour Push",
   "campaign_type": "push_notification", 
-  "budget": 50.00,
-  "budget_type": "daily",
+  "budget_type": "fixed",
+  "budget_amount": 50.00,
   "start_time": "2026-04-10T18:00:00Z",
   "end_time": "2026-04-15T22:00:00Z",
   "creative": {
@@ -2009,6 +2009,155 @@ for (final plan in plans.values) {
 ```
 
 ---
+
+## ADVERTISING FRONTEND STATUS UPDATE (SEP 2026)
+
+Status: **✅ FRONTEND WIRED**
+Priority: MEDIUM - Campaigns polish & subscription flow
+
+### Overview
+
+Frontend implementation status for the Advertising feature. Backend action **not required** for any item below except where noted.
+
+### 1. ✅ Plan Feature Descriptions (i18n keys) — Implemented
+
+The frontend now translates the `features` string keys returned by `GET /advertising/plans`
+(e.g. `feature_reduced_commission`) into localized labels (PT/EN/ES) using the key table from the
+"PLAN FEATURES & INTERNATIONALIZATION" section, and renders them per plan card in
+`SubscriptionPlansSheet`. Credits (`featured_hours`, `search_clicks`, `map_hours`,
+`boost_impressions`) are also rendered per tier. Unknown keys fall back to the raw key string.
+
+### 2. ✅ CORS on `/advertising/subscribe` — Verified Fixed (no backend request needed)
+
+The earlier `XMLHttpRequest onError` / CORS preflight failure from `http://localhost:8888` was
+re-tested against the live backend:
+
+- `OPTIONS` preflight to `POST /advertising/subscribe?bar_id=16` with
+  `Origin: http://localhost:8888`, `Access-Control-Request-Method: POST` and
+  `Access-Control-Request-Headers: content-type, authorization` returns
+  `access-control-allow-origin: http://localhost:8888` and
+  `access-control-allow-headers: content-type, authorization`.
+- The actual `POST` (non-preflighted) response also carries the CORS headers.
+
+The CORS middleware now reflects arbitrary localhost ports, so **no removal request is needed**.
+The previous failures were caused by the two frontend bugs already documented in
+"KNOWN ISSUES & BUG REPORTS" item 0 (wrong URL + missing `payment_method`), both now fixed.
+
+### 3. ✅ Subscribe Request Body — Fixed
+
+`POST /advertising/subscribe?bar_id={bar_id}` now sends the required fields:
+
+```json
+{
+  "tier": "master",
+  "billing_cycle": "monthly",
+  "payment_method": { "type": "pix" }
+}
+```
+
+Both response shapes are handled gracefully: full `AdSubscription` (card, `active`) and
+`waiting_payment` with PIX QR code (mapped to `pending`).
+
+### 4. ✅ Multi-Step Campaign Sheet — Fires Real Create Request
+
+`MultiStepCampaignSheet` now dispatches a real `POST /advertising/campaigns?bar_id={bar_id}`
+via `CreateCampaign` flow on "Launch" instead of only updating local UI. The success celebration
+dialog only shows after the backend responds; backend errors surface as a snackbar in the sheet.
+
+### 5. ✅ Delete Campaign — Wired
+
+`DELETE /advertising/campaigns/{id}?bar_id={bar_id}` is now wired end-to-end
+(datasource → repository → usecase → bloc). The campaigns page shows a confirmation dialog,
+dispatches `DeleteCampaign`, and removes the campaign from the list on success. Errors surface
+as a snackbar.
+
+### 6. ✅ Campaign Creation Contract Alignment & Budget/Credits (SEP 2026)
+
+Status: **✅ BACKEND COMPLETE — FRONTEND INTEGRATION & DEPLOYMENT VERIFICATION PENDING**
+Priority: HIGH - Production Launch Readiness
+
+#### Resolution
+
+The reported campaign-creation and subscription-plan issues were addressed backend-side:
+
+1. **Campaign budget contract aligned**
+   - `"daily"` is no longer used. The accepted values are `credits`, `fixed`, `cpc`, `cpm`, and `hourly`.
+   - Credit campaigns use `budget_amount`; placement percentages may be supplied as a map through
+     `placement_distribution` and are normalized to the backend's stored distribution format.
+   - Placement aliases such as `mapPin`, `map`, `promo_boost`, and `featured_home` are accepted.
+   - Cash campaigns are validated against placement-specific minimum daily budgets.
+
+2. **`GET /advertising/my-plan` resilience fixed**
+   - A bar with no paid advertising subscription now receives a default `regular` plan with zero
+     advertising credits and HTTP `200 OK`, rather than an HTTP `500`.
+   - Sparse/legacy subscription rows and legacy status values are handled defensively.
+
+3. **Rate card and credit balances exposed**
+   - New endpoint: `GET /advertising/rates`
+   - Requires `ads:view` and resolves the bar through the standard query parameter/header contract.
+   - The response includes the region currency, current tier, current available credits, tier credit
+     allowances, per-placement pricing model/rate/rate range, minimum daily budget, supported budget
+     types, and the credit bucket consumed by that placement.
+   - The frontend should use this endpoint instead of client-side rate constants or reach heuristics.
+
+#### Confirmed placement and credit mappings
+
+| Frontend placement / alias | Canonical placement | Pricing model | Credit bucket |
+|---|---|---|---|
+| `featured`, `featured_home`, `home` | `featured` | `cph` | `featured_hours` |
+| `search`, `sponsored_search` | `search` | `cpc` | `search_clicks` |
+| `map`, `mapPin`, `map_spotlight` | `map_pin` | `cph` | `map_hours` |
+| `promo`, `promo_boost` | `promo` | `cpc` | `boost_impressions` |
+| `banner` | `banner` | `cpm` | `boost_impressions` |
+| `push`, `push_notification` | `push_notification` | `cpm` | none |
+
+Banner campaigns are credit-backed and use `boost_impressions`; they are not restricted to a fixed
+cash budget. Every placement also supports `fixed` when its regional rate is configured.
+
+#### Valid `POST /advertising/campaigns` payload
+
+```json
+{
+  "name": "Campanha Destaque",
+  "campaign_type": "featured",
+  "budget_type": "credits",
+  "budget_amount": 100.0,
+  "start_time": "2026-09-24T19:30:27.008Z",
+  "end_time": "2026-10-24T19:30:27.008Z",
+  "targeting": {
+    "radius_km": 10,
+    "age_min": 18,
+    "age_max": 65,
+    "peak_hours_only": true,
+    "budget_optimizer_enabled": true
+  },
+  "creative": {
+    "title": "Campanha Destaque",
+    "cta": "visit_now",
+    "tagline": "Venha nos visitar!"
+  },
+  "placement_distribution": {
+    "featured": 50.0,
+    "search": 50.0
+  }
+}
+```
+
+For cash campaigns, use one of the supported values returned by `/advertising/rates` for the selected
+placement: `fixed`, `cpc`, `cpm`, or `hourly`. `daily` is not a valid request value.
+
+#### Frontend follow-up
+
+- Update the campaign sheet to send the payload above and never send `budget_type: "daily"`.
+- Fetch `/advertising/rates` when opening campaign creation; derive budget choices, minimum budgets,
+  credit balances, and estimate labels from that response.
+- Confirm the regular-plan response no longer requires a client-side error fallback.
+- Validate this contract against the deployed Fly.io backend after the current changes pass CI/CD.
+
+
+---
+
+## ADVERTISING SUBSCRIPTION (SPRINT 5 - NEW)
 
 ## ADVERTISING SUBSCRIPTION (SPRINT 5 - NEW)
 
