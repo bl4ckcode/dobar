@@ -2645,7 +2645,7 @@ class AdvertisingRepository {
 | `bar_id` missing → `400`, non-member → `403`, no token → `401` | ✅ verified |
 | `promo.pricing_model == "cpm"` (was `cpc`), `rate_unit == "per_1000_impressions"` | ✅ asserted in `tests/test_advertising_contract.py::TestRateCard` |
 | `promo`/`banner`/`push_notification` share the `boost_cpm` rate | ✅ asserted in `tests/test_advertising_contract.py::TestRateCard` |
-| Live re-check on Fly.io (`scripts/verify_rate_card_live.py`) | ⏳ pending a `user_id` with `ads:view` on production |
+| Live re-check on Fly.io (`scripts/verify_rate_card_live.py`) | ⏳ runs **after** the next CI deploy of `main` (production still serves `promo=cpc` until then), plus a production `user_id` holding `ads:view` on the target bar (`bar_staff` row with role `owner`/`admin`) — see `.docs/next_session_promo_tiers_and_billing.md` §4 |
 
 ---
 
