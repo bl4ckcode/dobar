@@ -62,11 +62,15 @@ CREDIT_UNIT_BY_BUCKET = {
     "boost_impressions": "impressions",
 }
 
+# Ground truth for the promo model: .docs/q4_2026/Dobar_Market_Analysis_Brazil_2026.pdf,
+# §5.2 "Product 4: Promotion Boost (CPM)" — promo is priced per 1,000 impressions, not per click.
+# `promo` reads its rate from the regional `boost_cpm` column (see REGION_RATE_FIELDS) and consumes the
+# `boost_impressions` credit bucket, so it reports the CPM model like `banner` / `push_notification`.
 PRICING_MODEL_BY_PLACEMENT = {
     "featured": "cph",
     "search": "cpc",
     "map_pin": "cph",
-    "promo": "cpc",
+    "promo": "cpm",
     "banner": "cpm",
     "push_notification": "cpm",
 }

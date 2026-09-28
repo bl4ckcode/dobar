@@ -379,6 +379,17 @@ class TestRateCard:
         assert float(search["rate_max"]) == 2.50
         assert search["credit_bucket"] == "search_clicks"
 
+        # `promo` is impressions-priced (ground truth: Dobar_Market_Analysis_Brazil_2026.pdf §5.2
+        # "Product 4: Promotion Boost (CPM)"). It reads the same `boost_cpm` column as `banner` and
+        # `push_notification`, so it must report the CPM model, not CPC.
+        promo = body["placements"]["promo"]
+        assert promo["pricing_model"] == "cpm"
+        assert promo["rate_unit"] == "per_1000_impressions"
+        assert promo["allowed_budget_types"] == ["credits", "cpm", "fixed"]
+        assert promo["rate"] == body["placements"]["banner"]["rate"]
+        assert promo["rate"] == body["placements"]["push_notification"]["rate"]
+        assert float(promo["rate"]) == 8.0
+
         assert body["placements"]["map_pin"]["credit_bucket"] == "map_hours"
         assert body["placements"]["promo"]["credit_bucket"] == "boost_impressions"
         assert body["placements"]["banner"]["credit_bucket"] == "boost_impressions"
@@ -413,6 +424,9 @@ class TestRateCard:
         assert float(body["placements"]["featured"]["rate"]) == 0.0
         assert body["placements"]["featured"]["allowed_budget_types"] == ["credits", "fixed"]
         assert body["placements"]["banner"]["allowed_budget_types"] == ["credits", "fixed"]
+        # `promo` is CPM too, so with no regional rate it degrades to credits + fixed as well.
+        assert body["placements"]["promo"]["pricing_model"] == "cpm"
+        assert body["placements"]["promo"]["allowed_budget_types"] == ["credits", "fixed"]
 
 
 class TestDistributionMinimums:
