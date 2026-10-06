@@ -94,7 +94,20 @@ CREDIT_UNIT_BY_BUCKET = {
     "boost_impressions": "impressions",
 }
 CREDIT_BUCKETS = ("featured_hours", "search_clicks", "map_hours", "boost_impressions")
-KNOWN_BUDGET_TYPES = {"credits", "fixed", "cpc", "cpm", "cph", "hourly"}
+# `cph` is deliberately absent: it is a pricing model, never a legal budget_type (A3 decision).
+# The rate card advertises the API-legal token instead (`cph` → `hourly`).
+KNOWN_BUDGET_TYPES = {"credits", "fixed", "cpc", "cpm", "hourly"}
+BUDGET_TYPE_BY_PRICING_MODEL = {
+    "cph": "hourly",
+    "cpc": "cpc",
+    "cpm": "cpm",
+}
+# Mirror of routes._get_allowed_campaign_types — what each tier may create (A2 decision:
+# promo_boost widened to master per PDF §5.2 "Master + VIP"; banner/map stay VIP-only).
+ALLOWED_CAMPAIGN_TYPES_BY_TIER = {
+    "vip": ["featured", "search", "map", "promo_boost", "banner", "push_notification"],
+    "master": ["featured", "search", "push_notification", "promo_boost"],
+}
 MONEY_FIELDS = ("rate", "min_daily_budget")
 MIN_DAILY_BUDGETS = {
     "featured": "40.00",
@@ -198,21 +211,34 @@ def verify_rate_card(payload: dict) -> Checker:
 
         c.check(f"`{name}.allowed_budget_types` holds only known budget types",
                 all(isinstance(v, str) and v in KNOWN_BUDGET_TYPES for v in allowed), repr(allowed))
+        c.check(f"`{name}.allowed_budget_types` never contains the pricing-model token 'cph'",
+                "cph" not in allowed, repr(allowed))
         c.check(f"`{name}.allowed_budget_types` has no duplicates",
                 len(allowed) == len(set(allowed)), repr(allowed))
         c.check(f"`{name}.allowed_budget_types` always contains 'fixed'", "fixed" in allowed,
                 repr(allowed))
 
-        # Composition mirrors routes.get_rate_card: credits (if credit-backed) + model (if rate > 0) + fixed.
+        # Composition mirrors routes.get_rate_card: credits (if credit-backed)
+        # + API-legal pricing-model token (if rate > 0) + fixed.
         rate_value = _money(entry.get("rate")) or 0.0
         expected_types = []
         if entry.get("credit_bucket"):
             expected_types.append("credits")
         if rate_value > 0:
-            expected_types.append(PRICING_MODEL_BY_PLACEMENT[name])
+            expected_types.append(BUDGET_TYPE_BY_PRICING_MODEL[PRICING_MODEL_BY_PLACEMENT[name]])
         expected_types.append("fixed")
         c.check(f"`{name}.allowed_budget_types` == {expected_types}", allowed == expected_types,
                 repr(allowed))
+
+        # A2: `usable` mirrors the create-endpoint tier gate for this tier.
+        expected_usable = (
+            CAMPAIGN_TYPE_BY_PLACEMENT[name]
+            in ALLOWED_CAMPAIGN_TYPES_BY_TIER.get(payload.get("tier"), [])
+        )
+        c.check(f"`{name}.usable` is a boolean",
+                isinstance(entry.get("usable"), bool), repr(entry.get("usable")))
+        c.check(f"`{name}.usable` == {expected_usable} for tier={payload.get('tier')!r}",
+                entry.get("usable") is expected_usable, repr(entry.get("usable")))
 
         bucket = entry.get("credit_bucket")
         expected_bucket = CREDIT_BUCKET_BY_PLACEMENT[name]
@@ -289,7 +315,7 @@ def _fixture() -> dict:
 
     def placement(name: str, rate: str, rate_max=None) -> dict:
         bucket = CREDIT_BUCKET_BY_PLACEMENT[name]
-        allowed = (["credits"] if bucket else []) + [PRICING_MODEL_BY_PLACEMENT[name]] + ["fixed"]
+        allowed = (["credits"] if bucket else []) + [BUDGET_TYPE_BY_PRICING_MODEL[PRICING_MODEL_BY_PLACEMENT[name]]] + ["fixed"]
         return {
             "placement": name,
             "campaign_type": CAMPAIGN_TYPE_BY_PLACEMENT[name],
@@ -302,6 +328,8 @@ def _fixture() -> dict:
             "credit_backed": bool(bucket),
             "min_daily_budget": MIN_DAILY_BUDGETS[name],
             "allowed_budget_types": allowed,
+            # master tier below → mirrors the create-endpoint tier gate
+            "usable": CAMPAIGN_TYPE_BY_PLACEMENT[name] in ALLOWED_CAMPAIGN_TYPES_BY_TIER["master"],
         }
 
     return {
@@ -353,6 +381,20 @@ def _mutations() -> list[tuple[str, "Callable[[dict], None]"]]:
     def budget_types_reordered(payload: dict) -> None:
         payload["placements"]["promo"]["allowed_budget_types"] = ["fixed", "cpm", "credits"]
 
+    def cph_advertised_as_budget_type(payload: dict) -> None:
+        # A3: `cph` is a pricing model, not a budget_type — the card must never advertise it.
+        payload["placements"]["featured"]["allowed_budget_types"] = ["credits", "cph", "fixed"]
+
+    def usable_flipped(payload: dict) -> None:
+        # A2: master may not buy `map` — usable must be False for map_pin on a master card.
+        payload["placements"]["map_pin"]["usable"] = True
+
+    def legacy_credit_key(payload: dict) -> None:
+        # B6: legacy keys fold at read time — the response must only ever expose canonical buckets.
+        payload["credits_available"]["promo_boost"] = payload["credits_available"].pop(
+            "boost_impressions"
+        )
+
     return [
         ("rate serialized as a number", rate_as_number),
         ("promo relabelled cpc", promo_back_to_cpc),
@@ -361,6 +403,9 @@ def _mutations() -> list[tuple[str, "Callable[[dict], None]"]]:
         ("credit_backed inconsistent", credit_backed_flipped),
         ("credits_by_tier missing vip", missing_vip_credits),
         ("allowed_budget_types out of documented order", budget_types_reordered),
+        ("pricing-model token cph advertised as budget_type", cph_advertised_as_budget_type),
+        ("usable flipped against the tier gate", usable_flipped),
+        ("legacy credit key leaking into credits_available", legacy_credit_key),
     ]
 
 

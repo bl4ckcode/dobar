@@ -103,8 +103,10 @@ class TestMyPlanResilience:
         assert body["created_at"] is None
         assert body["region_code"] == "BR"
         assert float(body["monthly_fee"]) == 0.0
+        # B6 decision: legacy keys fold into the canonical buckets instead of zeroing —
+        # {"banner": 100, "promo_boost": 50} both paid impressions → boost_impressions = 150.
         assert body["credits"] == {
-            "featured_hours": 0, "search_clicks": 0, "map_hours": 0, "boost_impressions": 0
+            "featured_hours": 0, "search_clicks": 0, "map_hours": 0, "boost_impressions": 150
         }
 
     @pytest.mark.asyncio
@@ -190,8 +192,11 @@ class TestMyPlanResilience:
         response = await client.get(f"/advertising/credits?bar_id={bar_id}", headers=headers)
 
         assert response.status_code == 200, response.text
+        # Legacy keys don't crash; B6 decision: their value is preserved by folding both
+        # legacy impression pots {"banner": 100, "promo_boost": 50} into boost_impressions
+        # (alias-at-read — see .docs/FE_BE_COMMUNICATION.md §10) instead of returning zeros.
         assert response.json() == {
-            "featured_hours": 0, "search_clicks": 0, "map_hours": 0, "boost_impressions": 0
+            "featured_hours": 0, "search_clicks": 0, "map_hours": 0, "boost_impressions": 150
         }
 
 
@@ -364,13 +369,24 @@ class TestRateCard:
             "featured", "search", "map_pin", "promo", "banner", "push_notification"
         }
 
+        # A2: `usable` mirrors the create-endpoint tier gate (master may create featured,
+        # search, push_notification and promo_boost — promo was widened to Master per PDF §5.2;
+        # banner/map stay VIP-only by deliberate restriction).
+        assert {name: card["usable"] for name, card in body["placements"].items()} == {
+            "featured": True, "search": True, "map_pin": False,
+            "promo": True, "banner": False, "push_notification": True,
+        }
+
         featured = body["placements"]["featured"]
         assert featured["pricing_model"] == "cph"
         assert featured["rate_unit"] == "per_hour"
         assert float(featured["rate"]) == 25.0
         assert featured["credit_bucket"] == "featured_hours"
         assert featured["credit_backed"] is True
-        assert featured["allowed_budget_types"] == ["credits", "cph", "fixed"]
+        # A3 decision: `allowed_budget_types` carries the API-legal budget_type token (`hourly`),
+        # never the pricing-model string `cph` — `cph` is not in BudgetTypeEnum/DB BudgetType.
+        assert featured["allowed_budget_types"] == ["credits", "hourly", "fixed"]
+        assert "cph" not in featured["allowed_budget_types"]
         assert float(featured["min_daily_budget"]) == 40.0
 
         search = body["placements"]["search"]
@@ -427,6 +443,11 @@ class TestRateCard:
         # `promo` is CPM too, so with no regional rate it degrades to credits + fixed as well.
         assert body["placements"]["promo"]["pricing_model"] == "cpm"
         assert body["placements"]["promo"]["allowed_budget_types"] == ["credits", "fixed"]
+        # A2: the bar is auto-provisioned as `regular`, which may create nothing — all six
+        # placements are still advertised (quirk #6) but marked unusable.
+        assert {name: card["usable"] for name, card in body["placements"].items()} == {
+            name: False for name in body["placements"]
+        }
 
 
 class TestDistributionMinimums:
@@ -469,4 +490,197 @@ class TestDistributionMinimums:
                 distribution, BudgetTypeEnum.FIXED, datetime.now(timezone.utc),
                 datetime.now(timezone.utc) + timedelta(days=30)
             )
+
+
+def _promo_payload(**overrides):
+    payload = {
+        "name": "Promo Campaign",
+        "campaign_type": "promo_boost",
+        "budget_type": "credits",
+        "budget_amount": 1000,
+        "start_time": datetime.now(timezone.utc).isoformat(),
+        "end_time": (datetime.now(timezone.utc) + timedelta(days=30)).isoformat(),
+    }
+    payload.update(overrides)
+    return payload
+
+
+class TestPromoTierGating:
+    """A2: promo tier gating per PDF §5.2 (Master + VIP) and the fail-closed rule.
+
+    Before this session the gate also had a fail-open hole: a payload that omitted
+    `campaign_type` and had no resolvable `placement_distribution` skipped the check entirely.
+    """
+
+    @pytest.mark.asyncio
+    async def test_regular_bar_is_rejected_with_403(self, auth_client, test_bar_in_db):
+        client, headers, user = auth_client
+        bar_id = test_bar_in_db["id"]
+        await _make_bar_owner(user["id"], bar_id)
+        await _seed_subscription(bar_id, tier="regular")
+
+        response = await client.post(
+            f"/advertising/campaigns?bar_id={bar_id}", json=_promo_payload(), headers=headers
+        )
+
+        assert response.status_code == 403
+        assert "requires a higher subscription tier" in response.text
+
+    @pytest.mark.asyncio
+    async def test_master_bar_is_accepted(self, auth_client, test_bar_in_db):
+        """PDF §5.2 gates Promotion Boost at Master + VIP — master must get 201 (it used to
+        403 because the code allowed VIP only)."""
+        client, headers, user = auth_client
+        bar_id = test_bar_in_db["id"]
+        await _make_bar_owner(user["id"], bar_id)
+        await _seed_subscription(bar_id, tier="master")
+
+        response = await client.post(
+            f"/advertising/campaigns?bar_id={bar_id}", json=_promo_payload(), headers=headers
+        )
+
+        assert response.status_code == 201, response.text
+        assert response.json()["campaign_type"] == "promo_boost"
+
+    @pytest.mark.asyncio
+    async def test_vip_bar_is_accepted(self, auth_client, test_bar_in_db):
+        client, headers, user = auth_client
+        bar_id = test_bar_in_db["id"]
+        await _make_bar_owner(user["id"], bar_id)
+        await _seed_subscription(bar_id, tier="vip")
+
+        response = await client.post(
+            f"/advertising/campaigns?bar_id={bar_id}", json=_promo_payload(), headers=headers
+        )
+
+        assert response.status_code == 201, response.text
+        assert response.json()["campaign_type"] == "promo_boost"
+
+    @pytest.mark.asyncio
+    async def test_omitted_campaign_type_fails_closed(self, auth_client, test_bar_in_db):
+        """A payload with neither campaign_type nor placement_distribution can be neither
+        gated, priced nor served — it used to bypass the tier gate (fail-open by omission)."""
+        client, headers, user = auth_client
+        bar_id = test_bar_in_db["id"]
+        await _make_bar_owner(user["id"], bar_id)
+        await _seed_subscription(bar_id, tier="regular")
+
+        payload = {
+            "name": "Typeless Campaign",
+            "budget_type": "fixed",
+            "budget_amount": 100.0,
+            "start_time": datetime.now(timezone.utc).isoformat(),
+        }
+        response = await client.post(
+            f"/advertising/campaigns?bar_id={bar_id}", json=payload, headers=headers
+        )
+
+        assert response.status_code == 400
+        assert "campaign_type or placement_distribution is required" in response.text
+
+
+class TestBudgetTypeValidation:
+    """A3: `budget_type` is validated against the placement's `allowed_budget_types` —
+    the FE-doc sentence ("exactly the budget_type values accepted by POST") is enforced."""
+
+    @pytest.mark.asyncio
+    async def test_cph_is_never_a_legal_budget_type(self, auth_client, test_bar_in_db):
+        """`cph` is a pricing model, not a budget_type: it is absent from BudgetTypeEnum and
+        from the DB BudgetType enum, so create rejects it at the schema level (422)."""
+        client, headers, user = auth_client
+        bar_id = test_bar_in_db["id"]
+        await _make_bar_owner(user["id"], bar_id)
+        await _seed_subscription(bar_id, tier="master")
+
+        response = await client.post(
+            f"/advertising/campaigns?bar_id={bar_id}",
+            json=_promo_payload(campaign_type="featured", budget_type="cph"),
+            headers=headers,
+        )
+
+        assert response.status_code == 422
+        assert "hourly" in response.text
+
+    @pytest.mark.asyncio
+    async def test_metered_budget_type_rejected_for_wrong_placement(
+        self, auth_client, test_bar_in_db
+    ):
+        """`cpc` belongs to search, not featured — previously any budget_type was accepted."""
+        client, headers, user = auth_client
+        bar_id = test_bar_in_db["id"]
+        await _make_bar_owner(user["id"], bar_id)
+        await _seed_subscription(bar_id, tier="master")
+        await _seed_region_pricing()
+
+        response = await client.post(
+            f"/advertising/campaigns?bar_id={bar_id}",
+            json=_promo_payload(campaign_type="featured", budget_type="cpc"),
+            headers=headers,
+        )
+
+        assert response.status_code == 400
+        assert "not accepted for placement 'featured'" in response.text
+        assert "hourly" in response.text
+
+    @pytest.mark.asyncio
+    async def test_search_accepts_cpc_when_region_has_a_rate(self, auth_client, test_bar_in_db):
+        client, headers, user = auth_client
+        bar_id = test_bar_in_db["id"]
+        await _make_bar_owner(user["id"], bar_id)
+        await _seed_subscription(bar_id, tier="master")
+        await _seed_region_pricing()
+
+        response = await client.post(
+            f"/advertising/campaigns?bar_id={bar_id}",
+            json=_promo_payload(campaign_type="search", budget_type="cpc"),
+            headers=headers,
+        )
+
+        assert response.status_code == 201, response.text
+
+    @pytest.mark.asyncio
+    async def test_credits_rejected_for_non_credit_backed_placement(
+        self, auth_client, test_bar_in_db
+    ):
+        """push_notification has no credit bucket, so budget_type=credits is invalid there."""
+        client, headers, user = auth_client
+        bar_id = test_bar_in_db["id"]
+        await _make_bar_owner(user["id"], bar_id)
+        await _seed_subscription(bar_id, tier="master")
+
+        response = await client.post(
+            f"/advertising/campaigns?bar_id={bar_id}",
+            json=_promo_payload(
+                campaign_type="push_notification", budget_type="credits", budget_amount=10
+            ),
+            headers=headers,
+        )
+
+        assert response.status_code == 400
+        assert "not accepted for placement 'push_notification'" in response.text
+
+    @pytest.mark.asyncio
+    async def test_metered_budget_type_requires_a_configured_rate(
+        self, auth_client, test_bar_in_db
+    ):
+        """The rate card only advertises a metered token when the region has a rate > 0;
+        create enforces the same rule, so the advertised and accepted sets match exactly."""
+        client, headers, user = auth_client
+        bar_id = test_bar_in_db["id"]
+        await _make_bar_owner(user["id"], bar_id)
+        await _seed_subscription(bar_id, tier="master")
+
+        payload = _promo_payload(campaign_type="featured", budget_type="hourly")
+
+        rejected = await client.post(
+            f"/advertising/campaigns?bar_id={bar_id}", json=payload, headers=headers
+        )
+        assert rejected.status_code == 400
+        assert "hourly" in rejected.text
+
+        await _seed_region_pricing()
+        accepted = await client.post(
+            f"/advertising/campaigns?bar_id={bar_id}", json=payload, headers=headers
+        )
+        assert accepted.status_code == 201, accepted.text
 

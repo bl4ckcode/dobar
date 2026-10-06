@@ -605,6 +605,10 @@ class PlacementRateCard(BaseModel):
     credit_backed: bool
     min_daily_budget: Decimal
     allowed_budget_types: List[str]
+    # Whether the bar's current advertising tier may create campaigns for this placement
+    # (mirrors POST /advertising/campaigns tier gating). Additive, defaults to True so older
+    # consumers of this model are unaffected — see .docs/FE_BE_COMMUNICATION.md §4 / §10.
+    usable: bool = True
 
 
 class AdRateCardResponse(BaseModel):

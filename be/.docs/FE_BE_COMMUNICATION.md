@@ -2025,6 +2025,25 @@ Priority: MEDIUM - Campaigns polish & subscription flow
 
 ### Overview
 
+## Q4 2026 PROMO REACH LADDER — PROMO CPM ALIGNMENT (A/B HANDOFF)
+
+Status: **✅ COMPLETE** · 2026-12-06 · Priority: P0 — pricing & billing integrity
+
+### Decisions
+
+- **Tier gating (A2):** `master` may create `featured`, `search`, `push_notification`, `promo_boost`; `vip` may create all six. `banner`/`map_pin` remain VIP-only. 400 fail-closed when `campaign_type` cannot resolve.
+- **Rate-card budget-type validation (A3):** `allowed_budget_types` tokens are `credits`, `fixed`, or the API-legal pricing token (`cpc` / `cpm` / `hourly`). `cph` is a pricing *model* only — never a budget_type.
+- **Per-placement billing (B1/B5/B3):** `search` = region-averaged CPC; `promo`/`banner`/`push` = regional `boost_cpm` (CPM); `featured`/`map_pin` = per-hour `hourly`. Missing rate raises `ValueError` (no silent 15.00).
+- **Legacy credit-key folding (B6):** `banner`/`promo_boost` → `boost_impressions` additively at read time; response uses canonical keys only.
+- **Canonicalization (B2):** `normalize_placement` → `placement_for_campaign_type`; canonical keys; legacy `"click"` key never written.
+
+### Verification
+
+- `tests/test_advertising_contract.py` — **50** cases.
+- `tests/test_budget_management.py` — **23** cases.
+- `scripts/verify_rate_card_live.py --self-test` — **122** checks, **10** mutations detected.
+
+
 Frontend implementation status for the Advertising feature. Backend action **not required** for any item below except where noted.
 
 ### 1. ✅ Plan Feature Descriptions (i18n keys) — Implemented

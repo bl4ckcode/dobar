@@ -13,6 +13,16 @@ DEFAULT_CREDITS: Dict[str, int] = {
 
 CREDIT_BUCKETS = tuple(DEFAULT_CREDITS.keys())
 
+# Legacy credit-key names found in real subscription rows (e.g. local barz_db
+# advertising_subscriptions.id=4: {"banner": 100, "promo_boost": 50}). Both used to pay for
+# impressions, and both placements consume `boost_impressions` today (CREDIT_BUCKET_BY_PLACEMENT),
+# so they fold into that bucket additively. Without this, ensure_credits silently returned zeros
+# for those rows. Only these two observed legacy names are aliased — unknown keys stay ignored.
+LEGACY_CREDIT_ALIASES = {
+    "banner": "boost_impressions",
+    "promo_boost": "boost_impressions",
+}
+
 PLACEMENTS = ("featured", "search", "map_pin", "promo", "banner", "push_notification")
 
 PLACEMENT_ALIASES = {
@@ -75,6 +85,22 @@ PRICING_MODEL_BY_PLACEMENT = {
     "push_notification": "cpm",
 }
 
+# API-legal `budget_type` token for each pricing model. The pricing model itself (`cph`) is NOT a
+# legal `budget_type`: `cph` is absent from BudgetTypeEnum (schemas.py) and from the DB `BudgetType`
+# enum (models.py), where the per-hour model is spelled `hourly`. The rate card advertises the token
+# from this map (never the raw model), and POST /advertising/campaigns validates against it.
+BUDGET_TYPE_BY_PRICING_MODEL = {
+    "cph": "hourly",
+    "cpc": "cpc",
+    "cpm": "cpm",
+}
+
+# Reverse of CAMPAIGN_TYPE_BY_PLACEMENT — canonical placement for a stored campaign_type value.
+PLACEMENT_BY_CAMPAIGN_TYPE = {
+    campaign_type: placement
+    for placement, campaign_type in CAMPAIGN_TYPE_BY_PLACEMENT.items()
+}
+
 RATE_UNIT_BY_PRICING_MODEL = {
     "cph": "per_hour",
     "cpc": "per_click",
@@ -126,6 +152,33 @@ def credit_bucket_for_placement(placement: Any) -> Optional[str]:
     return CREDIT_BUCKET_BY_PLACEMENT.get(normalize_placement(placement) or "")
 
 
+def placement_for_campaign_type(campaign_type: Any) -> Optional[str]:
+    """Canonical placement for a stored campaign_type value (`promo_boost` → `promo`)."""
+    if campaign_type is None:
+        return None
+    return PLACEMENT_BY_CAMPAIGN_TYPE.get(str(campaign_type))
+
+
+def allowed_budget_types_for_placement(placement: Any, has_rate: bool) -> List[str]:
+    """
+    The `budget_type` values a placement accepts — the single source used both to build the
+    rate card's `allowed_budget_types` and to validate `POST /advertising/campaigns`, so the
+    FE-doc promise ("exactly the budget_type values accepted by create") holds by construction.
+
+    Order (documented in .docs/FE_BE_COMMUNICATION.md §4): credits (if credit-backed),
+    the API-legal pricing-model token (only when the region has a configured rate > 0),
+    then `fixed`, which is always present.
+    """
+    allowed: List[str] = []
+    if credit_bucket_for_placement(placement):
+        allowed.append("credits")
+    pricing_model = PRICING_MODEL_BY_PLACEMENT.get(placement)
+    if has_rate and pricing_model:
+        allowed.append(BUDGET_TYPE_BY_PRICING_MODEL[pricing_model])
+    allowed.append("fixed")
+    return allowed
+
+
 def primary_placement(distribution: Any) -> Optional[str]:
     best = None
     best_percentage = -1.0
@@ -156,6 +209,16 @@ def ensure_credits(value: Any) -> Dict[str, int]:
             credits[bucket] = int(raw) if raw is not None else 0
         except (TypeError, ValueError):
             credits[bucket] = 0
+    # Fold legacy keys additively so pre-migration rows keep their balance (B6 decision:
+    # alias-at-read instead of a one-off data migration — see .docs/FE_BE_COMMUNICATION.md §10).
+    for legacy_key, bucket in LEGACY_CREDIT_ALIASES.items():
+        raw = value.get(legacy_key)
+        if raw is None:
+            continue
+        try:
+            credits[bucket] += int(raw)
+        except (TypeError, ValueError):
+            continue
     return credits
 
 

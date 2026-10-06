@@ -92,6 +92,18 @@ class TestDOB41:
             {"bar_id": bar_id, "now": datetime.now(timezone.utc)}
         )
         
+        # Ensure region pricing exists — A3: a metered budget_type (hourly) is only accepted
+        # when the region has a configured rate > 0 (mirrors what the rate card advertises).
+        await database.execute(
+            "INSERT INTO region_pricing (region_code, currency, master_monthly, master_annual, "
+            "vip_monthly, vip_annual, regular_commission, master_commission, vip_commission, "
+            "featured_cph, search_cpc_min, search_cpc_max, map_cph, boost_cpm, master_credits, "
+            "vip_credits, effective_date) "
+            "VALUES ('BR', 'BRL', 100.0, 1000.0, 300.0, 3000.0, 0.15, 0.10, 0.05, "
+            "10.0, 0.5, 2.0, 5.0, 1.0, '{}', '{}', :now)",
+            {"now": datetime.now(timezone.utc)}
+        )
+        
         camp_resp = await client.post(
             f"/advertising/campaigns?bar_id={bar_id}",
             json={

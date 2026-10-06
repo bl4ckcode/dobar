@@ -22,7 +22,11 @@ from app.advertising.schemas import (
     DashboardAnalytics, CampaignAnalytics, DailyAnalytics,
     EstimatedPerformance, CampaignGoalEnum
 )
-from app.advertising.pricing import credit_bucket_for_placement, distribution_to_storage
+from app.advertising.pricing import (
+    PRICING_MODEL_BY_PLACEMENT, REGION_RATE_FIELDS, as_decimal,
+    credit_bucket_for_placement, distribution_to_storage, normalize_placement,
+    placement_for_campaign_type
+)
 
 class CampaignService:
     """Service for managing advertising campaigns"""
@@ -774,8 +778,10 @@ class CampaignService:
                         ex=86400  # 24 hours
                     )
                     
-            # For CPC campaigns, deduct from budget
-            await CampaignService._process_click_billing(campaign_id)
+            # For CPC campaigns, deduct from budget — thread the event's placement through so
+            # budget_spent_per_placement gets a canonical placement key instead of the bogus
+            # "click" key this call used to produce (see .docs/next_session... §B2).
+            await CampaignService._process_click_billing(campaign_id, placement=placement)
         elif action_value == "conversion":
             await CampaignService._increment_counter(campaign_id, "conversions")
     
@@ -791,8 +797,52 @@ class CampaignService:
         await database.execute(query, {"campaign_id": campaign_id, "now": datetime.now(timezone.utc)})
     
     @staticmethod
+    async def _region_pricing_for_bar(bar_id: int) -> Optional[Dict[str, Any]]:
+        """
+        The `region_pricing` row for the bar's subscription region, or None when the bar has no
+        subscription or the region has no pricing row. Shared by the CPC/CPH/CPM billing paths so
+        they all resolve regional rates the same way.
+        """
+        try:
+            from app.advertising.models import AdvertisingSubscription, RegionPricing
+            sub_query = AdvertisingSubscription.__table__.select().where(
+                AdvertisingSubscription.bar_id == bar_id
+            )
+            sub = await database.fetch_one(sub_query)
+            if not sub:
+                return None
+            pricing_query = RegionPricing.__table__.select().where(
+                RegionPricing.region_code == sub["region_code"]
+            )
+            pricing = await database.fetch_one(pricing_query)
+            return dict(pricing) if pricing else None
+        except Exception:
+            return None
+
+    @staticmethod
+    def _resolve_placement(campaign: Any, explicit_placement: Optional[str] = None) -> Optional[str]:
+        """
+        Canonical placement key for `budget_spent_per_placement` writes (B2 decision: canonical
+        placements, not campaign types and never the bogus "click" key):
+        explicit event placement, normalized ("home" → "featured", "promo_boost" → "promo"), then
+        the campaign's own campaign_type mapped in reverse. None when neither resolves — callers
+        then skip the per-placement write instead of inventing a key.
+        """
+        placement = normalize_placement(explicit_placement)
+        if placement:
+            return placement
+        campaign_type = campaign.get("campaign_type") if hasattr(campaign, "get") else None
+        return placement_for_campaign_type(campaign_type)
+
+    @staticmethod
     async def _process_click_billing(campaign_id: int, placement: Optional[str] = None) -> None:
-        """Process billing for CPC campaigns with per-placement tracking"""
+        """
+        Process billing for CPC campaigns with per-placement tracking.
+
+        Single source of truth for click pricing (B1): the region's average CPC
+        ((search_cpc_min + search_cpc_max) / 2), falling back to 0.50 only when the region has no
+        pricing row. `AdServer.log_click` delegates here instead of hardcoding its own price.
+        """
         # Get campaign
         query = AdvertisingCampaign.__table__.select().where(
             AdvertisingCampaign.id == campaign_id
@@ -803,39 +853,27 @@ class CampaignService:
             return
         
         # Get CPC rate from region pricing if available
-        cpc_rate = Decimal("0.50")  # Default fallback
-        
-        try:
-            bar_id = campaign["bar_id"]
-            from app.advertising.models import AdvertisingSubscription, RegionPricing
-            sub_query = AdvertisingSubscription.__table__.select().where(
-                AdvertisingSubscription.bar_id == bar_id
-            )
-            sub = await database.fetch_one(sub_query)
-            if sub:
-                region = sub["region_code"]
-                pricing_query = RegionPricing.__table__.select().where(
-                    RegionPricing.region_code == region
-                )
-                pricing = await database.fetch_one(pricing_query)
-                if pricing:
-                    # Use the average of min and max CPC
-                    cpc_rate = (Decimal(str(pricing["search_cpc_min"])) + Decimal(str(pricing["search_cpc_max"]))) / Decimal("2")
-        except Exception:
-            pass  # Fall back to default CPC rate
+        cpc_rate = Decimal("0.50")  # Fallback when the region has no pricing row
+        pricing = await CampaignService._region_pricing_for_bar(campaign["bar_id"])
+        if pricing and pricing.get("search_cpc_min") is not None and pricing.get("search_cpc_max") is not None:
+            # Use the average of min and max CPC
+            cpc_rate = (
+                as_decimal(pricing["search_cpc_min"]) + as_decimal(pricing["search_cpc_max"])
+            ) / Decimal("2")
         
         now = datetime.now(timezone.utc)
-        new_spent = Decimal(str(campaign["budget_spent"])) + cpc_rate
+        new_spent = as_decimal(campaign["budget_spent"]) + cpc_rate
         update_values = {
             "budget_spent": new_spent,
             "updated_at": now
         }
         
-        # Track per-placement budget if placement is known
-        actual_placement = placement or "click"
+        # Track per-placement budget under a canonical placement key; skip the write entirely
+        # when the placement cannot be resolved (previously this wrote a bogus "click" key).
+        actual_placement = CampaignService._resolve_placement(campaign, placement)
         if actual_placement:
             budget_spent_per_placement = dict(campaign.get("budget_spent_per_placement") or {})
-            current_placement_spent = Decimal(str(budget_spent_per_placement.get(actual_placement, 0)))
+            current_placement_spent = as_decimal(budget_spent_per_placement.get(actual_placement, 0))
             budget_spent_per_placement[actual_placement] = float(current_placement_spent + cpc_rate)
             update_values["budget_spent_per_placement"] = budget_spent_per_placement
         
@@ -850,7 +888,13 @@ class CampaignService:
     
     @staticmethod
     async def _process_hourly_billing(campaign_id: int) -> None:
-        """Process billing for CPH (hourly) campaigns - called by scheduler"""
+        """
+        Process billing for CPH (hourly) campaigns - called by scheduler.
+
+        CPH is a flat-position product for Featured/Map only (B3 decision): those are the two
+        placements with a `*_cph` region column and the only ones the rate card advertises
+        `hourly` for. Sponsored Search has no CPH column — there is no search CPH product yet.
+        """
         query = AdvertisingCampaign.__table__.select().where(
             AdvertisingCampaign.id == campaign_id
         )
@@ -859,41 +903,28 @@ class CampaignService:
         if not campaign or campaign["budget_type"] != "hourly":
             return
         
+        # Canonical placement for the per-placement spend key; falls back to "featured" only for
+        # legacy rows without a recognizable campaign_type (the historical default).
+        placement = placement_for_campaign_type(campaign.get("campaign_type")) or "featured"
+        
         # Get hourly rate from region pricing
         hourly_rate = Decimal("10.00")  # Default fallback
-        placement = campaign.get("campaign_type", "featured")
-        
-        try:
-            bar_id = campaign["bar_id"]
-            from app.advertising.models import AdvertisingSubscription, RegionPricing
-            sub_query = AdvertisingSubscription.__table__.select().where(
-                AdvertisingSubscription.bar_id == bar_id
-            )
-            sub = await database.fetch_one(sub_query)
-            if sub:
-                region = sub["region_code"]
-                pricing_query = RegionPricing.__table__.select().where(
-                    RegionPricing.region_code == region
-                )
-                pricing = await database.fetch_one(pricing_query)
-                if pricing:
-                    if placement == "featured":
-                        hourly_rate = Decimal(str(pricing["featured_cph"]))
-                    elif placement == "map":
-                        hourly_rate = Decimal(str(pricing["map_cph"]))
-        except Exception:
-            pass
+        pricing = await CampaignService._region_pricing_for_bar(campaign["bar_id"])
+        if pricing and placement in ("featured", "map_pin"):
+            rate_field = REGION_RATE_FIELDS[placement][0]
+            if pricing.get(rate_field) is not None:
+                hourly_rate = as_decimal(pricing[rate_field])
         
         now = datetime.now(timezone.utc)
-        new_spent = Decimal(str(campaign["budget_spent"])) + hourly_rate
+        new_spent = as_decimal(campaign["budget_spent"]) + hourly_rate
         update_values = {
             "budget_spent": new_spent,
             "updated_at": now
         }
         
-        # Track per-placement budget
+        # Track per-placement budget under the canonical placement key
         budget_spent_per_placement = dict(campaign.get("budget_spent_per_placement") or {})
-        current_placement_spent = Decimal(str(budget_spent_per_placement.get(placement, 0)))
+        current_placement_spent = as_decimal(budget_spent_per_placement.get(placement, 0))
         budget_spent_per_placement[placement] = float(current_placement_spent + hourly_rate)
         update_values["budget_spent_per_placement"] = budget_spent_per_placement
         
@@ -903,12 +934,20 @@ class CampaignService:
         await database.execute(update_query)
         
         # Check if budget exhausted
-        if new_spent >= Decimal(str(campaign["budget_amount"])):
+        if new_spent >= as_decimal(campaign["budget_amount"]):
             await CampaignService._exhaust_campaign(campaign_id)
     
     @staticmethod
     async def _process_cpm_billing(campaign_id: int, impressions_since_last_bill: int = 1000) -> None:
-        """Process billing for CPM campaigns (per 1000 impressions)"""
+        """
+        Process billing for CPM campaigns (per 1000 impressions).
+
+        Placement-appropriate rate (B5): promo / banner / push_notification all read the regional
+        `boost_cpm` column — the very column the rate card advertises — instead of the old
+        hardcoded 15.00 fallback that every non-`promo_boost` campaign silently billed at.
+        Raises when the region has no usable CPM rate (or the campaign is not a CPM placement)
+        rather than inventing a price; the future scheduler must surface that, not swallow it.
+        """
         query = AdvertisingCampaign.__table__.select().where(
             AdvertisingCampaign.id == campaign_id
         )
@@ -917,42 +956,38 @@ class CampaignService:
         if not campaign or campaign["budget_type"] != "cpm":
             return
         
-        # Get CPM rate from region pricing
-        cpm_rate = Decimal("15.00")  # Default fallback
-        placement = campaign.get("campaign_type", "featured")
-        
-        try:
-            bar_id = campaign["bar_id"]
-            from app.advertising.models import AdvertisingSubscription, RegionPricing
-            sub_query = AdvertisingSubscription.__table__.select().where(
-                AdvertisingSubscription.bar_id == bar_id
+        placement = placement_for_campaign_type(campaign.get("campaign_type"))
+        if placement is None or PRICING_MODEL_BY_PLACEMENT.get(placement) != "cpm":
+            raise ValueError(
+                f"campaign {campaign_id} has budget_type 'cpm' but campaign_type "
+                f"{campaign.get('campaign_type')!r} maps to placement {placement!r}, which is not "
+                f"a CPM placement (promo/banner/push_notification); refusing to bill it."
             )
-            sub = await database.fetch_one(sub_query)
-            if sub:
-                region = sub["region_code"]
-                pricing_query = RegionPricing.__table__.select().where(
-                    RegionPricing.region_code == region
-                )
-                pricing = await database.fetch_one(pricing_query)
-                if pricing:
-                    if placement == "promo_boost":
-                        cpm_rate = Decimal(str(pricing["boost_cpm"]))
-        except Exception:
-            pass
+        
+        # Get CPM rate from region pricing
+        rate_field = REGION_RATE_FIELDS[placement][0]
+        pricing = await CampaignService._region_pricing_for_bar(campaign["bar_id"])
+        cpm_rate = as_decimal(pricing.get(rate_field)) if pricing else Decimal("0")
+        if cpm_rate <= 0:
+            raise ValueError(
+                f"no usable CPM rate for placement '{placement}': the bar's region has no "
+                f"region_pricing row or {rate_field} <= 0; refusing to bill campaign {campaign_id}."
+            )
         
         # Calculate cost: rate * (impressions / 1000)
         cost = cpm_rate * Decimal(str(impressions_since_last_bill)) / Decimal("1000")
         
         now = datetime.now(timezone.utc)
-        new_spent = Decimal(str(campaign["budget_spent"])) + cost
+        new_spent = as_decimal(campaign["budget_spent"]) + cost
         update_values = {
             "budget_spent": new_spent,
             "updated_at": now
         }
         
-        # Track per-placement budget
+        # Track per-placement budget under the canonical placement key (legacy campaign-type
+        # keys such as "promo_boost" are left untouched as history — B2 decision).
         budget_spent_per_placement = dict(campaign.get("budget_spent_per_placement") or {})
-        current_placement_spent = Decimal(str(budget_spent_per_placement.get(placement, 0)))
+        current_placement_spent = as_decimal(budget_spent_per_placement.get(placement, 0))
         budget_spent_per_placement[placement] = float(current_placement_spent + cost)
         update_values["budget_spent_per_placement"] = budget_spent_per_placement
         

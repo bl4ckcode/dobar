@@ -37,8 +37,9 @@ from .schemas import (
 from .pricing import (
     CAMPAIGN_TYPE_BY_PLACEMENT, CREDIT_BUCKETS, CREDIT_UNIT_BY_BUCKET, DEFAULT_MIN_DAILY_BUDGET,
     DEFAULT_REGION_CODE, ESTIMATION_DAYS, MIN_DAILY_BUDGETS, PRICING_MODEL_BY_PLACEMENT,
-    RATE_UNIT_BY_PRICING_MODEL, REGION_RATE_FIELDS, as_decimal,
-    credit_bucket_for_placement, ensure_credits, infer_campaign_type, normalize_placement
+    RATE_UNIT_BY_PRICING_MODEL, REGION_RATE_FIELDS, allowed_budget_types_for_placement, as_decimal,
+    credit_bucket_for_placement, ensure_credits, infer_campaign_type, normalize_placement,
+    placement_for_campaign_type
 )
 from .services.subscription_service import SubscriptionService, build_default_subscription
 from .services.campaign_service import CampaignService
@@ -229,6 +230,11 @@ async def get_rate_card(
     )
     pricing = dict(pricing) if pricing else {}
 
+    tier = _safe_enum(SubscriptionTierEnum, subscription.get("tier"), SubscriptionTierEnum.REGULAR)
+    # `usable` mirrors the create endpoint's tier gate so the FE can grey out placements the
+    # bar's tier cannot buy (additive field — see .docs/FE_BE_COMMUNICATION.md §4/§10).
+    allowed_campaign_types = _get_allowed_campaign_types(tier.value)
+
     placements = {}
     for placement, (rate_field, rate_max_field) in REGION_RATE_FIELDS.items():
         pricing_model = PRICING_MODEL_BY_PLACEMENT[placement]
@@ -236,11 +242,9 @@ async def get_rate_card(
         rate = as_decimal(pricing.get(rate_field))
         rate_max = as_decimal(pricing.get(rate_max_field)) if rate_max_field else None
 
-        allowed_budget_types = ["fixed"]
-        if rate > 0:
-            allowed_budget_types.insert(0, pricing_model)
-        if credit_bucket:
-            allowed_budget_types.insert(0, "credits")
+        # Same builder as POST /advertising/campaigns validation: emits the API-legal budget_type
+        # token (`hourly`, never `cph`), the metered token only when the region has a rate > 0.
+        allowed_budget_types = allowed_budget_types_for_placement(placement, has_rate=rate > 0)
 
         placements[placement] = PlacementRateCard(
             placement=placement,
@@ -254,12 +258,13 @@ async def get_rate_card(
             credit_backed=bool(credit_bucket),
             min_daily_budget=MIN_DAILY_BUDGETS.get(placement, DEFAULT_MIN_DAILY_BUDGET),
             allowed_budget_types=allowed_budget_types,
+            usable=CAMPAIGN_TYPE_BY_PLACEMENT[placement] in allowed_campaign_types,
         )
 
     return AdRateCardResponse(
         region_code=region_code,
         currency=pricing.get("currency") or "BRL",
-        tier=_safe_enum(SubscriptionTierEnum, subscription.get("tier"), SubscriptionTierEnum.REGULAR),
+        tier=tier,
         placements=placements,
         credit_buckets=list(CREDIT_BUCKETS),
         credits_by_tier={
@@ -307,13 +312,24 @@ async def create_campaign(
     effective_campaign_type = (
         campaign.campaign_type.value if campaign.campaign_type else infer_campaign_type(campaign.distribution)
     )
-    if effective_campaign_type is not None:
-        allowed_types = _get_allowed_campaign_types(subscription["tier"])
-        if effective_campaign_type not in allowed_types:
-            raise APIError.forbidden(
-                f"Campaign type '{effective_campaign_type}' requires a higher subscription tier."
-            )
-    
+    # Fail closed: a payload with neither `campaign_type` nor a resolvable `placement_distribution`
+    # previously skipped the tier gate entirely (fail-open by omission) — such a campaign can be
+    # neither gated, priced nor served, so reject it instead of letting it bypass the check.
+    if effective_campaign_type is None:
+        raise APIError.bad_request(
+            "campaign_type or placement_distribution is required: the campaign type could not be "
+            "determined, so tier gating cannot be applied."
+        )
+    allowed_types = _get_allowed_campaign_types(subscription["tier"])
+    if effective_campaign_type not in allowed_types:
+        raise APIError.forbidden(
+            f"Campaign type '{effective_campaign_type}' requires a higher subscription tier."
+        )
+
+    # Enforce the rate card's `allowed_budget_types` server-side (the FE-doc sentence was
+    # aspirational before): the budget_type must be accepted for every placement the campaign buys.
+    await _validate_budget_type(campaign, subscription)
+
     # Validate distribution minimum budgets if provided (cash budgets only)
     if campaign.distribution:
         await _validate_distribution_minimums(
@@ -574,13 +590,59 @@ def _subscription_to_response(subscription: Optional[dict], bar_id: Optional[int
 
 
 def _get_allowed_campaign_types(tier: str) -> List[str]:
-    """Get allowed campaign types for a subscription tier"""
+    """
+    Get allowed campaign types for a subscription tier.
+
+    Ground truth for promo: .docs/q4_2026/Dobar_Market_Analysis_Brazil_2026.pdf §5.2 gates
+    Promotion Boost at Master + VIP — `promo_boost` was added to the `master` list on 2026-10-06
+    (it used to be VIP-only). `banner` and `map` remain VIP-only deliberately: no pricing document
+    covers them for Master. An empty list 403s every campaign_type for `regular`.
+    """
     if tier == "vip":
         return ["featured", "search", "map", "promo_boost", "banner", "push_notification"]
     elif tier == "master":
-        return ["featured", "search", "push_notification"]
+        return ["featured", "search", "push_notification", "promo_boost"]
     else:
         return []
+
+
+async def _validate_budget_type(campaign: "CampaignCreate", subscription: dict) -> None:
+    """
+    Reject a `budget_type` the campaign's placements do not accept, using exactly the rule that
+    builds the rate card (allowed_budget_types_for_placement), so
+    `allowed_budget_types` in GET /advertising/rates is *enforced*, not aspirational:
+    `credits` only for credit-backed placements, metered tokens (`hourly` / `cpc` / `cpm`) only for
+    the matching pricing model *and* only when the region has a configured rate > 0,
+    `fixed` everywhere. Checked against every placement the campaign buys.
+    """
+    budget_type = campaign.budget_type.value
+
+    placements = set()
+    if campaign.campaign_type:
+        placement = placement_for_campaign_type(campaign.campaign_type.value)
+        if placement:
+            placements.add(placement)
+    for dist in campaign.distribution or []:
+        placement = normalize_placement(dist.placement)
+        if placement:
+            placements.add(placement)
+
+    region_code = (subscription.get("region_code") or DEFAULT_REGION_CODE).upper()
+    pricing_row = await database.fetch_one(
+        RegionPricing.__table__.select().where(RegionPricing.region_code == region_code)
+    )
+    pricing = dict(pricing_row) if pricing_row else {}
+
+    for placement in sorted(placements):
+        rate_field = REGION_RATE_FIELDS[placement][0]
+        allowed = allowed_budget_types_for_placement(
+            placement, has_rate=as_decimal(pricing.get(rate_field)) > 0
+        )
+        if budget_type not in allowed:
+            raise APIError.bad_request(
+                f"budget_type '{budget_type}' is not accepted for placement '{placement}'. "
+                f"Allowed budget types: {', '.join(allowed)}."
+            )
 
 
 def _campaign_to_response(campaign: dict) -> CampaignResponse:

@@ -5,6 +5,7 @@ on:
     branches:
       - main
   workflow_dispatch:
+  workflow_call:
 
 jobs:
   # 1. Run Unit Tests

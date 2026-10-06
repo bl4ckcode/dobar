@@ -5,7 +5,6 @@ High-performance ad serving for consumer-facing endpoints.
 Serves featured ads, sponsored search results, and map spotlights.
 """
 from datetime import datetime, timezone
-from decimal import Decimal
 from typing import List, Optional
 from sqlalchemy import select, and_, or_
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,6 +13,7 @@ from app.advertising.models import (
     AdvertisingCampaign, AdvertisingSubscription, AdvertisingImpression,
     CampaignStatus, CampaignType, AdAction, SubscriptionTier
 )
+from app.advertising.services.campaign_service import CampaignService
 from app.bars_and_restaurants.models.relational_models import Bar
 
 
@@ -224,7 +224,7 @@ class AdServer:
         user_id: Optional[int] = None
     ) -> bool:
         """
-        Log an ad click and deduct from budget if CPC.
+        Log an ad click; CPC billing is delegated to CampaignService.
         
         Returns:
             True if click was logged, False if campaign not found
@@ -249,20 +249,20 @@ class AdServer:
         )
         self.db.add(click)
         
-        # Update campaign click count
+        # Update campaign click count.
+        # NOTE: CampaignService.track_event is the *other* click recorder (atomic SQL counter
+        # plus CPC billing). Wire exactly one recorder per click event — if both ran for the
+        # same click, the click counter would double-count (handoff §B1/§B4).
         campaign.clicks = (campaign.clicks or 0) + 1
         
-        # If CPC campaign, deduct from budget
-        if campaign.budget_type and campaign.budget_type.value == "cpc":
-            # Get CPC rate from region pricing (simplified - use min rate)
-            cpc_cost = Decimal("0.50")  # Default CPC
-            campaign.budget_spent = (campaign.budget_spent or Decimal("0")) + cpc_cost
-            
-            # Check if budget exhausted
-            if campaign.budget_spent >= campaign.budget_amount:
-                campaign.status = CampaignStatus.COMPLETED
-        
         await self.db.commit()
+        
+        # CPC billing has a single source of truth: CampaignService._process_click_billing
+        # (region-aware rate, budget_spent_per_placement tracking, _exhaust_campaign).
+        # This class used to hardcode its own Decimal("0.50") price above a "use min rate"
+        # comment — that copy is gone; delegate instead (handoff §B1).
+        if campaign.budget_type and campaign.budget_type.value == "cpc":
+            await CampaignService._process_click_billing(campaign_id, placement=placement)
         return True
     
     async def log_conversion(

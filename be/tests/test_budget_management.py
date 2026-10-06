@@ -48,6 +48,17 @@ def _make_campaign(**overrides) -> dict:
     return campaign
 
 
+def _update_values(mock_db) -> dict:
+    """The `.values(...)` payload of the UPDATE statement passed to database.execute,
+    keyed by column name with the raw Python values (SQLAlchemy wraps both in
+    Column / BindParameter objects)."""
+    update_query = mock_db.execute.call_args[0][0]
+    return {
+        (key.name if hasattr(key, "name") else key): getattr(value, "value", value)
+        for key, value in update_query._values.items()
+    }
+
+
 # =============================================================================
 # Pro-rated Pause/Resume Tests
 # =============================================================================
@@ -181,13 +192,12 @@ class TestPerPlacementBudgetTracking:
             mock_db.execute = AsyncMock()
             
             await CampaignService._process_click_billing(1, placement="search")
-            
-            # Verify the update included budget_spent_per_placement
-            call_args = mock_db.execute.call_args
-            if call_args:
-                update_values = call_args[0][1] if len(call_args[0]) > 1 else {}
-                # The update should include budget_spent_per_placement
-                assert len(call_args) > 0  # At minimum, executed
+
+            values = _update_values(mock_db)
+            # Region pricing missing (the mocked fetches never yield a row) → fallback 0.50.
+            # B2 regression: the canonical placement key is written, never a bogus "click" key.
+            assert values["budget_spent_per_placement"] == {"search": 0.5}
+            assert "click" not in values["budget_spent_per_placement"]
     
     @pytest.mark.asyncio
     async def test_hourly_billing_tracks_per_placement(self):
@@ -202,28 +212,170 @@ class TestPerPlacementBudgetTracking:
             mock_db.execute = AsyncMock()
             
             await CampaignService._process_hourly_billing(1)
-            
-            call_args = mock_db.execute.call_args
-            if call_args:
-                assert len(call_args) > 0
+
+            values = _update_values(mock_db)
+            # Region pricing missing (mock never yields a row) → fallback 10.00 on 100.00 spent,
+            # recorded under the canonical placement key.
+            assert float(values["budget_spent"]) == 110.0
+            assert values["budget_spent_per_placement"] == {"featured": 110.0}
     
     @pytest.mark.asyncio
     async def test_cpm_billing_tracks_per_placement(self):
-        """CPM billing should track per-placement spend"""
+        """CPM billing bills promo at the regional boost_cpm (B5) and writes the canonical
+        placement key, leaving a legacy campaign-type key untouched (B2 decision)."""
+        campaign = {
+            "id": 1, "bar_id": 16, "budget_type": "cpm",
+            "campaign_type": "promo_boost",
+            "budget_amount": "500.00", "budget_spent": "50.00",
+            # legacy key written before this session; new writes go to canonical "promo"
+            "budget_spent_per_placement": {"promo_boost": 50.0}
+        }
+        with patch("app.advertising.services.campaign_service.database") as mock_db:
+            mock_db.fetch_one = AsyncMock(side_effect=[
+                campaign, {"region_code": "BR"}, {"boost_cpm": "8.00"}
+            ])
+            mock_db.execute = AsyncMock()
+
+            await CampaignService._process_cpm_billing(1, impressions_since_last_bill=1000)
+
+            values = _update_values(mock_db)
+            # 8.00 per 1,000 impressions → cost 8.00 on top of the 50.00 already spent
+            assert float(values["budget_spent"]) == 58.0
+            assert values["budget_spent_per_placement"] == {"promo_boost": 50.0, "promo": 8.0}
+
+    @pytest.mark.asyncio
+    async def test_cpm_billing_banner_and_push_read_boost_cpm_not_the_15_fallback(self):
+        """B5 regression: banner and push_notification bill through the same CPM function and
+        used to silently fall back to 15.00 because only the promo_boost branch read boost_cpm."""
+        for placement_key in ("banner", "push_notification"):
+            campaign = {
+                "id": 1, "bar_id": 16, "budget_type": "cpm",
+                "campaign_type": placement_key,
+                "budget_amount": "500.00", "budget_spent": "0.00",
+                "budget_spent_per_placement": {}
+            }
+            with patch("app.advertising.services.campaign_service.database") as mock_db:
+                mock_db.fetch_one = AsyncMock(side_effect=[
+                    campaign, {"region_code": "BR"}, {"boost_cpm": "8.00"}
+                ])
+                mock_db.execute = AsyncMock()
+
+                await CampaignService._process_cpm_billing(1, impressions_since_last_bill=1000)
+
+                values = _update_values(mock_db)
+                assert float(values["budget_spent"]) == 8.0  # boost_cpm, NOT the old 15.00
+                assert values["budget_spent_per_placement"] == {placement_key: 8.0}
+
+    @pytest.mark.asyncio
+    async def test_cpm_billing_raises_when_region_has_no_rate(self):
+        """B5 decision: no region rate → raise instead of inventing a price."""
+        campaign = {
+            "id": 1, "bar_id": 16, "budget_type": "cpm",
+            "campaign_type": "promo_boost",
+            "budget_amount": "500.00", "budget_spent": "50.00",
+            "budget_spent_per_placement": {}
+        }
+        with patch("app.advertising.services.campaign_service.database") as mock_db:
+            mock_db.fetch_one = AsyncMock(side_effect=[
+                campaign, {"region_code": "BR"}, None
+            ])
+            mock_db.execute = AsyncMock()
+
+            with pytest.raises(ValueError, match="no usable CPM rate"):
+                await CampaignService._process_cpm_billing(1)
+
+            assert not mock_db.execute.called
+
+    @pytest.mark.asyncio
+    async def test_cpm_billing_rejects_non_cpm_placement(self):
+        """A cpm budget_type on a non-CPM placement cannot be priced — refuse loudly."""
+        campaign = {
+            "id": 1, "bar_id": 16, "budget_type": "cpm",
+            "campaign_type": "featured",
+            "budget_amount": "500.00", "budget_spent": "0.00",
+            "budget_spent_per_placement": {}
+        }
+        with patch("app.advertising.services.campaign_service.database") as mock_db:
+            mock_db.fetch_one = AsyncMock(return_value=campaign)
+            mock_db.execute = AsyncMock()
+
+            with pytest.raises(ValueError, match="refusing to bill"):
+                await CampaignService._process_cpm_billing(1)
+
+            assert not mock_db.execute.called
+
+
+# =============================================================================
+# Click Placement Threading (handoff §B2)
+# =============================================================================
+
+class TestClickPlacementThreading:
+    """The ad-event recorder must pass the placement through so per-placement spend is keyed
+    by canonical placement — never by the old literal "click" fallback."""
+
+    @pytest.mark.asyncio
+    async def test_track_event_threads_placement_into_click_billing(self):
+        with patch("app.advertising.services.campaign_service.database") as mock_db:
+            mock_db.execute = AsyncMock()
+            with patch.object(
+                CampaignService, "_process_click_billing", new_callable=AsyncMock
+            ) as mock_billing:
+                await CampaignService.track_event(
+                    campaign_id=7, action="click", placement="promo", user_id=None
+                )
+
+                mock_billing.assert_awaited_once_with(7, placement="promo")
+
+    @pytest.mark.asyncio
+    async def test_click_billing_normalizes_event_placement_aliases(self):
+        """FE events send AdTrackEvent placements like "home" — must land on "featured"."""
         with patch("app.advertising.services.campaign_service.database") as mock_db:
             mock_db.fetch_one = AsyncMock(return_value={
-                "id": 1, "bar_id": 16, "budget_type": "cpm",
-                "campaign_type": "promo_boost",
-                "budget_amount": "500.00", "budget_spent": "50.00",
-                "budget_spent_per_placement": {"promo_boost": 50.0}
+                "id": 1, "bar_id": 16, "budget_type": "cpc",
+                "campaign_type": "featured",
+                "budget_amount": "100.00", "budget_spent": "0.00",
+                "budget_spent_per_placement": {}
             })
             mock_db.execute = AsyncMock()
-            
-            await CampaignService._process_cpm_billing(1, impressions_since_last_bill=1000)
-            
-            call_args = mock_db.execute.call_args
-            if call_args:
-                assert len(call_args) > 0
+
+            await CampaignService._process_click_billing(1, placement="home")
+
+            assert _update_values(mock_db)["budget_spent_per_placement"] == {"featured": 0.5}
+
+    @pytest.mark.asyncio
+    async def test_click_billing_falls_back_to_campaign_type_without_explicit_placement(self):
+        with patch("app.advertising.services.campaign_service.database") as mock_db:
+            mock_db.fetch_one = AsyncMock(return_value={
+                "id": 1, "bar_id": 16, "budget_type": "cpc",
+                "campaign_type": "promo_boost",
+                "budget_amount": "100.00", "budget_spent": "0.00",
+                "budget_spent_per_placement": {}
+            })
+            mock_db.execute = AsyncMock()
+
+            await CampaignService._process_click_billing(1)
+
+            values = _update_values(mock_db)
+            assert values["budget_spent_per_placement"] == {"promo": 0.5}
+            assert "click" not in values["budget_spent_per_placement"]
+
+    @pytest.mark.asyncio
+    async def test_click_billing_skips_the_write_when_placement_cannot_be_resolved(self):
+        """No campaign_type and no explicit placement → write budget_spent but no
+        per-placement entry, instead of inventing a key."""
+        with patch("app.advertising.services.campaign_service.database") as mock_db:
+            mock_db.fetch_one = AsyncMock(return_value={
+                "id": 1, "bar_id": 16, "budget_type": "cpc",
+                "budget_amount": "100.00", "budget_spent": "0.00",
+                "budget_spent_per_placement": {}
+            })
+            mock_db.execute = AsyncMock()
+
+            await CampaignService._process_click_billing(1)
+
+            values = _update_values(mock_db)
+            assert "budget_spent_per_placement" not in values
+            assert "click" not in values
 
 
 # =============================================================================
