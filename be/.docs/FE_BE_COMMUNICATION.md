@@ -2645,7 +2645,7 @@ class AdvertisingRepository {
 | `bar_id` missing → `400`, non-member → `403`, no token → `401` | ✅ verified |
 | `promo.pricing_model == "cpm"` (was `cpc`), `rate_unit == "per_1000_impressions"` | ✅ asserted in `tests/test_advertising_contract.py::TestRateCard` |
 | `promo`/`banner`/`push_notification` share the `boost_cpm` rate | ✅ asserted in `tests/test_advertising_contract.py::TestRateCard` |
-| Live re-check on Fly.io (`scripts/verify_rate_card_live.py`) | ✅ 2026-09-25, run from inside the production container (`flyctl ssh console`) and against the public URL with principal `user_id=6` / `bar_id=16`: **116/116 checks in both the `?bar_id=` and the `X-Bar-Id`-only forms**, `promo.pricing_model == "cpm"`, `rate == "8.00"`, `rate_unit == "per_1000_impressions"`, `credit_bucket == "boost_impressions"`. CI job: `.github/workflows/rate-card-live.yml` (manual `workflow_dispatch`; needs the `BARZ_JWT_SECRET` repo secret) |
+| Live re-check on Fly.io (`scripts/verify_rate_card_live.py`) | ✅ 2026-09-25, run from inside the production container (`flyctl ssh console`) and against the public URL with principal `user_id=6` / `bar_id=16`: **116/116 checks in both the `?bar_id=` and the `X-Bar-Id`-only forms**, `promo.pricing_model == "cpm"`, `rate == "8.00"`, `rate_unit == "per_1000_impressions"`, `credit_bucket == "boost_impressions"`. CI job: `.github/workflows/rate-card-live.yml` (manual `workflow_dispatch` or post-deploy `workflow_call`; verifies **from inside the app container** via the existing `FLY_API_TOKEN` — no app secret is stored in GitHub) |
 
 ---
 
