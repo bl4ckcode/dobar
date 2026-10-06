@@ -36,14 +36,17 @@ on:
         description: "Deployment to check ('local' for http://localhost:8000)"
         required: false
         default: "https://barz-backend-bold-sun-5691.fly.dev"
+        type: string
       user_id:
         description: "Principal minted into the token (must hold ads:view on bar_id)"
         required: false
         default: "6"
+        type: number
       bar_id:
         description: "Bar to query"
         required: false
         default: "16"
+        type: number
     secrets:
       BARZ_JWT_SECRET:
         required: true
