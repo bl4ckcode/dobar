@@ -20,12 +20,19 @@ Usage
     # offline: run every assertion against an embedded fixture (no token, no network)
     python scripts/verify_rate_card_live.py --self-test
 
+    # inside the deployed app container (secret never leaves the machine: the mint falls back
+    # to the container's own $SECRET_KEY; note flyctl's -C execs without a shell, so no cd/&&)
+    flyctl ssh console -a barz-backend-bold-sun-5691 -C \
+        'python /app/scripts/verify_rate_card_live.py --base-url http://127.0.0.1:8080 --user-id 6 --bar-id 16'
+
 Environment
 -----------
     BARZ_BASE_URL     default target URL, or "local" for http://localhost:8000
     BARZ_BAR_ID       bar to query
     BARZ_USER_ID      principal used when minting a token
     BARZ_JWT_SECRET   JWT secret used to mint (same value as the app's SECRET_KEY)
+    SECRET_KEY        fallback for the above — the app's own env var, so runs *inside* the
+                      app container need no secret flag or env at all
     BARZ_TOKEN        pre-existing bearer token; takes precedence over minting
 
 Exit code: 0 when every check passes, 1 otherwise, so CI can gate on it.
@@ -410,7 +417,10 @@ def resolve_token(args) -> tuple[str | None, str]:
     provided = args.token or os.getenv("BARZ_TOKEN")
     if provided:
         return provided, "provided token"
-    secret = args.jwt_secret or os.getenv("BARZ_JWT_SECRET")
+    # BARZ_JWT_SECRET first; $SECRET_KEY is the app's own env var, which makes the minting work
+    # out-of-the-box when the script runs *inside* the app container (flyctl ssh console) —
+    # in that case the secret never leaves the machine that already owns it.
+    secret = args.jwt_secret or os.getenv("BARZ_JWT_SECRET") or os.getenv("SECRET_KEY")
     if secret and args.user_id:
         return mint_token(args.user_id, secret), f"minted for user {args.user_id} (1h)"
     return None, "none"
@@ -445,7 +455,8 @@ def main() -> int:
                         help="principal used when minting a token; must hold ads:view on the bar")
     parser.add_argument("--token", default=None, help="existing bearer token ($BARZ_TOKEN)")
     parser.add_argument("--jwt-secret", default=None,
-                        help="JWT secret used to mint a token ($BARZ_JWT_SECRET / the app's SECRET_KEY)")
+                        help="JWT secret used to mint a token "
+                             "($BARZ_JWT_SECRET, else the app's $SECRET_KEY)")
     parser.add_argument("--self-test", action="store_true",
                         help="run every assertion offline against an embedded fixture")
     parser.add_argument("--dump", action="store_true", help="print the raw JSON response")
@@ -465,7 +476,7 @@ def main() -> int:
     if not token:
         print("❌ No credentials.\n"
               "   Pass --token, or --user-id together with --jwt-secret (or set BARZ_TOKEN /\n"
-              "   BARZ_JWT_SECRET). Run --self-test to exercise the checks offline instead.")
+              "   BARZ_JWT_SECRET / SECRET_KEY). Run --self-test to exercise the checks offline instead.")
         return 1
 
     headers = {"Authorization": f"Bearer {token}"}

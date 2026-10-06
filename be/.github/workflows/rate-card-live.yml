@@ -1,0 +1,93 @@
+name: Live Rate-Card Check
+
+# Verifies GET /advertising/rates against a running deployment with
+# scripts/verify_rate_card_live.py (exit 0 = contract holds, 1 = drift).
+#
+# Two ways to trigger:
+#   - workflow_dispatch: the manual "temp job" (choose base_url / principal / ref)
+#   - workflow_call:     wire it into deploy.yml as a post-deploy gate later, e.g.
+#                           verify_rate_card:
+#                             needs: deploy
+#                             uses: ./.github/workflows/rate-card-live.yml
+#                             secrets: inherit
+#
+# Requires the repo secret BARZ_JWT_SECRET (the app's SECRET_KEY) so the job can
+# mint a short-lived token:
+#   gh secret set BARZ_JWT_SECRET --body '<SECRET_KEY value>'
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Deployment to check ('local' for http://localhost:8000)"
+        required: false
+        default: "https://barz-backend-bold-sun-5691.fly.dev"
+      user_id:
+        description: "Principal minted into the token (must hold ads:view on bar_id)"
+        required: false
+        default: "6"
+      bar_id:
+        description: "Bar to query"
+        required: false
+        default: "16"
+  workflow_call:
+    inputs:
+      base_url:
+        description: "Deployment to check ('local' for http://localhost:8000)"
+        required: false
+        default: "https://barz-backend-bold-sun-5691.fly.dev"
+      user_id:
+        description: "Principal minted into the token (must hold ads:view on bar_id)"
+        required: false
+        default: "6"
+      bar_id:
+        description: "Bar to query"
+        required: false
+        default: "16"
+    secrets:
+      BARZ_JWT_SECRET:
+        required: true
+
+jobs:
+  verify:
+    name: Verify production rate card
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install script dependencies
+        run: |
+          python -m pip install --upgrade pip
+          # only what the verifier imports (httpx at module level, PyJWT inside mint_token),
+          # pinned by the same requirements.txt the app ships with
+          grep -E '^(httpx|PyJWT)' requirements.txt | xargs pip install
+
+      - name: Self-test the verifier offline
+        run: python scripts/verify_rate_card_live.py --self-test
+
+      - name: Check secret is configured
+        env:
+          BARZ_JWT_SECRET: ${{ secrets.BARZ_JWT_SECRET }}
+        run: |
+          if [ -z "$BARZ_JWT_SECRET" ]; then
+            echo "::error::BARZ_JWT_SECRET repo secret is not set — cannot mint a token."
+            echo "Set it with: gh secret set BARZ_JWT_SECRET --body '<app SECRET_KEY value>'"
+            exit 1
+          fi
+
+      - name: Verify GET /advertising/rates
+        env:
+          BARZ_JWT_SECRET: ${{ secrets.BARZ_JWT_SECRET }}
+        run: |
+          python scripts/verify_rate_card_live.py \
+            --base-url "${{ inputs.base_url }}" \
+            --user-id "${{ inputs.user_id }}" \
+            --bar-id "${{ inputs.bar_id }}"
