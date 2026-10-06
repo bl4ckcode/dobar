@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:barz/core/design/design_system.dart';
@@ -77,8 +77,8 @@ class _BusinessSideMenuState extends State<BusinessSideMenu> {
                 _buildSidebarButton(
                   isDark: isDark,
                   icon: _isExpanded
-                      ? LucideIcons.chevronsLeft
-                      : LucideIcons.chevronsRight,
+                      ? LucideIcons.chevrons_left
+                      : LucideIcons.chevrons_right,
                   label: 'Collapse',
                   onTap: () => setState(() => _isExpanded = !_isExpanded),
                   isGold: false,
@@ -86,7 +86,7 @@ class _BusinessSideMenuState extends State<BusinessSideMenu> {
                 const SizedBox(height: 4),
                 _buildSidebarButton(
                   isDark: isDark,
-                  icon: LucideIcons.logOut,
+                  icon: LucideIcons.log_out,
                   label: 'Logout',
                   onTap: () => context.read<SessionBloc>().add(
                     const SessionEvent.logout(),
@@ -196,7 +196,7 @@ class _BusinessSideMenuState extends State<BusinessSideMenu> {
                     ),
                     if (widget.bars.length > 1)
                       const Icon(
-                        LucideIcons.chevronsUpDown,
+                        LucideIcons.chevrons_up_down,
                         color: Colors.white38,
                         size: 16,
                       ),

@@ -8,6 +8,7 @@
             "name": "barz",
             "request": "launch",
             "type": "dart",
+            "deviceId": "web-server",
             "args": [
                 "--web-port=8888"
             ]
@@ -17,6 +18,7 @@
             "request": "launch",
             "type": "dart",
             "flutterMode": "profile",
+            "deviceId": "web-server",
             "args": [
                 "--web-port=8888"
             ]
@@ -26,6 +28,7 @@
             "request": "launch",
             "type": "dart",
             "flutterMode": "release",
+            "deviceId": "web-server",
             "args": [
                 "--web-port=8888"
             ]

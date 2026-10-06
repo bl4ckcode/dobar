@@ -1,6 +1,6 @@
 # BARZ - Frontend Backend Communication
 
-Last Updated: July 20, 2026
+Last Updated: September 25, 2026
 Backend Status: Live on Fly.io
 API Base URL: https://barz-backend-bold-sun-5691.fly.dev
 
@@ -321,7 +321,7 @@ X-Bar-Permissions: ads:view
 
 Endpoints raised enforcement to the correct granularity:
 
-- **View (read-only):** `GET /plans` (public), `GET /my-plan`, `GET /credits`,
+- **View (read-only):** `GET /plans` (public), `GET /my-plan`, `GET /credits`, `GET /rates`,
   `GET /campaigns`, `GET /campaigns/{id}`, `GET /campaigns/summary`,
   `GET /campaigns/analytics-summary`, `GET /analytics`, `GET /analytics/{campaign_id}`,
   `GET /invoices` → require `ads:view`.
@@ -825,7 +825,6 @@ Payouts are automatically recorded when DPE notifies the backend of successful t
 
 ### 2. Dispute Management
 Disputes (chargebacks) are recorded and linked to the original `order_id` for administrative review.
-```
 
 ---
 
@@ -1363,8 +1362,10 @@ Priority: HIGH - Monetization & Growth
 Allows bar owners to subscribe to Pro plans (MASTER/VIP) and create/manage advertising campaigns with detailed performance analytics.
 
 > [!IMPORTANT]
-> All advertising endpoints require the `bar_id` as a **Query Parameter** for RBAC verification (e.g., `?bar_id=123`).
-> Users must have `ADS_MANAGE` permission (Owner, Admin, or Manager roles).
+> All advertising endpoints require the `bar_id` for RBAC verification — as a **Query Parameter**
+> (`?bar_id=123`) or via the `X-Bar-Id` request header.
+> Read endpoints require `ads:view`; write endpoints require `ads:manage`. Owner and Admin hold both
+> today; Manager and below are read-gated / denied unless granted a custom permission.
 
 ### 1. Subscription Management
 
@@ -1375,6 +1376,13 @@ Returns pricing and feature list for the bar's region.
 **Current Subscription:**
 `GET /advertising/my-plan?bar_id={bar_id}`
 Returns active tier, status, and remaining credits.
+
+**Rate Card & Credit Balances:**
+`GET /advertising/rates?bar_id={bar_id}`
+Returns the region rate card per placement (pricing model, rate, rate range, minimum daily budget,
+allowed `budget_type` values, credit bucket) plus the bar's current tier and available credits.
+This is the canonical source for the campaign wizard — see the full schema section later in this file.
+Requires `ads:view` (read), not `ads:manage`.
 
 **Subscribe to Plan:**
 ```
@@ -1400,8 +1408,8 @@ Body:
 {
   "name": "Happy Hour Push",
   "campaign_type": "push_notification", 
-  "budget": 50.00,
-  "budget_type": "daily",
+  "budget_type": "fixed",
+  "budget_amount": 50.00,
   "start_time": "2026-04-10T18:00:00Z",
   "end_time": "2026-04-15T22:00:00Z",
   "creative": {
@@ -2009,6 +2017,658 @@ for (final plan in plans.values) {
 ```
 
 ---
+
+## ADVERTISING FRONTEND STATUS UPDATE (SEP 2026)
+
+Status: **✅ FRONTEND WIRED**
+Priority: MEDIUM - Campaigns polish & subscription flow
+
+### Overview
+
+## Q4 2026 PROMO REACH LADDER — PROMO CPM ALIGNMENT (A/B HANDOFF)
+
+Status: **✅ COMPLETE** · 2026-12-06 · Priority: P0 — pricing & billing integrity
+
+### Decisions
+
+- **Tier gating (A2):** `master` may create `featured`, `search`, `push_notification`, `promo_boost`; `vip` may create all six. `banner`/`map_pin` remain VIP-only. 400 fail-closed when `campaign_type` cannot resolve.
+- **Rate-card budget-type validation (A3):** `allowed_budget_types` tokens are `credits`, `fixed`, or the API-legal pricing token (`cpc` / `cpm` / `hourly`). `cph` is a pricing *model* only — never a budget_type.
+- **Per-placement billing (B1/B5/B3):** `search` = region-averaged CPC; `promo`/`banner`/`push` = regional `boost_cpm` (CPM); `featured`/`map_pin` = per-hour `hourly`. Missing rate raises `ValueError` (no silent 15.00).
+- **Legacy credit-key folding (B6):** `banner`/`promo_boost` → `boost_impressions` additively at read time; response uses canonical keys only.
+- **Canonicalization (B2):** `normalize_placement` → `placement_for_campaign_type`; canonical keys; legacy `"click"` key never written.
+
+### Verification
+
+- `tests/test_advertising_contract.py` — **50** cases.
+- `tests/test_budget_management.py` — **23** cases.
+- `scripts/verify_rate_card_live.py --self-test` — **122** checks, **10** mutations detected.
+
+
+Frontend implementation status for the Advertising feature. Backend action **not required** for any item below except where noted.
+
+### 1. ✅ Plan Feature Descriptions (i18n keys) — Implemented
+
+The frontend now translates the `features` string keys returned by `GET /advertising/plans`
+(e.g. `feature_reduced_commission`) into localized labels (PT/EN/ES) using the key table from the
+"PLAN FEATURES & INTERNATIONALIZATION" section, and renders them per plan card in
+`SubscriptionPlansSheet`. Credits (`featured_hours`, `search_clicks`, `map_hours`,
+`boost_impressions`) are also rendered per tier. Unknown keys fall back to the raw key string.
+
+### 2. ✅ CORS on `/advertising/subscribe` — Verified Fixed (no backend request needed)
+
+The earlier `XMLHttpRequest onError` / CORS preflight failure from `http://localhost:8888` was
+re-tested against the live backend:
+
+- `OPTIONS` preflight to `POST /advertising/subscribe?bar_id=16` with
+  `Origin: http://localhost:8888`, `Access-Control-Request-Method: POST` and
+  `Access-Control-Request-Headers: content-type, authorization` returns
+  `access-control-allow-origin: http://localhost:8888` and
+  `access-control-allow-headers: content-type, authorization`.
+- The actual `POST` (non-preflighted) response also carries the CORS headers.
+
+The CORS middleware now reflects arbitrary localhost ports, so **no removal request is needed**.
+The previous failures were caused by the two frontend bugs already documented in
+"KNOWN ISSUES & BUG REPORTS" item 0 (wrong URL + missing `payment_method`), both now fixed.
+
+### 3. ✅ Subscribe Request Body — Fixed
+
+`POST /advertising/subscribe?bar_id={bar_id}` now sends the required fields:
+
+```json
+{
+  "tier": "master",
+  "billing_cycle": "monthly",
+  "payment_method": { "type": "pix" }
+}
+```
+
+Both response shapes are handled gracefully: full `AdSubscription` (card, `active`) and
+`waiting_payment` with PIX QR code (mapped to `pending`).
+
+### 4. ✅ Multi-Step Campaign Sheet — Fires Real Create Request
+
+`MultiStepCampaignSheet` now dispatches a real `POST /advertising/campaigns?bar_id={bar_id}`
+via `CreateCampaign` flow on "Launch" instead of only updating local UI. The success celebration
+dialog only shows after the backend responds; backend errors surface as a snackbar in the sheet.
+
+### 5. ✅ Delete Campaign — Wired
+
+`DELETE /advertising/campaigns/{id}?bar_id={bar_id}` is now wired end-to-end
+(datasource → repository → usecase → bloc). The campaigns page shows a confirmation dialog,
+dispatches `DeleteCampaign`, and removes the campaign from the list on success. Errors surface
+as a snackbar.
+
+### 6. ✅ Campaign Creation Contract Alignment & Budget/Credits (SEP 2026)
+
+Status: **✅ BACKEND COMPLETE — FRONTEND INTEGRATION & DEPLOYMENT VERIFICATION PENDING**
+Priority: HIGH - Production Launch Readiness
+
+#### Resolution
+
+The reported campaign-creation and subscription-plan issues were addressed backend-side:
+
+1. **Campaign budget contract aligned**
+   - `"daily"` is no longer used. The accepted values are `credits`, `fixed`, `cpc`, `cpm`, and `hourly`.
+   - Credit campaigns use `budget_amount`; placement percentages may be supplied as a map through
+     `placement_distribution` and are normalized to the backend's stored distribution format.
+   - Placement aliases such as `mapPin`, `map`, `promo_boost`, and `featured_home` are accepted.
+   - Cash campaigns are validated against placement-specific minimum daily budgets.
+
+2. **`GET /advertising/my-plan` resilience fixed**
+   - A bar with no paid advertising subscription now receives a default `regular` plan with zero
+     advertising credits and HTTP `200 OK`, rather than an HTTP `500`.
+   - Sparse/legacy subscription rows and legacy status values are handled defensively.
+
+3. **Rate card and credit balances exposed**
+   - New endpoint: `GET /advertising/rates`
+   - Requires `ads:view` and resolves the bar through the standard query parameter/header contract.
+   - The response includes the region currency, current tier, current available credits, tier credit
+     allowances, per-placement pricing model/rate/rate range, minimum daily budget, supported budget
+     types, and the credit bucket consumed by that placement.
+   - The frontend should use this endpoint instead of client-side rate constants or reach heuristics.
+   - **Full canonical schema, field reference, examples, error contract and Dart parsing helpers:
+     see the section `GET /advertising/rates` (CANONICAL SCHEMA) below.**
+
+#### Confirmed placement and credit mappings
+
+| Frontend placement / alias | Canonical placement | Pricing model | Credit bucket |
+|---|---|---|---|
+| `featured`, `featured_home`, `home` | `featured` | `cph` | `featured_hours` |
+| `search`, `sponsored_search` | `search` | `cpc` | `search_clicks` |
+| `map`, `mapPin`, `map_spotlight` | `map_pin` | `cph` | `map_hours` |
+| `promo`, `promo_boost` | `promo` | `cpm` | `boost_impressions` |
+| `banner` | `banner` | `cpm` | `boost_impressions` |
+| `push`, `push_notification` | `push_notification` | `cpm` | none |
+
+Banner campaigns are credit-backed and use `boost_impressions`; they are not restricted to a fixed
+cash budget. Every placement also supports `fixed` when its regional rate is configured.
+
+#### Valid `POST /advertising/campaigns` payload
+
+```json
+{
+  "name": "Campanha Destaque",
+  "campaign_type": "featured",
+  "budget_type": "credits",
+  "budget_amount": 100.0,
+  "start_time": "2026-09-24T19:30:27.008Z",
+  "end_time": "2026-10-24T19:30:27.008Z",
+  "targeting": {
+    "radius_km": 10,
+    "age_min": 18,
+    "age_max": 65,
+    "peak_hours_only": true,
+    "budget_optimizer_enabled": true
+  },
+  "creative": {
+    "title": "Campanha Destaque",
+    "cta": "visit_now",
+    "tagline": "Venha nos visitar!"
+  },
+  "placement_distribution": {
+    "featured": 50.0,
+    "search": 50.0
+  }
+}
+```
+
+For cash campaigns, use one of the supported values returned by `/advertising/rates` for the selected
+placement: `fixed`, `cpc`, `cpm`, or `hourly`. `daily` is not a valid request value.
+
+#### Frontend follow-up
+
+- Update the campaign sheet to send the payload above and never send `budget_type: "daily"`.
+- Fetch `/advertising/rates` when opening campaign creation; derive budget choices, minimum budgets,
+  credit balances, and estimate labels from that response.
+- Confirm the regular-plan response no longer requires a client-side error fallback.
+- Validate this contract against the deployed Fly.io backend after the current changes pass CI/CD.
+
+---
+
+## ADVERTISING RATE CARD — `GET /advertising/rates` (CANONICAL SCHEMA)
+
+Status: **✅ BACKEND COMPLETE** (live on Fly.io after the next CI/CD deploy)
+Priority: HIGH - Required before wiring campaign creation end-to-end
+Last verified: Sep 25, 2026 — captured from the running app (`app/advertising/routes.py::get_rate_card`,
+Pydantic 2.8.2 / FastAPI 0.112.0) and pinned by `tests/test_advertising_contract.py::TestRateCard`.
+
+### Overview
+
+`GET /advertising/rates` is the **single source of truth for the campaign wizard**. It returns, for
+the active bar:
+
+- the region rate card (currency + per-placement pricing model, rate, rate range, minimum daily budget),
+- the placements the bar may buy and the `budget_type` values each placement accepts,
+- the credit bucket each placement consumes when the campaign is credit-backed,
+- the bar's **current tier** and **current available credits**,
+- the regional credit allowances for `master` and `vip` (used for upsell copy, not for the bar's balance).
+
+The front-end must derive budget choices, minimum budgets, credit balances and estimate labels from
+this response instead of client-side rate constants or reach heuristics.
+
+### 1. Request
+
+```
+GET /advertising/rates?bar_id={bar_id}
+Auth: Required (Access Token - Bearer JWT)
+Permission: ads:view            (owner / admin by default; manager needs the custom ads:view grant)
+```
+
+`bar_id` is resolved in this order (implemented by `require_bar_permission`):
+
+| # | Source | Notes |
+|---|---|---|
+| 1 | path parameter | not applicable to this route |
+| 2 | `?bar_id=` query parameter | current clients — keep sending it |
+| 3 | `X-Bar-Id` request header | supported fallback for new clients |
+
+There is **no** `region_code` request parameter and none is accepted: the region comes from the
+bar's advertising subscription row (falling back to `BR` when the bar has no subscription yet).
+
+### 2. Response headers (bar context)
+
+Every successful call also echoes the standard bar-context headers, so the FE can gate UI in the
+same round-trip (see "BAR CONTEXT HEADERS"):
+
+| Header | Example |
+|---|---|
+| `X-Bar-Id` | `16` |
+| `X-Bar-Role` | `owner` |
+| `X-Bar-Permissions` | `ads:manage,ads:view,analytics:export,...` |
+
+### 3. Response — canonical shape
+
+> [!IMPORTANT]
+> **Monetary fields are JSON strings, not numbers.** `Decimal` fields (`rate`, `rate_max`,
+> `min_daily_budget`) are serialized as strings: `"25.00"`, `"0.80"`, `"40.00"`. Do **not** cast
+> them with `as double` / `as num` in Dart — they will throw. Parse with `double.parse(value)`
+> (see the Dart section below). Integers in `credits*` objects are real numbers.
+
+Example: a **Master** bar in region `BR` (rates as seeded by the contract test), after consuming
+part of its monthly credits:
+
+```json
+{
+  "region_code": "BR",
+  "currency": "BRL",
+  "tier": "master",
+  "placements": {
+    "featured": {
+      "placement": "featured",
+      "campaign_type": "featured",
+      "pricing_model": "cph",
+      "rate": "25.00",
+      "rate_max": null,
+      "rate_unit": "per_hour",
+      "credit_bucket": "featured_hours",
+      "credit_unit": "hours",
+      "credit_backed": true,
+      "min_daily_budget": "40.00",
+      "allowed_budget_types": ["credits", "cph", "fixed"]
+    },
+    "search": {
+      "placement": "search",
+      "campaign_type": "search",
+      "pricing_model": "cpc",
+      "rate": "0.80",
+      "rate_max": "2.50",
+      "rate_unit": "per_click",
+      "credit_bucket": "search_clicks",
+      "credit_unit": "clicks",
+      "credit_backed": true,
+      "min_daily_budget": "20.00",
+      "allowed_budget_types": ["credits", "cpc", "fixed"]
+    },
+    "map_pin": {
+      "placement": "map_pin",
+      "campaign_type": "map",
+      "pricing_model": "cph",
+      "rate": "35.00",
+      "rate_max": null,
+      "rate_unit": "per_hour",
+      "credit_bucket": "map_hours",
+      "credit_unit": "hours",
+      "credit_backed": true,
+      "min_daily_budget": "25.00",
+      "allowed_budget_types": ["credits", "cph", "fixed"]
+    },
+    "promo": {
+      "placement": "promo",
+      "campaign_type": "promo_boost",
+      "pricing_model": "cpm",
+      "rate": "8.00",
+      "rate_max": null,
+      "rate_unit": "per_1000_impressions",
+      "credit_bucket": "boost_impressions",
+      "credit_unit": "impressions",
+      "credit_backed": true,
+      "min_daily_budget": "15.00",
+      "allowed_budget_types": ["credits", "cpm", "fixed"]
+    },
+    "banner": {
+      "placement": "banner",
+      "campaign_type": "banner",
+      "pricing_model": "cpm",
+      "rate": "8.00",
+      "rate_max": null,
+      "rate_unit": "per_1000_impressions",
+      "credit_bucket": "boost_impressions",
+      "credit_unit": "impressions",
+      "credit_backed": true,
+      "min_daily_budget": "30.00",
+      "allowed_budget_types": ["credits", "cpm", "fixed"]
+    },
+    "push_notification": {
+      "placement": "push_notification",
+      "campaign_type": "push_notification",
+      "pricing_model": "cpm",
+      "rate": "8.00",
+      "rate_max": null,
+      "rate_unit": "per_1000_impressions",
+      "credit_bucket": null,
+      "credit_unit": null,
+      "credit_backed": false,
+      "min_daily_budget": "25.00",
+      "allowed_budget_types": ["cpm", "fixed"]
+    }
+  },
+  "credit_buckets": ["featured_hours", "search_clicks", "map_hours", "boost_impressions"],
+  "credits_by_tier": {
+    "master": {"featured_hours": 4, "search_clicks": 200, "map_hours": 2, "boost_impressions": 5000},
+    "vip": {"featured_hours": 12, "search_clicks": 1000, "map_hours": 8, "boost_impressions": 25000}
+  },
+  "credits_available": {"featured_hours": 2, "search_clicks": 40, "map_hours": 1, "boost_impressions": 0},
+  "generated_at": "2026-09-25T12:00:00Z"
+}
+```
+
+### 4. Field reference
+
+**Root object**
+
+| Field | Type | Description |
+|---|---|---|
+| `region_code` | string | Region used to price the bar (`BR`, `US`, `MX`, ...), uppercased |
+| `currency` | string | ISO currency for all monetary fields; defaults to `BRL` when the region row is missing |
+| `tier` | `"regular"` \| `"master"` \| `"vip"` | The bar's **current** advertising tier. A bar with no subscription row is auto-provisioned as `regular` |
+| `placements` | object (map) | Keyed by canonical placement — always **all six keys** are present, whether or not the bar can afford them |
+| `credit_buckets` | string[] | Fixed order: `featured_hours`, `search_clicks`, `map_hours`, `boost_impressions` |
+| `credits_by_tier` | object | Regional monthly **allowance** per tier (`master`, `vip`). This is plan marketing data, **not** the bar's balance |
+| `credits_available` | object | The bar's **current remaining** credits — the value to show in the wizard and to spend |
+| `generated_at` | ISO-8601 UTC | Server timestamp of the response |
+
+**Each entry in `placements`**
+
+| Field | Type | Description |
+|---|---|---|
+| `placement` | string | Canonical key, mirrors the map key (echoed for convenience) |
+| `campaign_type` | string | Value to send as `campaign_type` when a single-placement campaign is created. Note `map_pin` → `"map"` and `promo` → `"promo_boost"` |
+| `pricing_model` | `"cph"` \| `"cpc"` \| `"cpm"` | Metered model used for this placement |
+| `rate` | decimal **string** | Region rate for the model above. `"0"` means the region has no configured rate for this placement |
+| `rate_max` | decimal **string** or `null` | Upper bound only for placements with a range (currently only `search`, from `search_cpc_max`). `null` = single fixed rate |
+| `rate_unit` | string | Human label for `rate`: `per_hour`, `per_click`, `per_1000_impressions` |
+| `credit_bucket` | string or `null` | Credit bucket consumed when `budget_type: "credits"`. `null` = placement cannot be paid with credits |
+| `credit_unit` | string or `null` | Unit of the bucket: `hours`, `clicks`, `impressions` |
+| `credit_backed` | boolean | Convenience flag = `credit_bucket != null` |
+| `min_daily_budget` | decimal **string** | Minimum **daily** cash budget for this placement, used to validate cash campaigns |
+| `allowed_budget_types` | string[] | Exactly the `budget_type` values accepted by `POST /advertising/campaigns` for this placement |
+
+**How `allowed_budget_types` is composed** (backend algorithm, in this order):
+
+1. `"fixed"` is always present.
+2. If `rate > 0`, the placement's `pricing_model` (`cph` / `cpc` / `cpm`) is prepended.
+3. If the placement is credit-backed, `"credits"` is prepended.
+
+So a healthy `BR` region yields `["credits", "cph", "fixed"]` for `featured`, and a region with no
+pricing row yields just `["credits", "fixed"]` (or `["fixed"]` for `push_notification`, which is never
+credit-backed). `hourly` is **not** emitted by the rate card — `POST /advertising/campaigns` still
+accepts it, but `fixed` is the value the FE should send for cash campaigns.
+
+### 5. Example — Regular bar (upsell view)
+
+Rates are **region-level**, so a `regular` bar receives the same rate card as a paying bar but with
+`credits_available` zeroed out. This is exactly what the FE should render to upsell Master/VIP:
+show the real cash rates plus the `credits_by_tier` allowances as the "included credits" of the paid plans.
+
+```json
+{
+  "region_code": "BR",
+  "currency": "BRL",
+  "tier": "regular",
+  "placements": {
+    "featured": {
+      "placement": "featured",
+      "campaign_type": "featured",
+      "pricing_model": "cph",
+      "rate": "25.00",
+      "rate_max": null,
+      "rate_unit": "per_hour",
+      "credit_bucket": "featured_hours",
+      "credit_unit": "hours",
+      "credit_backed": true,
+      "min_daily_budget": "40.00",
+      "allowed_budget_types": ["credits", "cph", "fixed"]
+    }
+  },
+  "credit_buckets": ["featured_hours", "search_clicks", "map_hours", "boost_impressions"],
+  "credits_by_tier": {
+    "master": {"featured_hours": 4, "search_clicks": 200, "map_hours": 2, "boost_impressions": 5000},
+    "vip": {"featured_hours": 12, "search_clicks": 1000, "map_hours": 8, "boost_impressions": 25000}
+  },
+  "credits_available": {"featured_hours": 0, "search_clicks": 0, "map_hours": 0, "boost_impressions": 0},
+  "generated_at": "2026-09-25T12:00:00Z"
+}
+```
+
+> [!NOTE]
+> A `regular` bar has **no credits**, so `"credits"` still appears in `allowed_budget_types` (it is a
+> property of the placement, not of the bar). The FE must disable the "pay with credits" option when
+> the matching `credits_available` bucket is `0`, rather than relying on the array alone.
+
+(Only one placement is shown above for brevity; the full response always contains all six
+placements with the same field set as section 3.)
+
+### 6. Errors
+
+| Status | Body | Cause |
+|---|---|---|
+| `401` | `{"error_code":"UNAUTHORIZED","message":"Authentication required"}` | Missing / invalid Bearer token |
+| `400` | `{"detail":"bar_id is required in path, query, or X-Bar-Id header"}` | No `bar_id` in path, query or header |
+| `400` | `{"detail":"Invalid bar_id format"}` | Non-integer `bar_id` |
+| `403` | `{"detail":"You don't have access to this bar"}` | Caller is not an active member of that bar |
+| `403` | `{"detail":"Missing permission: ads:view"}` | Member, but lacks `ads:view` (e.g. cashier / staff) |
+
+The endpoint never returns `500` for a bar without a subscription: the bar is auto-provisioned as
+`regular` with zeroed credits, and a region without a `region_pricing` row degrades to `rate: "0"`
+and `currency: "BRL"`.
+
+### 7. Canonical placements, aliases and rate sources
+
+`placements` is **always** keyed by these six canonical names. The FE may keep using aliases when
+sending `placement_distribution`, but must read the response with the canonical keys.
+
+| Canonical key | Accepted `placement_distribution` aliases | `campaign_type` to send | `pricing_model` | `rate` source column (`region_pricing`) | `credit_bucket` | `min_daily_budget` |
+|---|---|---|---|---|---|---|
+| `featured` | `featured`, `featured_home`, `featuredhome`, `home` | `featured` | `cph` | `featured_cph` | `featured_hours` | `"40.00"` |
+| `search` | `search`, `sponsored_search`, `sponsoredsearch` | `search` | `cpc` | `search_cpc_min` (`rate_max` ← `search_cpc_max`) | `search_clicks` | `"20.00"` |
+| `map_pin` | `map`, `map_pin`, `mapPin`, `mappin`, `map_spotlight`, `mapspotlight` | `map` | `cph` | `map_cph` | `map_hours` | `"25.00"` |
+| `promo` | `promo`, `promo_boost`, `promoboost` | `promo_boost` | `cpm` | `boost_cpm` | `boost_impressions` | `"15.00"` |
+| `banner` | `banner`, `banners` | `banner` | `cpm` | `boost_cpm` | `boost_impressions` | `"30.00"` |
+| `push_notification` | `push`, `push_notification` | `push_notification` | `cpm` | `boost_cpm` | — (`null`) | `"25.00"` |
+
+Aliases are matched case-insensitively with `-` / spaces normalized to `_` (`mapPin` → `map_pin`).
+Unknown names are rejected with `422` at create time.
+
+`push_notification` is additionally **tier-gated**: it is not credit-backed and requires a `master`
+or `vip` subscription, otherwise `POST /advertising/campaigns` returns `403`.
+
+> [!NOTE]
+> **Ground truth for the `promo` model.** `.docs/q4_2026/Dobar_Market_Analysis_Brazil_2026.pdf`
+> (August 2026, the most recent pricing document) prices Promotion Boost **per 1,000 impressions** —
+> §5.2 "Product 4: Promotion Boost (CPM)": R$12/1k (Local 1–2km, min R$25) · R$10/1k (District, min
+> R$50) · R$8/1k (City wide, min R$100) · R$6/1k (Metro/event, min R$200), with 5,000 impressions/month
+> included for VIP. That is why `promo` reports `pricing_model: "cpm"` and shares the `boost_cpm`
+> column with `banner` / `push_notification` — the three rates are identical by construction.
+>
+> **Not modelled yet (roadmap — do not look for these fields in the response):** the PDF's reach-tier
+> ladder above, and its **Master + VIP tier gating** of promo. The rate card exposes a single `rate`
+> per placement today, and `POST /advertising/campaigns` does not reject `promo` for a `regular` bar.
+> Treat the ladder and the tier restriction as product guidance, not as response data.
+
+### 8. Wiring the wizard
+
+1. On opening campaign creation, call `GET /advertising/rates?bar_id={bar_id}` (cache per bar + tier).
+2. Render one card per `placements` key, localizing `placement` / `campaign_type` labels client-side.
+3. Budget selector = `allowed_budget_types` of the selected placement, minus `"credits"` when the
+   corresponding `credits_available[bucket]` is `0` (or the placement is not `credit_backed`).
+4. Show `rate` + `rate_unit` (+ `rate_max` as "up to" for `search`) using the response `currency`.
+5. Enforce `min_daily_budget` in the UI **before** submitting — the backend enforces it server-side as:
+
+```
+daily_placement_budget = placement.budget / campaign_duration_days
+campaign_duration_days = max((end_time - start_time).days, 1)   # default 7 when dates are missing
+reject if daily_placement_budget < min_daily_budget             # cash budget types only
+```
+
+So for a 30-day campaign you must allocate at least `30 × min_daily_budget` to the placement
+(e.g. `featured` → ≥ `1200.00` BRL over 30 days). Credit campaigns skip this check entirely.
+
+6. Build and send the create payload:
+
+```json
+{
+  "name": "Campanha Destaque",
+  "campaign_type": "featured",
+  "budget_type": "credits",
+  "budget_amount": 12.0,
+  "start_time": "2026-09-25T19:30:27.008Z",
+  "end_time": "2026-10-25T19:30:27.008Z",
+  "targeting": {"radius_km": 10, "age_min": 18, "age_max": 65, "budget_optimizer_enabled": true},
+  "creative": {"title": "Campanha Destaque", "cta": "visit_now", "tagline": "Venha nos visitar!"},
+  "placement_distribution": {"featured": 50.0, "search": 50.0}
+}
+```
+
+- `placement_distribution` accepts the **map form** (`{"featured": 50.0}`) or the list form
+  (`[{"placement": "featured", "percentage": 50}]`). Percentages are normalized server-side and each
+  placement's `budget` is derived from `budget_amount × percentage / 100`.
+- For `budget_type: "credits"`, `budget_amount` is expressed in the placement's `credit_unit`
+  (hours / clicks / impressions) and is **not** currency. It is validated against
+  `credits_available[credit_bucket]`.
+- Never send `budget_type: "daily"` — it is rejected. Use `credits`, `fixed`, `cpc`, `cpm` or `hourly`
+  (`fixed` recommended for cash).
+
+Failure to meet a minimum returns `400`:
+
+```json
+{
+  "error_code": "BAD_REQUEST",
+  "message": "Placement 'featured' requires minimum daily budget of R$ 40.00. Current allocation: R$ 10.00/day"
+}
+```
+
+### 9. Dart implementation
+
+```dart
+class PlacementRate {
+  final String placement;
+  final String campaignType;
+  final String pricingModel;
+  final double rate;
+  final double? rateMax;
+  final String rateUnit;
+  final String? creditBucket;
+  final String? creditUnit;
+  final bool creditBacked;
+  final double minDailyBudget;
+  final List<String> allowedBudgetTypes;
+
+  PlacementRate.fromJson(String key, Map<String, dynamic> json)
+      : placement = json['placement'] as String? ?? key,
+        campaignType = json['campaign_type'] as String,
+        pricingModel = json['pricing_model'] as String,
+        // Decimals arrive as JSON *strings* -> never use `as double` / `as num`.
+        rate = _money(json['rate']),
+        rateMax = json['rate_max'] == null ? null : _money(json['rate_max']),
+        rateUnit = json['rate_unit'] as String,
+        creditBucket = json['credit_bucket'] as String?,
+        creditUnit = json['credit_unit'] as String?,
+        creditBacked = json['credit_backed'] as bool,
+        minDailyBudget = _money(json['min_daily_budget']),
+        allowedBudgetTypes =
+            (json['allowed_budget_types'] as List).cast<String>().toList();
+
+  static double _money(Object? value) {
+    if (value == null) return 0;
+    if (value is num) return value.toDouble();
+    return double.tryParse(value.toString()) ?? 0;
+  }
+}
+
+class RateCard {
+  final String regionCode;
+  final String currency;
+  final String tier;
+  final Map<String, PlacementRate> placements;
+  final List<String> creditBuckets;
+  final Map<String, Map<String, int>> creditsByTier;
+  final Map<String, int> creditsAvailable;
+
+  RateCard.fromJson(Map<String, dynamic> json)
+      : regionCode = json['region_code'] as String,
+        currency = json['currency'] as String,
+        tier = json['tier'] as String,
+        placements = {
+          for (final e in (json['placements'] as Map).entries)
+            e.key as String
+                : PlacementRate.fromJson(e.key as String, e.value as Map<String, dynamic>),
+        },
+        creditBuckets = (json['credit_buckets'] as List).cast<String>(),
+        creditsByTier = (json['credits_by_tier'] as Map).map(
+          (k, v) => MapEntry(k as String, Map<String, int>.from(v as Map)),
+        ),
+        creditsAvailable = Map<String, int>.from(json['credits_available'] as Map);
+
+  /// Credits the bar may actually spend for a given placement.
+  int spendableCredits(String placement) {
+    final bucket = placements[placement]?.creditBucket;
+    if (bucket == null) return 0;
+    return creditsAvailable[bucket] ?? 0;
+  }
+
+  /// Budget types to offer in the UI (drops `credits` when the balance is 0).
+  List<String> usableBudgetTypes(String placement) {
+    final card = placements[placement];
+    if (card == null) return const [];
+    if (!card.creditBacked || spendableCredits(placement) == 0) {
+      return card.allowedBudgetTypes.where((t) => t != 'credits').toList();
+    }
+    return card.allowedBudgetTypes;
+  }
+
+  /// Minimum total budget for a placement over `days`, in the response currency.
+  double minTotalBudget(String placement, int days) =>
+      (placements[placement]?.minDailyBudget ?? 0) * (days < 1 ? 1 : days);
+}
+
+class AdvertisingRepository {
+  final Dio _dio;
+
+  Future<RateCard> getRateCard(int barId) async {
+    final res = await _dio.get(
+      '/advertising/rates',
+      queryParameters: {'bar_id': barId},
+    );
+    return RateCard.fromJson(res.data as Map<String, dynamic>);
+  }
+}
+```
+
+### 10. Known quirks & caveats (read before wiring)
+
+1. **`promo` is CPM (it reported `cpc` until Sep 25, 2026).** `promo` takes its `rate` from the
+   regional `boost_cpm` column, but it used to report `pricing_model: "cpc"` / `rate_unit: "per_click"`.
+   It now reports `cpm` / `per_1000_impressions` with `allowed_budget_types: ["credits","cpm","fixed"]`,
+   aligned with `.docs/q4_2026/Dobar_Market_Analysis_Brazil_2026.pdf` §5.2 ("Product 4: Promotion Boost
+   (CPM)") and with the `boost_impressions` credit bucket. `promo`, `banner` and `push_notification` all
+   read the same `boost_cpm` column, so their `rate` values are equal by construction — never treat that
+   as three independent price points.
+2. **`rate_max` semantics.** Only `search` has a range today (`"0.80"` – `"2.50"`); every other
+   placement returns `null`. When the region has no `region_pricing` row, `search.rate_max` comes
+   back as the string `"0"` instead of `null` — always compare numerically, never by null-ness.
+3. **Decimal formatting is not uniform.** A configured rate is `"25.00"`; a missing region rate is
+   `"0"` (no decimals). Parse numerically; do not pattern-match on the string.
+4. **`credits_by_tier` is marketing data, `credits_available` is the balance.** Both keys are always
+   present — even for a `regular` bar, which sees the Master/VIP allowances so the FE can upsell.
+5. **`hourly` is accepted but never advertised.** The create endpoint accepts `hourly`, yet no
+   placement lists it in `allowed_budget_types`. Stick to the returned values.
+6. **All six placements are always returned,** even those the bar's tier cannot use (e.g.
+   `push_notification` on a `regular` plan). Gate by `tier` + balance, not by key presence.
+7. **`tier` reflects the advertising subscription,** not the consumer subscription of the user:
+   a bar on a free/absent plan reports `regular` and is auto-provisioned on first call.
+8. **Cash budget accrual is not live yet.** No scheduler invokes the campaign billing paths and the ad
+   server's impression/click handlers are not called anywhere in the current code base, so
+   `budget_spent` stays at `0` and a running campaign will **not** auto-complete on budget exhaustion.
+   Do not build progress bars or "spend so far" copy that assumes per-impression/per-click/per-hour
+   accrual yet — drive status from the campaign endpoints instead.
+
+### 11. Verification status
+
+| Check | Result |
+|---|---|
+| `tests/test_advertising_contract.py::TestRateCard` (2 tests) | ✅ passing locally |
+| `X-Bar-Id` header resolution without `?bar_id=` | ✅ `200` |
+| `region_pricing` row missing → zeroed rates, `200` | ✅ verified |
+| Bar without subscription → auto-provisioned `regular`, `200` | ✅ verified |
+| `Decimal` wire format is string-typed | ✅ verified on the ASGI test client |
+| `bar_id` missing → `400`, non-member → `403`, no token → `401` | ✅ verified |
+| `promo.pricing_model == "cpm"` (was `cpc`), `rate_unit == "per_1000_impressions"` | ✅ asserted in `tests/test_advertising_contract.py::TestRateCard` |
+| `promo`/`banner`/`push_notification` share the `boost_cpm` rate | ✅ asserted in `tests/test_advertising_contract.py::TestRateCard` |
+| Live re-check on Fly.io (`scripts/verify_rate_card_live.py`) | ✅ 2026-09-25, run from inside the production container (`flyctl ssh console`) and against the public URL with principal `user_id=6` / `bar_id=16`: **116/116 checks in both the `?bar_id=` and the `X-Bar-Id`-only forms**, `promo.pricing_model == "cpm"`, `rate == "8.00"`, `rate_unit == "per_1000_impressions"`, `credit_bucket == "boost_impressions"`. CI job: `.github/workflows/rate-card-live.yml` (manual `workflow_dispatch` or post-deploy `workflow_call`; verifies **from inside the app container** via the existing `FLY_API_TOKEN` — no app secret is stored in GitHub) |
+
+---
+
+## ADVERTISING SUBSCRIPTION (SPRINT 5 - NEW)
 
 ## ADVERTISING SUBSCRIPTION (SPRINT 5 - NEW)
 

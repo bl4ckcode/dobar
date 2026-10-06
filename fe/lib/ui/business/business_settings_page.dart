@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
@@ -163,7 +163,7 @@ class BusinessSettingsPage extends StatelessWidget {
 
                     // Terms of Service
                     _SettingItem(
-                          icon: LucideIcons.fileText,
+                          icon: LucideIcons.file_text,
                           label: l10n.settings_terms_of_service,
                           onTap: () {
                             AppRoute.termsOfService.push(context);
@@ -175,7 +175,7 @@ class BusinessSettingsPage extends StatelessWidget {
 
                     // Privacy Policy
                     _SettingItem(
-                          icon: LucideIcons.shieldCheck,
+                          icon: LucideIcons.shield_check,
                           label: l10n.settings_privacy_policy,
                           onTap: () {
                             AppRoute.privacyPolicy.push(context);
@@ -385,7 +385,7 @@ class _LanguageOption extends StatelessWidget {
     final colors = context.dobarColors;
     return ListTile(
       leading: Icon(
-        isSelected ? LucideIcons.checkCircle : LucideIcons.languages,
+        isSelected ? LucideIcons.circle_check : LucideIcons.languages,
         color: isSelected ? barzGold : colors.labelSecondary,
         size: 22,
       ),
@@ -488,7 +488,7 @@ class _SettingsHeader extends StatelessWidget {
             children: [
               _HeaderAction(
                 label: l10n.settings_switch_bar,
-                icon: LucideIcons.chevronRight,
+                icon: LucideIcons.chevron_right,
                 onTap: () {},
                 color: barzGold,
               ),
@@ -497,7 +497,7 @@ class _SettingsHeader extends StatelessWidget {
               const SizedBox(width: 16),
               _HeaderAction(
                 label: l10n.settings_view_public_profile,
-                icon: LucideIcons.chevronRight,
+                icon: LucideIcons.chevron_right,
                 onTap: () {},
                 color: mutedColor,
               ),
@@ -622,7 +622,7 @@ class _SettingItem extends StatelessWidget {
             ?trailing,
             if (trailing == null)
               Icon(
-                LucideIcons.chevronRight,
+                LucideIcons.chevron_right,
                 color: destructive
                     ? errorRed.withValues(alpha: 0.4)
                     : dividerColor,
@@ -717,7 +717,7 @@ class _DangerZone extends StatelessWidget {
             ),
           ),
           _SettingItem(
-            icon: LucideIcons.trash2,
+            icon: LucideIcons.trash_off,
             label: isProcessing
                 ? '${l10n.loading}...'
                 : l10n.settings_delete_business_data,
@@ -743,7 +743,7 @@ class _DangerZone extends StatelessWidget {
                   },
           ),
           _SettingItem(
-            icon: LucideIcons.alertTriangle,
+            icon: LucideIcons.triangle_alert,
             label: isProcessing
                 ? '${l10n.loading}...'
                 : l10n.settings_deactivate_account,

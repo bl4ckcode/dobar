@@ -3,7 +3,7 @@ import 'package:barz/core/design/tokens/dobar_colors.dart';
 import 'package:barz/core/services/websocket/order_tracking_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 class StageStep {
   final OrderStatus status;
@@ -24,19 +24,19 @@ const List<StageStep> _stages = [
     status: OrderStatus.confirmed,
     label: 'Ordered',
     sub: 'Confirmed',
-    icon: LucideIcons.clipboardCheck,
+    icon: LucideIcons.clipboard_check,
   ),
   StageStep(
     status: OrderStatus.preparing,
     label: 'Preparing',
     sub: 'Crafting your drinks',
-    icon: LucideIcons.glassWater,
+    icon: LucideIcons.glass_water,
   ),
   StageStep(
     status: OrderStatus.ready,
     label: 'Ready',
     sub: 'At the counter',
-    icon: LucideIcons.packageCheck,
+    icon: LucideIcons.package_check,
   ),
   StageStep(
     status: OrderStatus.completed,

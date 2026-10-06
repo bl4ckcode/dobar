@@ -37,7 +37,6 @@
   "@want_a_specific_drink": {
     "description": "Rótulo 'Com sede daquela bebida específica?'."
   },
-
   "orders_title": "Meus Pedidos",
   "orders_empty": "Nenhum pedido ainda",
   "orders_empty_subtitle": "Faça seu primeiro pedido em um bar perto de você!",
@@ -61,12 +60,12 @@
   "pro_monthly": "Mensal",
   "pro_annual": "Anual",
   "pro_save_percent": "ECONOMIZE {percent}%",
-  "pro_benefit_priority_title": "Prioridade nos Pedidos",
+  "pro_benefit_priority_title": "Pedidos Prioritários",
   "pro_benefit_priority_desc": "Seus pedidos furam a fila nos horários de pico.",
-  "pro_benefit_cashback_title": "Boost de Cashback",
+  "pro_benefit_cashback_title": "Cashback Turbinado",
   "pro_benefit_cashback_desc": "Ganhe o dobro de cashback em cada compra.",
   "pro_benefit_deals_title": "Ofertas Exclusivas",
-  "pro_benefit_deals_desc": "Acesso a happy hours e promos relâmpago para membros.",
+  "pro_benefit_deals_desc": "Acesso a happy hours e promos relâmpago só para membros.",
   "pro_benefit_badge_title": "Badge VIP de Check-in",
   "pro_benefit_badge_desc": "Mostre seu status Pro nos bares parceiros.",
   "pro_benefit_early_title": "Acesso Antecipado",
@@ -84,7 +83,6 @@
   "order_cancel": "Cancelar Pedido",
   "order_cancel_confirm": "Tem certeza que deseja cancelar este pedido?",
   "order_items_count": "{count, plural, =1{1 item} other{{count} itens}}",
-
   "cart_title": "Seu Carrinho",
   "cart_empty": "Seu carrinho está vazio",
   "cart_add_items": "Adicione alguns itens deliciosos!",
@@ -109,7 +107,6 @@
   "cart_notes_hint": "Alergias, gelo extra...",
   "cart_coupon_not_connected": "Lógica de cupom ainda não conectada",
   "cart_spot_not_available": "Mesa/Local não disponível",
-
   "menu_title": "Cardápio",
   "menu_search": "Buscar no cardápio...",
   "menu_categories": "Categorias",
@@ -118,7 +115,6 @@
   "menu_item_added": "Adicionado ao carrinho!",
   "menu_item_price": "R$ {price}",
   "menu_item_unavailable": "Indisponível no momento",
-
   "payment_title": "Pagamento",
   "payment_method": "Forma de Pagamento",
   "payment_method_card": "Cartão de Crédito/Débito",
@@ -201,6 +197,7 @@
   "campaign_status_pending": "PENDENTE",
   "campaign_status_completed": "CONCLUÍDO",
   "campaign_status_cancelled": "CANCELADO",
+  "campaign_status_draft": "RASCUNHO",
   "campaign_metric_impressions": "IMPRESSÕES",
   "campaign_metric_clicks": "CLIQUES",
   "campaign_metric_budget": "ORÇAMENTO",
@@ -222,16 +219,10 @@
   "checkin_active_checkout": "Fechar conta",
   "checkin_checkout_title": "Sair do {barName}?",
   "checkin_checkout_subtitle": "Sua sessão será encerrada e o carrinho será limpo.",
-  "checkin_checkout_confirm": "Sim, fechar conta",
+  "checkin_checkout_confirm": "Tem certeza que deseja fazer check-out deste bar?",
   "checkin_checkout_cancel": "Ficar",
   "pro_modal_title": "Dobar PRO",
   "pro_modal_subtitle": "Desbloqueie a melhor experiência na noite",
-  "pro_benefit_priority_title": "Pedidos Prioritários",
-  "pro_benefit_priority_desc": "Seus pedidos furam a fila nos horários de pico.",
-  "pro_benefit_cashback_title": "Cashback Turbinado",
-  "pro_benefit_cashback_desc": "Ganhe o dobro de cashback em cada compra.",
-  "pro_benefit_deals_title": "Ofertas Exclusivas",
-  "pro_benefit_deals_desc": "Acesso a happy hours e promos relâmpago só para membros.",
   "pro_benefit_vip_title": "Badge VIP de Check-in",
   "pro_benefit_vip_desc": "Mostre seu status Pro nos bares parceiros.",
   "pro_benefit_early_access_title": "Acesso Antecipado",
@@ -248,7 +239,6 @@
   "pro_modal_restore": "Restaurar Compra",
   "pro_modal_terms": "Termos e Privacidade",
   "pro_coming_soon": "Em Breve",
-
   "checkout_order_details": "Detalhes do Pedido",
   "checkout_order_type": "Tipo de Pedido",
   "checkout_dine_in": "Comer Aqui",
@@ -257,9 +247,7 @@
   "checkout_place_order": "Fazer Pedido",
   "checkout_success": "Pedido Realizado!",
   "checkout_order_placed": "Seu pedido foi realizado com sucesso.",
-
   "cart_special_instructions": "Instruções Especiais",
-
   "checkin_title": "Check-in",
   "checkin_at_bar": "Você está no {barName}!",
   "checkin_confirm": "Fazer check-in",
@@ -275,8 +263,6 @@
   "checkin_table_hint": "ex.: 5, A1, Terraço",
   "checkin_table_label": "Mesa {table}",
   "checkin_checkout": "Fazer check-out",
-  "checkin_checkout_confirm": "Tem certeza que deseja fazer check-out deste bar?",
-
   "notification_order_ready": "Seu pedido está pronto!",
   "notification_order_confirmed": "Seu pedido foi confirmado",
   "notification_order_preparing": "Seu pedido está sendo preparado",
@@ -285,17 +271,13 @@
   "support_on_the_way": "Suporte a caminho",
   "directions_opening": "Abrindo mapa com direções...",
   "help": "Ajuda",
-
   "loading": "Carregando...",
   "error_generic": "Algo deu errado",
   "error_network": "Erro de conexão. Verifique sua internet.",
   "error_retry": "Tentar novamente",
   "success": "Sucesso!",
-  "cancel": "Cancelar",
   "confirm": "Confirmar",
   "close": "Fechar",
-  "save": "Salvar",
-  "delete": "Excluir",
   "edit": "Editar",
   "done": "Concluído",
   "next": "Próximo",
@@ -304,7 +286,6 @@
   "no_results": "Nenhum resultado encontrado",
   "connection_lost": "Conexão perdida",
   "reconnecting": "Reconectando...",
-
   "business_welcome_title": "Bem-vindo, Dono de Bar! 🎉",
   "business_welcome_subtitle": "Vamos configurar seu bar no Dobar",
   "business_create_bar": "Criar Novo Bar",
@@ -327,7 +308,6 @@
   "business_client_mode": "Modo Cliente",
   "business_select_bar": "Selecionar bar",
   "business_no_bar_selected": "Nenhum bar selecionado",
-
   "email_prompt_title": "Quer seu recibo?",
   "email_prompt_benefits": "Adicione seu email para ter:",
   "email_benefit_receipts": "Recibos digitais",
@@ -339,11 +319,9 @@
   "email_already_in_use": "Este email já está vinculado a outra conta",
   "email_update_failed": "Falha ao atualizar email. Tente novamente.",
   "email_added_success": "Email adicionado com sucesso!",
-
   "featured": "Destaque",
   "sponsored": "Patrocinado",
   "ad_distance_away": "{distance} km de distância",
-
   "analytics": "Análises",
   "performance": "Desempenho",
   "impressions": "Impressões",
@@ -356,7 +334,6 @@
   "daily_average": "Média Diária",
   "daily_breakdown": "Detalhamento Diário",
   "no_data_available": "Nenhum dado disponível",
-
   "subscription_plans": "Planos de Assinatura",
   "choose_your_plan": "Escolha Seu Plano",
   "boost_your_bar_visibility": "Aumente a visibilidade do seu bar e alcance mais clientes",
@@ -370,7 +347,6 @@
   "confirm_subscription_message": "Deseja assinar o plano",
   "subscription_created": "Assinatura criada com sucesso!",
   "select_bar_first": "Por favor, selecione um bar primeiro",
-
   "create_bar": "Criar Bar",
   "bar_created_success": "Bar criado com sucesso!",
   "error_creating_bar": "Falha ao criar bar. Por favor, tente novamente.",
@@ -430,7 +406,6 @@
   "review_info_hint": "Certifique-se de que tudo está correto antes de criar seu bar.",
   "discard": "Descartar",
   "field_required": "Este campo é obrigatório",
-
   "payout_setup_title": "Configuração de Pagamento",
   "payout_setup_hint": "Adicione seu CNPJ e conta bancária para receber pagamentos dos seus pedidos.",
   "bank_account": "Conta Bancária",
@@ -457,7 +432,6 @@
   "general_hours": "Horário Geral",
   "general_hours_hint": "Defina o horário para todos os dias de uma vez",
   "or_customize": "Ou personalize cada dia abaixo",
-
   "section_promotions": "Ofertas Quentes",
   "section_categories": "Categorias",
   "section_nearby_bars": "Parceiros Próximos",
@@ -495,8 +469,6 @@
   "location_mismatch_subtitle": "Gostaria de atualizar sua localização para ver bares e restaurantes locais?",
   "location_mismatch_update_button": "Atualizar Localização",
   "location_mismatch_not_now_button": "Agora não",
-
-  "business_no_bar_selected": "Nenhum bar selecionado",
   "business_welcome_back": "Bem-vindo de volta, {role}",
   "@business_welcome_back": {
     "placeholders": {
@@ -698,7 +670,6 @@
     }
   },
   "business_campaign_card_desc": "Crie uma campanha e alcance mais clientes na sua área!",
-
   "feature_basic_listing": "Seu bar listado no app Barz",
   "feature_order_management": "Gestão de pedidos em tempo real",
   "feature_basic_analytics": "Analytics básicos das campanhas",
@@ -831,5 +802,7 @@
   "category_brewery": "Cervejaria",
   "details_description": "Descrição",
   "details_business_registration": "Registro do Estabelecimento",
-  "details_location_method": "Método de Localização"
+  "details_location_method": "Método de Localização",
+  "campaign_type_banner": "BANNER",
+  "campaign_type_push": "PUSH"
 }

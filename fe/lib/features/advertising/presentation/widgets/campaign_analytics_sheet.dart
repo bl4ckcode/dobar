@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:ui';
 import 'dart:math' as math;
 import 'package:barz/core/design/design_system.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:barz/features/advertising/domain/models/models.dart';
 import 'package:barz/features/advertising/presentation/bloc/advertising_bloc.dart';
 import 'package:barz/features/advertising/presentation/bloc/advertising_event.dart';
@@ -327,12 +327,12 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
                             value: _formatNumber(imp),
                           ),
                           _MetricCardData(
-                            icon: LucideIcons.mousePointerClick,
+                            icon: LucideIcons.mouse_pointer_click,
                             label: 'CLICKS',
                             value: _formatNumber(clk),
                           ),
                           _MetricCardData(
-                            icon: LucideIcons.refreshCcw,
+                            icon: LucideIcons.refresh_ccw,
                             label: 'CONVERSIONS',
                             value: _formatNumber(convs),
                           ),
@@ -340,17 +340,17 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
                         const SizedBox(height: 10),
                         _buildMetricGridRow([
                           _MetricCardData(
-                            icon: LucideIcons.trendingUp,
+                            icon: LucideIcons.trending_up,
                             label: 'CTR',
                             value: '${ctr.toStringAsFixed(1)}%',
                           ),
                           _MetricCardData(
-                            icon: LucideIcons.dollarSign,
+                            icon: LucideIcons.dollar_sign,
                             label: 'COST PER CLICK',
                             value: currencyFormat.format(cpc),
                           ),
                           _MetricCardData(
-                            icon: LucideIcons.pieChart,
+                            icon: LucideIcons.chart_pie,
                             label: 'CONVERSION RATE',
                             value: '${convRate.toStringAsFixed(1)}%',
                           ),
@@ -510,7 +510,7 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
                                     child: Row(
                                       children: [
                                         Icon(
-                                          LucideIcons.calendarClock,
+                                          LucideIcons.calendar_clock,
                                           size: 16,
                                           color: barzGold,
                                         ),

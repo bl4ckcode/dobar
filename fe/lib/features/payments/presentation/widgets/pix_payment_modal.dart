@@ -4,7 +4,7 @@ import 'package:barz/core/design/design_system.dart';
 import 'package:barz/features/payments/domain/models/payment_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:barz/l10n/app_localizations.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
@@ -101,7 +101,7 @@ class _PixPaymentModalState extends State<PixPaymentModal> {
       SnackBar(
         content: Row(
           children: [
-            const Icon(LucideIcons.checkCircle, color: Colors.green, size: 18),
+            const Icon(LucideIcons.circle_check, color: Colors.green, size: 18),
             const SizedBox(width: 8),
             Text(l10n.payment_pix_copied),
           ],
@@ -159,7 +159,7 @@ class _PixPaymentModalState extends State<PixPaymentModal> {
                     borderRadius: BorderRadius.circular(10),
                   ),
                   child: const Icon(
-                    LucideIcons.qrCode,
+                    LucideIcons.qr_code,
                     color: pixGreen,
                     size: 22,
                   ),

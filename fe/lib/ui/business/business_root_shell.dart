@@ -8,7 +8,7 @@ import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
 import 'package:barz/features/session/presentation/bloc/session_event.dart';
 import 'package:barz/features/session/domain/models/bar_access.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 import 'widgets/business_onboarding_view.dart';
 
 const double kBusinessWebBreakpoint = 768.0;
@@ -84,6 +84,8 @@ class _BusinessRootShellState extends State<BusinessRootShell> {
               body: Directionality(
                 textDirection: TextDirection.rtl,
                 child: Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Expanded(
                       child: Directionality(
@@ -213,7 +215,7 @@ class _BusinessRootShellState extends State<BusinessRootShell> {
                     if (bars.length > 1) ...[
                       const SizedBox(width: 4),
                       const Icon(
-                        LucideIcons.chevronDown,
+                        LucideIcons.chevron_down,
                         color: Colors.white38,
                         size: 12,
                       ),
@@ -475,7 +477,7 @@ class _BusinessSideNavState extends State<_BusinessSideNav> {
                     child: Column(
                       children: [
                         _buildActionRow(
-                          icon: LucideIcons.user,
+                          icon: Icons.person,
                           label: 'Client Mode',
                           onTap: widget.onSwitchToClientMode,
                         ),
@@ -615,7 +617,7 @@ class _BusinessSideNavState extends State<_BusinessSideNav> {
                     ),
                     if (widget.bars.length > 1)
                       const Icon(
-                        LucideIcons.chevronsUpDown,
+                        LucideIcons.chevrons_up_down,
                         color: Colors.white38,
                         size: 16,
                       ),
@@ -909,7 +911,7 @@ class _BusinessDrawer extends StatelessWidget {
             Padding(
               padding: const EdgeInsets.all(24.0),
               child: _DrawerTile(
-                icon: LucideIcons.logOut,
+                icon: LucideIcons.log_out,
                 label: 'Logout',
                 isSelected: false,
                 isWarning: true,

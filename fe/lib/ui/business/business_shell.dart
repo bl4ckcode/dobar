@@ -2,7 +2,7 @@ import 'package:barz/core/router/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:barz/core/rbac/rbac.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
@@ -317,12 +317,12 @@ class _BusinessShellState extends State<BusinessShell> {
   ) {
     final items = <BusinessNavItem>[
       const BusinessNavItem(
-        icon: LucideIcons.layoutDashboard,
+        icon: LucideIcons.layout_dashboard,
         label: 'Dashboard',
         page: BusinessDashboardPage(),
       ),
       const BusinessNavItem(
-        icon: LucideIcons.shoppingBag,
+        icon: LucideIcons.shopping_bag,
         label: 'Orders',
         page: CashierPage(),
       ),
@@ -331,7 +331,7 @@ class _BusinessShellState extends State<BusinessShell> {
     if (activeBar.canEditMenu) {
       items.add(
         const BusinessNavItem(
-          icon: LucideIcons.utensilsCrossed,
+          icon: LucideIcons.utensils_crossed,
           label: 'Menu',
           page: MenuManagementPage(),
         ),
@@ -361,7 +361,7 @@ class _BusinessShellState extends State<BusinessShell> {
     if (activeBar.canViewBilling || activeBar.canManageAds) {
       items.add(
         const BusinessNavItem(
-          icon: LucideIcons.creditCard,
+          icon: LucideIcons.credit_card,
           label: 'Subscription',
           page: SubscriptionPlansPage(),
         ),
@@ -423,7 +423,7 @@ class _BusinessDrawer extends StatelessWidget {
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(
-                    LucideIcons.glassWater,
+                    LucideIcons.glass_water,
                     color: barzDark,
                     size: 24,
                   ),
@@ -507,7 +507,7 @@ class _BusinessDrawer extends StatelessWidget {
                 const Divider(),
                 ListTile(
                   leading: const Icon(
-                    LucideIcons.logOut,
+                    LucideIcons.log_out,
                     color: Colors.redAccent,
                     size: 22,
                   ),

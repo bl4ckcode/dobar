@@ -90,6 +90,11 @@ class AdvertisingRepositoryImpl implements AdvertisingRepository {
   }
 
   @override
+  Future<RateCard> getRateCard(int barId) {
+    return _datasource.getRateCard(barId);
+  }
+
+  @override
   Future<AdSubscription> createSubscription({
     required int barId,
     required SubscriptionTier tier,
@@ -169,6 +174,11 @@ class AdvertisingRepositoryImpl implements AdvertisingRepository {
   @override
   Future<AdCampaign> createCampaign(CreateCampaignRequest request) {
     return _datasource.createCampaign(request);
+  }
+
+  @override
+  Future<AdCampaign> publishCampaign(int campaignId, int barId) {
+    return _datasource.publishCampaign(campaignId, barId);
   }
 
   @override

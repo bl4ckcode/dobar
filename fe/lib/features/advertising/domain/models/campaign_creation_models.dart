@@ -23,13 +23,14 @@ enum CampaignGoal {
   fullPresence,
 }
 
-/// Available campaign placements.
+/// Available campaign placements (canonical backend keys + push).
 enum CampaignPlacement {
   featured,
   search,
   mapPin,
   promo,
   banner,
+  pushNotification,
 }
 
 /// Placement metadata for UI display.
@@ -41,6 +42,7 @@ extension CampaignPlacementMeta on CampaignPlacement {
       CampaignPlacement.mapPin => 'Mapa',
       CampaignPlacement.promo => 'Promo',
       CampaignPlacement.banner => 'Banner',
+      CampaignPlacement.pushNotification => 'Push',
     };
   }
 
@@ -56,16 +58,19 @@ extension CampaignPlacementMeta on CampaignPlacement {
         'Impulsione promoções ou drinks específicos',
       CampaignPlacement.banner =>
         'Banner em rotação premium pelo app',
+      CampaignPlacement.pushNotification =>
+        'Notificação push geolocalizada (Master/VIP)',
     };
   }
 
   String get pricingModel {
     return switch (this) {
-      CampaignPlacement.featured => 'CPC / CPM',
+      CampaignPlacement.featured => 'CPH',
       CampaignPlacement.search => 'CPC',
-      CampaignPlacement.mapPin => 'CPM / Taxa fixa',
-      CampaignPlacement.promo => 'CPC',
+      CampaignPlacement.mapPin => 'CPH',
+      CampaignPlacement.promo => 'CPM',
       CampaignPlacement.banner => 'CPM',
+      CampaignPlacement.pushNotification => 'CPM',
     };
   }
 
@@ -76,6 +81,31 @@ extension CampaignPlacementMeta on CampaignPlacement {
       CampaignPlacement.mapPin => 25.0,
       CampaignPlacement.promo => 15.0,
       CampaignPlacement.banner => 30.0,
+      CampaignPlacement.pushNotification => 25.0,
+    };
+  }
+
+  /// Canonical backend placement key for `placement_distribution`.
+  String get canonicalKey {
+    return switch (this) {
+      CampaignPlacement.featured => 'featured',
+      CampaignPlacement.search => 'search',
+      CampaignPlacement.mapPin => 'map_pin',
+      CampaignPlacement.promo => 'promo',
+      CampaignPlacement.banner => 'banner',
+      CampaignPlacement.pushNotification => 'push_notification',
+    };
+  }
+
+  /// Value to send as `campaign_type` for a single-placement campaign.
+  String get campaignTypeWire {
+    return switch (this) {
+      CampaignPlacement.featured => 'featured',
+      CampaignPlacement.search => 'search',
+      CampaignPlacement.mapPin => 'map',
+      CampaignPlacement.promo => 'promo_boost',
+      CampaignPlacement.banner => 'banner',
+      CampaignPlacement.pushNotification => 'push_notification',
     };
   }
 }

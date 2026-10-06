@@ -4,7 +4,7 @@ import 'package:barz/core/design/design_system.dart';
 import 'package:barz/features/advertising/domain/models/models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:barz/l10n/app_localizations.dart';
@@ -124,7 +124,8 @@ class _CreateCampaignSheetState extends State<CreateCampaignSheet> {
       CampaignType.search => l10n.campaign_type_search,
       CampaignType.map => l10n.campaign_type_map,
       CampaignType.promoBoost => l10n.campaign_type_promo_boost,
-      _ => type.name.toUpperCase(),
+      CampaignType.banner => l10n.campaign_type_banner,
+      CampaignType.pushNotification => l10n.campaign_type_push,
     };
   }
 
@@ -134,7 +135,8 @@ class _CreateCampaignSheetState extends State<CreateCampaignSheet> {
       CampaignType.search => '🔍',
       CampaignType.map => '📍',
       CampaignType.promoBoost => '🚀',
-      _ => '📢',
+      CampaignType.banner => '🖼️',
+      CampaignType.pushNotification => '🔔',
     };
   }
 
@@ -150,7 +152,7 @@ class _CreateCampaignSheetState extends State<CreateCampaignSheet> {
         barId: barId,
         name: _nameController.text,
         campaignType: _selectedType,
-        budgetType: BudgetType.cash,
+        budgetType: BudgetType.fixed,
         budgetAmount: double.tryParse(_budgetController.text) ?? 0.0,
         startDate: _startDate,
         endDate: _endDate,

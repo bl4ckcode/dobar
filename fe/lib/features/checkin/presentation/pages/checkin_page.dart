@@ -10,7 +10,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/core/design/tokens/dobar_colors.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:barz/features/bars/domain/models/bar_model.dart';
 import 'package:barz/features/location/presentation/bloc/location_cubit.dart';
 
@@ -205,7 +205,7 @@ class _InitialViewState extends State<_InitialView> {
                               ),
                             ),
                             child: Icon(
-                              LucideIcons.qrCode,
+                              LucideIcons.qr_code,
                               size: 60,
                               color: colors.buttonPrimary,
                             ),
@@ -282,7 +282,7 @@ class _InitialViewState extends State<_InitialView> {
                         // Trigger finding bars immediately
                         _findNearbyBars(context);
                       },
-                      icon: LucideIcons.mapPin,
+                      icon: LucideIcons.map_pin,
                       label: l10n.checkin_initial_find_nearby,
                     ),
                   ],
@@ -708,7 +708,7 @@ class _NearbyBarsView extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              LucideIcons.mapPinOff,
+              LucideIcons.map_pin_off,
               size: 64,
               color: colors.labelSecondary.withValues(alpha: 0.5),
             ),
@@ -749,7 +749,7 @@ class _NearbyBarsView extends StatelessWidget {
                     shape: BoxShape.circle,
                   ),
                   child: Icon(
-                    LucideIcons.arrowLeft,
+                    LucideIcons.arrow_left,
                     color: colors.labelPrimary,
                     size: 20,
                   ),
@@ -1168,7 +1168,7 @@ class _ActiveCheckinView extends StatelessWidget {
               // Primary Actions
               _PrimaryButton(
                 onPressed: () => AppRoute.pushBar(context, checkin.barId),
-                icon: LucideIcons.utensilsCrossed,
+                icon: LucideIcons.utensils_crossed,
                 label: l10n.checkin_active_browse_menu,
               ).animate().fadeIn(delay: 500.ms).slideY(begin: 0.1, end: 0),
 
@@ -1176,7 +1176,7 @@ class _ActiveCheckinView extends StatelessWidget {
 
               _SecondaryButton(
                 onPressed: () => AppRoute.cart.push(context),
-                icon: LucideIcons.shoppingCart,
+                icon: LucideIcons.shopping_cart,
                 label: l10n.checkin_active_view_cart,
               ).animate().fadeIn(delay: 600.ms).slideY(begin: 0.1, end: 0),
 

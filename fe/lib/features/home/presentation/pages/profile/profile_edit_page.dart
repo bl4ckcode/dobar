@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/features/user/presentation/bloc/user_bloc.dart';
 import 'package:barz/features/user/presentation/bloc/user_event.dart';
@@ -87,7 +87,7 @@ class _ProfileEditPageState extends State<ProfileEditPage> {
             ),
           ),
           leading: IconButton(
-            icon: Icon(LucideIcons.arrowLeft, color: colors.labelPrimary),
+            icon: Icon(LucideIcons.arrow_left, color: colors.labelPrimary),
             onPressed: () => Navigator.pop(context),
           ),
           actions: [

@@ -33,7 +33,7 @@ import 'package:barz/core/theme/theme_cubit.dart';
 import '../widgets/security_indicators.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:barz/core/design/tokens/dobar_colors.dart';
 
 class CheckoutArguments {
@@ -246,7 +246,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
                               paymentOptions: [
                                 PaymentOptionItem(
                                   label: l10n.payment_method_pix,
-                                  icon: LucideIcons.qrCode,
+                                  icon: LucideIcons.qr_code,
                                   iconColor: const Color(0xFF32BCAD),
                                   onTap: () =>
                                       setState(() => _selectedCardId = '__pix__'),
@@ -325,7 +325,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
         children: [
           _CircleIconButton(
             onPressed: () => context.pop(),
-            icon: LucideIcons.chevronLeft,
+            icon: LucideIcons.chevron_left,
             isDark: isDark,
           ),
           const SizedBox(width: 16),

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:barz/core/design/design_system.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:barz/core/rbac/rbac.dart';
 import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/core/utils/injections.dart';
@@ -848,7 +848,7 @@ class _QuickActionsSection extends StatelessWidget {
             ),
             if (activeBar.canEditMenu)
               _QuickActionChip(
-                icon: LucideIcons.utensilsCrossed,
+                icon: LucideIcons.utensils_crossed,
                 label: 'Edit Menu',
                 onTap: () => context.go(AppRoute.businessMenu.path),
               ),
@@ -859,14 +859,14 @@ class _QuickActionsSection extends StatelessWidget {
                 onTap: () => context.go(AppRoute.businessCampaigns.path),
               ),
               _QuickActionChip(
-                icon: LucideIcons.qrCode,
+                icon: LucideIcons.qr_code,
                 label: 'Table QR',
                 onTap: () => _showComingSoon(context, 'Table QR Generator'),
               ),
             ],
             if (activeBar.canManageStaff)
               _QuickActionChip(
-                icon: LucideIcons.userPlus,
+                icon: LucideIcons.user_plus,
                 label: 'Invite Staff',
                 onTap: () => _showComingSoon(context, 'Staff Invitations'),
                 highlighted: true,

@@ -119,6 +119,11 @@ class AdvertisingUsecase {
     return _repository.getSubscription(barId);
   }
 
+  /// Get the advertising rate card for a bar (campaign wizard pricing source).
+  Future<RateCard> getRateCard(int barId) {
+    return _repository.getRateCard(barId);
+  }
+
   /// Create subscription.
   Future<AdSubscription> createSubscription({
     required int barId,
@@ -198,6 +203,11 @@ class AdvertisingUsecase {
   /// Create a new campaign.
   Future<AdCampaign> createCampaign(CreateCampaignRequest request) {
     return _repository.createCampaign(request);
+  }
+
+  /// Publish a draft campaign (draft → active or scheduled).
+  Future<AdCampaign> publishCampaign(int campaignId, int barId) {
+    return _repository.publishCampaign(campaignId, barId);
   }
 
   /// Pause a campaign.

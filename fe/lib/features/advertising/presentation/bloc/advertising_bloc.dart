@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:barz/core/error/exceptions.dart';
+import 'package:barz/features/advertising/domain/models/models.dart';
 import 'package:barz/features/advertising/domain/usecases/advertising_usecase.dart';
 import 'advertising_event.dart';
 import 'advertising_state.dart';
@@ -20,6 +21,7 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
     // Business events
     on<LoadPlans>(_onLoadPlans);
     on<LoadSubscription>(_onLoadSubscription);
+    on<LoadRateCard>(_onLoadRateCard);
     on<CreateSubscription>(_onCreateSubscription);
     on<CancelSubscription>(_onCancelSubscription);
     on<CaptureSubscriptionPayment>(_onCaptureSubscriptionPayment);
@@ -27,6 +29,7 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
     on<LoadCampaigns>(_onLoadCampaigns);
     on<LoadCampaign>(_onLoadCampaign);
     on<CreateCampaignEvent>(_onCreateCampaign);
+    on<PublishCampaign>(_onPublishCampaign);
     on<PauseCampaign>(_onPauseCampaign);
     on<ResumeCampaign>(_onResumeCampaign);
     on<DeleteCampaign>(_onDeleteCampaign);
@@ -158,6 +161,20 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
     }
   }
 
+  Future<void> _onLoadRateCard(
+    LoadRateCard event,
+    Emitter<AdvertisingState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingRateCard: true, error: null));
+    try {
+      final card = await _usecase.getRateCard(event.barId);
+      emit(state.copyWith(rateCard: card, isLoadingRateCard: false));
+    } catch (e) {
+      final message = e is AppException ? e.displayMessage : e.toString();
+      emit(state.copyWith(isLoadingRateCard: false, error: message));
+    }
+  }
+
   Future<void> _onCreateSubscription(
     CreateSubscription event,
     Emitter<AdvertisingState> emit,
@@ -284,20 +301,109 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
     CreateCampaignEvent event,
     Emitter<AdvertisingState> emit,
   ) async {
-    emit(state.copyWith(isLoadingCampaign: true, error: null));
+    emit(
+      state.copyWith(
+        isLoadingCampaign: true,
+        error: null,
+        successMessage: null,
+      ),
+    );
     try {
-      final campaign = await _usecase.createCampaign(event.request);
-      final updatedCampaigns = [...state.campaigns, campaign];
+      // POST /advertising/campaigns only creates a draft — it never
+      // auto-activates. Chain the publish call so "Launch" actually goes
+      // live (draft → active, or draft → scheduled when start_time > now).
+      final draft = await _usecase.createCampaign(event.request);
+      AdCampaign published = draft;
+      String? publishError;
+      if (draft.status == CampaignStatus.draft ||
+          draft.status == CampaignStatus.pending) {
+        try {
+          published = await _usecase.publishCampaign(
+            draft.id,
+            draft.barId,
+          );
+        } catch (e) {
+          publishError = _friendlyError(e);
+        }
+      }
+      final updatedCampaigns = [...state.campaigns, published];
+      if (publishError != null) {
+        emit(
+          state.copyWith(
+            campaigns: updatedCampaigns,
+            selectedCampaign: published,
+            isLoadingCampaign: false,
+            successMessage: null,
+            error:
+                'Rascunho criado, mas a ativação falhou: $publishError',
+          ),
+        );
+        return;
+      }
+      final launchedMsg = switch (published.status) {
+        CampaignStatus.active => 'Campanha ativada com sucesso!',
+        CampaignStatus.scheduled => 'Campanha agendada com sucesso!',
+        CampaignStatus.pending => 'Campanha agendada com sucesso!',
+        _ => 'Campanha criada com sucesso!',
+      };
+      emit(
+        state.copyWith(
+          campaigns: updatedCampaigns,
+          selectedCampaign: published,
+          isLoadingCampaign: false,
+          successMessage: launchedMsg,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          isLoadingCampaign: false,
+          error: _friendlyError(e),
+        ),
+      );
+    }
+  }
+
+  Future<void> _onPublishCampaign(
+    PublishCampaign event,
+    Emitter<AdvertisingState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        isLoadingCampaign: true,
+        error: null,
+        successMessage: null,
+      ),
+    );
+    try {
+      final campaign = await _usecase.publishCampaign(
+        event.campaignId,
+        event.barId,
+      );
+      final updatedCampaigns = state.campaigns
+          .map((c) => c.id == campaign.id ? campaign : c)
+          .toList();
+      final msg = switch (campaign.status) {
+        CampaignStatus.active => 'Campanha ativada!',
+        CampaignStatus.scheduled => 'Campanha agendada!',
+        CampaignStatus.pending => 'Campanha agendada!',
+        _ => 'Campanha publicada!',
+      };
       emit(
         state.copyWith(
           campaigns: updatedCampaigns,
           selectedCampaign: campaign,
           isLoadingCampaign: false,
-          successMessage: 'Campaign created successfully!',
+          successMessage: msg,
         ),
       );
     } catch (e) {
-      emit(state.copyWith(isLoadingCampaign: false, error: e.toString()));
+      emit(
+        state.copyWith(
+          isLoadingCampaign: false,
+          error: _friendlyError(e),
+        ),
+      );
     }
   }
 
@@ -401,5 +507,17 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
 
   void _onSetSearch(SetSearch event, Emitter<AdvertisingState> emit) {
     emit(state.copyWith(searchQuery: event.query));
+  }
+
+  /// Surfaces backend validation messages verbatim (they already contain the
+  /// concrete `R$ X/dia` minimums the wizard must show).
+  String _friendlyError(Object e) {
+    if (e is AppException) {
+      final msg = e.displayMessage.trim();
+      if (msg.isNotEmpty) return msg;
+      return 'Falha na operação. Tente novamente.';
+    }
+    final msg = e.toString().replaceFirst('Exception: ', '').trim();
+    return msg.isEmpty ? 'Falha na operação. Tente novamente.' : msg;
   }
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 enum AppRoute {
   home('/'),
@@ -146,12 +146,12 @@ List<BusinessNavigationItem> buildBusinessNavItems({
 }) {
   final items = <BusinessNavigationItem>[
     const BusinessNavigationItem(
-      icon: LucideIcons.layoutDashboard,
+      icon: LucideIcons.layout_dashboard,
       label: 'Dashboard',
       route: AppRoute.businessDashboard,
     ),
     const BusinessNavigationItem(
-      icon: LucideIcons.shoppingBag,
+      icon: LucideIcons.shopping_bag,
       label: 'Cashier',
       route: AppRoute.businessCashier,
     ),
@@ -160,7 +160,7 @@ List<BusinessNavigationItem> buildBusinessNavItems({
   if (canEditMenu) {
     items.add(
       const BusinessNavigationItem(
-        icon: LucideIcons.utensilsCrossed,
+        icon: LucideIcons.utensils_crossed,
         label: 'Menu',
         route: AppRoute.businessMenu,
       ),

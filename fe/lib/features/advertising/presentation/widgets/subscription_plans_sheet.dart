@@ -3,7 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:barz/core/design/design_system.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 import '../bloc/advertising_bloc.dart';
 import '../bloc/advertising_event.dart';
 import '../bloc/advertising_state.dart';
@@ -262,7 +262,7 @@ class _SubscriptionPlansSheetState extends State<SubscriptionPlansSheet> {
     return Center(
       child: Column(
         children: [
-          Icon(LucideIcons.alertTriangle, color: errorRed, size: 48),
+          Icon(LucideIcons.triangle_alert, color: errorRed, size: 48),
           const SizedBox(height: 16),
           Text(error, style: TextStyle(color: dobar.labelSecondary)),
           const SizedBox(height: 24),

@@ -21,6 +21,8 @@ abstract class AdvertisingState with _$AdvertisingState {
     @Default(false) bool isLoadingPlans,
     AdSubscription? subscription,
     @Default(false) bool isLoadingSubscription,
+    RateCard? rateCard,
+    @Default(false) bool isLoadingRateCard,
     SubscriptionTrialSetupResult? trialSetup,
     @Default(false) bool isSettingUpTrial,
     @Default([]) List<AdCampaign> campaigns,

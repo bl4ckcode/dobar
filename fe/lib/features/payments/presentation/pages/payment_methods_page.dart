@@ -7,7 +7,7 @@ import 'package:barz/features/payments/presentation/bloc/payment_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:barz/l10n/app_localizations.dart';
 
 class PaymentMethodsPage extends StatelessWidget {
@@ -86,7 +86,7 @@ class PaymentMethodsPage extends StatelessWidget {
             onPressed: () => _showAddCardSheet(context),
             backgroundColor: barzGold,
             foregroundColor: Colors.black,
-            icon: const Icon(LucideIcons.creditCard),
+            icon: const Icon(LucideIcons.credit_card),
             label: Text(
               l10n.payment_add_card,
               style: TextStyle(fontWeight: FontWeight.bold),
@@ -168,7 +168,7 @@ class _EmptyCardsView extends StatelessWidget {
               shape: BoxShape.circle,
             ),
             child: const Icon(
-              LucideIcons.creditCard,
+              LucideIcons.credit_card,
               size: 48,
               color: barzGold,
             ),
@@ -220,11 +220,11 @@ class _CreditCardTile extends StatelessWidget {
   IconData _brandIcon(String? brand) {
     switch (brand?.toLowerCase()) {
       case 'visa':
-        return LucideIcons.creditCard;
+        return LucideIcons.credit_card;
       case 'mastercard':
-        return LucideIcons.creditCard;
+        return LucideIcons.credit_card;
       default:
-        return LucideIcons.creditCard;
+        return LucideIcons.credit_card;
     }
   }
 
@@ -303,7 +303,7 @@ class _CreditCardTile extends StatelessWidget {
                 ),
                 IconButton(
                   icon: Icon(
-                    LucideIcons.trash2,
+                    LucideIcons.trash_off,
                     color: dobar.labelSecondary,
                     size: 20,
                   ),
@@ -441,7 +441,7 @@ class _AddCardSheetState extends State<_AddCardSheet> {
             const SizedBox(height: 20),
             Row(
               children: [
-                const Icon(LucideIcons.creditCard, color: barzGold),
+                const Icon(LucideIcons.credit_card, color: barzGold),
                 const SizedBox(width: 12),
                 Text(
                   l10n.payment_add_credit_card,

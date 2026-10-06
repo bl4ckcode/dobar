@@ -40,6 +40,10 @@ abstract class AdvertisingDatasource {
 
   // Authenticated endpoints
   Future<AdSubscription?> getSubscription(int barId);
+
+  /// Fetch the advertising rate card for [barId] (single source of truth for
+  /// the campaign wizard: pricing, budget types, credit buckets and balances).
+  Future<RateCard> getRateCard(int barId);
   Future<AdSubscription> createSubscription({
     required int barId,
     required SubscriptionTier tier,
@@ -69,6 +73,7 @@ abstract class AdvertisingDatasource {
   Future<List<AdCampaign>> getCampaigns(int barId);
   Future<AdCampaign> getCampaign(int campaignId);
   Future<AdCampaign> createCampaign(CreateCampaignRequest request);
+  Future<AdCampaign> publishCampaign(int campaignId, int barId);
   Future<AdCampaign> pauseCampaign(int campaignId, int barId);
   Future<AdCampaign> resumeCampaign(int campaignId, int barId);
   Future<void> deleteCampaign(int campaignId, int barId);
@@ -221,6 +226,19 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
   }
 
   @override
+  Future<RateCard> getRateCard(int barId) async {
+    try {
+      final response = await dio.get(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.advertisingRates}',
+        queryParameters: {'bar_id': barId},
+      );
+      return RateCard.fromJson(Map<String, dynamic>.from(response.data as Map));
+    } on DioException catch (e) {
+      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
+    }
+  }
+
+  @override
   Future<AdSubscription> createSubscription({
     required int barId,
     required SubscriptionTier tier,
@@ -237,6 +255,7 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
             'type': 'pix',
           },
         },
+        options: Options(headers: {"Access-Control-Request-Headers": "content-type, accept"}),
       );
 
       // Backend returns two different response shapes:
@@ -407,32 +426,22 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
 
   @override
   Future<AdCampaign> createCampaign(CreateCampaignRequest request) async {
-    // `bar_id` is sent as a query parameter (per the documented contract) and
-    // also kept in the body for compatibility with backends that still read it
-    // from the payload.
-    //
-    // Budget and date keys are sent in BOTH spellings because the published
-    // contract (`budget`, `start_time`, `end_time`) and the campaign response
-    // model (`budget_amount`) disagree. FastAPI ignores unknown fields, so the
-    // duplicate keys are harmless. Remove the duplicates once the backend
-    // confirms the canonical payload — see docs/FE_BE_COMMUNICATION.md.
+    // Canonical payload per docs/FE_BE_COMMUNICATION.md §"Valid POST
+    // /advertising/campaigns payload": `bar_id` travels as `?bar_id=`
+    // query only; budget/date keys use the `budget_amount` / `start_time` /
+    // `end_time` spellings the backend validates.
     try {
       final response = await dio.post(
         '${ApiEndpoints.baseUrl}${ApiEndpoints.campaigns}',
         queryParameters: {'bar_id': request.barId},
         data: {
-          'bar_id': request.barId,
           'name': request.name,
           'campaign_type': request.campaignType.wireName,
           'budget_type': request.budgetType.name,
-          'budget': request.budgetAmount,
           'budget_amount': request.budgetAmount,
           'start_time': request.startDate.toIso8601String(),
-          'start_date': request.startDate.toIso8601String(),
           if (request.endDate != null)
             'end_time': request.endDate!.toIso8601String(),
-          if (request.endDate != null)
-            'end_date': request.endDate!.toIso8601String(),
           if (request.targeting != null)
             'targeting': {
               if (request.targeting!.radiusKm != null)
@@ -464,6 +473,21 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
           if (request.placementDistribution != null &&
               request.placementDistribution!.isNotEmpty)
             'placement_distribution': request.placementDistribution,
+        },
+      );
+      return AdCampaign.fromJson(response.data);
+    } on DioException catch (e) {
+      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
+    }
+  }
+
+  @override
+  Future<AdCampaign> publishCampaign(int campaignId, int barId) async {
+    try {
+      final response = await dio.post(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.publishCampaign(campaignId)}',
+        queryParameters: {
+          'bar_id': barId,
         },
       );
       return AdCampaign.fromJson(response.data);

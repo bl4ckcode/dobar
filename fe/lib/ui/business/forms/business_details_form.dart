@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
@@ -588,7 +588,7 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
                       children: [
                         GestureDetector(
                           onTap: _handleBack,
-                          child: Icon(LucideIcons.arrowLeft, color: textColor, size: 22),
+                          child: Icon(LucideIcons.arrow_left, color: textColor, size: 22),
                         ),
                         const SizedBox(width: 12),
                         Text(
@@ -659,7 +659,7 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
                                     ),
                                   )
                                 else if (_saved)
-                                  const Icon(LucideIcons.checkCircle,
+                                  const Icon(LucideIcons.circle_check,
                                       color: successGreen, size: 18),
                                 const SizedBox(width: 6),
                                 Text(
@@ -774,7 +774,7 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
                               fieldKey: 'barName',
                             ),
                             const SizedBox(height: 16),
-                            _fieldLabel(LucideIcons.fileText, l10n.details_description),
+                            _fieldLabel(LucideIcons.file_text, l10n.details_description),
                             TextField(
                               controller: _ctrl('description', _form.description),
                               onChanged: (v) => setState(() => _form.description = v),
@@ -854,7 +854,7 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
                         _sectionHeader(l10n.location),
                         _buildSection(
                           children: [
-                            _fieldLabel(LucideIcons.mapPin, l10n.address),
+                            _fieldLabel(LucideIcons.map_pin, l10n.address),
                             _inputField(
                               value: _form.address,
                               onChanged: (v) => _form.address = v,
@@ -867,7 +867,7 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      _fieldLabel(LucideIcons.mapPin, l10n.details_city),
+                                      _fieldLabel(LucideIcons.map_pin, l10n.details_city),
                                       _inputField(
                                         value: _form.city,
                                         onChanged: (v) => _form.city = v,
@@ -881,7 +881,7 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      _fieldLabel(LucideIcons.mapPin, l10n.details_state),
+                                      _fieldLabel(LucideIcons.map_pin, l10n.details_state),
                                       _inputField(
                                         value: _form.state,
                                         onChanged: (v) => _form.state = v,
@@ -975,7 +975,7 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
                         _sectionHeader(l10n.details_business_registration),
                         _buildSection(
                           children: [
-                            _fieldLabel(LucideIcons.fileText, l10n.business_id),
+                            _fieldLabel(LucideIcons.file_text, l10n.business_id),
                             Row(
                               children: [
                                 Expanded(
@@ -1011,14 +1011,14 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
                               ],
                             ),
                             const SizedBox(height: 16),
-                            _fieldLabel(LucideIcons.scrollText, l10n.details_state_registration),
+                            _fieldLabel(LucideIcons.scroll_text, l10n.details_state_registration),
                             _inputField(
                               value: _form.stateRegistration,
                               onChanged: (v) => _form.stateRegistration = v,
                               fieldKey: 'stateRegistration',
                             ),
                             const SizedBox(height: 16),
-                            _fieldLabel(LucideIcons.checkCircle, l10n.details_verification_status),
+                            _fieldLabel(LucideIcons.circle_check, l10n.details_verification_status),
                             Container(
                               padding: const EdgeInsets.symmetric(
                                   horizontal: 12, vertical: 6),
@@ -1111,10 +1111,10 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
                         _sectionHeader(l10n.details_location_logic),
                         _buildSection(
                           children: [
-                            _fieldLabel(LucideIcons.mapPin, l10n.details_location_method),
+                            _fieldLabel(LucideIcons.map_pin, l10n.details_location_method),
                             _buildDropdown(
                               label: '',
-                              icon: LucideIcons.mapPin,
+                              icon: LucideIcons.map_pin,
                               value: _form.locationMethod,
                               items: const [
                                 'table_number',

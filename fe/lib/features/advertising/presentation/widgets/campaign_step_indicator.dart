@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:barz/core/design/design_system.dart';
 
 /// Step data for the campaign creation indicator.
@@ -14,7 +14,7 @@ class CampaignStep {
     CampaignStep(label: 'Orçamento', icon: LucideIcons.wallet),
     CampaignStep(label: 'Criativo', icon: LucideIcons.image),
     CampaignStep(label: 'Segmentação', icon: LucideIcons.target),
-    CampaignStep(label: 'Revisão', icon: LucideIcons.checkSquare),
+    CampaignStep(label: 'Revisão', icon: LucideIcons.square_check),
   ];
 }
 

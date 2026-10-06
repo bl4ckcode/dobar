@@ -81,7 +81,7 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
 
     try {
       final result = await userRepository!.getCurrentUser();
-      return result.fold(
+      return await result.fold(
         (failure) {
           // 404 = new user needs registration and onboarding
           // 500+ = server error, assume complete to not block user

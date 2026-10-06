@@ -51,6 +51,10 @@ abstract class AdvertisingRepository {
   /// Get subscription for a bar.
   Future<AdSubscription?> getSubscription(int barId);
 
+  /// Get the advertising rate card for a bar — the campaign wizard's source of
+  /// truth for pricing, budget types, credit buckets and available credits.
+  Future<RateCard> getRateCard(int barId);
+
   /// Create a subscription for a bar.
   Future<AdSubscription> createSubscription({
     required int barId,
@@ -93,6 +97,9 @@ abstract class AdvertisingRepository {
 
   /// Create a new campaign.
   Future<AdCampaign> createCampaign(CreateCampaignRequest request);
+
+  /// Publish a draft campaign (draft → active/scheduled). Requires ads:manage.
+  Future<AdCampaign> publishCampaign(int campaignId, int barId);
 
   /// Pause a campaign.
   Future<AdCampaign> pauseCampaign(int campaignId, int barId);

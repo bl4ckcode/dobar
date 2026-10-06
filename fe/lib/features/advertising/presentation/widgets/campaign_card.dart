@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/features/advertising/domain/models/models.dart';
 import 'package:intl/intl.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:barz/l10n/app_localizations.dart';
 
 /// Placement icon mapping matching the React Native CampaignsPage.
@@ -10,9 +10,10 @@ IconData _placementIcon(CampaignType type) {
   return switch (type) {
     CampaignType.featured => LucideIcons.star,
     CampaignType.search => LucideIcons.search,
-    CampaignType.map => LucideIcons.mapPin,
+    CampaignType.map => LucideIcons.map_pin,
     CampaignType.promoBoost => LucideIcons.flame,
     CampaignType.banner => LucideIcons.image,
+    CampaignType.pushNotification => LucideIcons.bell,
   };
 }
 
@@ -24,6 +25,8 @@ Color _statusColor(CampaignStatus status) {
     CampaignStatus.completed => const Color(0xFF9E9E9E),
     CampaignStatus.pending => const Color(0xFF9E9E9E),
     CampaignStatus.cancelled => const Color(0xFF9E9E9E),
+    CampaignStatus.draft => const Color(0xFF9E9E9E),
+    CampaignStatus.scheduled => const Color(0xFF7CC4FF),
   };
 }
 
@@ -33,7 +36,9 @@ String _statusLabel(CampaignStatus status, AppLocalizations l10n) {
     CampaignStatus.paused => l10n.campaign_status_paused,
     CampaignStatus.pending => l10n.campaign_status_pending,
     CampaignStatus.completed => l10n.campaign_status_completed,
-    CampaignStatus.cancelled => 'Cancelada',
+    CampaignStatus.cancelled => l10n.campaign_status_cancelled,
+    CampaignStatus.draft => l10n.campaign_status_draft,
+    CampaignStatus.scheduled => l10n.campaign_status_pending,
   };
 }
 
@@ -85,12 +90,9 @@ class _CampaignCardState extends State<CampaignCard>
     final c = widget.campaign;
 
     final budgetTotal = c.budgetAmount;
-    final budgetSpent = c.budgetSpent;
-    final budgetPercent = budgetTotal > 0
-        ? (budgetSpent / budgetTotal).clamp(0.0, 1.0)
-        : 0.0;
-    final pct = (budgetPercent * 100).round();
-    final isHot = pct >= 90;
+    // NOTE (FE_BE_COMMUNICATION.md §10.8): cash budget accrual is not live —
+    // no scheduler invokes billing, so `budget_spent` stays at 0. Never drive
+    // progress/status UI on it; show the allocated budget instead.
     final ctr =
         c.impressions > 0 ? (c.clicks / c.impressions) * 100 : 0.0;
 
@@ -232,62 +234,38 @@ class _CampaignCardState extends State<CampaignCard>
 
                 const SizedBox(height: 20),
 
-                // Budget progress bar
-                Column(
+                // Budget allocation (NOT spend progress: `budget_spent`
+                // stays 0 until the backend billing scheduler ships).
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text.rich(
-                          TextSpan(
-                            children: [
-                              TextSpan(
-                                text: _formatBrl(budgetSpent),
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.white70,
-                                ),
-                              ),
-                              TextSpan(
-                                text: ' de ${_formatBrl(budgetTotal)}',
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.white38,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Text(
-                          '$pct%',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                            color: isHot ? errorRed : barzGold,
-                          ),
-                        ),
-                      ],
+                    Text(
+                      'Orçamento: ${_formatBrl(budgetTotal)}',
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.white70,
+                      ),
                     ),
-                    const SizedBox(height: 6),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0.0, end: budgetPercent),
-                        duration: const Duration(milliseconds: 1200),
-                        curve: const Cubic(0.22, 1.0, 0.36, 1.0),
-                        builder: (context, value, _) {
-                          return LinearProgressIndicator(
-                            value: value,
-                            minHeight: 6,
-                            backgroundColor:
-                                Colors.white.withValues(alpha: 0.06),
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              isHot
-                                  ? const Color(0xFFFF6B6B)
-                                  : const Color(0xFFFFDE59),
-                            ),
-                          );
-                        },
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: barzGold.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: barzGold.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Text(
+                        c.budgetType.name.toUpperCase(),
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.5,
+                          color: barzGold,
+                        ),
                       ),
                     ),
                   ],
@@ -348,7 +326,7 @@ class _CampaignCardState extends State<CampaignCard>
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
-                                LucideIcons.barChart3,
+                                LucideIcons.chart_bar_decreasing,
                                 size: 16,
                                 color: dobar.labelSecondary,
                               ),
@@ -389,13 +367,13 @@ class _CampaignCardState extends State<CampaignCard>
                         if (isActive)
                           PopupMenuItem(
                             value: 'toggle',
-                            child: _menuItem(LucideIcons.pauseCircle, 'Pausar',
+                            child: _menuItem(LucideIcons.circle_pause, 'Pausar',
                                 dobar),
                           )
                         else
                           PopupMenuItem(
                             value: 'toggle',
-                            child: _menuItem(LucideIcons.playCircle, 'Retomar',
+                            child: _menuItem(LucideIcons.circle_play, 'Retomar',
                                 dobar),
                           ),
                         PopupMenuItem(
@@ -406,7 +384,7 @@ class _CampaignCardState extends State<CampaignCard>
                         const PopupMenuDivider(),
                         PopupMenuItem(
                           value: 'delete',
-                          child: _menuItem(LucideIcons.trash2, 'Excluir',
+                          child: _menuItem(LucideIcons.trash, 'Excluir',
                               dobar,
                               color: errorRed),
                         ),
@@ -419,7 +397,7 @@ class _CampaignCardState extends State<CampaignCard>
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(
-                          LucideIcons.moreHorizontal,
+                          LucideIcons.message_circle_more,
                           size: 16,
                           color: dobar.labelSecondary,
                         ),

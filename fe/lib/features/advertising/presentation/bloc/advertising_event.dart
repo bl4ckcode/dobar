@@ -57,6 +57,11 @@ sealed class AdvertisingEvent with _$AdvertisingEvent {
   const factory AdvertisingEvent.loadSubscription({required int barId}) =
       LoadSubscription;
 
+  /// Load the advertising rate card for a bar (campaign wizard pricing
+  /// source: per-placement rates, allowed budget types, credit balances).
+  const factory AdvertisingEvent.loadRateCard({required int barId}) =
+      LoadRateCard;
+
   /// Create subscription.
   const factory AdvertisingEvent.createSubscription({
     required int barId,
@@ -101,6 +106,10 @@ sealed class AdvertisingEvent with _$AdvertisingEvent {
   /// Pause a campaign.
   const factory AdvertisingEvent.pauseCampaign({required int campaignId, required int barId}) =
       PauseCampaign;
+
+  /// Publish a draft campaign (draft → active/scheduled). Requires ads:manage.
+  const factory AdvertisingEvent.publishCampaign({required int campaignId, required int barId}) =
+      PublishCampaign;
 
   /// Resume a campaign.
   const factory AdvertisingEvent.resumeCampaign({required int campaignId, required int barId}) =

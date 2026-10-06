@@ -9,7 +9,7 @@ import 'package:barz/features/notifications/presentation/bloc/notification_state
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -67,7 +67,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
         ),
         leading: IconButton(
-          icon: Icon(LucideIcons.chevronLeft, color: colors.labelPrimary),
+          icon: Icon(LucideIcons.chevron_left, color: colors.labelPrimary),
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
@@ -107,7 +107,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(
-                    LucideIcons.alertCircle,
+                    LucideIcons.circle_alert,
                     size: 48,
                     color: colors.labelSecondary,
                   ),
@@ -131,7 +131,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(
-                      LucideIcons.bellOff,
+                      LucideIcons.bell_off,
                       size: 64,
                       color: colors.labelSecondary.withValues(alpha: 0.3),
                     ),
@@ -301,7 +301,7 @@ class _NotificationIcon extends StatelessWidget {
 
     switch (type) {
       case NotificationType.orderUpdate:
-        icon = LucideIcons.shoppingBag;
+        icon = LucideIcons.shopping_bag;
         color = Colors.blue;
         break;
       case NotificationType.promotion:

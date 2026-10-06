@@ -33,10 +33,20 @@ enum CampaignType {
   @JsonValue('promo_boost')
   promoBoost,
   banner,
+  @JsonValue('push_notification')
+  pushNotification,
 }
 
 /// Campaign status enum
-enum CampaignStatus { pending, active, paused, completed, cancelled }
+enum CampaignStatus {
+  pending,
+  active,
+  paused,
+  completed,
+  cancelled,
+  draft,
+  scheduled,
+}
 
 /// Backend wire name for a campaign type.
 ///
@@ -49,11 +59,18 @@ extension CampaignTypeWire on CampaignType {
     CampaignType.map => 'map',
     CampaignType.promoBoost => 'promo_boost',
     CampaignType.banner => 'banner',
+    CampaignType.pushNotification => 'push_notification',
   };
 }
 
 /// Budget type enum
-enum BudgetType { credits, cash, mixed }
+enum BudgetType { 
+  hourly,
+  cpc,
+  cpm,
+  fixed,
+  credits 
+}
 
 /// Campaign targeting options
 @freezed

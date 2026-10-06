@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:barz/core/design/design_system.dart';
@@ -62,8 +62,11 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
   String _barName = '';
   bool _barNameLoaded = false;
 
-  // Step 2: Budget
+  // Step 2: Budget — canonical source is GET /advertising/rates
+  // (pricing, min daily budgets, allowed budget types, credit balances).
+  // Never derive minimums/balances from client-side constants.
   final _budgetController = TextEditingController(text: '500');
+  BudgetType _budgetType = BudgetType.fixed;
   DateTime _startDate = DateTime.now();
   DateTime? _endDate;
   List<PlacementDistribution> _distribution = [];
@@ -95,6 +98,17 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
         .read<AdvertisingBloc>()
         .stream
         .listen(_onAdvertisingStateChanged);
+    // Rate card is the wizard's pricing source (rates, min daily budgets,
+    // allowed budget types, credit balances). Fetch once per open.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _loadRateCard());
+  }
+
+  void _loadRateCard() {
+    final barId = _activeBarId;
+    if (barId == null || !mounted) return;
+    context.read<AdvertisingBloc>().add(
+      AdvertisingEvent.loadRateCard(barId: barId),
+    );
   }
 
   void _initBarName() {
@@ -179,7 +193,27 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
           0.0,
           (sum, d) => sum + d.percentage,
         );
-        return _totalBudget >= 50 && (total - 100).abs() < 0.01;
+        if (!((total - 100).abs() < 0.01)) return false;
+        if (_budgetType == BudgetType.credits) {
+          return _validateCreditBudgets();
+        }
+        // Cash: enforce the rate card's minimum daily budget per placement
+        // so the backend does not reject the launch with a 400.
+        // backend: daily = placement.budget / max(days,1); reject if
+        // daily < min_daily_budget. Unknown placements (no rate card entry)
+        // fall back to the static metadata floor.
+        if (_totalBudget <= 0) return false;
+        final rateCard = context.read<AdvertisingBloc>().state.rateCard;
+        final days = _campaignDays.clamp(1, 90);
+        for (final d in _distribution) {
+          final minTotal = rateCard?.minTotalBudget(
+                d.placement.canonicalKey,
+                days,
+              ) ??
+              (d.placement.minDailyBudget * days);
+          if (minTotal > 0 && d.budget < minTotal) return false;
+        }
+        return true;
       case 2:
         return _taglineController.text.length <= 60;
       case 3:
@@ -189,6 +223,95 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
       default:
         return true;
     }
+  }
+
+  /// Credit campaigns skip the cash minimum check; instead the requested
+  /// amount per placement must fit the bar's remaining `credits_available`
+  /// bucket (hours / clicks / impressions — not currency).
+  bool _validateCreditBudgets() {
+    final rateCard = context.read<AdvertisingBloc>().state.rateCard;
+    if (rateCard == null) return false;
+    if (_totalBudget <= 0) return false;
+    for (final d in _distribution) {
+      final key = d.placement.canonicalKey;
+      final card = rateCard.placements[key];
+      // Push is never credit-backed.
+      if (card == null || !card.creditBacked) return false;
+      if (d.budget > rateCard.spendableCredits(key)) return false;
+    }
+    return true;
+  }
+
+  /// First placement that violates the cash minimum, for inline messaging.
+  /// Null when everything passes (or when credits mode handles validation).
+  String? _minBudgetViolation() {
+    if (_budgetType == BudgetType.credits) return null;
+    final rateCard = context.read<AdvertisingBloc>().state.rateCard;
+    final days = _campaignDays.clamp(1, 90);
+    for (final d in _distribution) {
+      final minTotal = rateCard?.minTotalBudget(
+            d.placement.canonicalKey,
+            days,
+          ) ??
+          (d.placement.minDailyBudget * days);
+      if (minTotal > 0 && d.budget < minTotal) {
+        return '${d.placement.label} exige mínimo de R\$ ${minTotal.toStringAsFixed(2)} '
+            'para $days dia(s) (atual: R\$ ${d.budget.toStringAsFixed(2)}).';
+      }
+    }
+    return null;
+  }
+
+  /// Budget types the wizard may offer for the current placement mix,
+  /// derived from the rate card. `credits` is only offered when every
+  /// selected placement is credit-backed AND has balance > 0.
+  List<BudgetType> _availableBudgetTypes() {
+    final rateCard = context.read<AdvertisingBloc>().state.rateCard;
+    if (rateCard == null || _distribution.isEmpty) {
+      return const [BudgetType.fixed];
+    }
+    var creditsOk = true;
+    final cash = <String>{};
+    for (final d in _distribution) {
+      final key = d.placement.canonicalKey;
+      final usable = rateCard.usableBudgetTypes(key).toSet();
+      cash.addAll(usable.where((t) => t != 'credits'));
+      if (!usable.contains('credits')) creditsOk = false;
+    }
+    final out = <BudgetType>[];
+    if (creditsOk) out.add(BudgetType.credits);
+    for (final t in cash) {
+      final bt = _budgetTypeFromWire(t);
+      if (bt != null && !out.contains(bt)) out.add(bt);
+    }
+    if (!out.contains(BudgetType.fixed)) out.add(BudgetType.fixed);
+    // Keep the current selection valid when the mix changes.
+    if (!out.contains(_budgetType)) {
+      // Defer setState-safe assignment: caller rebuilds anyway.
+      _budgetType = out.first;
+    }
+    return out;
+  }
+
+  static BudgetType? _budgetTypeFromWire(String wire) {
+    return switch (wire) {
+      'credits' => BudgetType.credits,
+      'fixed' => BudgetType.fixed,
+      'cpc' => BudgetType.cpc,
+      'cpm' => BudgetType.cpm,
+      'cph' || 'hourly' => BudgetType.hourly,
+      _ => null,
+    };
+  }
+
+  static String _budgetTypeLabel(BudgetType t) {
+    return switch (t) {
+      BudgetType.credits => 'Créditos',
+      BudgetType.fixed => 'Saldo (R\$)',
+      BudgetType.cpc => 'CPC',
+      BudgetType.cpm => 'CPM',
+      BudgetType.hourly => 'Por hora',
+    };
   }
 
   void _showCloseConfirmation() {
@@ -275,32 +398,59 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
     });
   }
 
-  void _togglePlacement(int index) {
+  /// Whether `push_notification` must stay locked: the rate card tier is
+  /// neither `master` nor `vip` (push is tier-gated and never credit-backed).
+  bool get _isPushGated {
+    final tier = context
+        .read<AdvertisingBloc>()
+        .state
+        .rateCard
+        ?.tier
+        .toLowerCase();
+    return tier != 'master' && tier != 'vip';
+  }
+
+  void _showPushUpsell() {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Push notifications exigem plano Master ou VIP. Veja os planos para desbloquear.',
+          ),
+        ),
+      );
+  }
+
+  void _togglePlacement(CampaignPlacement placement, int index) {
+    // `push_notification` is tier-gated (master/vip only) and never
+    // credit-backed — redirect regular bars to the plans upsell.
+    if (placement == CampaignPlacement.pushNotification &&
+        index < 0 &&
+        _isPushGated) {
+      _showPushUpsell();
+      return;
+    }
     setState(() {
-      if (_distribution.length > index) {
+      if (index >= 0 && _distribution.length > index) {
         final list = [..._distribution];
         list.removeAt(index);
         _distribution = list;
-      } else {
-        final remaining = CampaignPlacement.values
-            .where((p) => !_distribution.any((d) => d.placement == p))
+      } else if (!_distribution.any((d) => d.placement == placement)) {
+        final evenShare = 100.0 / (_distribution.length + 1);
+        _distribution = _distribution
+            .map((d) => PlacementDistribution(
+                  placement: d.placement,
+                  percentage: evenShare,
+                  budget: _totalBudget * evenShare / 100,
+                ))
             .toList();
-        if (remaining.isNotEmpty) {
-          final newP = remaining.first;
-          final evenShare = 100.0 / (_distribution.length + 1);
-          _distribution = _distribution
-              .map((d) => PlacementDistribution(
-                    placement: d.placement,
-                    percentage: evenShare,
-                    budget: _totalBudget * evenShare / 100,
-                  ))
-              .toList();
-          _distribution.add(PlacementDistribution(
-            placement: newP,
-            percentage: evenShare,
-            budget: _totalBudget * evenShare / 100,
-          ));
-        }
+        _distribution.add(PlacementDistribution(
+          placement: placement,
+          percentage: evenShare,
+          budget: _totalBudget * evenShare / 100,
+        ));
       }
     });
   }
@@ -334,7 +484,9 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
     return null;
   }
 
-  /// Resolves the in-flight create-campaign request.
+  /// Resolves the in-flight create-campaign request. The bloc chains
+  /// create → publish, so by the time `isLoadingCampaign` flips false the
+  /// selected campaign already carries its post-publish status.
   void _onAdvertisingStateChanged(AdvertisingState state) {
     if (!mounted || !_isLaunching || state.isLoadingCampaign) return;
 
@@ -346,7 +498,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
       return;
     }
 
-    _showLaunchSuccess();
+    _showLaunchSuccess(state.selectedCampaign?.status);
   }
 
   void _showLaunchError(String message) {
@@ -377,7 +529,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
       barId: barId,
       name: name,
       campaignType: _campaignTypeFor(primary.placement),
-      budgetType: BudgetType.cash,
+      budgetType: _budgetType,
       budgetAmount: _totalBudget,
       startDate: _startDate,
       endDate: _endDate,
@@ -408,31 +560,59 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
       CampaignPlacement.mapPin => CampaignType.map,
       CampaignPlacement.promo => CampaignType.promoBoost,
       CampaignPlacement.banner => CampaignType.banner,
+      CampaignPlacement.pushNotification => CampaignType.pushNotification,
     };
   }
 
   /// Backend wire name for a placement (`/advertising/campaigns`).
   ///
-  /// `CampaignPlacement.name` is not usable directly: the API expects `map`
-  /// and `promo_boost` rather than `mapPin` and `promo`.
-  static String _placementWireName(CampaignPlacement placement) {
-    return switch (placement) {
-      CampaignPlacement.featured => 'featured',
-      CampaignPlacement.search => 'search',
-      CampaignPlacement.mapPin => 'map',
-      CampaignPlacement.promo => 'promo_boost',
-      CampaignPlacement.banner => 'banner',
-    };
+  /// Delegates to [CampaignPlacementMeta.canonicalKey] so aliases stay in
+  /// one place (`map_pin`, `promo_boost`, `push_notification`).
+  static String _placementWireName(CampaignPlacement placement) =>
+      placement.canonicalKey;
+
+  /// One-line rate label for a placement row: prefers the live rate card
+  /// (`rate + rate_unit`, `rate_max` as "up to" for search, response
+  /// currency) and falls back to the static metadata when offline.
+  String _rateLineFor(
+    BuildContext context,
+    CampaignPlacement placement,
+    PlacementDistribution? dist,
+  ) {
+    final rateCard = context.watch<AdvertisingBloc>().state.rateCard;
+    final daily = dist == null
+        ? 0.0
+        : dist.budget / _campaignDays.clamp(1, 90);
+    final card = rateCard?.placements[placement.canonicalKey];
+    if (card == null || card.rate <= 0) {
+      return 'R\$ ${daily.toStringAsFixed(2)}/dia · ${placement.pricingModel}';
+    }
+    final currency = rateCard?.currency ?? 'BRL';
+    final symbol = currency == 'BRL' ? r'R$' : '$currency ';
+    var rateLabel = '$symbol${card.rate.toStringAsFixed(2)} ${card.rateUnit}';
+    if ((card.rateMax ?? 0) > card.rate) {
+      rateLabel += ' (até $symbol${card.rateMax!.toStringAsFixed(2)})';
+    }
+    final minLabel =
+        'mín $symbol${card.minDailyBudget.toStringAsFixed(2)}/dia';
+    return 'R\$ ${daily.toStringAsFixed(2)}/dia · $rateLabel · $minLabel';
   }
 
-  void _showLaunchSuccess() {
+  void _showLaunchSuccess([CampaignStatus? status]) {
     final ep = _estimatedPerformance;
+    final title = switch (status) {
+      CampaignStatus.active => 'Campanha no ar!',
+      CampaignStatus.scheduled => 'Campanha agendada!',
+      CampaignStatus.pending => 'Campanha agendada!',
+      _ => 'Campanha Lançada!',
+    };
     showDialog(
       context: context,
       barrierDismissible: false,
       barrierColor: Colors.transparent,
       builder: (ctx) => _LaunchSuccessDialog(
         name: _nameController.text,
+        title: title,
         budget: _totalBudget,
         days: _campaignDays,
         estimatedPerformance: ep,
@@ -507,6 +687,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
       CampaignPlacement.mapPin => _placementRed,
       CampaignPlacement.promo => _placementGreen,
       CampaignPlacement.banner => _placementPurple,
+      CampaignPlacement.pushNotification => _placementOrange,
     };
   }
 
@@ -545,7 +726,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
           ],
         ),
         leading: IconButton(
-          icon: const Icon(LucideIcons.chevronLeft, color: Colors.white),
+          icon: const Icon(LucideIcons.chevron_left, color: Colors.white),
           onPressed: _currentStep > 0
               ? () => _goToStep(_currentStep - 1)
               : _showCloseConfirmation,
@@ -772,6 +953,12 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
     final totalPct =
         _distribution.fold<double>(0.0, (sum, d) => sum + d.percentage);
     final isValid = (totalPct - 100).abs() < 0.01;
+    final budgetOptions = _availableBudgetTypes();
+    final minViolation = _minBudgetViolation();
+    final isCredits = _budgetType == BudgetType.credits;
+    final rateCard = context.watch<AdvertisingBloc>().state.rateCard;
+    final isLoadingRates =
+        context.watch<AdvertisingBloc>().state.isLoadingRateCard;
 
     return ResponsiveCenterContainer(
       maxWidthPercentage: 0.5,
@@ -872,6 +1059,108 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
             ),
 
             const SizedBox(height: 16),
+            Text(
+              'Forma de pagamento',
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 0.8,
+                color: dobarColors.labelSecondary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            if (isLoadingRates && rateCard == null)
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF121212),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF2C2C2C)),
+                ),
+                child: const Row(
+                  children: [
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: barzGold,
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Text(
+                      'Carregando tabela de preços…',
+                      style: TextStyle(fontSize: 12, color: Colors.white70),
+                    ),
+                  ],
+                ),
+              )
+            else
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: budgetOptions.map((t) {
+                  final selected = _budgetType == t;
+                  return GestureDetector(
+                    onTap: () => setState(() => _budgetType = t),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 10),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: selected
+                              ? barzGold
+                              : const Color(0xFF2C2C2C),
+                          width: selected ? 1.5 : 1,
+                        ),
+                        color: selected
+                            ? barzGold.withValues(alpha: 0.1)
+                            : Colors.transparent,
+                      ),
+                      child: Text(
+                        _budgetTypeLabel(t),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: selected
+                              ? FontWeight.w600
+                              : FontWeight.w400,
+                          color: selected
+                              ? barzGold
+                              : dobarColors.labelSecondary,
+                        ),
+                      ),
+                    ),
+                  );
+                }).toList(),
+              ),
+            if (minViolation != null) ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: errorRed.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: errorRed.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(LucideIcons.triangle_alert,
+                        size: 16, color: errorRed),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        minViolation,
+                        style:
+                            const TextStyle(fontSize: 11, color: errorRed),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+
+            const SizedBox(height: 16),
 
             // Date range - matching Lovable style
             Row(
@@ -896,6 +1185,70 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
             ),
 
             const SizedBox(height: 20),
+
+            // Credit balances — `credits_available` is the bar's real
+            // balance; `credits_by_tier` is plan marketing data (upsell copy).
+            if (isCredits && rateCard != null)
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: barzGold.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: barzGold.withValues(alpha: 0.3)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(LucideIcons.wallet, size: 14, color: barzGold),
+                        SizedBox(width: 6),
+                        Text(
+                          'Seus créditos disponíveis',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ..._distribution.map((d) {
+                      final key = d.placement.canonicalKey;
+                      final card = rateCard.placements[key];
+                      final balance = rateCard.spendableCredits(key);
+                      final unit = card?.creditUnit ?? '';
+                      final short = d.budget > balance;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                d.placement.label,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              '$balance $unit',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: short ? errorRed : pixGreen,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+                  ],
+                ),
+              ),
 
             // Smart distribution button - matching Lovable
             Center(
@@ -936,7 +1289,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(
-                          LucideIcons.wand2,
+                          LucideIcons.wand_sparkles,
                           size: 16,
                           color: barzGold,
                         ),
@@ -1032,8 +1385,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                           ),
                         ),
                         GestureDetector(
-                          onTap: () => _togglePlacement(
-                              index >= 0 ? index : _distribution.length),
+                          onTap: () => _togglePlacement(placement, index),
                           child: AnimatedContainer(
                             duration: const Duration(milliseconds: 200),
                             width: 44,
@@ -1159,7 +1511,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                         ],
                       ),
                       Text(
-                        'R\$ ${(dist.budget / _campaignDays.clamp(1, 90)).toStringAsFixed(2)}/dia · ${placement.pricingModel}',
+                        _rateLineFor(context, placement, dist),
                         style: const TextStyle(
                           fontSize: 10,
                           color: Color(0xFFB0B0B0),
@@ -1216,7 +1568,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                 ),
                 child: Row(
                   children: [
-                    const Icon(LucideIcons.alertTriangle,
+                    const Icon(LucideIcons.triangle_alert,
                         size: 16, color: errorRed),
                     const SizedBox(width: 8),
                     Expanded(
@@ -1631,7 +1983,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                     ),
                     Icon(
                       _promoteHappyHour
-                          ? LucideIcons.checkCircle
+                          ? LucideIcons.circle_check
                           : LucideIcons.circle,
                       size: 22,
                       color: _promoteHappyHour
@@ -1663,7 +2015,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
           children: [
             Row(
               children: [
-                const Icon(LucideIcons.mapPin,
+                const Icon(LucideIcons.map_pin,
                     size: 16, color: barzGold),
                 const SizedBox(width: 8),
                 Text(
@@ -1941,7 +2293,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        const Icon(LucideIcons.checkCircle,
+                        const Icon(LucideIcons.circle_check,
                             size: 12, color: Color(0xFF00B37E)),
                         const SizedBox(width: 6),
                         const Text(
@@ -2227,7 +2579,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
 
                   if (_taglineController.text.isNotEmpty) ...[
                     _buildReviewRow(
-                      icon: LucideIcons.messageSquare,
+                      icon: LucideIcons.message_square,
                       label: 'Chamada',
                       value: _taglineController.text,
                     ),
@@ -2235,7 +2587,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                   ],
 
                   _buildReviewRow(
-                    icon: LucideIcons.mapPin,
+                    icon: LucideIcons.map_pin,
                     label: 'Alcance',
                     value:
                         '${_radiusKm.round()} km · ${_ageMin.round()}-${_ageMax.round()} anos',
@@ -2259,7 +2611,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                 children: [
                   Row(
                     children: [
-                      const Icon(LucideIcons.trendingUp,
+                      const Icon(LucideIcons.trending_up,
                           size: 16, color: barzGold),
                       const SizedBox(width: 8),
                       Text(
@@ -2523,7 +2875,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                                 )
                               else
                                 const Icon(
-                                  LucideIcons.chevronRight,
+                                  LucideIcons.chevron_right,
                                   size: 18,
                                   color: Colors.black,
                                 ),
@@ -2618,9 +2970,10 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
     return switch (p) {
       CampaignPlacement.featured => LucideIcons.star,
       CampaignPlacement.search => LucideIcons.search,
-      CampaignPlacement.mapPin => LucideIcons.mapPin,
+      CampaignPlacement.mapPin => LucideIcons.map_pin,
       CampaignPlacement.promo => LucideIcons.flame,
       CampaignPlacement.banner => LucideIcons.image,
+      CampaignPlacement.pushNotification => LucideIcons.bell,
     };
   }
 
@@ -2698,6 +3051,7 @@ class _DaySchedule extends StatelessWidget {
 /// Launch success celebration dialog.
 class _LaunchSuccessDialog extends StatefulWidget {
   final String name;
+  final String title;
   final double budget;
   final int days;
   final EstimatedPerformance estimatedPerformance;
@@ -2707,6 +3061,7 @@ class _LaunchSuccessDialog extends StatefulWidget {
 
   const _LaunchSuccessDialog({
     required this.name,
+    required this.title,
     required this.budget,
     required this.days,
     required this.estimatedPerformance,
@@ -2790,9 +3145,9 @@ class _LaunchSuccessDialogState extends State<_LaunchSuccessDialog>
                   ),
                 ),
                 const SizedBox(height: 24),
-                const Text(
-                  'Campanha Lançada!',
-                  style: TextStyle(
+                Text(
+                  widget.title,
+                  style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: Colors.white,

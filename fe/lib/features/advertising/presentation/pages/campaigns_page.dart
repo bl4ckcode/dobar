@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/core/utils/injections.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
 import '../bloc/advertising_bloc.dart';
@@ -123,6 +123,8 @@ String _statusForFilter(AdCampaign c) {
     CampaignStatus.completed => 'completed',
     CampaignStatus.pending => 'draft',
     CampaignStatus.cancelled => 'completed',
+    CampaignStatus.draft => 'draft',
+    CampaignStatus.scheduled => 'active',
   };
 }
 
@@ -133,25 +135,28 @@ String _statusForFilter(AdCampaign c) {
 class _CampaignTotals {
   final int impressions;
   final int clicks;
-  final double spent;
+
+  /// Sum of allocated `budget_amount` — NOT real spend. `budget_spent` stays
+  /// at 0 until the backend billing scheduler ships (FE_BE_COMMUNICATION §8).
+  final double allocated;
   final double ctr;
 
   const _CampaignTotals({
     required this.impressions,
     required this.clicks,
-    required this.spent,
+    required this.allocated,
     required this.ctr,
   });
 
   factory _CampaignTotals.from(List<AdCampaign> campaigns) {
     final impressions = campaigns.fold<int>(0, (s, c) => s + c.impressions);
     final clicks = campaigns.fold<int>(0, (s, c) => s + c.clicks);
-    final spent = campaigns.fold<double>(0, (s, c) => s + c.budgetSpent);
+    final allocated = campaigns.fold<double>(0, (s, c) => s + c.budgetAmount);
     final ctr = impressions > 0 ? (clicks / impressions) * 100 : 0.0;
     return _CampaignTotals(
       impressions: impressions,
       clicks: clicks,
-      spent: spent,
+      allocated: allocated,
       ctr: ctr,
     );
   }
@@ -204,9 +209,12 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
     final sessionState = context.read<SessionBloc>().state;
     if (sessionState is SessionReady &&
         sessionState.session.activeBar != null) {
-      context.read<AdvertisingBloc>().add(
-        LoadCampaigns(barId: sessionState.session.activeBar!.barId),
-      );
+      final barId = sessionState.session.activeBar!.barId;
+      final bloc = context.read<AdvertisingBloc>();
+      bloc.add(LoadCampaigns(barId: barId));
+      // The balance chip + VIP gating read the rate card (tier +
+      // credits_available), so keep it fresh alongside the list.
+      bloc.add(AdvertisingEvent.loadRateCard(barId: barId));
     }
   }
 
@@ -779,7 +787,7 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(LucideIcons.alertTriangle, size: 64, color: errorRed),
+            const Icon(LucideIcons.triangle_alert, size: 64, color: errorRed),
             const SizedBox(height: 16),
             Text(
               error,
@@ -791,7 +799,7 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
             const SizedBox(height: 24),
             ElevatedButton.icon(
               onPressed: _loadCampaigns,
-              icon: const Icon(LucideIcons.refreshCw),
+              icon: const Icon(LucideIcons.refresh_cw),
               label: Text(l10n.retry),
             ),
           ],
@@ -923,7 +931,7 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
                   border: Border.all(color: barzGold.withValues(alpha: 0.3)),
                 ),
                 child: const Icon(
-                  LucideIcons.barChart3,
+                  LucideIcons.chart_bar,
                   size: 16,
                   color: barzGold,
                 ),
@@ -972,19 +980,19 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
                     isGold: true,
                   ),
                   _StatCard(
-                    icon: LucideIcons.mousePointerClick,
+                    icon: LucideIcons.mouse_pointer_click,
                     label: 'Cliques',
                     value: _formatCompact(totals.clicks),
                   ),
                   _StatCard(
-                    icon: LucideIcons.trendingUp,
+                    icon: LucideIcons.trending_up,
                     label: 'CTR médio',
                     value: '${totals.ctr.toStringAsFixed(2)}%',
                   ),
                   _StatCard(
-                    icon: LucideIcons.dollarSign,
-                    label: 'Total investido',
-                    value: _formatBrl(totals.spent),
+                    icon: LucideIcons.dollar_sign,
+                    label: 'Orçamento alocado',
+                    value: _formatBrl(totals.allocated),
                     isGold: true,
                   ),
                 ],
@@ -1004,6 +1012,13 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
       bloc.add(PauseCampaign(campaignId: campaign.id, barId: campaign.barId));
     } else if (campaign.status == CampaignStatus.paused) {
       bloc.add(ResumeCampaign(campaignId: campaign.id, barId: campaign.barId));
+    } else if (campaign.status == CampaignStatus.draft ||
+        campaign.status == CampaignStatus.pending) {
+      // Drafts strand without this: create never auto-activates, so publish
+      // explicitly (draft → active, or draft → scheduled for future starts).
+      bloc.add(
+        PublishCampaign(campaignId: campaign.id, barId: campaign.barId),
+      );
     }
   }
 
@@ -1140,13 +1155,36 @@ class _AnimatedMegaphoneState extends State<_AnimatedMegaphone>
   }
 }
 
-/// Balance chip showing available budget.
+/// Balance chip showing live credits from GET /advertising/rates
+/// (`credits_available` — the bar's real balance, never `credits_by_tier`).
 class _BalanceChip extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dobar = context.dobarColors;
+    final adState = context.watch<AdvertisingBloc>().state;
+    final rateCard = adState.rateCard;
 
-    return Container(
+    final subtitle = rateCard == null
+        ? 'Carregando…'
+        : rateCard.creditsAvailable.entries
+            .where((e) => (e.value) > 0)
+            .map((e) => '${e.value} ${_shortBucket(e.key)}')
+            .join(' · ');
+    final display =
+        subtitle.isEmpty ? 'Sem créditos — ver planos' : subtitle;
+
+    return GestureDetector(
+      onTap: () {
+        final sessionState = context.read<SessionBloc>().state;
+        if (sessionState is SessionReady &&
+            sessionState.session.activeBar != null) {
+          SubscriptionPlansSheet.show(
+            context,
+            sessionState.session.activeBar!.barId,
+          );
+        }
+      },
+      child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         color: barzDarkLight,
@@ -1172,7 +1210,7 @@ class _BalanceChip extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                'Saldo',
+                rateCard == null ? 'Créditos' : 'Créditos · ${rateCard.tier}',
                 style: TextStyle(
                   fontSize: 10,
                   fontWeight: FontWeight.w500,
@@ -1180,9 +1218,9 @@ class _BalanceChip extends StatelessWidget {
                   color: dobar.labelSecondary,
                 ),
               ),
-              const Text(
-                'R\$ 1.200,00',
-                style: TextStyle(
+              Text(
+                display,
+                style: const TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
@@ -1204,7 +1242,7 @@ class _BalanceChip extends StatelessWidget {
                 Icon(LucideIcons.plus, size: 12, color: barzGold),
                 SizedBox(width: 4),
                 Text(
-                  'Adicionar',
+                  'Planos',
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
@@ -1216,7 +1254,18 @@ class _BalanceChip extends StatelessWidget {
           ),
         ],
       ),
+    ),
     );
+  }
+
+  static String _shortBucket(String bucket) {
+    return switch (bucket) {
+      'featured_hours' => 'destaque',
+      'search_clicks' => 'cliques',
+      'map_hours' => 'mapa',
+      'boost_impressions' => 'impressões',
+      _ => bucket,
+    };
   }
 }
 
@@ -1271,7 +1320,7 @@ class _SortDropdown extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             Icon(
-              LucideIcons.chevronDown,
+              LucideIcons.chevron_down,
               size: 16,
               color: context.dobarColors.labelSecondary,
             ),

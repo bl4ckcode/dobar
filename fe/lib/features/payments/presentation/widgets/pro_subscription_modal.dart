@@ -2,7 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:barz/core/design/tokens/dobar_colors.dart';
 import 'package:barz/core/design/tokens/colors.dart';
 import 'package:barz/l10n/app_localizations.dart';
@@ -218,7 +218,7 @@ class _ProSubscriptionModalState extends State<ProSubscriptionModal> {
         isDark: isDark,
       ),
       _BenefitItem(
-        icon: LucideIcons.trendingUp,
+        icon: LucideIcons.trending_up,
         title: l10n.pro_benefit_cashback_title,
         desc: l10n.pro_benefit_cashback_desc,
         colors: colors,
@@ -232,14 +232,14 @@ class _ProSubscriptionModalState extends State<ProSubscriptionModal> {
         isDark: isDark,
       ),
       _BenefitItem(
-        icon: LucideIcons.badgeCheck,
+        icon: LucideIcons.badge_check,
         title: l10n.pro_benefit_vip_title,
         desc: l10n.pro_benefit_vip_desc,
         colors: colors,
         isDark: isDark,
       ),
       _BenefitItem(
-        icon: LucideIcons.calendarCheck,
+        icon: LucideIcons.calendar_check,
         title: l10n.pro_benefit_early_access_title,
         desc: l10n.pro_benefit_early_access_desc,
         colors: colors,

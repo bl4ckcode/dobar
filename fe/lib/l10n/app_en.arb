@@ -37,7 +37,6 @@
   "@want_a_specific_drink": {
     "description": "Thirst for that specific drink question label"
   },
-
   "orders_title": "My Orders",
   "orders_empty": "No orders yet",
   "orders_empty_subtitle": "Place your first order at a bar near you!",
@@ -112,7 +111,6 @@
       }
     }
   },
-
   "cart_title": "Your Cart",
   "cart_empty": "Your cart is empty",
   "cart_add_items": "Add some delicious items!",
@@ -151,7 +149,6 @@
       }
     }
   },
-
   "menu_title": "Menu",
   "menu_search": "Search menu...",
   "menu_categories": "Categories",
@@ -167,7 +164,6 @@
     }
   },
   "menu_item_unavailable": "Currently unavailable",
-
   "payment_title": "Payment",
   "payment_method": "Payment Method",
   "payment_method_card": "Credit/Debit Card",
@@ -231,7 +227,6 @@
   "payment_pix_copy_hint": "or copy the PIX code below",
   "payment_pix_copy_button": "Copy PIX Code",
   "payment_pix_copied": "Pix code copied to clipboard!",
-
   "checkout_order_details": "Order Details",
   "checkout_order_type": "Order Type",
   "checkout_dine_in": "Dine In",
@@ -240,9 +235,7 @@
   "checkout_place_order": "Place Order",
   "checkout_success": "Order Placed!",
   "checkout_order_placed": "Your order has been placed successfully.",
-
   "cart_special_instructions": "Special Instructions",
-
   "checkin_title": "Check-in",
   "checkin_at_bar": "You're at {barName}!",
   "@checkin_at_bar": {
@@ -272,8 +265,7 @@
     }
   },
   "checkin_checkout": "Check out",
-  "checkin_checkout_confirm": "Are you sure you want to check out from this bar?",
-
+  "checkin_checkout_confirm": "Yes, check out",
   "notification_order_ready": "Your order is ready!",
   "notification_order_confirmed": "Your order has been confirmed",
   "notification_order_preparing": "Your order is being prepared",
@@ -282,17 +274,13 @@
   "support_on_the_way": "Support is on the way",
   "directions_opening": "Opening directions map...",
   "help": "Help",
-
   "loading": "Loading...",
   "error_generic": "Something went wrong",
   "error_network": "Network error. Please check your connection.",
   "error_retry": "Retry",
   "success": "Success!",
-  "cancel": "Cancel",
   "confirm": "Confirm",
   "close": "Close",
-  "save": "Save",
-  "delete": "Delete",
   "edit": "Edit",
   "done": "Done",
   "next": "Next",
@@ -301,7 +289,6 @@
   "no_results": "No results found",
   "connection_lost": "Connection lost",
   "reconnecting": "Reconnecting...",
-
   "business_welcome_title": "Welcome, Bar Owner! 🎉",
   "business_welcome_subtitle": "Let's get your bar set up on Dobar",
   "business_create_bar": "Create New Bar",
@@ -324,7 +311,6 @@
   "business_client_mode": "Client Mode",
   "business_select_bar": "Select bar",
   "business_no_bar_selected": "No bar selected",
-
   "email_prompt_title": "Want your receipt?",
   "email_prompt_benefits": "Add your email to get:",
   "email_benefit_receipts": "Digital receipts",
@@ -336,7 +322,6 @@
   "email_already_in_use": "This email is already linked to another account",
   "email_update_failed": "Failed to update email. Please try again.",
   "email_added_success": "Email added successfully!",
-
   "featured": "Featured",
   "sponsored": "Sponsored",
   "ad_distance_away": "{distance} km away",
@@ -347,7 +332,6 @@
       }
     }
   },
-
   "analytics": "Analytics",
   "performance": "Performance",
   "impressions": "Impressions",
@@ -360,7 +344,6 @@
   "daily_average": "Daily Avg",
   "daily_breakdown": "Daily Breakdown",
   "no_data_available": "No data available",
-
   "subscription_plans": "Subscription Plans",
   "choose_your_plan": "Choose Your Plan",
   "boost_your_bar_visibility": "Boost your bar's visibility and reach more customers",
@@ -374,7 +357,6 @@
   "confirm_subscription_message": "Do you want to subscribe to",
   "subscription_created": "Subscription created successfully!",
   "select_bar_first": "Please select a bar first",
-
   "create_bar": "Create Bar",
   "bar_created_success": "Bar created successfully!",
   "error_creating_bar": "Failed to create bar. Please try again.",
@@ -434,7 +416,6 @@
   "review_info_hint": "Make sure everything looks correct before creating your bar.",
   "discard": "Discard",
   "field_required": "This field is required",
-
   "payout_setup_title": "Payment Setup",
   "payout_setup_hint": "Add your business ID and bank account to receive payments from your orders.",
   "bank_account": "Bank Account",
@@ -461,7 +442,6 @@
   "general_hours": "General Hours",
   "general_hours_hint": "Set hours for all days at once",
   "or_customize": "Or customize each day below",
-
   "section_promotions": "Hot Deals",
   "section_categories": "Categories",
   "section_nearby_bars": "Nearby Partners",
@@ -517,6 +497,7 @@
   "campaign_status_pending": "PENDING",
   "campaign_status_completed": "COMPLETED",
   "campaign_status_cancelled": "CANCELLED",
+  "campaign_status_draft": "DRAFT",
   "campaign_metric_impressions": "IMPRESSIONS",
   "campaign_metric_clicks": "CLICKS",
   "campaign_metric_budget": "BUDGET",
@@ -545,16 +526,9 @@
     }
   },
   "checkin_checkout_subtitle": "Your session will end and the cart will be cleared.",
-  "checkin_checkout_confirm": "Yes, check out",
   "checkin_checkout_cancel": "Stay",
   "pro_modal_title": "Dobar PRO",
   "pro_modal_subtitle": "Unlock the ultimate nightlife experience",
-  "pro_benefit_priority_title": "Priority Ordering",
-  "pro_benefit_priority_desc": "Your orders jump the queue at peak times.",
-  "pro_benefit_cashback_title": "Cashback Boost",
-  "pro_benefit_cashback_desc": "Earn double cashback on every purchase.",
-  "pro_benefit_deals_title": "Exclusive Deals",
-  "pro_benefit_deals_desc": "Access members-only happy hours and flash promos.",
   "pro_benefit_vip_title": "VIP Check-in Badge",
   "pro_benefit_vip_desc": "Show your Pro status at partner bars.",
   "pro_benefit_early_access_title": "Early Access",
@@ -586,8 +560,6 @@
   "location_mismatch_subtitle": "Would you like to update your location to see local bars and restaurants?",
   "location_mismatch_update_button": "Update Location",
   "location_mismatch_not_now_button": "Not now",
-
-  "business_no_bar_selected": "No bar selected",
   "business_welcome_back": "Welcome back, {role}",
   "@business_welcome_back": {
     "placeholders": {
@@ -789,7 +761,6 @@
     }
   },
   "business_campaign_card_desc": "Create a campaign and reach more customers in your area!",
-
   "feature_basic_listing": "Your bar listed in the Barz app",
   "@feature_basic_listing": {
     "description": "Plan feature: bar appears in the app listing. Key returned by GET /advertising/plans."
@@ -998,5 +969,7 @@
   "category_brewery": "Brewery",
   "details_description": "Description",
   "details_business_registration": "Business Registration",
-  "details_location_method": "Location Method"
+  "details_location_method": "Location Method",
+  "campaign_type_banner": "BANNER",
+  "campaign_type_push": "PUSH"
 }

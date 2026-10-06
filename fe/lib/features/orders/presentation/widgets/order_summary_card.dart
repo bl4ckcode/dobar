@@ -4,7 +4,7 @@ import 'package:barz/core/design/tokens/dobar_colors.dart';
 import 'package:barz/features/orders/domain/models/order_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 class OrderSummaryCard extends StatelessWidget {
   final OrderModel order;
@@ -59,7 +59,7 @@ class OrderSummaryCard extends StatelessWidget {
                           shape: BoxShape.circle,
                         ),
                         child: Center(
-                          child: Icon(LucideIcons.clipboardList, color: barzGold, size: 18),
+                          child: Icon(LucideIcons.clipboard_list, color: barzGold, size: 18),
                         ),
                       ),
                       const SizedBox(width: 12),

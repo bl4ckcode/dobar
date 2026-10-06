@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_event.dart';
@@ -200,7 +200,7 @@ class BusinessStatusToolbar extends StatelessWidget {
                 // Search - hidden on mobile
                 if (showSearch && !isMobile) ...[
                   _ToolbarIcon(
-                    icon: LucideIcons.search,
+                    icon: Icons.search,
                     borderColor: borderColor,
                     color: mutedTextColor,
                   ),
@@ -211,7 +211,7 @@ class BusinessStatusToolbar extends StatelessWidget {
                   Stack(
                     children: [
                       _ToolbarIcon(
-                        icon: LucideIcons.bell,
+                        icon: Icons.notifications,
                         borderColor: borderColor,
                         color: mutedTextColor,
                       ),
@@ -266,7 +266,7 @@ class _ToolbarIcon extends StatelessWidget {
         border: Border.all(color: borderColor),
         borderRadius: BorderRadius.circular(6),
       ),
-      child: Icon(icon, size: 16, color: color),
+      child: Icon(icon, size: 24, color: color),
     );
   }
 }
@@ -497,7 +497,7 @@ class ProfilePopupMenu extends StatelessWidget {
                 value: 'logout',
                 child: Row(
                   children: [
-                    const Icon(LucideIcons.logOut, size: 18, color: errorRed),
+                    const Icon(LucideIcons.log_out, size: 18, color: errorRed),
                     const SizedBox(width: 8),
                     const Text('Log out', style: TextStyle(color: errorRed)),
                   ],

@@ -14,7 +14,7 @@ import 'package:barz/features/payments/presentation/pages/checkout_page.dart';
 import 'package:barz/features/payments/presentation/widgets/pro_subscription_modal.dart';
 import 'package:barz/ui/business/widgets/pro_plan_sheet.dart';
 import 'package:barz/core/design/tokens/dobar_colors.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 import '../primitives/barz_app_bar.dart';
 import '../primitives/barz_card.dart';
 import '../../core/utils/constant/styles.dart';
@@ -71,7 +71,7 @@ class _ProfileWireframeState extends State<ProfileWireframe> {
         actions: [
           if (kDebugMode)
             IconButton(
-              icon: const Icon(LucideIcons.flaskConical),
+              icon: const Icon(LucideIcons.flask_conical),
               tooltip: 'Sprint 6 Showcases',
               onPressed: () {
                 showModalBottomSheet(
@@ -87,7 +87,7 @@ class _ProfileWireframeState extends State<ProfileWireframe> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           ListTile(
-                            leading: const Icon(LucideIcons.qrCode, color: barzYellow),
+                            leading: const Icon(LucideIcons.qr_code, color: barzYellow),
                             title: const Text('Bar Entry VIP (Check-in)'),
                             subtitle: const Text('Redesigned Industrial Modern flow'),
                             onTap: () {
@@ -114,7 +114,7 @@ class _ProfileWireframeState extends State<ProfileWireframe> {
                             },
                           ),
                           ListTile(
-                            leading: const Icon(LucideIcons.creditCard, color: barzYellow),
+                            leading: const Icon(LucideIcons.credit_card, color: barzYellow),
                             title: const Text('Industrial Checkout'),
                             subtitle: const Text('Premium success dialog & UI'),
                             onTap: () {

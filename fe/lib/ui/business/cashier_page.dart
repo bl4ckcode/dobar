@@ -2,7 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/ui/business/widgets/business_toolbars.dart';
 import 'package:get_it/get_it.dart';
@@ -133,7 +133,7 @@ class _CashierPageState extends State<CashierPage>
                     actions: [
                       IconButton(
                         icon: Icon(
-                          _soundOn ? LucideIcons.volume2 : LucideIcons.volumeX,
+                          _soundOn ? LucideIcons.volume_off : LucideIcons.volume_x,
                           size: 20,
                           color: _soundOn ? barzGold : mutedColor,
                         ),
@@ -172,7 +172,7 @@ class _CashierPageState extends State<CashierPage>
                       ),
                       const SizedBox(width: 8),
                       IconButton(
-                        icon: const Icon(LucideIcons.refreshCw, size: 18),
+                        icon: const Icon(LucideIcons.refresh_cw, size: 18),
                         onPressed: () {
                           if (_activeBarId != null) {
                             _liveOrdersBloc?.add(

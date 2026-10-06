@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:barz/l10n/app_localizations.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/advertising/presentation/bloc/subscription_trial_cubit.dart';
@@ -107,7 +107,7 @@ class ProPlanSheet extends StatelessWidget {
                   child: Column(
                     children: [
                       _BenefitItem(
-                        icon: LucideIcons.trendingUp,
+                        icon: LucideIcons.trending_up,
                         title: 'Advanced Analytics',
                         description:
                             'Get deep insights into your audience demographics, popular times, and menu performance.',
@@ -128,7 +128,7 @@ class ProPlanSheet extends StatelessWidget {
                       ),
                       const SizedBox(height: 16),
                       _BenefitItem(
-                        icon: LucideIcons.scanLine,
+                        icon: LucideIcons.scan_line,
                         title: 'Unlimited Table QR',
                         description:
                             'Generate unlimited active tables and dynamic QR codes for direct ordering.',

@@ -1,7 +1,7 @@
 import 'package:barz/core/design/tokens/colors.dart';
 import 'package:barz/core/design/tokens/dobar_colors.dart';
 import 'package:flutter/material.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 
 class VenueTableInfo extends StatelessWidget {
   final String tableNumber;
@@ -31,7 +31,7 @@ class VenueTableInfo extends StatelessWidget {
                 colors: dobarColors,
                 label: 'TABLE',
                 value: tableNumber,
-                iconPath: LucideIcons.layoutGrid,
+                iconPath: LucideIcons.layout_grid,
                 isGradient: true,
               ),
             ),
@@ -41,7 +41,7 @@ class VenueTableInfo extends StatelessWidget {
               child: _ActionButton(
                 colors: dobarColors,
                 label: 'Call waiter',
-                icon: LucideIcons.bellRing,
+                icon: LucideIcons.bell_ring,
                 onPressed: onCallWaiter,
               ),
             ),
@@ -51,7 +51,7 @@ class VenueTableInfo extends StatelessWidget {
               child: _ActionButton(
                 colors: dobarColors,
                 label: 'Directions',
-                icon: LucideIcons.mapPin,
+                icon: LucideIcons.map_pin,
                 onPressed: onDirections,
               ),
             ),

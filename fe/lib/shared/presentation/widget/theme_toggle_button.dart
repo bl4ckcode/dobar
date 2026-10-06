@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/core/theme/theme_cubit.dart';
 
@@ -25,7 +24,7 @@ class ThemeToggleButton extends StatelessWidget {
         side: BorderSide(color: theme.colorScheme.outline),
       ),
       icon: Icon(
-        isDark ? LucideIcons.sun : LucideIcons.moon,
+        isDark ? Icons.light_mode : Icons.dark_mode,
         size: 20,
         color: color ?? dobar.labelSecondary,
       ),

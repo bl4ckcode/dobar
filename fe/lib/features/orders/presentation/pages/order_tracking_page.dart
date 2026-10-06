@@ -20,7 +20,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:confetti/confetti.dart';
 
 class OrderTrackingPage extends StatefulWidget {
@@ -200,7 +200,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage>
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             _IconButton(
-                              icon: LucideIcons.arrowLeft,
+                              icon: LucideIcons.arrow_left,
                               onPressed: () => context.pop(),
                               colors: dobarColors,
                             ),
@@ -252,7 +252,7 @@ class _OrderTrackingPageState extends State<OrderTrackingPage>
                                   mainAxisAlignment: MainAxisAlignment.center,
                                   children: [
                                     Icon(
-                                      LucideIcons.glassWater,
+                                      LucideIcons.glass_water,
                                       size: 14,
                                       color: barzGold,
                                     ),
@@ -367,13 +367,13 @@ class _OrderTrackingPageState extends State<OrderTrackingPage>
                                     onCallWaiter: () => _showTopSnackBar(
                                       context,
                                       l10n.support_on_the_way,
-                                      LucideIcons.bellRing,
+                                      LucideIcons.bell_ring,
                                       context.dobarColors,
                                     ),
                                     onDirections: () => _showTopSnackBar(
                                       context,
                                       l10n.directions_opening,
-                                      LucideIcons.mapPin,
+                                      LucideIcons.map_pin,
                                       context.dobarColors,
                                     ),
                                   )
@@ -654,7 +654,7 @@ class _FooterActions extends StatelessWidget {
       children: [
         TextButton.icon(
           onPressed: onBack,
-          icon: const Icon(LucideIcons.arrowLeft, size: 16),
+          icon: const Icon(LucideIcons.arrow_left, size: 16),
           label: Text(l10n.back),
           style: TextButton.styleFrom(
             foregroundColor: colors.labelPrimary.withValues(alpha: 0.5),
@@ -663,7 +663,7 @@ class _FooterActions extends StatelessWidget {
         const SizedBox(height: 8),
         TextButton.icon(
           onPressed: () {},
-          icon: const Icon(LucideIcons.helpCircle, size: 16),
+          icon: const Icon(LucideIcons.info, size: 16),
           label: Text(l10n.help),
           style: TextButton.styleFrom(
             foregroundColor: colors.labelPrimary.withValues(alpha: 0.3),

@@ -130,12 +130,15 @@ class ApiEndpoints {
   static String cancelSubscription(int subscriptionId) =>
       '/advertising/subscriptions/$subscriptionId/cancel';
   static const String campaigns = '/advertising/campaigns';
+  static const String advertisingRates = '/advertising/rates';
   static String campaign(int campaignId) =>
       '/advertising/campaigns/$campaignId';
   static String pauseCampaign(int campaignId) =>
       '/advertising/campaigns/$campaignId/pause';
   static String resumeCampaign(int campaignId) =>
       '/advertising/campaigns/$campaignId/resume';
+  static String publishCampaign(int campaignId) =>
+      '/advertising/campaigns/$campaignId/publish';
   static String campaignAnalytics(int campaignId) =>
       '/advertising/analytics/$campaignId';
 
