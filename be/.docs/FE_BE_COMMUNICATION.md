@@ -2264,7 +2264,7 @@ part of its monthly credits:
       "credit_unit": "hours",
       "credit_backed": true,
       "min_daily_budget": "40.00",
-      "allowed_budget_types": ["credits", "cph", "fixed"]
+      "allowed_budget_types": ["credits", "hourly", "fixed"]
     },
     "search": {
       "placement": "search",
@@ -2290,7 +2290,7 @@ part of its monthly credits:
       "credit_unit": "hours",
       "credit_backed": true,
       "min_daily_budget": "25.00",
-      "allowed_budget_types": ["credits", "cph", "fixed"]
+      "allowed_budget_types": ["credits", "hourly", "fixed"]
     },
     "promo": {
       "placement": "promo",
@@ -2376,13 +2376,13 @@ part of its monthly credits:
 **How `allowed_budget_types` is composed** (backend algorithm, in this order):
 
 1. `"fixed"` is always present.
-2. If `rate > 0`, the placement's `pricing_model` (`cph` / `cpc` / `cpm`) is prepended.
+2. If `rate > 0`, the API-legal pricing token for the placement's `pricing_model` is prepended:
+   - `cph` (featured / map_pin) → `hourly`
+   - `cpc` (search) → `cpc`
+   - `cpm` (promo / banner / push) → `cpm`
 3. If the placement is credit-backed, `"credits"` is prepended.
 
-So a healthy `BR` region yields `["credits", "cph", "fixed"]` for `featured`, and a region with no
-pricing row yields just `["credits", "fixed"]` (or `["fixed"]` for `push_notification`, which is never
-credit-backed). `hourly` is **not** emitted by the rate card — `POST /advertising/campaigns` still
-accepts it, but `fixed` is the value the FE should send for cash campaigns.
+So a healthy `BR` region yields `["credits", "hourly", "fixed"]` for `featured` (and `["credits", "cpm", "fixed"]` for `promo`/`banner`/`push`), and a region with no pricing row yields just `["credits", "fixed"]` (or `["fixed"]` for `push_notification`, which is never credit-backed).
 
 ### 5. Example — Regular bar (upsell view)
 
@@ -2407,7 +2407,7 @@ show the real cash rates plus the `credits_by_tier` allowances as the "included 
       "credit_unit": "hours",
       "credit_backed": true,
       "min_daily_budget": "40.00",
-      "allowed_budget_types": ["credits", "cph", "fixed"]
+      "allowed_budget_types": ["credits", "hourly", "fixed"]
     }
   },
   "credit_buckets": ["featured_hours", "search_clicks", "map_hours", "boost_impressions"],
