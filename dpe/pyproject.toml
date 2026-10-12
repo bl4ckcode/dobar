@@ -1,0 +1,88 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dobar-payment-engine"
+version = "2.0.0"
+description = "Enterprise-grade payment processing engine for Latin America"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Carlos Alves", email = "carlosaugusto2005@hotmail.com"}
+]
+keywords = ["payments", "stripe", "pagar.me", "stone", "paypal", "latam", "brazil"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Office/Business :: Financial",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "pydantic[email]>=2.0",
+    "python-dotenv>=1.0",
+    "stripe>=7.0",
+    "paypal-server-sdk>=1.0",
+    "httpx>=0.25",
+    "apimatic-core>=0.2",
+    "apimatic-core-interfaces>=0.1",
+    "apimatic-requests-client-adapter>=0.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "pytest-cov>=4.0",
+    "black>=23.0",
+    "mypy>=1.0",
+    "ruff>=0.1",
+]
+redis = [
+    "redis>=5.0",
+]
+api = [
+    "fastapi>=0.109",
+    "uvicorn>=0.27",
+]
+all = [
+    "redis>=5.0",
+    "fastapi>=0.109",
+    "uvicorn>=0.27",
+]
+
+[project.urls]
+Homepage = "https://github.com/bl4ckcode/dobar-payment-engine"
+Documentation = "https://github.com/bl4ckcode/dobar-payment-engine#readme"
+Repository = "https://github.com/bl4ckcode/dobar-payment-engine"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["dobar_payment*"]
+
+[tool.setuptools.package-data]
+"dobar_payment" = ["py.typed"]
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312"]
+
+[tool.ruff]
+line-length = 100
+select = ["E", "F", "I", "W"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+warn_return_any = true
+warn_unused_ignores = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
