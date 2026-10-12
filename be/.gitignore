@@ -1,0 +1,52 @@
+# Ignore virtual environment directories
+venv/
+env/
+ENV/
+.venv/
+.ENV/
+
+# Ignore Python cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Ignore environment variable files
+.env
+.env.*
+
+# Ignore IDE/editor specific files
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Ignore macOS specific files
+.DS_Store
+
+# Ignore log files
+*.log
+
+# Ignore compiled files
+*.so
+*.dll
+*.dylib
+.DS_Store
+.env
+
+# Database dump file
+barz_db.sql
+
+# Firebase credentials file
+fb-barz-admin.json
+flytoken
+
+# Official Documentation Files to Ignore
+MARKETING_RULES.md
+
+# Ignore seed script
+scripts/seed_via_curl.sh
+barz777-50d7fa551c8a.json
+
+# Ignore documentation directory
+.docs/business/*
+test.db

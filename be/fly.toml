@@ -1,0 +1,45 @@
+# fly.toml app configuration file generated for barz-backend-bold-sun-5691 on 2026-06-02T03:06:26Z
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
+
+app = 'barz-backend-bold-sun-5691'
+primary_region = 'gru'
+
+kill_signal = "SIGTERM"
+kill_timeout = "10s"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = 'stop'
+  auto_start_machines = true
+  min_machines_running = 1
+  processes = ['app']
+
+  [http_service.concurrency]
+    type = "connections"
+    soft_limit = 150
+    hard_limit = 250
+
+[[http_service.checks]]
+  grace_period = "15s"
+  interval = "15s"
+  method = "GET"
+  timeout = "5s"
+  path = "/health"
+
+[[vm]]
+  cpu_kind = "shared"
+  cpus = 1
+  memory = "512mb"
+  memory_mb = 512
+
+[metrics]
+  port = 9091
+  path = "/metrics"
+
+[env]
+  DB_POOL_SIZE = "10"
+  DB_MAX_OVERFLOW = "20"
+  DB_POOL_RECYCLE = "300"

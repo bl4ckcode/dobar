@@ -1,0 +1,96 @@
+#t\"
+> **Status:** ✅ Fior
+#*
+-
+> **  \#*
+-
+> **Status:** �r -as a### Overview
+
+Barz implements an **offline-first archces
+Barz implepay
+### WebSocket Enpt
+Barz impleutiBarz implepay
+### WebSocket Endpoints (�| ### WebSockeel
+| Endpoint | Description |
+|----------|not|----------|-------------eu| wss://.../ws/orders/{or O| Endpoint | Description |
+|---------n,|----------|ten|---------ic
+**, 
+**Message Format:**content = '''# 🍻 BARZ - Frontend ↔️ Backhor\"
+> **⚠️ IMPORTANT:** This document contains ONLY the laves**M r> **⚠️ IMPORTANT:** This document contains ONLY the latestrep> Prela> **Last Updated:** January 14, 2026  "s> **Last Updated:** January 14, 2026  
+> **Backend Statyme> **Backend Staan> **Backend Statyme> **Backend Status  > *T > **Backend Statyme> **Backend Staan> **Backend Statyme> **Backend Status  >  J> **Backend Statyme> **Backend Staan> **Backend Statyme> **Backend Status  > *T > **Backend Statyme> **Backend Staan> 
+|||aut|||aut|||a PO|||aut|||aut|||a PO|||aut|||aut||Pro|||e and Onboarding
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| /me/profile | GET/PUT | Get/update profile |
+| /me/onboarding | POST | Set user_type + country_code |
+| /me/bars | GET | Get all bars user has access to |
+
+### Bars
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| /bars/ | GET | Search bars by location |
+| /bars/{bar_id} | GET | Get bar details |
+| /bars/wizard | POST | Create bar (wizard) |
+| /bars/{bar_id}/dashboard/stats | GET | Dashboard analytics |
+| /bars/{bar_id}/orders | GET | Bar orders list |
+| /bars/{bar_id}/status | GET/POST | Bar open/closed status |
+
+### Menus
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| /menus/bar/{bar_id} | GET | Get menus for bar |
+| /menus/{menu_id}/items | GET/POST | Menu items |
+| /menus/trending/drinks | GET | Trending drinks |
+
+### Orders and Payments
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| /orders/ | GET/POST | Orders |
+| /orders/sync | POST | Sync offline operations |
+| /payments/create | POST | Create payment (+ idempotency) |
+| /payments/confirm | POST | Confirm payment |
+
+### Advertising
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| /advertising/serve/featured | GET | Featured ads |
+| /advertising/campaigns | GET/POST | Manage campaigns |
+
+### WebSocket
+| Endpoint | Description |
+|----------|-------------|
+| /ws/orders/{order_id}/status | User order tracking |
+| /ws/bar/{bar_id}/orders | Bar owner dashboard |
+
+---
+
+## ✅ IMPLEMENTATION STATUS
+
+| Feature | Backend | Frontend |
+|---------|---------|----------|
+| Auth (Phone/Google/Apple) | ✅ | ✅ |
+| Refresh Tokens | ✅ | ✅ |
+| Profile and Onboarding | ✅ | ✅ |
+| RBAC (roles/permissions) | ✅ | ✅ |
+| Bar Discovery | ✅ | ✅ |
+| Bar Creation Wizard | ✅ | ✅ |
+| Dashboard Stats | ✅ | ✅ |
+| Menu Management | ✅ | ✅ |
+| Orders | ✅ | ✅ |
+| WebSocket (order tracking) | ✅ | ✅ |
+| WebSocket (bar dashboard) | ✅ | ⏳ |
+| Offline-First (cache) | ✅ | ✅ |
+| Idempotency Keys | ✅ | ⏳ |
+| Conflict Resolution | ✅ | ⏳ |
+| Advertising | ✅ | ✅ |
+
+---
+
+*This document is the single source of truth for FE-BE coordination.*  
+*Always update before committing. Previous versions in git history.* 🚀
+'''
+
+with open('FE_BE_COMMUNICATION.md', 'w') as f:
+    f.write(content)
+print('File written successfully')
+"

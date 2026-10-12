@@ -1,0 +1,39 @@
+name: Run Database Migrations
+
+on:
+  workflow_call:
+
+jobs:
+  migrate:
+    name: Run Migrations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT_WRITE_ACCESS }}
+      
+      - name: Setup Fly CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Check current migration status
+        run: |
+          echo "📊 Current database migration status:"
+          flyctl ssh console -a barz-backend-bold-sun-5691 -C "alembic current" || echo "⚠️ Could not check status"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+      - name: Run migrations
+        run: |
+          echo "🚀 Running database migrations..."
+          flyctl ssh console -a barz-backend-bold-sun-5691 -C "alembic upgrade head"
+          echo "✅ Migrations completed successfully"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        timeout-minutes: 5
+
+      - name: Verify migration status
+        run: |
+          echo "🔍 Final migration status:"
+          flyctl ssh console -a barz-backend-bold-sun-5691 -C "alembic current"
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
