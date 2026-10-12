@@ -1,6 +1,12 @@
 # Dobar Repository Agent Guidelines
 
-This documents serves as main guidance for the sub-repositories (fe, be, dpe and docs) for dobar ecosystem.
+This is dobar monorepo structure, which contains four main directories:
+- **fe**: Front-end Flutter app
+- **be**: Back-end application
+- **dpe**: Dobar-payment-engine
+- **docs**: Documents
+
+Each directory has its own AGENTS.md file that should be referenced when working on that specific directory.
 
 ## fe
 - **Front-end Flutter app**: under fe folder, there is our front-end application that uses Flutter and has its own AGENTS.md for architecture, tech stack, state management and development workflow.
@@ -13,3 +19,7 @@ This documents serves as main guidance for the sub-repositories (fe, be, dpe and
 
 ## docs
 - **Documents**: under docs folder, there are businesses files, front-end and back-end communication between agents, back-end and dobar-payment-engine communication between agents, market analysis and this folder should be considered source of truth.
+
+- **FE_BE_COMMUNICATION**: under docs folder, there is a file that describes the communication between front-end and back-end applications. Keep it updated and as short as possible, it's not necessary to document the whole FE and BE architecture, just the key endpoints and data structures.
+
+- **BE_DPE_COMMUNICATION**: under docs folder, there is a file that describes the communication between back-end and dobar-payment-engine applications. Keep it updated and as short as possible, it's not necessary to document the whole BE and DPE architecture, just the key endpoints and data structures.
