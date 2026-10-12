@@ -1,0 +1,180 @@
+export const copy = {
+  brand: "dobar",
+  nav: {
+    features: "Recursos",
+    how: "Como Funciona",
+    faq: "FAQ",
+    join: "Entrar na Lista",
+  },
+  hero: {
+    // CORRECTED: Changed from camel case to the new headline
+    headlinePre: "Venha fazer parte do maior ecossistema digital de ",
+    headlineHighlight: "bares e restaurantes do Brasil!",
+    sub: "Seja um dos primeiros bares do Brasil a revolucionar a experiência dos seus clientes com pedidos digitais, pagamento instantâneo via PIX e ferramentas de marketing poderosas.",
+    cta: "Entrar na Lista de Espera",
+    secondary: "Já tem convite? Faça login",
+  },
+  social: {
+    title: "Bares de Confiança Já Estão Dentro",
+    stats: [
+      { value: "50+", label: "bares na lista de espera" },
+      { value: "3", label: "cidades no lançamento" },
+      { value: "R$145+", label: "economia por mês" },
+      { value: "0%", label: "taxa de setup" },
+    ],
+  },
+  features: {
+    title: "Tudo Que Seu Bar Precisa.",
+    titleAlt: "Nada Que Não Precisa.",
+    sub: "Uma plataforma completa, construída do zero para a realidade do nightlife brasileiro.",
+    items: [
+      {
+        title: "Pedidos Sem Fila",
+        desc: "Clientes pedem direto da mesa. Sem app para instalar. Sem filas no balcão.",
+      },
+      {
+        title: "Pagamento Instantâneo",
+        desc: "PIX integrado. Dinheiro na conta em segundos. Sem aluguel de maquininha, sem taxas escondidas.",
+      },
+      {
+        title: "Taxas Menores",
+        desc: "Sem aluguel de maquininha (economia de R$145+/mês). PIX com taxas menores que cartão. Google Pay e Apple Pay integrados.",
+      },
+      {
+        title: "Marketing Automático",
+        desc: "Campanhas inteligentes, happy hours digitais e retenção de clientes sem esforço.",
+      },
+      {
+        title: "Menu Inteligente com IA",
+        desc: "Cadastro instantâneo do cardápio. Nossa IA lê sites, PDFs e até fotos de cardápios físicos — tudo automaticamente convertido para seu menu digital. Zero trabalho manual.",
+      },
+    ],
+    aiDemo: {
+      step1: "Foto do cardápio",
+      step2: "IA processando",
+      step3: "Menu digital pronto",
+    },
+  },
+  pricing: {
+    title: "Planos Dobar Pro",
+    sub: "Escolha o plano ideal para o tamanho do seu bar. Sem surpresas, sem taxas escondidas.",
+    popular: "Mais Popular",
+    plans: [
+      {
+        name: "Regular",
+        price: "Grátis",
+        priceSub: "Para sempre",
+        commission: "18% por transação",
+        cta: "Começar Grátis",
+        ctaVariant: "outline",
+        features: [
+          { label: "Pedidos digitais ilimitados", ok: true },
+          { label: "PIX integrado", ok: true },
+          { label: "Suporte por email", ok: true },
+          { label: "Featured Home", ok: false },
+          { label: "Sponsored Search", ok: false },
+          { label: "Map Spotlight", ok: false },
+          { label: "Promo Boost", ok: false },
+          { label: "Selo verificado", ok: false },
+          { label: "Acesso à API", ok: false },
+        ],
+      },
+      {
+        name: "Master",
+        price: "R$199",
+        priceUnit: "/mês",
+        priceSub: "ou R$1.910/ano",
+        commission: "14% por transação",
+        cta: "Assinar Master",
+        ctaVariant: "primary",
+        highlight: true,
+        features: [
+          { label: "Tudo do Regular", ok: true },
+          { label: "Suporte prioritário", ok: true },
+          { label: "Featured Home — 5h/mês", ok: true },
+          { label: "Sponsored Search — 100 cliques/mês", ok: true },
+          { label: "Map Spotlight — 3h/mês", ok: true },
+          { label: "Promo Boost — comprar avulso", ok: true },
+          { label: "Selo verificado", ok: false },
+          { label: "Acesso à API", ok: false },
+        ],
+      },
+      {
+        name: "VIP",
+        price: "R$599",
+        priceUnit: "/mês",
+        priceSub: "ou R$5.750/ano",
+        commission: "10% por transação",
+        cta: "Falar com Vendas",
+        ctaVariant: "primary",
+        premium: true,
+        features: [
+          { label: "Tudo do Master", ok: true },
+          { label: "Phone + Chat + Gerente dedicado*", ok: true },
+          { label: "Featured Home — 20h/mês", ok: true },
+          { label: "Sponsored Search — 500 cliques/mês", ok: true },
+          { label: "Map Spotlight — 15h/mês", ok: true },
+          { label: "Promo Boost — 5.000 impressões/mês", ok: true },
+          { label: "Selo verificado", ok: true },
+          { label: "Acesso completo à API", ok: true },
+        ],
+      },
+    ],
+    vipNote: "*Gerente dedicado para bares com 50+ pedidos/dia",
+    trust: "💡 Economia real: Com R$30.000/mês em vendas, o plano VIP economiza R$900/mês vs. maquininhas tradicionais.",
+  },
+  how: {
+    title: "Em 3 Passos, Seu Bar Está Pronto",
+    steps: [
+      { n: "01", title: "Cadastre-se", desc: "Reserve sua vaga na lista de espera em 30 segundos." },
+      { n: "02", title: "Receba Acesso", desc: "Nossa equipe entrará em contato para onboarding personalizado." },
+      { n: "03", title: "Comece a Vender", desc: "Configure seu cardápio digital e comece a receber pedidos no mesmo dia." },
+    ],
+  },
+  form: {
+    title: "Garanta Sua Vaga Agora",
+    sub: "Vagas limitadas para o lançamento. Cadastro 100% gratuito.",
+    fields: {
+      bar: "Nome do bar",
+      name: "Seu nome",
+      email: "E-mail",
+      phone: "WhatsApp",
+      city: "Cidade",
+    },
+    cities: ["São Paulo", "Rio de Janeiro", "Belo Horizonte", "Outra"],
+    submit: "Entrar na Lista de Espera",
+    secure: "Seus dados estão seguros",
+    nospam: "Sem spam, prometemos",
+    successTitle: "Você está na lista!",
+    successDesc: "Em breve nossa equipe entrará em contato pelo WhatsApp. Compartilhe com outros donos de bar:",
+  },
+  faq: {
+    title: "Perguntas Frequentes",
+    items: [
+      {
+        q: "Quanto custa para usar o Dobar?",
+        a: "Sem mensalidade. Sem aluguel de maquininha (economia de R$145+/mês). Cobramos apenas uma pequena taxa por transação — PIX com taxas significativamente menores que as de cartão de crédito tradicional (2-3%). Preço transparente, sem surpresas.",
+      },
+      {
+        q: "Preciso de equipamento especial?",
+        a: "Não. O Dobar funciona em qualquer smartphone ou tablet. Seus clientes pedem do próprio celular, sem instalar app.",
+      },
+      {
+        q: "Como funciona o pagamento?",
+        a: "PIX cai na sua conta em segundos. Pagamentos com cartão de crédito são repassados no dia útil seguinte. Aceitamos também Google Pay e Apple Pay.",
+      },
+      {
+        q: "E se eu já tiver outro sistema?",
+        a: "A migração é simples e podemos rodar em paralelo durante a transição. Nossa equipe ajuda na importação do cardápio e treinamento.",
+      },
+      {
+        q: "Quando o lançamento oficial?",
+        a: "Previsto para o Q2 de 2025. Quem entrar na lista de espera tem acesso antecipado e condições especiais de lançamento.",
+      },
+    ],
+  },
+  footer: {
+    links: ["Sobre", "Termos", "Privacidade", "Contato"],
+    rights: "© 2025 Dobar. Todos os direitos reservados.",
+  },
+};

@@ -1,0 +1,118 @@
+import 'package:barz/features/advertising/domain/models/models.dart';
+
+/// Abstract repository for advertising operations.
+/// Separated into public (ad serving) and authenticated (business) operations.
+abstract class AdvertisingRepository {
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PUBLIC ENDPOINTS - Ad Serving (no auth required)
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Get featured ads for home carousel.
+  Future<List<FeaturedAd>> getFeaturedAds({
+    required double latitude,
+    required double longitude,
+    int limit = 5,
+  });
+
+  /// Get sponsored search results.
+  Future<List<SearchAd>> getSearchAds({
+    required double latitude,
+    required double longitude,
+    String? query,
+    String? category,
+    int limit = 3,
+  });
+
+  /// Get map spotlight ads.
+  Future<List<MapAd>> getMapAds({
+    required double latitude,
+    required double longitude,
+    int? zoomLevel,
+    int limit = 5,
+  });
+
+  /// Track ad impression, click, or conversion.
+  Future<void> trackAdEvent({
+    required int campaignId,
+    required String action, // 'impression', 'click', 'conversion'
+    String? placement,
+    String? sessionId,
+    double? latitude,
+    double? longitude,
+  });
+
+  /// Get available subscription plans (public, with regional pricing).
+  Future<PlansResponse> getPlans({String? regionCode});
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // AUTHENTICATED ENDPOINTS - Business Operations
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /// Get subscription for a bar.
+  Future<AdSubscription?> getSubscription(int barId);
+
+  /// Get the advertising rate card for a bar — the campaign wizard's source of
+  /// truth for pricing, budget types, credit buckets and available credits.
+  Future<RateCard> getRateCard(int barId);
+
+  /// Create a subscription for a bar.
+  Future<AdSubscription> createSubscription({
+    required int barId,
+    required SubscriptionTier tier,
+    required String regionCode,
+  });
+  Future<SubscriptionTrialSetupResult> setupSubscriptionTrial({
+    required int barId,
+    required int ownerId,
+    required String plan,
+    required String paymentMethodId,
+    required String customerEmail,
+    required String customerName,
+  });
+
+  /// Cancel a subscription.
+  Future<void> cancelSubscription(int subscriptionId);
+
+  /// Capture a payment after trial.
+  Future<SubscriptionCaptureResult> capturePayment({
+    required String paymentId,
+    required int amountCents,
+  });
+
+  /// Upgrade a subscription with proration.
+  Future<SubscriptionUpgradeResult> upgradeSubscription({
+    required int barId,
+    required int amountCents,
+    required String currency,
+    required String country,
+    required String cardToken,
+    required ProrationInfo proration,
+  });
+
+  /// List campaigns for a bar.
+  Future<List<AdCampaign>> getCampaigns(int barId);
+
+  /// Get a specific campaign.
+  Future<AdCampaign> getCampaign(int campaignId);
+
+  /// Create a new campaign.
+  Future<AdCampaign> createCampaign(CreateCampaignRequest request);
+
+  /// Publish a draft campaign (draft → active/scheduled). Requires ads:manage.
+  Future<AdCampaign> publishCampaign(int campaignId, int barId);
+
+  /// Pause a campaign.
+  Future<AdCampaign> pauseCampaign(int campaignId, int barId);
+
+  /// Resume a campaign.
+  Future<AdCampaign> resumeCampaign(int campaignId, int barId);
+
+  /// Delete a campaign.
+  Future<void> deleteCampaign(int campaignId, int barId);
+
+  /// Get campaign analytics.
+  Future<CampaignAnalytics> getCampaignAnalytics({
+    required int campaignId,
+    required int barId,
+  });
+}

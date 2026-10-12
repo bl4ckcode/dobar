@@ -1,0 +1,306 @@
+import 'dart:async';
+import 'dart:convert';
+import 'package:barz/core/design/design_system.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'dart:math';
+import 'package:sign_in_with_apple/sign_in_with_apple.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:barz/features/authentication/presentation/bloc/login_bloc.dart';
+import 'package:barz/features/authentication/presentation/bloc/login_event.dart';
+
+import 'login_buttons_platform.dart'
+    if (dart.library.io) 'login_buttons_platform_io.dart';
+import 'google_button.dart' as web;
+
+const _nonceChars =
+    '0123456789ABCDEFGHIJKLMNOPQRSTUVXYZabcdefghijklmnopqrstuvwxyz-._';
+
+/// Generate a cryptographically secure random nonce for replay attack prevention.
+String generateNonce({int length = 32}) {
+  final random = Random.secure();
+  return Iterable.generate(
+    length,
+    (_) => _nonceChars[random.nextInt(_nonceChars.length)],
+  ).join();
+}
+
+class LoginButtonsWidget extends StatefulWidget {
+  final LoginBloc loginBloc;
+
+  const LoginButtonsWidget({super.key, required this.loginBloc});
+
+  @override
+  State<LoginButtonsWidget> createState() => _LoginButtonsWidgetState();
+}
+
+class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
+  StreamSubscription<GoogleSignInAuthenticationEvent>? _authSubscription;
+  Widget? _cachedGoogleButtonWeb;
+
+  @override
+  void initState() {
+    super.initState();
+    _initGoogleSignIn();
+    // Cache the Google button widget once on web to prevent re-creating
+    // the GIS SDK button on every parent rebuild, which causes multiple
+    // DOM elements and "already defined" warnings.
+    if (kIsWeb) {
+      _cachedGoogleButtonWeb = _buildGoogleButtonWeb();
+    }
+  }
+
+  Future<void> _initGoogleSignIn() async {
+    final signIn = GoogleSignIn.instance;
+
+    // Listen to authentication events
+    _authSubscription = signIn.authenticationEvents.listen(
+      (event) async {
+        switch (event) {
+          case GoogleSignInAuthenticationEventSignIn():
+            await _handleGoogleSignInSuccess(event.user);
+          case GoogleSignInAuthenticationEventSignOut():
+            // User signed out
+            break;
+        }
+      },
+      onError: (error) {
+        // Handle errors gracefully - FedCM can timeout on web if user is idle
+        debugPrint("Google Sign-In stream error (non-fatal): $error");
+      },
+    );
+
+    // Initialize (no clientId needed for mobile platforms)
+    try {
+      await signIn.initialize();
+    } catch (e) {
+      debugPrint("Google Sign-In init (non-fatal): $e");
+    }
+  }
+
+  Future<void> _handleGoogleSignInSuccess(GoogleSignInAccount user) async {
+    try {
+      final idToken = user.authentication.idToken;
+      final authorization = await user.authorizationClient
+          .authorizationForScopes(['email', 'profile']);
+
+      if (idToken != null) {
+        final credential = GoogleAuthProvider.credential(
+          accessToken: authorization?.accessToken,
+          idToken: idToken,
+        );
+
+        final userCredential = await FirebaseAuth.instance.signInWithCredential(
+          credential,
+        );
+        final firebaseIdToken = await userCredential.user?.getIdToken();
+
+        if (firebaseIdToken != null) {
+          final tokenExpiration = _extractExpFromJwt(idToken);
+          debugPrint(
+            "Firebase ID Token: ${firebaseIdToken.substring(0, 50)}...",
+          );
+          widget.loginBloc.add(
+            LoginEvent.googleLoginPressed(
+              key: user.email,
+              token: firebaseIdToken,
+              tokenExpiration: tokenExpiration,
+            ),
+          );
+        } else {
+          debugPrint("Error: Could not get Firebase ID token");
+        }
+      } else {
+        debugPrint("Error: Google authentication returned null idToken");
+      }
+    } catch (e) {
+      debugPrint("Error getting Google auth: $e");
+    }
+  }
+
+  int? _extractExpFromJwt(String jwt) {
+    try {
+      final parts = jwt.split('.');
+      if (parts.length != 3) return null;
+      final payload = parts[1];
+      final normalized = base64Url.normalize(payload);
+      final decoded = utf8.decode(base64Url.decode(normalized));
+      final json = jsonDecode(decoded) as Map<String, dynamic>;
+      return json['exp'] as int?;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _signInWithGoogle() async {
+    // This method is only called on mobile platforms
+    // On web, we use renderButton() which handles its own sign-in flow
+    try {
+      final signIn = GoogleSignIn.instance;
+      debugPrint("[Google Sign-In] Button clicked (mobile)");
+
+      if (signIn.supportsAuthenticate()) {
+        debugPrint("[Google Sign-In] Calling authenticate()...");
+        await signIn.authenticate();
+        debugPrint("[Google Sign-In] authenticate() completed");
+      } else {
+        debugPrint(
+          "[Google Sign-In] authenticate() not supported - this shouldn't happen on mobile",
+        );
+      }
+    } catch (e, stack) {
+      debugPrint("[Google Sign-In] Error: $e");
+      debugPrint("[Google Sign-In] Stack: $stack");
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Google Sign-In failed: ${e.toString().split(':').last}',
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _authSubscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _signInWithApple() async {
+    try {
+      // Generate a cryptographically secure nonce for replay attack prevention
+      final rawNonce = generateNonce();
+
+      final appleCredential = await SignInWithApple.getAppleIDCredential(
+        scopes: [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+        nonce: rawNonce,
+        webAuthenticationOptions: kIsWeb
+            ? WebAuthenticationOptions(
+                clientId: 'com.barz.app',
+                redirectUri: Uri.parse(
+                  'https://barz-backend-bold-sun-5691.fly.dev/auth/apple/callback',
+                ),
+              )
+            : null,
+      );
+
+      debugPrint(
+        "Apple Identity Token: ${appleCredential.identityToken?.substring(0, 50)}...",
+      );
+
+      final oauthCredential = OAuthProvider('apple.com').credential(
+        idToken: appleCredential.identityToken,
+        rawNonce: rawNonce,
+      );
+
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(
+        oauthCredential,
+      );
+      final firebaseIdToken = await userCredential.user?.getIdToken();
+
+      if (firebaseIdToken != null) {
+        final tokenExpiration = appleCredential.identityToken != null
+            ? _extractExpFromJwt(appleCredential.identityToken!)
+            : null;
+        debugPrint(
+          "Firebase ID Token from Apple: ${firebaseIdToken.substring(0, 50)}...",
+        );
+        widget.loginBloc.add(
+          LoginEvent.appleLoginPressed(
+            key:
+                appleCredential.email ??
+                userCredential.user?.email ??
+                'apple_user',
+            token: firebaseIdToken,
+            tokenExpiration: tokenExpiration,
+          ),
+        );
+      } else {
+        debugPrint("Error: Could not get Firebase ID token from Apple sign-in");
+      }
+    } catch (e) {
+      debugPrint("Error signing in with Apple: $e");
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // On web: use Google's native renderButton() (required by GIS SDK)
+        // Keep it cached to prevent re-creating the GIS SDK button on every
+        // parent rebuild, which causes multiple DOM elements and warnings.
+        if (kIsWeb)
+          _cachedGoogleButtonWeb ?? _buildGoogleButtonWeb()
+        else if (isAndroidPlatform())
+          _buildSocialButton(
+            onPressed: _signInWithGoogle,
+            icon: 'assets/icons/google.png',
+            label: 'Continue with Google',
+          ),
+        if (kIsWeb || isIOSPlatform()) const SizedBox(height: BarzSpacing.sm),
+        // Apple sign-in: web and iOS
+        if (kIsWeb || isIOSPlatform())
+          _buildSocialButton(
+            onPressed: _signInWithApple,
+            icon: 'assets/icons/apple.png',
+            label: 'Continue with Apple',
+          ),
+      ],
+    );
+  }
+
+  /// Builds the Google Sign-In button for web using Google's native SDK button.
+  /// This should only be called once and cached via [_cachedGoogleButtonWeb].
+  Widget _buildGoogleButtonWeb() {
+    return Container(
+      width: double.infinity,
+      height: TouchTargets.minimum,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(BarzRadii.md),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: web.renderButton(),
+    );
+  }
+
+  Widget _buildSocialButton({
+    required VoidCallback onPressed,
+    required String icon,
+    required String label,
+  }) {
+    return SizedBox(
+      width: double.infinity,
+      height: TouchTargets.minimum,
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(
+            vertical: ButtonSpacing.paddingVertical,
+            horizontal: ButtonSpacing.paddingHorizontal,
+          ),
+          side: const BorderSide(color: barzDark, width: 2),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(BarzRadii.md),
+          ),
+        ),
+        icon: Image.asset(icon, height: 24, width: 24),
+        label: Text(
+          label,
+          style: barzTextTheme.labelLarge?.copyWith(
+            color: barzDark,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ),
+    );
+  }
+}

@@ -1,0 +1,523 @@
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:barz/core/error/exceptions.dart';
+import 'package:barz/features/advertising/domain/models/models.dart';
+import 'package:barz/features/advertising/domain/usecases/advertising_usecase.dart';
+import 'advertising_event.dart';
+import 'advertising_state.dart';
+
+/// BLoC for advertising operations.
+/// Handles both client-side ad serving and business-side campaign management.
+class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
+  final AdvertisingUsecase _usecase;
+
+  AdvertisingBloc(this._usecase) : super(const AdvertisingState()) {
+    // Ad serving events
+    on<LoadFeaturedAds>(_onLoadFeaturedAds);
+    on<LoadSearchAds>(_onLoadSearchAds);
+    on<LoadMapAds>(_onLoadMapAds);
+    on<TrackImpression>(_onTrackImpression);
+    on<TrackClick>(_onTrackClick);
+
+    // Business events
+    on<LoadPlans>(_onLoadPlans);
+    on<LoadSubscription>(_onLoadSubscription);
+    on<LoadRateCard>(_onLoadRateCard);
+    on<CreateSubscription>(_onCreateSubscription);
+    on<CancelSubscription>(_onCancelSubscription);
+    on<CaptureSubscriptionPayment>(_onCaptureSubscriptionPayment);
+    on<UpgradeSubscription>(_onUpgradeSubscription);
+    on<LoadCampaigns>(_onLoadCampaigns);
+    on<LoadCampaign>(_onLoadCampaign);
+    on<CreateCampaignEvent>(_onCreateCampaign);
+    on<PublishCampaign>(_onPublishCampaign);
+    on<PauseCampaign>(_onPauseCampaign);
+    on<ResumeCampaign>(_onResumeCampaign);
+    on<DeleteCampaign>(_onDeleteCampaign);
+    on<LoadAnalytics>(_onLoadAnalytics);
+
+    // UI events
+    on<SetFilter>(_onSetFilter);
+    on<SetSort>(_onSetSort);
+    on<SetSearch>(_onSetSearch);
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // AD SERVING HANDLERS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  Future<void> _onLoadFeaturedAds(
+    LoadFeaturedAds event,
+    Emitter<AdvertisingState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingFeatured: true, error: null));
+    try {
+      final ads = await _usecase.getFeaturedAds(
+        latitude: event.latitude,
+        longitude: event.longitude,
+        limit: event.limit,
+      );
+      emit(state.copyWith(featuredAds: ads, isLoadingFeatured: false));
+    } catch (e) {
+      emit(state.copyWith(isLoadingFeatured: false, error: e.toString()));
+    }
+  }
+
+  Future<void> _onLoadSearchAds(
+    LoadSearchAds event,
+    Emitter<AdvertisingState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingSearch: true, error: null));
+    try {
+      final ads = await _usecase.getSearchAds(
+        latitude: event.latitude,
+        longitude: event.longitude,
+        query: event.query,
+        category: event.category,
+        limit: event.limit,
+      );
+      emit(state.copyWith(searchAds: ads, isLoadingSearch: false));
+    } catch (e) {
+      emit(state.copyWith(isLoadingSearch: false, error: e.toString()));
+    }
+  }
+
+  Future<void> _onLoadMapAds(
+    LoadMapAds event,
+    Emitter<AdvertisingState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingMap: true, error: null));
+    try {
+      final ads = await _usecase.getMapAds(
+        latitude: event.latitude,
+        longitude: event.longitude,
+        zoomLevel: event.zoomLevel,
+        limit: event.limit,
+      );
+      emit(state.copyWith(mapAds: ads, isLoadingMap: false));
+    } catch (e) {
+      emit(state.copyWith(isLoadingMap: false, error: e.toString()));
+    }
+  }
+
+  Future<void> _onTrackImpression(
+    TrackImpression event,
+    Emitter<AdvertisingState> emit,
+  ) async {
+    // Fire and forget - don't block UI
+    _usecase.trackImpression(
+      campaignId: event.campaignId,
+      placement: event.placement,
+      latitude: event.latitude,
+      longitude: event.longitude,
+    );
+  }
+
+  Future<void> _onTrackClick(
+    TrackClick event,
+    Emitter<AdvertisingState> emit,
+  ) async {
+    // Fire and forget - don't block UI
+    _usecase.trackClick(
+      campaignId: event.campaignId,
+      placement: event.placement,
+      latitude: event.latitude,
+      longitude: event.longitude,
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // BUSINESS HANDLERS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  Future<void> _onLoadPlans(
+    LoadPlans event,
+    Emitter<AdvertisingState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingPlans: true, error: null));
+    try {
+      final plans = await _usecase.getPlans(regionCode: event.regionCode);
+      emit(state.copyWith(plans: plans, isLoadingPlans: false));
+    } catch (e) {
+      emit(state.copyWith(isLoadingPlans: false, error: e.toString()));
+    }
+  }
+
+  Future<void> _onLoadSubscription(
+    LoadSubscription event,
+    Emitter<AdvertisingState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingSubscription: true, error: null));
+    try {
+      final subscription = await _usecase.getSubscription(event.barId);
+      emit(
+        state.copyWith(
+          subscription: subscription,
+          isLoadingSubscription: false,
+        ),
+      );
+    } catch (e) {
+      final message = e is AppException ? e.displayMessage : e.toString();
+      emit(state.copyWith(isLoadingSubscription: false, error: message));
+    }
+  }
+
+  Future<void> _onLoadRateCard(
+    LoadRateCard event,
+    Emitter<AdvertisingState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingRateCard: true, error: null));
+    try {
+      final card = await _usecase.getRateCard(event.barId);
+      emit(state.copyWith(rateCard: card, isLoadingRateCard: false));
+    } catch (e) {
+      final message = e is AppException ? e.displayMessage : e.toString();
+      emit(state.copyWith(isLoadingRateCard: false, error: message));
+    }
+  }
+
+  Future<void> _onCreateSubscription(
+    CreateSubscription event,
+    Emitter<AdvertisingState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingSubscription: true, error: null));
+    try {
+      final subscription = await _usecase.createSubscription(
+        barId: event.barId,
+        tier: event.tier,
+        regionCode: event.regionCode,
+      );
+      emit(
+        state.copyWith(
+          subscription: subscription,
+          isLoadingSubscription: false,
+          successMessage: 'Subscription created successfully!',
+        ),
+      );
+    } catch (e) {
+      final message = e is AppException ? e.displayMessage : e.toString();
+      emit(state.copyWith(isLoadingSubscription: false, error: message));
+    }
+  }
+
+  Future<void> _onCancelSubscription(
+    CancelSubscription event,
+    Emitter<AdvertisingState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingSubscription: true, error: null));
+    try {
+      await _usecase.cancelSubscription(event.subscriptionId);
+      emit(
+        state.copyWith(
+          subscription: null,
+          isLoadingSubscription: false,
+          successMessage: 'Subscription cancelled',
+        ),
+      );
+    } catch (e) {
+      final message = e is AppException ? e.displayMessage : e.toString();
+      emit(state.copyWith(isLoadingSubscription: false, error: message));
+    }
+  }
+
+  Future<void> _onCaptureSubscriptionPayment(
+    CaptureSubscriptionPayment event,
+    Emitter<AdvertisingState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingSubscription: true, error: null));
+    try {
+      final result = await _usecase.capturePayment(
+        paymentId: event.paymentId,
+        amountCents: event.amountCents,
+      );
+      emit(
+        state.copyWith(
+          isLoadingSubscription: false,
+          successMessage: 'Payment captured: ${result.status}',
+        ),
+      );
+    } catch (e) {
+      final message = e is AppException ? e.displayMessage : e.toString();
+      emit(state.copyWith(isLoadingSubscription: false, error: message));
+    }
+  }
+
+  Future<void> _onUpgradeSubscription(
+    UpgradeSubscription event,
+    Emitter<AdvertisingState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingSubscription: true, error: null));
+    try {
+      final result = await _usecase.upgradeSubscription(
+        barId: event.barId,
+        amountCents: event.amountCents,
+        currency: event.currency,
+        country: event.country,
+        cardToken: event.cardToken,
+        proration: event.proration,
+      );
+      emit(
+        state.copyWith(
+          isLoadingSubscription: false,
+          successMessage: 'Upgrade successful: ${result.status}',
+        ),
+      );
+      // Reload subscription after upgrade
+      add(LoadSubscription(barId: event.barId));
+    } catch (e) {
+      final message = e is AppException ? e.displayMessage : e.toString();
+      emit(state.copyWith(isLoadingSubscription: false, error: message));
+    }
+  }
+
+  Future<void> _onLoadCampaigns(
+    LoadCampaigns event,
+    Emitter<AdvertisingState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingCampaigns: true, error: null));
+    try {
+      final campaigns = await _usecase.getCampaigns(event.barId);
+      emit(state.copyWith(campaigns: campaigns, isLoadingCampaigns: false));
+    } catch (e) {
+      emit(state.copyWith(isLoadingCampaigns: false, error: e.toString()));
+    }
+  }
+
+  Future<void> _onLoadCampaign(
+    LoadCampaign event,
+    Emitter<AdvertisingState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingCampaign: true, error: null));
+    try {
+      final campaign = await _usecase.getCampaign(event.campaignId);
+      emit(
+        state.copyWith(selectedCampaign: campaign, isLoadingCampaign: false),
+      );
+    } catch (e) {
+      emit(state.copyWith(isLoadingCampaign: false, error: e.toString()));
+    }
+  }
+
+  Future<void> _onCreateCampaign(
+    CreateCampaignEvent event,
+    Emitter<AdvertisingState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        isLoadingCampaign: true,
+        error: null,
+        successMessage: null,
+      ),
+    );
+    try {
+      // POST /advertising/campaigns only creates a draft — it never
+      // auto-activates. Chain the publish call so "Launch" actually goes
+      // live (draft → active, or draft → scheduled when start_time > now).
+      final draft = await _usecase.createCampaign(event.request);
+      AdCampaign published = draft;
+      String? publishError;
+      if (draft.status == CampaignStatus.draft ||
+          draft.status == CampaignStatus.pending) {
+        try {
+          published = await _usecase.publishCampaign(
+            draft.id,
+            draft.barId,
+          );
+        } catch (e) {
+          publishError = _friendlyError(e);
+        }
+      }
+      final updatedCampaigns = [...state.campaigns, published];
+      if (publishError != null) {
+        emit(
+          state.copyWith(
+            campaigns: updatedCampaigns,
+            selectedCampaign: published,
+            isLoadingCampaign: false,
+            successMessage: null,
+            error:
+                'Rascunho criado, mas a ativação falhou: $publishError',
+          ),
+        );
+        return;
+      }
+      final launchedMsg = switch (published.status) {
+        CampaignStatus.active => 'Campanha ativada com sucesso!',
+        CampaignStatus.scheduled => 'Campanha agendada com sucesso!',
+        CampaignStatus.pending => 'Campanha agendada com sucesso!',
+        _ => 'Campanha criada com sucesso!',
+      };
+      emit(
+        state.copyWith(
+          campaigns: updatedCampaigns,
+          selectedCampaign: published,
+          isLoadingCampaign: false,
+          successMessage: launchedMsg,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          isLoadingCampaign: false,
+          error: _friendlyError(e),
+        ),
+      );
+    }
+  }
+
+  Future<void> _onPublishCampaign(
+    PublishCampaign event,
+    Emitter<AdvertisingState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        isLoadingCampaign: true,
+        error: null,
+        successMessage: null,
+      ),
+    );
+    try {
+      final campaign = await _usecase.publishCampaign(
+        event.campaignId,
+        event.barId,
+      );
+      final updatedCampaigns = state.campaigns
+          .map((c) => c.id == campaign.id ? campaign : c)
+          .toList();
+      final msg = switch (campaign.status) {
+        CampaignStatus.active => 'Campanha ativada!',
+        CampaignStatus.scheduled => 'Campanha agendada!',
+        CampaignStatus.pending => 'Campanha agendada!',
+        _ => 'Campanha publicada!',
+      };
+      emit(
+        state.copyWith(
+          campaigns: updatedCampaigns,
+          selectedCampaign: campaign,
+          isLoadingCampaign: false,
+          successMessage: msg,
+        ),
+      );
+    } catch (e) {
+      emit(
+        state.copyWith(
+          isLoadingCampaign: false,
+          error: _friendlyError(e),
+        ),
+      );
+    }
+  }
+
+  Future<void> _onPauseCampaign(
+    PauseCampaign event,
+    Emitter<AdvertisingState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingCampaign: true, error: null));
+    try {
+      final campaign = await _usecase.pauseCampaign(event.campaignId, event.barId);
+      final updatedCampaigns = state.campaigns
+          .map((c) => c.id == campaign.id ? campaign : c)
+          .toList();
+      emit(
+        state.copyWith(
+          campaigns: updatedCampaigns,
+          selectedCampaign: campaign,
+          isLoadingCampaign: false,
+          successMessage: 'Campaign paused',
+        ),
+      );
+    } catch (e) {
+      emit(state.copyWith(isLoadingCampaign: false, error: e.toString()));
+    }
+  }
+
+  Future<void> _onResumeCampaign(
+    ResumeCampaign event,
+    Emitter<AdvertisingState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingCampaign: true, error: null));
+    try {
+      final campaign = await _usecase.resumeCampaign(event.campaignId, event.barId);
+      final updatedCampaigns = state.campaigns
+          .map((c) => c.id == campaign.id ? campaign : c)
+          .toList();
+      emit(
+        state.copyWith(
+          campaigns: updatedCampaigns,
+          selectedCampaign: campaign,
+          isLoadingCampaign: false,
+          successMessage: 'Campaign resumed',
+        ),
+      );
+    } catch (e) {
+      emit(state.copyWith(isLoadingCampaign: false, error: e.toString()));
+    }
+  }
+
+  Future<void> _onDeleteCampaign(
+    DeleteCampaign event,
+    Emitter<AdvertisingState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingCampaign: true, error: null));
+    try {
+      await _usecase.deleteCampaign(event.campaignId, event.barId);
+      final updatedCampaigns =
+          state.campaigns.where((c) => c.id != event.campaignId).toList();
+      emit(
+        state.copyWith(
+          campaigns: updatedCampaigns,
+          selectedCampaign: state.selectedCampaign?.id == event.campaignId
+              ? null
+              : state.selectedCampaign,
+          isLoadingCampaign: false,
+          successMessage: 'Campaign deleted',
+        ),
+      );
+    } catch (e) {
+      emit(state.copyWith(isLoadingCampaign: false, error: e.toString()));
+    }
+  }
+
+  Future<void> _onLoadAnalytics(
+    LoadAnalytics event,
+    Emitter<AdvertisingState> emit,
+  ) async {
+    emit(state.copyWith(isLoadingAnalytics: true, error: null));
+    try {
+      final analytics = await _usecase.getCampaignAnalytics(
+        campaignId: event.campaignId,
+        barId: event.barId,
+      );
+      emit(state.copyWith(analytics: analytics, isLoadingAnalytics: false));
+    } catch (e) {
+      emit(state.copyWith(isLoadingAnalytics: false, error: e.toString()));
+    }
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // UI HANDLERS
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  void _onSetFilter(SetFilter event, Emitter<AdvertisingState> emit) {
+    emit(state.copyWith(filterStatus: event.status));
+  }
+
+  void _onSetSort(SetSort event, Emitter<AdvertisingState> emit) {
+    emit(state.copyWith(sortBy: event.sortBy));
+  }
+
+  void _onSetSearch(SetSearch event, Emitter<AdvertisingState> emit) {
+    emit(state.copyWith(searchQuery: event.query));
+  }
+
+  /// Surfaces backend validation messages verbatim (they already contain the
+  /// concrete `R$ X/dia` minimums the wizard must show).
+  String _friendlyError(Object e) {
+    if (e is AppException) {
+      final msg = e.displayMessage.trim();
+      if (msg.isNotEmpty) return msg;
+      return 'Falha na operação. Tente novamente.';
+    }
+    final msg = e.toString().replaceFirst('Exception: ', '').trim();
+    return msg.isEmpty ? 'Falha na operação. Tente novamente.' : msg;
+  }
+}

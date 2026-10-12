@@ -1,0 +1,589 @@
+import 'package:barz/core/network/error/failures.dart';
+import 'package:barz/features/bars/domain/repositories/abstract_bar_repository.dart';
+import 'package:barz/features/cart/domain/models/cart_model.dart';
+import 'package:barz/features/cart/domain/models/cart_models.dart'
+    hide CartItem, Promotion;
+import 'package:barz/features/cart/domain/models/cart_models.dart'
+    as legacy_models;
+import 'package:barz/features/cart/domain/usecases/cart_usecase.dart';
+import 'package:barz/features/cart/presentation/bloc/cart_event.dart';
+import 'package:barz/features/cart/presentation/bloc/cart_state.dart';
+import 'package:collection/collection.dart';
+import 'package:dartz/dartz.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:rxdart/rxdart.dart';
+import 'package:bloc_concurrency/bloc_concurrency.dart';
+
+class CartBloc extends Bloc<CartEvent, CartState> {
+  final CartUsecase cartUsecase;
+  final AbstractBarRepository barRepository;
+  CartSyncRequest? _lastSyncRequest;
+
+  CartBloc({required this.cartUsecase, required this.barRepository})
+    : super(CartInitial()) {
+    on<LoadCart>(_onLoadCart);
+    on<AddToCart>(_onAddToCart);
+    on<UpdateCartItem>(_onUpdateCartItem);
+    on<RemoveFromCart>(_onRemoveFromCart);
+    on<DecreaseCartItem>(_onDecreaseCartItem);
+    on<ClearCart>(_onClearCart);
+    on<Checkout>(_onCheckout);
+    on<LoadCheckoutConfig>(_onLoadCheckoutConfig);
+    on<UpdateActivePromotions>(_onUpdateActivePromotions);
+    on<CheckSpotAvailability>(_onCheckSpotAvailability);
+
+    on<SyncCart>(
+      _onSyncCart,
+      transformer: (events, mapper) {
+        return restartable<SyncCart>()(
+          events.debounceTime(const Duration(milliseconds: 500)),
+          mapper,
+        );
+      },
+    );
+  }
+
+  Future<void> _onLoadCart(LoadCart event, Emitter<CartState> emit) async {
+    final barId =
+        event.barId ??
+        (state is CartLoaded ? (state as CartLoaded).barId : null);
+
+    if (state is CartLoaded) {
+      final current = state as CartLoaded;
+      if (current.cart.items.isNotEmpty && current.barId == barId) {
+        return;
+      }
+    }
+
+    CartLoaded currentState;
+    if (state is CartLoaded) {
+      currentState = state as CartLoaded;
+    } else {
+      currentState = CartLoaded(
+        cart: CartModel(
+          id: 0,
+          userId: 0,
+          items: [],
+          totalItems: 0,
+          subtotal: 0,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+        barId: barId,
+      );
+    }
+
+    _lastSyncRequest = null;
+
+    emit(currentState.copyWith(isLoading: true, barId: barId));
+
+    final itemsInput = currentState.cart.items
+        .map(
+          (item) => CartItemInput(
+            menuItemId: item.menuItemId,
+            quantity: item.quantity,
+          ),
+        )
+        .toList();
+
+    final request = CartSyncRequest(
+      items: itemsInput,
+      activePromotionIds: currentState.selectedPromotionIds,
+    );
+
+    try {
+      final result = await cartUsecase.syncCart(request);
+      result.fold(
+        (failure) =>
+            emit(currentState.copyWith(isLoading: false, barId: barId)),
+        (serverCart) => emit(CartLoaded(cart: serverCart, barId: barId)),
+      );
+    } catch (e) {
+      emit(currentState.copyWith(isLoading: false, barId: barId));
+    }
+  }
+
+  Future<void> _onLoadCheckoutConfig(
+    LoadCheckoutConfig event,
+    Emitter<CartState> emit,
+  ) async {
+    if (state is CartLoaded) {
+      final currentState = state as CartLoaded;
+
+      if (currentState.locationConfig != null &&
+          currentState.barId == event.barId) {
+        return;
+      }
+
+      final results = await Future.wait([
+        barRepository.getLocationConfig(event.barId),
+        barRepository.getPromotions(event.barId),
+      ]);
+
+      final locationResult = results[0] as Either<Failure, LocationConfig>;
+      final promotionsResult =
+          results[1] as Either<Failure, List<legacy_models.Promotion>>;
+
+      LocationConfig? locationConfig = currentState.locationConfig;
+      List<legacy_models.Promotion> promotions = currentState.activePromotions;
+
+      locationResult.fold(
+        (failure) => null,
+        (config) => locationConfig = config,
+      );
+
+      promotionsResult.fold((failure) => null, (promos) => promotions = promos);
+
+      emit(
+        currentState.copyWith(
+          locationConfig: locationConfig,
+          activePromotions: promotions,
+        ),
+      );
+    }
+  }
+
+  void _onAddToCart(AddToCart event, Emitter<CartState> emit) {
+    CartLoaded currentState;
+
+    if (state is CartLoaded) {
+      currentState = state as CartLoaded;
+    } else {
+      currentState = CartLoaded(
+        cart: CartModel(
+          id: 0,
+          userId: 0,
+          items: [],
+          totalItems: 0,
+          subtotal: 0,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      );
+    }
+
+    final switchedBar =
+        currentState.barId != null &&
+        currentState.barId != event.barId &&
+        currentState.cart.items.isNotEmpty;
+
+    final baseItems = switchedBar
+        ? <CartItemModel>[]
+        : List<CartItemModel>.from(currentState.cart.items);
+
+    final existingIndex = baseItems.indexWhere(
+      (item) => item.menuItemId == event.menuItemId,
+    );
+
+    List<CartItemModel> updatedItems;
+
+    if (existingIndex != -1) {
+      final existingItem = baseItems[existingIndex];
+      final newQuantity = existingItem.quantity + event.quantity;
+      updatedItems = List.from(baseItems);
+      updatedItems[existingIndex] = existingItem.copyWith(
+        quantity: newQuantity,
+        totalPrice: newQuantity * existingItem.unitPrice,
+      );
+    } else {
+      updatedItems = List.from(baseItems)
+        ..add(
+          CartItemModel(
+            id: 0,
+            cartId: currentState.cart.id,
+            menuItemId: event.menuItemId,
+            barId: event.barId,
+            menuItemName: event.menuItemName,
+            quantity: event.quantity,
+            unitPrice: event.unitPrice,
+            totalPrice: event.quantity * event.unitPrice,
+          ),
+        );
+    }
+
+    final updatedCart = currentState.cart.copyWith(
+      items: updatedItems,
+      totalItems: updatedItems.fold<int>(0, (sum, item) => sum + item.quantity),
+      subtotal: updatedItems.fold<double>(
+        0.0,
+        (sum, item) => sum + item.totalPrice,
+      ),
+      total:
+          updatedItems.fold<double>(0.0, (sum, item) => sum + item.totalPrice) -
+          currentState.cart.discount +
+          currentState.cart.tax +
+          currentState.cart.tip +
+          currentState.cart.deliveryFee,
+    );
+
+    final newTimestamp = DateTime.now().millisecondsSinceEpoch;
+    emit(
+      currentState.copyWith(
+        cart: updatedCart,
+        barId: event.barId,
+        lastSyncTimestamp: newTimestamp,
+        version: currentState.version + 1,
+      ),
+    );
+    add(const SyncCart());
+  }
+
+  void _onUpdateCartItem(UpdateCartItem event, Emitter<CartState> emit) {
+    if (state is! CartLoaded) return;
+    final currentState = state as CartLoaded;
+    final currentItems = List<CartItemModel>.from(currentState.cart.items);
+    final index = currentItems.indexWhere(
+      (item) => item.menuItemId == event.menuItemId,
+    );
+
+    if (index != -1) {
+      final item = currentItems[index];
+      final updatedItem = item.copyWith(
+        quantity: event.quantity,
+        totalPrice: event.quantity * item.unitPrice,
+      );
+      currentItems[index] = updatedItem;
+
+      final updatedCart = currentState.cart.copyWith(
+        items: currentItems,
+        totalItems: currentItems.fold<int>(
+          0,
+          (sum, item) => sum + item.quantity,
+        ),
+        subtotal: currentItems.fold<double>(
+          0.0,
+          (sum, item) => sum + item.totalPrice,
+        ),
+        total:
+            currentItems.fold<double>(
+              0.0,
+              (sum, item) => sum + item.totalPrice,
+            ) -
+            currentState.cart.discount +
+            currentState.cart.tax +
+            currentState.cart.tip +
+            currentState.cart.deliveryFee,
+      );
+
+      final newTimestamp = DateTime.now().millisecondsSinceEpoch;
+      emit(
+        currentState.copyWith(
+          cart: updatedCart,
+          lastSyncTimestamp: newTimestamp,
+          version: currentState.version + 1,
+        ),
+      );
+      add(const SyncCart());
+    }
+  }
+
+  void _onRemoveFromCart(RemoveFromCart event, Emitter<CartState> emit) {
+    if (state is! CartLoaded) return;
+    final currentState = state as CartLoaded;
+    final currentItems = currentState.cart.items
+        .where((item) => item.menuItemId != event.menuItemId)
+        .toList();
+
+    final updatedCart = currentState.cart.copyWith(
+      items: currentItems,
+      totalItems: currentItems.fold<int>(0, (sum, item) => sum + item.quantity),
+      subtotal: currentItems.fold<double>(
+        0.0,
+        (sum, item) => sum + item.totalPrice,
+      ),
+      total:
+          currentItems.fold<double>(0.0, (sum, item) => sum + item.totalPrice) -
+          currentState.cart.discount +
+          currentState.cart.tax +
+          currentState.cart.tip +
+          currentState.cart.deliveryFee,
+    );
+
+    final newTimestamp = DateTime.now().millisecondsSinceEpoch;
+    emit(
+      currentState.copyWith(
+        cart: updatedCart,
+        lastSyncTimestamp: newTimestamp,
+        version: currentState.version + 1,
+      ),
+    );
+    add(const SyncCart());
+  }
+
+  void _onDecreaseCartItem(DecreaseCartItem event, Emitter<CartState> emit) {
+    if (state is! CartLoaded) return;
+    final currentState = state as CartLoaded;
+    final currentItems = List<CartItemModel>.from(currentState.cart.items);
+    final index = currentItems.indexWhere(
+      (item) => item.menuItemId == event.menuItemId,
+    );
+
+    if (index == -1) return;
+
+    final item = currentItems[index];
+    if (item.quantity <= 1) {
+      currentItems.removeAt(index);
+    } else {
+      currentItems[index] = item.copyWith(
+        quantity: item.quantity - 1,
+        totalPrice: (item.quantity - 1) * item.unitPrice,
+      );
+    }
+
+    final updatedCart = currentState.cart.copyWith(
+      items: currentItems,
+      totalItems: currentItems.fold<int>(0, (sum, item) => sum + item.quantity),
+      subtotal: currentItems.fold<double>(
+        0.0,
+        (sum, item) => sum + item.totalPrice,
+      ),
+      total:
+          currentItems.fold<double>(0.0, (sum, item) => sum + item.totalPrice) -
+          currentState.cart.discount +
+          currentState.cart.tax +
+          currentState.cart.tip +
+          currentState.cart.deliveryFee,
+    );
+
+    final newTimestamp = DateTime.now().millisecondsSinceEpoch;
+    emit(
+      currentState.copyWith(
+        cart: updatedCart,
+        lastSyncTimestamp: newTimestamp,
+        version: currentState.version + 1,
+      ),
+    );
+    add(const SyncCart());
+  }
+
+  void _onUpdateActivePromotions(
+    UpdateActivePromotions event,
+    Emitter<CartState> emit,
+  ) {
+    if (state is! CartLoaded) return;
+    final currentState = state as CartLoaded;
+
+    final newTimestamp = DateTime.now().millisecondsSinceEpoch;
+    emit(
+      currentState.copyWith(
+        selectedPromotionIds: event.activePromotionIds,
+        isLoading: true,
+        lastSyncTimestamp: newTimestamp,
+        version: currentState.version + 1,
+      ),
+    );
+    add(const SyncCart());
+  }
+
+  Future<void> _onSyncCart(SyncCart event, Emitter<CartState> emit) async {
+    final syncStartTime = DateTime.now().millisecondsSinceEpoch;
+    try {
+      if (state is! CartLoaded) return;
+      final currentState = state as CartLoaded;
+
+      final itemsInput = currentState.cart.items
+          .map(
+            (item) => CartItemInput(
+              menuItemId: item.menuItemId,
+              quantity: item.quantity,
+            ),
+          )
+          .toList();
+
+      final request = CartSyncRequest(
+        items: itemsInput,
+        activePromotionIds: currentState.selectedPromotionIds,
+      );
+
+      if (_lastSyncRequest == request) {
+        return;
+      }
+      _lastSyncRequest = request;
+
+      final result = await cartUsecase.syncCart(request);
+
+      result.fold(
+        (failure) {
+          if (state is CartLoaded) {
+            final st = state as CartLoaded;
+            final updatedIssues = st.cart.validationIssues
+                .where((i) => i.severity != 'sync_error')
+                .toList();
+            updatedIssues.add(
+              ValidationIssue(
+                severity: 'sync_error',
+                message:
+                    'Offline: Unable to reliably sync cart prior to checkout.',
+              ),
+            );
+
+            emit(
+              st.copyWith(
+                isLoading: false,
+                cart: st.cart.copyWith(validationIssues: updatedIssues),
+              ),
+            );
+          }
+        },
+        (serverCart) {
+          final latestState = state;
+          if (latestState is! CartLoaded) return;
+
+          if (latestState.lastSyncTimestamp > syncStartTime) {
+            return;
+          }
+
+          final localItems = latestState.cart.items;
+          final mergedItems = localItems.map((local) {
+            final serverItem = serverCart.items.firstWhereOrNull(
+              (s) => s.menuItemId == local.menuItemId,
+            );
+            if (serverItem != null) {
+              return local.copyWith(
+                id: serverItem.id, // Update temp ID with server ID
+                unitPrice: serverItem.unitPrice,
+                totalPrice: local.quantity * serverItem.unitPrice,
+              );
+            }
+            return local;
+          }).toList();
+
+          final localTotal = mergedItems.fold<double>(
+            0.0,
+            (sum, item) => sum + item.totalPrice,
+          );
+
+          final mergedCart = latestState.cart.copyWith(
+            items: mergedItems,
+            discount: serverCart.discount,
+            tax: serverCart.tax,
+            tip: serverCart.tip,
+            deliveryFee: serverCart.deliveryFee,
+            total:
+                localTotal -
+                serverCart.discount +
+                serverCart.tax +
+                serverCart.tip +
+                serverCart.deliveryFee,
+            subtotal: localTotal,
+            bundleSavings: serverCart.bundleSavings,
+            subtotalAfterBundles: serverCart.subtotalAfterBundles,
+            validationIssues: serverCart.validationIssues
+                .where((i) => i.severity != 'sync_error')
+                .toList(),
+            appliedBundles: serverCart.appliedBundles,
+          );
+          emit(latestState.copyWith(cart: mergedCart, isLoading: false));
+        },
+      );
+    } catch (e) {
+      if (state is CartLoaded) {
+        emit((state as CartLoaded).copyWith(isLoading: false));
+      }
+    }
+  }
+
+  Future<void> _onClearCart(ClearCart event, Emitter<CartState> emit) async {
+    CartLoaded currentState;
+    
+    if (state is CartLoaded) {
+      currentState = state as CartLoaded;
+    } else {
+      // Create a default CartLoaded state if we are in CheckoutSuccess or CartError
+      currentState = CartLoaded(
+        cart: CartModel(
+          id: 0,
+          userId: 0,
+          items: [],
+          totalItems: 0,
+          subtotal: 0.0,
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        ),
+      );
+    }
+
+    final updatedCart = currentState.cart.copyWith(
+      items: [],
+      totalItems: 0,
+      subtotal: 0.0,
+      discount: 0.0,
+      total: 0.0,
+      bundleSavings: 0.0,
+      subtotalAfterBundles: 0.0,
+      validationIssues: [],
+    );
+
+    final newTimestamp = DateTime.now().millisecondsSinceEpoch;
+    emit(
+      currentState.copyWith(
+        cart: updatedCart,
+        isLoading: true,
+        lastSyncTimestamp: newTimestamp,
+        version: currentState.version + 1,
+      ),
+    );
+
+    add(const SyncCart());
+  }
+
+  Future<void> _onCheckout(Checkout event, Emitter<CartState> emit) async {
+    if (state is CartLoaded) {
+      final st = state as CartLoaded;
+      if (st.isLoading) {
+        emit(const CartError(message: 'Please wait for cart to sync...'));
+        emit(st);
+        return;
+      }
+      if (st.cart.validationIssues.any((i) => i.severity == 'sync_error')) {
+        emit(
+          const CartError(
+            message:
+                'Cart sync failed. Please check your internet connection before checking out.',
+          ),
+        );
+        emit(st);
+        return;
+      }
+    }
+
+    final currentLoadedState = state is CartLoaded ? state : null;
+    emit(const CartLoading());
+    final result = await cartUsecase.checkout(
+      orderType: event.orderType,
+      paymentMethod: event.paymentMethod,
+      tableNumber: event.tableNumber,
+      specialInstructions: event.specialInstructions,
+      activePromotionIds: event.activePromotionIds,
+    );
+    result.fold((failure) {
+      emit(CartError(message: failure.errorMessage));
+      if (currentLoadedState != null) {
+        emit(currentLoadedState);
+      }
+    }, (checkoutResult) => emit(CheckoutSuccess(result: checkoutResult)));
+  }
+
+  Future<void> _onCheckSpotAvailability(
+    CheckSpotAvailability event,
+    Emitter<CartState> emit,
+  ) async {
+    if (state is! CartLoaded) return;
+    final currentState = state as CartLoaded;
+
+    emit(currentState.copyWith(isLoading: true));
+
+    final result = await cartUsecase.checkSpotAvailability(
+      barId: event.barId,
+      spotId: event.spotId,
+    );
+
+    result.fold((failure) => emit(CartError(message: failure.errorMessage)), (
+      availability,
+    ) {
+      emit(
+        currentState.copyWith(spotAvailability: availability, isLoading: false),
+      );
+    });
+  }
+}

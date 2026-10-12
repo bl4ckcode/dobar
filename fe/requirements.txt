@@ -1,0 +1,31 @@
+- As a dobar user, when I open the application:
+   - be able to login with: Apple, Google or my phone number plus a 2 auth factor, we won't have passwords but MFA
+   - be able to register with my document plus past login requirement (cpf, rg, id)
+   - be able to see Terms of Use, and Privacy
+
+ - As a dobar user, logged in, in home:
+    - be able to see home with drinks/cashback promotions/bars or and restaurants discounts
+    - be able to see bars/restaurants exclusive section (so we can benefit from partners/bars premium features, such as ad in home)
+    - be able to see drinks section
+    - be able to see a nav bar containing: home, find, profile tabs
+    - be able to see toolbar (that will be cutomized later) containing: user picture left, current location center, qr code icon right 
+    - if location is <100m, be contaimplained with a beatiful modal informing I am close or already present on a partner bar/restaurant, and if I want to see the menu of it 
+    - if location > 100 and not preimum member yet, be contaimplained with dobar premium modal invite which can benefit from reedems, discounts, acumulative usage, etc
+    
+- As a dobar user, logged in and having selected find tab:
+    - be able to see a search bar on top
+    - be able to see a list of bars/restaurants nearby
+    - be able to filter bars/restaurants by distance, rating, price, offers
+    - be able to see bars/restaurants in map view but also in list view
+    - be able to select a bar/restaurant and see its details (menu, offers, reviews, location, etc)
+    - this is the view map, it must be beautiful and easy to use, we can inspire ourselves in Uber/Ifood/Mercado Livre (when delivering) apps
+    - bar/restaurants pins must be customized with their own logo/pin and also show if they have offers/promotions available, like a circled pin or something like that
+    - be able to click on a bar/restaurant pin and see a small popup with basic info (name, rating, offers available) and be able to click to see more details
+
+- As a dobar user, logged in and having selected profile tab:
+    - be able to see my profile picture, name, email/phone number
+    - be able to see my past activities (bars/restaurants visited, offers used, etc)
+    - be able to see my accumulated cashback/rewards
+    - be able to see settings (notifications, privacy, etc)
+    - be able to see help/support section
+    - be able to see logout button

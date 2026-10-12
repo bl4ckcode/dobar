@@ -1,0 +1,53 @@
+import 'package:equatable/equatable.dart';
+
+abstract class OrderEvent extends Equatable {
+  const OrderEvent();
+
+  @override
+  List<Object?> get props => [];
+}
+
+class LoadMyOrders extends OrderEvent {
+  final String? status;
+
+  const LoadMyOrders({this.status});
+
+  @override
+  List<Object?> get props => [status];
+}
+
+class LoadMoreOrders extends OrderEvent {
+  final String? status;
+
+  const LoadMoreOrders({this.status});
+
+  @override
+  List<Object?> get props => [status];
+}
+
+class LoadOrder extends OrderEvent {
+  final int orderId;
+
+  const LoadOrder({required this.orderId});
+
+  @override
+  List<Object?> get props => [orderId];
+}
+
+class LoadOrderTimeline extends OrderEvent {
+  final int orderId;
+
+  const LoadOrderTimeline({required this.orderId});
+
+  @override
+  List<Object?> get props => [orderId];
+}
+
+class CancelOrder extends OrderEvent {
+  final int orderId;
+
+  const CancelOrder({required this.orderId});
+
+  @override
+  List<Object?> get props => [orderId];
+}
