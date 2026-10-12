@@ -1,0 +1,9 @@
+Layer 1 — PIX first, aggressively. PIX transactions have essentially zero chargeback risk (they're account-to-account, irreversible, and the user is authenticated by their bank). Push PIX as the default payment method with a small incentive (e.g. "Pay with PIX and get 5% back in Dobar credits"). Every percentage point shift from credit to PIX reduces your fraud exposure materially.
+
+Layer 2 — 3DS 2.x for all card payments. This is non-negotiable. 3DS transfers fraud liability to the card issuer when the authentication succeeds — meaning chargebacks from fraudulent transactions become the bank's problem, not yours. Pagar.me supports 3DS 2.x. Enforce it for all credit transactions above R$30. Research shows 60–85% chargeback reduction from 3DS alone.
+
+Layer 3 — Konduto or Stripe Radar for behavioral analysis. Konduto is Brazil-native and analyzes typing cadence, mouse behavior, device fingerprint, and historical CPF patterns. ClearSale is the other major player — they process manually for ambiguous cases and offer a chargeback guarantee product. For a bar app where most transactions are small-ticket and same-person repeat behavior, Konduto's machine learning model is particularly effective because it learns your venue's order patterns quickly.
+
+Layer 4 — Internal velocity rules (your own code). Regardless of acquirer: flag any user attempting more than 3 orders in a 15-minute window, or orders from a device that failed 2+ payment attempts in 24 hours, or orders from an account created < 5 minutes ago with a high-value cart. These rules cost almost nothing to implement and eliminate the most obvious fraud vectors.
+
+Layer 5 — Reserve policy for chargeback monitoring. Pagar.me holds a rolling reserve for new accounts. Negotiate the release schedule as you establish a clean track record. If your chargeback rate stays below 0.5% (Visa VDMP threshold is 0.9%), you can negotiate reserve removal and better rates simultaneously.

@@ -1,0 +1,40 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "barz",
+            "request": "launch",
+            "type": "dart",
+            "cwd": "${workspaceFolder}/fe",
+            "deviceId": "web-server",
+            "program": "${workspaceFolder}/fe/lib/main.dart",
+            "args": [
+                "--web-port=8888"
+            ]
+        },
+        {
+            "name": "barz (profile mode)",
+            "request": "launch",
+            "type": "dart",
+            "cwd": "${workspaceFolder}/fe",
+            "flutterMode": "profile",
+            "deviceId": "web",
+            "program": "lib/main.dart",
+            "args": [
+                "--web-port=8888"
+            ]
+        },
+        {
+            "name": "barz (release mode)",
+            "request": "launch",
+            "type": "dart",
+            "cwd": "${workspaceFolder}/fe",
+            "flutterMode": "release",
+            "deviceId": "web",
+            "program": "lib/main.dart",
+            "args": [
+                "--web-port=8888"
+            ]
+        }
+    ]
+}
