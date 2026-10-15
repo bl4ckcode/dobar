@@ -11,6 +11,9 @@ jobs:
   validate_contracts:
     name: Validate Payment & Wallet Contracts
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: be
     outputs:
       status: ${{ steps.final_status.outputs.status }}
     
@@ -24,6 +27,7 @@ jobs:
         with:
           python-version: '3.12'
           cache: 'pip'
+          cache-dependency-path: be/requirements.txt
       
       - name: Install dependencies
         run: |
@@ -40,11 +44,11 @@ jobs:
           CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD 2>/dev/null || echo "")
           
           CRITICAL_PATHS=(
-            "app/payment/"
-            "app/bars_and_restaurants/models/wallet_models.py"
-            "app/bars_and_restaurants/services/wallet_service.py"
-            "app/bars_and_restaurants/routes/cart.py"
-            "app/bars_and_restaurants/schemas/cart.py"
+            "be/app/payment/"
+            "be/app/bars_and_restaurants/models/wallet_models.py"
+            "be/app/bars_and_restaurants/services/wallet_service.py"
+            "be/app/bars_and_restaurants/routes/cart.py"
+            "be/app/bars_and_restaurants/schemas/cart.py"
           )
           
           CHANGES_DETECTED=false

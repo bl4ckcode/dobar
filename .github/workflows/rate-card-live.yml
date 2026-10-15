@@ -47,6 +47,9 @@ jobs:
   verify:
     name: Verify production rate card
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: be
     env:
       # keep in sync with `app =` in fly.toml
       FLY_APP: barz-backend-bold-sun-5691

@@ -7,6 +7,9 @@ jobs:
   migrate:
     name: Run Migrations
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: be
     steps:
       - uses: actions/checkout@v4
         with:
