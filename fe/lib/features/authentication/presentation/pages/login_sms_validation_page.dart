@@ -105,9 +105,9 @@ class _LoginValidatePhoneNumberPageState
     return Scaffold(
       backgroundColor: colors.background,
       appBar: AppBar(
-        backgroundColor: colors.navBackground,
+        backgroundColor: colors.background,
         elevation: 0,
-        iconTheme: IconThemeData(color: colors.labelSelected),
+        iconTheme: IconThemeData(color: colors.labelPrimary),
       ),
       body: BlocListener<LoginBloc, LoginState>(
         bloc: widget.loginBloc,

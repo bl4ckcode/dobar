@@ -343,9 +343,10 @@ class _BusinessSummaryCardState extends State<_BusinessSummaryCard> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.center,
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
                             widget.title.toUpperCase(),
@@ -395,6 +396,7 @@ class _BusinessSummaryCardState extends State<_BusinessSummaryCard> {
                             ],
                           ),
                         ],
+                      ),
                       ),
                     ),
                     Container(

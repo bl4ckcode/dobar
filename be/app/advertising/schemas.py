@@ -161,10 +161,10 @@ class SubscribeRequest(BaseModel):
 class PixSubscriptionResponse(BaseModel):
     """Response returned when PIX is selected for subscription"""
     status: str = "waiting_payment"
-    pix_qr_code: str
-    pix_copia_e_cola: str
-    pix_expires_at: datetime
-    invoice_id: int
+    pix_qr_code: Optional[str] = None
+    pix_copia_e_cola: Optional[str] = None
+    pix_expires_at: Optional[datetime] = None
+    invoice_id: Optional[int] = None
 
 
 class ChangePlanRequest(BaseModel):

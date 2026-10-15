@@ -1354,10 +1354,11 @@ class _StatCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: const Color(0xFF2C2C2C)),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        children: [
+      child: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
           Row(
             children: [
               Icon(
@@ -1388,6 +1389,7 @@ class _StatCard extends StatelessWidget {
             ),
           ),
         ],
+        ),
       ),
     );
   }

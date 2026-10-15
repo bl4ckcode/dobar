@@ -9,7 +9,3 @@ A production back-end Python FastAPI application for connecting dobar owners and
 ## 📖 Specialized Documentation
 - [**Architecture & Tech Stack**](docs/agents/architecture.md)
 - [**Development Workflow**](docs/agents/development_workflow.md)
-- [**Direct communication with front-end**](.docs/FE_BE_COMMUNICATION.md)
-- [**Direct communication with dobar-payment-engine**](.docs/BE_DE_COMMUNICATION.md)
-- [**Domain Knowledge**](.docs/business)
-- [**Dobar Payment Engine (External)**](../dobar-payment-engine/.docs)

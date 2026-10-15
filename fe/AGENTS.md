@@ -10,5 +10,3 @@ A production Flutter application for dobar owners and clients connecting venues 
 ## 📖 Specialized Documentation
 - [**Architecture, Tech Stack & State Management**](docs/agents/architecture.md)
 - [**Development Workflow**](docs/agents/development_workflow.md)
-- [**Direct communication with back-end**](docs/agents/FE_BE_COMMUNICATION.md)
-- [**Domain knowledge**](docs/business)

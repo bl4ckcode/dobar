@@ -370,11 +370,20 @@ class _CampaignCardState extends State<CampaignCard>
                             child: _menuItem(LucideIcons.circle_pause, 'Pausar',
                                 dobar),
                           )
-                        else
+                        else if (c.status == CampaignStatus.paused)
                           PopupMenuItem(
                             value: 'toggle',
                             child: _menuItem(LucideIcons.circle_play, 'Retomar',
                                 dobar),
+                          )
+                        else if (c.status == CampaignStatus.draft ||
+                            c.status == CampaignStatus.pending)
+                          // Drafts never auto-activate on create — this
+                          // dispatches POST /campaigns/{id}/publish.
+                          PopupMenuItem(
+                            value: 'toggle',
+                            child: _menuItem(
+                                LucideIcons.rocket, 'Ativar', dobar),
                           ),
                         PopupMenuItem(
                           value: 'duplicate',

@@ -27,7 +27,11 @@ class GlowButton extends StatelessWidget {
         duration: const Duration(milliseconds: 150),
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
-          color: enabled ? barzGold : barzDarkMuted,
+          color: enabled
+              ? barzGold
+              : (Theme.of(context).brightness == Brightness.dark
+                  ? barzDarkMuted
+                  : surfaceMuted),
           borderRadius: BorderRadius.circular(8),
           boxShadow: enabled
               ? [

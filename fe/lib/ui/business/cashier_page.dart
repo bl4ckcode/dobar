@@ -72,6 +72,7 @@ class _CashierPageState extends State<CashierPage>
   void dispose() {
     _uiRefreshTimer?.cancel();
     _pulseController.dispose();
+    _liveOrdersBloc?.close();
     super.dispose();
   }
 

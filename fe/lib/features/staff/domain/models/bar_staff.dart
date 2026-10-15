@@ -21,7 +21,7 @@ class BarStaff {
   factory BarStaff.fromJson(Map<String, dynamic> json) {
     return BarStaff(
       id: (json['id'] ?? '').toString(),
-      name: json['name'] as String? ?? '',
+      name: json['display_name'] as String? ?? json['name'] as String? ?? '',
       email: json['email'] as String? ?? '',
       phone: json['phone'] as String? ?? '',
       role: BarRoleExtension.fromString(json['role'] as String? ?? 'staff'),

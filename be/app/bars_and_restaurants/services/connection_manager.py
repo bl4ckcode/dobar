@@ -329,8 +329,8 @@ async def websocket_bar_owner_dashboard(
                     "order_id": order["id"],
                     "bar_id": bar_id,
                     "status": order["status"],
-                    "total_price": float(order["total_price"]) if order.get("total_price") else 0,
-                    "created_at": order["created_at"].isoformat() if order.get("created_at") else None,
+                    "total_price": float(order["total_price"]) if order["total_price"] is not None else 0,
+                    "created_at": order["created_at"].isoformat() if order["created_at"] is not None else None,
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                     "message": "Pending order awaiting confirmation"
                 }
