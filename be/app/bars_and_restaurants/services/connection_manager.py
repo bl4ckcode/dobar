@@ -241,6 +241,81 @@ def get_bar_status_message(status: str) -> str:
 # WEBSOCKET ENDPOINTS
 # =============================================================================
 
+async def _send_bar_dashboard_snapshot(
+    websocket: WebSocket,
+    bar_id: int,
+    staff_info: dict,
+) -> None:
+    pending_query = Order.__table__.select().where(
+        (Order.bar_id == bar_id) & (Order.status == "pending")
+    )
+    pending_orders = await database.fetch_all(pending_query)
+
+    await websocket.send_json({
+        "type": "connected",
+        "bar_id": bar_id,
+        "bar_name": staff_info["bar_name"],
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "message": f"Connected to {staff_info['bar_name']} order updates",
+        "pending_orders_count": len(pending_orders),
+        "active_connections": manager.get_bar_connection_count(bar_id)
+    })
+
+    for order in pending_orders:
+        await websocket.send_json({
+            "type": "pending_order",
+            "order_id": order["id"],
+            "bar_id": bar_id,
+            "status": order["status"],
+            "total_price": float(order["total_price"]) if order["total_price"] is not None else 0,
+            "created_at": order["created_at"].isoformat() if order["created_at"] is not None else None,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "message": "Pending order awaiting confirmation"
+        })
+
+
+async def _handle_bar_owner_message(
+    websocket: WebSocket,
+    bar_id: int,
+    data: str,
+) -> None:
+    try:
+        command = json.loads(data)
+        action = command.get("action")
+        order_id = command.get("order_id")
+        if action and order_id:
+            result = await handle_bar_owner_command(
+                bar_id=bar_id,
+                order_id=order_id,
+                action=action,
+                reason=command.get("reason"),
+                websocket=websocket
+            )
+            await websocket.send_json(result)
+        else:
+            await websocket.send_json({
+                "type": "error",
+                "message": "Invalid command. Required: action, order_id"
+            })
+    except json.JSONDecodeError:
+        await websocket.send_json({
+            "type": "error",
+            "message": "Invalid JSON format"
+        })
+
+
+async def _listen_for_bar_owner_commands(websocket: WebSocket, bar_id: int) -> None:
+    while True:
+        try:
+            data = await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
+            await _handle_bar_owner_message(websocket, bar_id, data)
+        except asyncio.TimeoutError:
+            await websocket.send_json({
+                "type": "heartbeat",
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            })
+
+
 @ws_router.websocket("/ws/bar/{bar_id}/orders")
 async def websocket_bar_owner_dashboard(
     websocket: WebSocket,
@@ -305,80 +380,8 @@ async def websocket_bar_owner_dashboard(
     await manager.connect_to_bar(websocket, bar_id)
 
     try:
-        pending_query = Order.__table__.select().where(
-            (Order.bar_id == bar_id) & (Order.status == "pending")
-        )
-        pending_orders = await database.fetch_all(pending_query)
-
-        welcome_message = {
-            "type": "connected",
-            "bar_id": bar_id,
-            "bar_name": staff_info["bar_name"],
-            "timestamp": datetime.now(timezone.utc).isoformat(),
-            "message": f"Connected to {staff_info['bar_name']} order updates",
-            "pending_orders_count": len(pending_orders),
-            "active_connections": manager.get_bar_connection_count(bar_id)
-        }
-        await websocket.send_json(welcome_message)
-        
-        # Send list of current pending orders
-        if pending_orders:
-            for order in pending_orders:
-                order_notification = {
-                    "type": "pending_order",
-                    "order_id": order["id"],
-                    "bar_id": bar_id,
-                    "status": order["status"],
-                    "total_price": float(order["total_price"]) if order["total_price"] is not None else 0,
-                    "created_at": order["created_at"].isoformat() if order["created_at"] is not None else None,
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                    "message": "Pending order awaiting confirmation"
-                }
-                await websocket.send_json(order_notification)
-        
-        # Listen for incoming commands from bar owner AND watch for new orders
-        while True:
-            try:
-                # Wait for commands from bar owner (with timeout for heartbeat)
-                data = await asyncio.wait_for(
-                    websocket.receive_text(), 
-                    timeout=30.0  # 30 second timeout for heartbeat
-                )
-                
-                # Parse command
-                try:
-                    command = json.loads(data)
-                    action = command.get("action")
-                    order_id = command.get("order_id")
-                    
-                    if action and order_id:
-                        result = await handle_bar_owner_command(
-                            bar_id=bar_id,
-                            order_id=order_id,
-                            action=action,
-                            reason=command.get("reason"),
-                            websocket=websocket
-                        )
-                        await websocket.send_json(result)
-                    else:
-                        await websocket.send_json({
-                            "type": "error",
-                            "message": "Invalid command. Required: action, order_id"
-                        })
-                        
-                except json.JSONDecodeError:
-                    await websocket.send_json({
-                        "type": "error",
-                        "message": "Invalid JSON format"
-                    })
-                    
-            except asyncio.TimeoutError:
-                # Send heartbeat to keep connection alive
-                await websocket.send_json({
-                    "type": "heartbeat",
-                    "timestamp": datetime.now(timezone.utc).isoformat()
-                })
-                
+        await _send_bar_dashboard_snapshot(websocket, bar_id, staff_info)
+        await _listen_for_bar_owner_commands(websocket, bar_id)
     except WebSocketDisconnect:
         pass
     finally:
