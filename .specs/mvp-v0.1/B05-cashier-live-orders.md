@@ -45,6 +45,7 @@ Use [FE/BE contract](../../docs/FE_BE_COMMUNICATION.md) for durable interfaces; 
 - **B05-AC02** — A status transition immediately reaches connected customer trackers and other authorized cashier sessions; reconnect recovers current snapshot without duplicates.
 - **B05-AC03** — Every status mutation route checks venue scope and order:process permission; direct unauthorized or cross-venue mutations are rejected.
 - **B05-AC04** — Payment pending/failed/confirmed remains distinguishable, and retries or simultaneous updates cannot regress a completed order or invent payment success.
+- **B05-AC05** — Live cashier excludes orders past their venue's operating-day close. An order expires at the close of the venue operating day (local venue time, `America/Sao_Paulo` for the BH MVP) in which it was created. Overnight shifts that span midnight are covered: an evening order expires at the next-day close, and an early-morning order belongs to the previous day's shift. Bars without configured operating hours keep previous behavior (no expiry). Payment records, API shape, and cashier status semantics are unchanged.
 
 ## Validation scenarios and evidence
 

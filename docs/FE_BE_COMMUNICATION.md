@@ -37,6 +37,7 @@ Canonical integration summary, reviewed against this checkout on 2026-10-22. The
 |---|---|
 | Onboarding/menu import | `POST /bars/wizard`, `POST /menus/extract`, `POST /menus/extract-url`; resumability and AI failures need workflow validation |
 | Live cashier | `GET /bars/{bar_id}/orders/live`, `PUT /bars/{bar_id}/orders/{order_id}/status` with `{status, notes?}`; mutation requires `order:process` |
+| | `GET /bars/{bar_id}/orders/live` returns only orders still within their venue's operating day: an order expires at the close (venue local time) of the operating day in which it was created, including overnight shifts that span midnight. Response shape and status semantics are unchanged; bars without configured operating hours keep previous behavior (no expiry). |
 | Campaigns | `/advertising/campaigns`, publish/pause/resume/delete routes, summary/analytics endpoints; [advertising routes](../be/app/advertising/routes.py) |
 | Rate card | `GET /advertising/rates`; use [response schemas](../be/app/advertising/schemas.py) and current [rate-card test](../be/tests/test_advertising_contract.py), not archived response examples |
 | Plans/subscriptions | `GET /advertising/plans`, `GET /advertising/my-plan`, `POST /advertising/subscribe`, `/advertising/invoices`; [subscription service](../be/app/advertising/services/subscription_service.py) |
