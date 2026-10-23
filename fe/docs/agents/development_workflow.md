@@ -16,8 +16,8 @@ This document outlines the workflow and verification guidelines when developing 
      flutter test
      ```
 4. **Back-end support, services/endpoints request and fixes**
-   - We always write to @FE_BE_COMMUNICATION.md when we need to request or fix back-end services/endpoints.
+   - Update the canonical [FE ↔ BE contract](../../../docs/FE_BE_COMMUNICATION.md) when wire behavior changes; put requested behavior and acceptance criteria in the relevant root spec.
    - We clean up the file with outdated/irrelevant information so it always stays relevant, up-to-date, concise and easy to understand.
 5. **Our UI/UX design is always loyal to @dobar_colors and Lovable generated projects**
    - We very often ask Lovable to generate our UI's and Workflows designs, we store the prompts in @lovable_stitch_prompts.md and follow the patterns there.
-   - Lovable generates a React Native project, often with light mode which we ask too, which we clone, replicate, copy and translate to our Flutter needs.
+   - Lovable generates React UI source. Record its exported repository revision and translate it to Flutter using the existing architecture, localization, semantic theme tokens, responsive light/dark UI, and the `dobar-react-to-flutter` skill. Do not assume the export is React Native.

@@ -1,0 +1,9 @@
+{
+  "team_key": "DOB",
+  "area_labels": {
+    "fe": "barz-fe",
+    "be": "barz-be",
+    "dpe": "payments"
+  },
+  "feature_label": "Feature"
+}

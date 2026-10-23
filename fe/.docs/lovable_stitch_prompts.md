@@ -1,5 +1,7 @@
 # Lovable and Stitch Prompts
 
+The spec-backed [staff invitation acceptance prompt](../../.specs/mvp-v0.1/pilot/lovable-staff-invitation.md) requests React + TypeScript output, followed by an explicit [source export and Flutter handoff](../../.specs/mvp-v0.1/pilot/react-source-handoff.md). Existing briefs below preserve earlier design requests; use the current journey spec and application contracts for implementation decisions.
+
 ## Business Shell (Owner/Staff App)
 
 ### Business Settings Page

@@ -41,4 +41,4 @@ DPE listens for external gateway webhooks at `POST /webhooks/{gateway}`, validat
 
 ## Error Codes Ref
 
-See [API Contract](./api_contract.md) for the full error code table.
+See the [canonical BE ↔ DPE contract](../../../docs/BE_DPE_COMMUNICATION.md) and linked middleware for current error codes; distinguish mocked structural checks from actual provider sandbox evidence.

@@ -1,11 +1,10 @@
-# Dobar back-end Agent Guidelines
+# Dobar backend agent guidelines
 
-A production back-end Python FastAPI application for connecting dobar owners and users with venues and services.
+Production FastAPI backend with Postgres, Redis, MongoDB, and external services. Read [root instructions](../AGENTS.md) first.
 
-## 🚀 The Essentials
-- **Package Manager**: Pip (using `requirements.txt` and `requirements-test.txt`)
-- **Safeguard**: This app is hosted in FlyIO; all deploys must run via the GitHub Actions CI/CD pipeline. Always ensure backward compatibility for existing users and data.
-
-## 📖 Specialized Documentation
-- [**Architecture & Tech Stack**](docs/agents/architecture.md)
-- [**Development Workflow**](docs/agents/development_workflow.md)
+- Preserve wire/data compatibility, enforce authentication and bar permissions server-side, and keep pricing and entitlement decisions server-owned.
+- Read [architecture](docs/agents/architecture.md) and [development workflow](docs/agents/development_workflow.md). Use a virtual environment and `requirements.txt` / `requirements-test.txt`.
+- Use the canonical [FE ↔ BE](../docs/FE_BE_COMMUNICATION.md) and [BE ↔ DPE](../docs/BE_DPE_COMMUNICATION.md) contracts. Keep durable contract changes there; acceptance intent lives in specs.
+- Run affected `pytest` suites and contract checks. Use local `../dpe` source for monorepo integration checks; provider mocks are not sandbox verification.
+- Describe migrations and authorization/error-contract changes in handoffs. Never log card data, tokens, or credentials.
+- Deploy to FlyIO only through existing GitHub Actions CI/CD. Never deploy manually or automatically stage/commit/push.

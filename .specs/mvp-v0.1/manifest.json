@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "specs": [
+    "C01-customer-authentication.md",
+    "C02-home-discovery.md",
+    "C03-map-navigation.md",
+    "C04-profile-privacy.md",
+    "C05-check-in.md",
+    "C06-live-menu.md",
+    "C07-cart-revalidation.md",
+    "C08-card-checkout.md",
+    "C09-pix-checkout.md",
+    "C10-native-wallets.md",
+    "C11-order-tracking.md",
+    "B01-business-auth-navigation.md",
+    "B02-venue-onboarding.md",
+    "B03-ai-menu-import.md",
+    "B04-business-dashboard.md",
+    "B05-cashier-live-orders.md",
+    "B06-campaign-management.md",
+    "B07-staff-invitation.md",
+    "B08-staff-invitation-acceptance.md",
+    "B09-staff-permissions.md",
+    "B10-business-settings.md",
+    "B11-subscription-purchase.md",
+    "B12-subscription-management.md",
+    "S01-design-system.md",
+    "S02-payment-reconciliation.md"
+  ],
+  "requirements": "requirements.json",
+  "pilot": "B08"
+}

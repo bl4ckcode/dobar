@@ -4,3 +4,8 @@
 .nx/workspace-data
 .nx/self-healing
 .nx/migrate-runs
+
+# Local agent workflow state and Python caches
+.agent-workflow/
+__pycache__/
+*.py[cod]

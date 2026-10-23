@@ -77,5 +77,5 @@ REDIS_URL=redis://localhost:6379
 
 - [BE ↔ DPE API Contract](./api_contract.md)
 - [Integration Guide](./integration_guide.md)
-- [Business context & API contracts](../../.docs/BE_DPE_COMMUNICATION.md)
-- [Implementation roadmap](../../.docs/IMPLEMENTATION_PLAN.md)
+- [Canonical BE ↔ DPE contract](../../../docs/BE_DPE_COMMUNICATION.md)
+- [MVP specifications](../../../.specs/mvp-v0.1/README.md)

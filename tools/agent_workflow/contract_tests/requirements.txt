@@ -1,0 +1,3 @@
+# Match BE's supported versions; update with be/requirements.txt.
+pydantic[email]==2.8.2
+httpx==0.27.2

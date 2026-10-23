@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "spec_id": "B08",
+  "team_key": "DOB",
+  "team_id": "da6648f2-5f21-4837-a807-ee91715d5609",
+  "workspace": "https://linear.app/dobarecosystem",
+  "transport": "connected-linear",
+  "product_verification": "unverified",
+  "issues": [
+    {
+      "key": "dobar:mvp-v0.1:B08",
+      "id": "DOB-89",
+      "uuid": "07593afa-5a8e-449f-8d1b-a31cc0063a89",
+      "url": "https://linear.app/dobarecosystem/issue/DOB-89/b08-staff-invitation-acceptance-pilot",
+      "parentId": null,
+      "labels": [
+        "barz-be",
+        "barz-fe",
+        "Feature"
+      ],
+      "status": "Backlog",
+      "identity_verified": true
+    },
+    {
+      "key": "dobar:mvp-v0.1:B08:fe",
+      "id": "DOB-90",
+      "uuid": "a09754c3-cd8d-4052-af70-83c80dc6a4b2",
+      "url": "https://linear.app/dobarecosystem/issue/DOB-90/b08fe-resume-and-accept-staff-invitation-in-flutter",
+      "parentId": "DOB-89",
+      "labels": [
+        "barz-fe"
+      ],
+      "status": "Backlog",
+      "identity_verified": true
+    },
+    {
+      "key": "dobar:mvp-v0.1:B08:be",
+      "id": "DOB-91",
+      "uuid": "3f561425-c9c8-43ee-952f-7e37a2130081",
+      "url": "https://linear.app/dobarecosystem/issue/DOB-91/b08be-bind-atomic-invitation-acceptance-to-verified-recipient",
+      "parentId": "DOB-89",
+      "labels": [
+        "barz-be"
+      ],
+      "status": "Backlog",
+      "identity_verified": true
+    }
+  ]
+}

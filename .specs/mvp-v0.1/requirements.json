@@ -1,0 +1,1012 @@
+{
+  "version": 1,
+  "sources": [
+    {
+      "id": "mvp",
+      "path": "docs/q4_2026/Dobar_MVP_v0.1.md",
+      "sha256": "ea7d10d152ccecbdaf85c256314780d39282d4b0ca1517fb867c593398c85586"
+    },
+    {
+      "id": "launch-decisions",
+      "path": "docs/AGENT_WORKFLOW.md",
+      "sha256": "4b8fa2a700ff023dbce95cf05881a3920fc7cba9abf172eafee6d347e0d19adb"
+    }
+  ],
+  "requirements": [
+    {
+      "id": "MVP-C01-01",
+      "source": "mvp",
+      "source_text": "Client workflow: Login with cellphone number, Google or Apple account",
+      "specs": [
+        "C01"
+      ],
+      "criteria": [
+        "C01-AC01",
+        "C01-AC02"
+      ]
+    },
+    {
+      "id": "MVP-C01-02",
+      "source": "mvp",
+      "source_text": "Minimal onboarding: number login or Google/Apple account -> confirm SMS -> send to Home and enable Location permission to dobar",
+      "specs": [
+        "C01"
+      ],
+      "criteria": [
+        "C01-AC01",
+        "C01-AC02",
+        "C01-AC03"
+      ]
+    },
+    {
+      "id": "MVP-C01-03",
+      "source": "mvp",
+      "source_text": "Are you a business button? -> send to Business workflow",
+      "specs": [
+        "C01"
+      ],
+      "criteria": [
+        "C01-AC03"
+      ]
+    },
+    {
+      "id": "LAUNCH-C01-01",
+      "source": "launch-decisions",
+      "source_text": "Launch in Belo Horizonte, Brazil with Portuguese UI and Android/iOS customer journeys",
+      "specs": [
+        "C01"
+      ],
+      "criteria": [
+        "C01-AC02",
+        "C01-AC03"
+      ]
+    },
+    {
+      "id": "MVP-C02-01",
+      "source": "mvp",
+      "source_text": "Home: near bars and restaurants sections, most ordere drinks, trending in your area, promotions",
+      "specs": [
+        "C02"
+      ],
+      "criteria": [
+        "C02-AC01",
+        "C02-AC02"
+      ]
+    },
+    {
+      "id": "MVP-C03-01",
+      "source": "mvp",
+      "source_text": "Map: pins of partner bar/restaurant; pins of promotions",
+      "specs": [
+        "C03"
+      ],
+      "criteria": [
+        "C03-AC01"
+      ]
+    },
+    {
+      "id": "MVP-C03-02",
+      "source": "mvp",
+      "source_text": "Ability to draw route to bar/restaurant; ability to send to Maps apps",
+      "specs": [
+        "C03"
+      ],
+      "criteria": [
+        "C03-AC02"
+      ]
+    },
+    {
+      "id": "MVP-C04-01",
+      "source": "mvp",
+      "source_text": "Profile: account options, preferences, delete my data compliance of App/Google stores",
+      "specs": [
+        "C04"
+      ],
+      "criteria": [
+        "C04-AC01",
+        "C04-AC02",
+        "C04-AC03",
+        "C04-AC04"
+      ]
+    },
+    {
+      "id": "MVP-C05-01",
+      "source": "mvp",
+      "source_text": "Check-in button: appear only if <10m of a partner bar/restaurant",
+      "specs": [
+        "C05"
+      ],
+      "criteria": [
+        "C05-AC01"
+      ]
+    },
+    {
+      "id": "MVP-C05-02",
+      "source": "mvp",
+      "source_text": "User check-in can be made when location is <10m of bar/restaurant location",
+      "specs": [
+        "C05"
+      ],
+      "criteria": [
+        "C05-AC01"
+      ]
+    },
+    {
+      "id": "MVP-C05-03",
+      "source": "mvp",
+      "source_text": "User may indicate where he is located at the bar",
+      "specs": [
+        "C05"
+      ],
+      "criteria": [
+        "C05-AC02"
+      ]
+    },
+    {
+      "id": "MVP-C05-04",
+      "source": "mvp",
+      "source_text": "User can check-in before or when he is just about to make an order",
+      "specs": [
+        "C05"
+      ],
+      "criteria": [
+        "C05-AC02",
+        "C05-AC04"
+      ]
+    },
+    {
+      "id": "MVP-C06-01",
+      "source": "mvp",
+      "source_text": "Bar/restaurant menu with categories and sub-categories if applicable",
+      "specs": [
+        "C06"
+      ],
+      "criteria": [
+        "C06-AC01"
+      ]
+    },
+    {
+      "id": "MVP-C06-02",
+      "source": "mvp",
+      "source_text": "Items with increment and decrement buttons, prices with or without promotions",
+      "specs": [
+        "C06"
+      ],
+      "criteria": [
+        "C06-AC01"
+      ]
+    },
+    {
+      "id": "MVP-C06-03",
+      "source": "mvp",
+      "source_text": "Real time live data update: changes in the price by business must reflect users currently browsing",
+      "specs": [
+        "C06"
+      ],
+      "criteria": [
+        "C06-AC02"
+      ]
+    },
+    {
+      "id": "MVP-C06-04",
+      "source": "mvp",
+      "source_text": "Changes in the amount of items available by business must reflect users currently browsing",
+      "specs": [
+        "C06"
+      ],
+      "criteria": [
+        "C06-AC02"
+      ]
+    },
+    {
+      "id": "MVP-C06-05",
+      "source": "mvp",
+      "source_text": "Changes in a group of items must reflect users currently browsing",
+      "specs": [
+        "C06"
+      ],
+      "criteria": [
+        "C06-AC02"
+      ]
+    },
+    {
+      "id": "MVP-C06-06",
+      "source": "mvp",
+      "source_text": "Proceed to checkout must double check cart validation",
+      "specs": [
+        "C06"
+      ],
+      "criteria": [
+        "C06-AC04"
+      ]
+    },
+    {
+      "id": "MVP-C07-01",
+      "source": "mvp",
+      "source_text": "Cart screen: Edit order",
+      "specs": [
+        "C07"
+      ],
+      "criteria": [
+        "C07-AC01"
+      ]
+    },
+    {
+      "id": "MVP-C07-02",
+      "source": "mvp",
+      "source_text": "Insert redeem code",
+      "specs": [
+        "C07"
+      ],
+      "criteria": [
+        "C07-AC01",
+        "C07-AC02"
+      ]
+    },
+    {
+      "id": "MVP-C07-03",
+      "source": "mvp",
+      "source_text": "Confirm location given by check-in or indicate where user is so that the order should be delivered at",
+      "specs": [
+        "C07"
+      ],
+      "criteria": [
+        "C07-AC03"
+      ]
+    },
+    {
+      "id": "MVP-C08-01",
+      "source": "mvp",
+      "source_text": "Checkout: Pay with Credit Card",
+      "specs": [
+        "C08"
+      ],
+      "criteria": [
+        "C08-AC01",
+        "C08-AC02",
+        "C08-AC05"
+      ]
+    },
+    {
+      "id": "LAUNCH-C08-01",
+      "source": "launch-decisions",
+      "source_text": "PagarMe handles Brazilian purchases using provider-side tokenization, server amounts, authenticated calls, redaction and idempotency",
+      "specs": [
+        "C08"
+      ],
+      "criteria": [
+        "C08-AC01",
+        "C08-AC02",
+        "C08-AC03",
+        "C08-AC04"
+      ]
+    },
+    {
+      "id": "MVP-C09-01",
+      "source": "mvp",
+      "source_text": "Checkout: Pay with PIX",
+      "specs": [
+        "C09"
+      ],
+      "criteria": [
+        "C09-AC01",
+        "C09-AC02",
+        "C09-AC03",
+        "C09-AC04"
+      ]
+    },
+    {
+      "id": "LAUNCH-C09-01",
+      "source": "launch-decisions",
+      "source_text": "Pix must be provider-backed with valid Copia e Cola/QR/expiry and authenticated payment confirmation",
+      "specs": [
+        "C09"
+      ],
+      "criteria": [
+        "C09-AC01",
+        "C09-AC02",
+        "C09-AC03",
+        "C09-AC04",
+        "C09-AC05"
+      ]
+    },
+    {
+      "id": "MVP-C10-01",
+      "source": "mvp",
+      "source_text": "Checkout: Credit Card via Apple or Google Pay as well",
+      "specs": [
+        "C10"
+      ],
+      "criteria": [
+        "C10-AC01",
+        "C10-AC02",
+        "C10-AC03",
+        "C10-AC04"
+      ]
+    },
+    {
+      "id": "LAUNCH-C10-01",
+      "source": "launch-decisions",
+      "source_text": "Customer journeys cover Android/iOS and native wallet evidence requires configured device checks",
+      "specs": [
+        "C10"
+      ],
+      "criteria": [
+        "C10-AC01",
+        "C10-AC04"
+      ]
+    },
+    {
+      "id": "MVP-C11-01",
+      "source": "mvp",
+      "source_text": "Order tracking page must transit shared Pending -> Preparing -> Ready -> Completed states",
+      "specs": [
+        "C11"
+      ],
+      "criteria": [
+        "C11-AC01",
+        "C11-AC03"
+      ]
+    },
+    {
+      "id": "MVP-C11-02",
+      "source": "mvp",
+      "source_text": "Sockets or event driven UI",
+      "specs": [
+        "C11"
+      ],
+      "criteria": [
+        "C11-AC02"
+      ]
+    },
+    {
+      "id": "LAUNCH-C11-01",
+      "source": "launch-decisions",
+      "source_text": "Shared order states Pending -> Preparing -> Ready -> Completed with compatibility for existing clients",
+      "specs": [
+        "C11"
+      ],
+      "criteria": [
+        "C11-AC01",
+        "C11-AC02",
+        "C11-AC03"
+      ]
+    },
+    {
+      "id": "MVP-B01-01",
+      "source": "mvp",
+      "source_text": "Business Web first look: Login number or Google/Apple account -> confirm SMS",
+      "specs": [
+        "B01"
+      ],
+      "criteria": [
+        "B01-AC01"
+      ]
+    },
+    {
+      "id": "MVP-B01-02",
+      "source": "mvp",
+      "source_text": "Side menu: Account Owner/Admin, Cashier and above, Marketing capabilities by explicit permissions",
+      "specs": [
+        "B01"
+      ],
+      "criteria": [
+        "B01-AC02",
+        "B01-AC03"
+      ]
+    },
+    {
+      "id": "LAUNCH-B01-01",
+      "source": "launch-decisions",
+      "source_text": "Business journeys cover browsers and preserve existing roles",
+      "specs": [
+        "B01"
+      ],
+      "criteria": [
+        "B01-AC01",
+        "B01-AC02",
+        "B01-AC03",
+        "B01-AC04"
+      ]
+    },
+    {
+      "id": "MVP-B02-01",
+      "source": "mvp",
+      "source_text": "Optional onboarding: images, AI Menu Reader, contact information, bank account information; allow to save progress",
+      "specs": [
+        "B02"
+      ],
+      "criteria": [
+        "B02-AC01",
+        "B02-AC02",
+        "B02-AC03"
+      ]
+    },
+    {
+      "id": "MVP-B03-01",
+      "source": "mvp",
+      "source_text": "AI Menu Reader during optional business onboarding",
+      "specs": [
+        "B03"
+      ],
+      "criteria": [
+        "B03-AC01",
+        "B03-AC02",
+        "B03-AC03"
+      ]
+    },
+    {
+      "id": "MVP-B04-01",
+      "source": "mvp",
+      "source_text": "Home: Profit/Revenue/Total num. orders/Economy versus credit card or physical token machines",
+      "specs": [
+        "B04"
+      ],
+      "criteria": [
+        "B04-AC01"
+      ]
+    },
+    {
+      "id": "MVP-B04-02",
+      "source": "mvp",
+      "source_text": "Orders Table summary clicked sends directly to Cashier/Orders live sockets page",
+      "specs": [
+        "B04"
+      ],
+      "criteria": [
+        "B04-AC02"
+      ]
+    },
+    {
+      "id": "MVP-B04-03",
+      "source": "mvp",
+      "source_text": "Campaigns Table summary clicked sends directly to Campaigns",
+      "specs": [
+        "B04"
+      ],
+      "criteria": [
+        "B04-AC02"
+      ]
+    },
+    {
+      "id": "MVP-B05-01",
+      "source": "mvp",
+      "source_text": "Orders page: sockets or event driven updates reflect to clients instantly",
+      "specs": [
+        "B05"
+      ],
+      "criteria": [
+        "B05-AC02"
+      ]
+    },
+    {
+      "id": "MVP-B05-02",
+      "source": "mvp",
+      "source_text": "Pipeline Pending -> Preparing -> Ready -> Completed",
+      "specs": [
+        "B05"
+      ],
+      "criteria": [
+        "B05-AC01"
+      ]
+    },
+    {
+      "id": "MVP-B05-03",
+      "source": "mvp",
+      "source_text": "Orders screen roles: Cashier and above",
+      "specs": [
+        "B05"
+      ],
+      "criteria": [
+        "B05-AC03"
+      ]
+    },
+    {
+      "id": "MVP-B06-01",
+      "source": "mvp",
+      "source_text": "Campaigns page has marketing campaigns with several customizations",
+      "specs": [
+        "B06"
+      ],
+      "criteria": [
+        "B06-AC01",
+        "B06-AC02",
+        "B06-AC05"
+      ]
+    },
+    {
+      "id": "MVP-B06-02",
+      "source": "mvp",
+      "source_text": "Multi-step immersive 5-step experience inspired by Meta Ads",
+      "specs": [
+        "B06"
+      ],
+      "criteria": [
+        "B06-AC01"
+      ]
+    },
+    {
+      "id": "MVP-B06-03",
+      "source": "mvp",
+      "source_text": "Placements Feature Bar, Search Boost, Map Pin Highlight, Promo Boost, Banner Ads",
+      "specs": [
+        "B06"
+      ],
+      "criteria": [
+        "B06-AC02"
+      ]
+    },
+    {
+      "id": "MVP-B06-04",
+      "source": "mvp",
+      "source_text": "Steps allow Budget, Creative images/banners, Target Public, Review",
+      "specs": [
+        "B06"
+      ],
+      "criteria": [
+        "B06-AC01",
+        "B06-AC02"
+      ]
+    },
+    {
+      "id": "MVP-B06-05",
+      "source": "mvp",
+      "source_text": "VIP banner for Regular tiers so one can subscribe and create campaigns",
+      "specs": [
+        "B06"
+      ],
+      "criteria": [
+        "B06-AC03"
+      ]
+    },
+    {
+      "id": "MVP-B06-06",
+      "source": "mvp",
+      "source_text": "Marketing capabilities by explicit ads permissions",
+      "specs": [
+        "B06"
+      ],
+      "criteria": [
+        "B06-AC04"
+      ]
+    },
+    {
+      "id": "LAUNCH-B06-01",
+      "source": "launch-decisions",
+      "source_text": "Marketing capabilities use explicit permissions rather than adding a Marketing role",
+      "specs": [
+        "B06"
+      ],
+      "criteria": [
+        "B06-AC04"
+      ]
+    },
+    {
+      "id": "MVP-B07-01",
+      "source": "mvp",
+      "source_text": "Staff page allows invitation by email; admin has special privileges",
+      "specs": [
+        "B07"
+      ],
+      "criteria": [
+        "B07-AC01",
+        "B07-AC04"
+      ]
+    },
+    {
+      "id": "MVP-B07-02",
+      "source": "mvp",
+      "source_text": "Invite staff members by Google/Apple account email or phone number",
+      "specs": [
+        "B07"
+      ],
+      "criteria": [
+        "B07-AC01",
+        "B07-AC03"
+      ]
+    },
+    {
+      "id": "MVP-B07-03",
+      "source": "mvp",
+      "source_text": "Backend sends email with invite once user clicks",
+      "specs": [
+        "B07"
+      ],
+      "criteria": [
+        "B07-AC03"
+      ]
+    },
+    {
+      "id": "LAUNCH-B07-01",
+      "source": "launch-decisions",
+      "source_text": "Existing staff accounts receive no membership until explicit authenticated acceptance",
+      "specs": [
+        "B07"
+      ],
+      "criteria": [
+        "B07-AC02",
+        "B07-AC04"
+      ]
+    },
+    {
+      "id": "MVP-B08-01",
+      "source": "mvp",
+      "source_text": "Invitation screen shown from link with invite acceptance",
+      "specs": [
+        "B08"
+      ],
+      "criteria": [
+        "B08-AC01",
+        "B08-AC05"
+      ]
+    },
+    {
+      "id": "MVP-B08-02",
+      "source": "launch-decisions",
+      "source_text": "Authenticate with existing methods, resume invitation and accept before receiving access",
+      "specs": [
+        "B08"
+      ],
+      "criteria": [
+        "B08-AC01",
+        "B08-AC02",
+        "B08-AC03",
+        "B08-AC04"
+      ]
+    },
+    {
+      "id": "MVP-B08-03",
+      "source": "launch-decisions",
+      "source_text": "Staff invitation acceptance is the first Lovable automation pilot",
+      "specs": [
+        "B08"
+      ],
+      "criteria": [
+        "B08-AC06"
+      ]
+    },
+    {
+      "id": "LAUNCH-B08-01",
+      "source": "launch-decisions",
+      "source_text": "Staff authenticate through existing login methods, resume invitation, verify matching contact and accept before access",
+      "specs": [
+        "B08"
+      ],
+      "criteria": [
+        "B08-AC01",
+        "B08-AC02",
+        "B08-AC03",
+        "B08-AC04",
+        "B08-AC05"
+      ]
+    },
+    {
+      "id": "LAUNCH-B08-02",
+      "source": "launch-decisions",
+      "source_text": "Lovable produces React UI, then exported source revision is recorded before Flutter translation and independent validation",
+      "specs": [
+        "B08"
+      ],
+      "criteria": [
+        "B08-AC06"
+      ]
+    },
+    {
+      "id": "MVP-B09-01",
+      "source": "mvp",
+      "source_text": "Staff screen access by explicit staff:view and staff:manage; admin special privileges",
+      "specs": [
+        "B09"
+      ],
+      "criteria": [
+        "B09-AC01",
+        "B09-AC02",
+        "B09-AC03"
+      ]
+    },
+    {
+      "id": "MVP-B09-02",
+      "source": "mvp",
+      "source_text": "Existing roles remain, marketing capabilities use explicit permissions",
+      "specs": [
+        "B09"
+      ],
+      "criteria": [
+        "B09-AC01",
+        "B09-AC04"
+      ]
+    },
+    {
+      "id": "MVP-B10-01",
+      "source": "mvp",
+      "source_text": "Settings: basic information, bank account info, account preferences overall",
+      "specs": [
+        "B10"
+      ],
+      "criteria": [
+        "B10-AC01",
+        "B10-AC02",
+        "B10-AC03"
+      ]
+    },
+    {
+      "id": "MVP-B10-02",
+      "source": "mvp",
+      "source_text": "Account data, working hours etc with explicit bar permissions",
+      "specs": [
+        "B10"
+      ],
+      "criteria": [
+        "B10-AC01"
+      ]
+    },
+    {
+      "id": "MVP-B10-03",
+      "source": "mvp",
+      "source_text": "Bank account info admin",
+      "specs": [
+        "B10"
+      ],
+      "criteria": [
+        "B10-AC02"
+      ]
+    },
+    {
+      "id": "MVP-B10-04",
+      "source": "mvp",
+      "source_text": "Password all, delete my account all, language all",
+      "specs": [
+        "B10"
+      ],
+      "criteria": [
+        "B10-AC03",
+        "B10-AC04"
+      ]
+    },
+    {
+      "id": "MVP-B11-01",
+      "source": "launch-decisions",
+      "source_text": "Business VIP/Master subscriptions need a payment screen and configured Stripe",
+      "specs": [
+        "B11"
+      ],
+      "criteria": [
+        "B11-AC01",
+        "B11-AC02",
+        "B11-AC03",
+        "B11-AC04"
+      ]
+    },
+    {
+      "id": "LAUNCH-B11-01",
+      "source": "launch-decisions",
+      "source_text": "Stripe handles business subscriptions using backend-owned Checkout and webhook-driven entitlements",
+      "specs": [
+        "B11"
+      ],
+      "criteria": [
+        "B11-AC01",
+        "B11-AC02",
+        "B11-AC03",
+        "B11-AC04",
+        "B11-AC05"
+      ]
+    },
+    {
+      "id": "MVP-B12-01",
+      "source": "launch-decisions",
+      "source_text": "Business subscribers must be sent to Stripe Customer Portal",
+      "specs": [
+        "B12"
+      ],
+      "criteria": [
+        "B12-AC01",
+        "B12-AC02",
+        "B12-AC03"
+      ]
+    },
+    {
+      "id": "LAUNCH-B12-01",
+      "source": "launch-decisions",
+      "source_text": "Stripe Customer Portal handles subscription management and cannot trust redirects for billing state",
+      "specs": [
+        "B12"
+      ],
+      "criteria": [
+        "B12-AC01",
+        "B12-AC02",
+        "B12-AC03",
+        "B12-AC04"
+      ]
+    },
+    {
+      "id": "MVP-S01-01",
+      "source": "mvp",
+      "source_text": "App first look appearance",
+      "specs": [
+        "S01"
+      ],
+      "criteria": [
+        "S01-AC01",
+        "S01-AC02"
+      ]
+    },
+    {
+      "id": "MVP-S01-02",
+      "source": "mvp",
+      "source_text": "Business Web first look appearance",
+      "specs": [
+        "S01"
+      ],
+      "criteria": [
+        "S01-AC01",
+        "S01-AC02"
+      ]
+    },
+    {
+      "id": "MVP-S01-03",
+      "source": "launch-decisions",
+      "source_text": "Align some colors of system design",
+      "specs": [
+        "S01"
+      ],
+      "criteria": [
+        "S01-AC01",
+        "S01-AC04"
+      ]
+    },
+    {
+      "id": "MVP-S01-04",
+      "source": "launch-decisions",
+      "source_text": "Lovable prompts produce React export then Flutter implementation and validation",
+      "specs": [
+        "S01"
+      ],
+      "criteria": [
+        "S01-AC03",
+        "S01-AC04"
+      ]
+    },
+    {
+      "id": "LAUNCH-S01-01",
+      "source": "launch-decisions",
+      "source_text": "Reuse canonical context, portable skills, localized rules, and semantic theme tokens for design refinement",
+      "specs": [
+        "S01"
+      ],
+      "criteria": [
+        "S01-AC01",
+        "S01-AC02",
+        "S01-AC03",
+        "S01-AC04"
+      ]
+    },
+    {
+      "id": "MVP-S02-01",
+      "source": "mvp",
+      "source_text": "Security: use own device safely; monitoring and validation from business side",
+      "specs": [
+        "S02"
+      ],
+      "criteria": [
+        "S02-AC01",
+        "S02-AC02",
+        "S02-AC03"
+      ]
+    },
+    {
+      "id": "MVP-S02-02",
+      "source": "launch-decisions",
+      "source_text": "Backend errors do not reflect payment layer and CORS problems need diagnosis",
+      "specs": [
+        "S02"
+      ],
+      "criteria": [
+        "S02-AC04"
+      ]
+    },
+    {
+      "id": "MVP-S02-03",
+      "source": "launch-decisions",
+      "source_text": "Bar must know whether client paid",
+      "specs": [
+        "S02"
+      ],
+      "criteria": [
+        "S02-AC03"
+      ]
+    },
+    {
+      "id": "MVP-S02-04",
+      "source": "mvp",
+      "source_text": "Automation and efficiency through device-based ordering/payment",
+      "specs": [
+        "S02"
+      ],
+      "criteria": [
+        "S02-AC02",
+        "S02-AC03"
+      ]
+    },
+    {
+      "id": "LAUNCH-S02-01",
+      "source": "launch-decisions",
+      "source_text": "Independent validation distinguishes passed, failed, blocked and skipped; implementation alone is not validated",
+      "specs": [
+        "S02"
+      ],
+      "criteria": [
+        "S02-AC05"
+      ]
+    },
+    {
+      "id": "MVP-PRINCIPLE-01",
+      "source": "mvp",
+      "source_text": "Mission: become the biggest payments platform for bars/restaurants until 2030; vision: digitalize and provide agility and AI to public service processes",
+      "specs": [
+        "B03",
+        "C08",
+        "S02"
+      ],
+      "criteria": [
+        "B03-AC01",
+        "C08-AC01",
+        "S02-AC03"
+      ]
+    },
+    {
+      "id": "MVP-PRINCIPLE-02",
+      "source": "mvp",
+      "source_text": "Automation: technology and AI speed up customer service",
+      "specs": [
+        "B03",
+        "B05"
+      ],
+      "criteria": [
+        "B03-AC01",
+        "B05-AC02"
+      ]
+    },
+    {
+      "id": "MVP-PRINCIPLE-03",
+      "source": "mvp",
+      "source_text": "Security: users pay securely from their own devices",
+      "specs": [
+        "C08",
+        "S02"
+      ],
+      "criteria": [
+        "C08-AC03",
+        "S02-AC01"
+      ]
+    },
+    {
+      "id": "MVP-PRINCIPLE-04",
+      "source": "mvp",
+      "source_text": "Efficiency: business-side monitoring and validation",
+      "specs": [
+        "B04",
+        "S02"
+      ],
+      "criteria": [
+        "B04-AC01",
+        "S02-AC03"
+      ]
+    },
+    {
+      "id": "MVP-PRINCIPLE-05",
+      "source": "mvp",
+      "source_text": "Accessibility: all done by user own device",
+      "specs": [
+        "C01",
+        "C09",
+        "S01"
+      ],
+      "criteria": [
+        "C01-AC01",
+        "C09-AC02",
+        "S01-AC02"
+      ]
+    }
+  ]
+}

@@ -5,11 +5,17 @@ on:
     branches: [main, develop, 'feat/**']
     paths:
       - 'fe/**'
+      - 'tools/agent_workflow/fixtures/**'
+      - 'be/app/payment/schemas.py'
+      - 'dpe/dobar_payment/api/schemas.py'
       - '.github/workflows/fe-unit-tests.yml'
   pull_request:
     branches: [main, develop]
     paths:
       - 'fe/**'
+      - 'tools/agent_workflow/fixtures/**'
+      - 'be/app/payment/schemas.py'
+      - 'dpe/dobar_payment/api/schemas.py'
       - '.github/workflows/fe-unit-tests.yml'
 
 jobs:
