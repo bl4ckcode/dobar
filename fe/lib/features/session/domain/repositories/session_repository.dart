@@ -1,6 +1,7 @@
 import 'package:dartz/dartz.dart';
 import 'package:barz/core/network/error/failures.dart';
 import 'package:barz/features/session/domain/models/bar_access.dart';
+import 'package:barz/features/session/domain/models/invitation_preview.dart';
 
 abstract class SessionRepository {
   /// Fetch all bars the user has access to
@@ -8,4 +9,9 @@ abstract class SessionRepository {
 
   /// Accept a staff invitation using invitation code
   Future<Either<Failure, BarAccess>> acceptInvitation(String invitationCode);
+
+  /// Preview invitation details for the authenticated, verified user.
+  Future<Either<Failure, InvitationPreview>> previewInvitation(
+    String invitationCode,
+  );
 }

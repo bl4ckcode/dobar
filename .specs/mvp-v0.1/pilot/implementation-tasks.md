@@ -21,6 +21,8 @@ Owner: frontend; heavy-ui translates the actual reviewed React export. Skills: d
 
 ## B08/be — Bind atomic acceptance to the verified recipient
 
+Use the [focused DOB-91 handoff](B08-backend-handoff.md) for current FE consumer evidence, BE implementation scope and integration follow-ups after DOB-90.
+
 Owner: backend; planner: cross-repo-planner. Skills: dobar-backend, dobar-cross-repo-plan. Existing issuance behavior is corrected by B07, not duplicated in this task.
 
 - Add authenticated `POST /me/bars/invitations/preview` with JSON `invitation_code`. For matching verified recipient only, return safe venue name/image, offered role/permission labels or codes for localized display, masked contact, expiry and pending/already-accepted state. For mismatched/unverified identities return safe error categories without venue-private data. Signed-out page shows a generic invitation/login frame and fetches details after login; possession of code alone reveals no private roster/contact data.

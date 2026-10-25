@@ -109,6 +109,7 @@ class ApiEndpoints {
   // RBAC / Session Management
   static const String myBars = '/me/bars';
   static const String acceptInvitation = '/me/bars/accept-invitation';
+  static const String previewInvitation = '/me/bars/invitations/preview';
 
   // Staff Management
   static String barStaff(int barId) => '/bars/$barId/staff';

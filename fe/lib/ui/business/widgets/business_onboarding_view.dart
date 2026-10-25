@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:go_router/go_router.dart';
 import 'package:barz/core/design/design_system.dart';
+import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_event.dart';
 import 'package:barz/l10n/app_localizations.dart';
@@ -178,56 +179,10 @@ class BusinessOnboardingView extends StatelessWidget {
     );
   }
 
+  /// B08-FE: Navigate to the staff invitation acceptance page (manual code entry).
+  /// Replaces the former coming-soon dialog.
   void _showInvitationDialog(BuildContext context) {
-    final controller = TextEditingController();
-    final l10n = AppLocalizations.of(context)!;
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text(l10n.business_enter_code),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: controller,
-              decoration: InputDecoration(
-                hintText: l10n.business_enter_code_hint,
-                border: const OutlineInputBorder(),
-              ),
-              autofocus: true,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              l10n.business_code_instructions,
-              style: TextStyle(color: Colors.grey[600], fontSize: 12),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(dialogContext),
-            child: Text(l10n.cancel),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(dialogContext);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(l10n.business_coming_soon),
-                  backgroundColor: barzDark,
-                ),
-              );
-            },
-            style: FilledButton.styleFrom(
-              backgroundColor: barzGold,
-              foregroundColor: barzDark,
-            ),
-            child: Text(l10n.business_join_team),
-          ),
-        ],
-      ),
-    );
+    context.push(AppRoute.staffInvitationAccept.path);
   }
 }
 

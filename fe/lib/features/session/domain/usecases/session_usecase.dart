@@ -2,6 +2,7 @@ import 'package:dartz/dartz.dart';
 import 'package:barz/core/network/error/failures.dart';
 import 'package:barz/core/rbac/user_type.dart';
 import 'package:barz/features/session/domain/models/bar_access.dart';
+import 'package:barz/features/session/domain/models/invitation_preview.dart';
 import 'package:barz/features/session/domain/repositories/session_repository.dart';
 import 'package:barz/features/user/domain/repositories/abstract_user_repository.dart';
 import 'package:barz/features/session/domain/models/user_session.dart';
@@ -58,5 +59,12 @@ class SessionUsecase {
   /// Accept a staff invitation
   Future<Either<Failure, BarAccess>> acceptInvitation(String invitationCode) {
     return _sessionRepository.acceptInvitation(invitationCode);
+  }
+
+  /// Preview invitation details (recipient-bound; authenticated only)
+  Future<Either<Failure, InvitationPreview>> previewInvitation(
+    String invitationCode,
+  ) {
+    return _sessionRepository.previewInvitation(invitationCode);
   }
 }

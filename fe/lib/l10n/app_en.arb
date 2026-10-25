@@ -971,5 +971,79 @@
   "details_business_registration": "Business Registration",
   "details_location_method": "Location Method",
   "campaign_type_banner": "BANNER",
-  "campaign_type_push": "PUSH"
+  "campaign_type_push": "PUSH",
+
+  "invitation_header_back": "Back",
+  "invitation_loading": "Loading invitation…",
+  "invitation_eyebrow": "Team invitation",
+  "invitation_title": "You received an invitation",
+  "invitation_generic_hint": "Invitation details will appear after you sign in with the invited account.",
+  "invitation_sent_to": "Sent to",
+  "invitation_role_label": "Role",
+  "invitation_permissions_title": "What you will be able to do",
+  "invitation_valid_until": "Valid until {date}",
+  "@invitation_valid_until": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "invitation_sign_in_title": "Sign in to continue",
+  "invitation_sign_in_hint": "Use the same account or phone that received the invitation.",
+  "invitation_google": "Continue with Google",
+  "invitation_apple": "Continue with Apple",
+  "invitation_phone": "Continue with phone",
+  "invitation_connected_as": "You are signed in as",
+  "invitation_switch_account": "Switch account",
+  "invitation_verified": "Verified",
+  "invitation_not_verified": "Not verified",
+  "invitation_accept_cta": "Accept invitation",
+  "invitation_accept_support": "By accepting, you will gain access to this venue's workspace.",
+  "invitation_dismiss": "Not now",
+  "invitation_accepting": "Accepting invitation…",
+  "invitation_success_title": "Invitation accepted!",
+  "invitation_success_body": "You are now part of {venue} as {role}.",
+  "@invitation_success_body": {
+    "placeholders": {
+      "venue": { "type": "String" },
+      "role": { "type": "String" }
+    }
+  },
+  "invitation_already_member_title": "You are already part of the team.",
+  "invitation_already_member_body": "Your access to {venue} as {role} is active.",
+  "@invitation_already_member_body": {
+    "placeholders": {
+      "venue": { "type": "String" },
+      "role": { "type": "String" }
+    }
+  },
+  "invitation_enter_workspace": "Enter workspace",
+  "invitation_wrong_account_title": "This invitation was sent to a different account.",
+  "invitation_wrong_account_body": "Sign in with the account or phone that received the invitation to continue.",
+  "invitation_unverified_title": "Confirm your email or phone to continue.",
+  "invitation_unverified_body_email": "We will send a confirmation link to your account email.",
+  "invitation_unverified_body_phone": "We will send a code by SMS to your account phone.",
+  "invitation_verify_email": "Confirm email",
+  "invitation_verify_phone": "Confirm phone",
+  "invitation_expired_title": "This invitation has expired.",
+  "invitation_revoked_title": "This invitation was cancelled.",
+  "invitation_request_new": "Ask the venue manager for a new invitation.",
+  "invitation_invalid_title": "Could not use this invitation.",
+  "invitation_invalid_body": "Check the link or code with the person who sent the invitation.",
+  "invitation_load_error_title": "Could not load the invitation. Try again.",
+  "invitation_accept_error_title": "Could not confirm your entry. Try again.",
+  "invitation_retry": "Try again",
+  "invitation_back_to_onboarding": "Back to start",
+  "invitation_manual_title": "Accept invitation",
+  "invitation_manual_intro": "Received an invitation to join a venue? Enter the code below.",
+  "invitation_manual_label": "Invitation code",
+  "invitation_manual_help": "Paste the code received by email or message",
+  "invitation_manual_placeholder": "e.g. DBR-7K4M-29QX",
+  "invitation_manual_submit": "Continue",
+  "invitation_manual_error_empty": "Please enter the invitation code.",
+  "invitation_manual_error_malformed": "Invalid code. Check and try again.",
+  "invitation_role_owner": "Owner",
+  "invitation_role_admin": "Administrator",
+  "invitation_role_manager": "Manager",
+  "invitation_role_cashier": "Cashier",
+  "invitation_role_staff": "Staff"
 }

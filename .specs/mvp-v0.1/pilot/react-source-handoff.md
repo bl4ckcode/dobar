@@ -2,24 +2,45 @@
 owner: heavy-ui
 spec: B08
 artifact: react-source-handoff
-status: awaiting-human-export
+status: translated
 ---
 
 # Staff invitation React → Flutter handoff
 
-The [Lovable prompt](lovable-staff-invitation.md) is ready. No Lovable session, exported source or revision has been supplied by this delivery. Do not fabricate a commit or begin a source-based translation against screenshots alone.
-
 | Field | Current value |
 |---|---|
-| Source repository URL | Pending human export |
-| Immutable commit SHA | Pending human export |
-| Exported source directory | Pending human export |
-| Lovable session/design reference | Pending human generation |
-| Reviewed React state matrix | Pending product review |
-| Design assets/license provenance | Pending export review |
-| Product approval/evidence reference | Pending review |
+| Source repository URL | `/Users/carlosalves/Documents/PDev/staff-hub-invitations` (local) |
+| Immutable commit SHA | Pending human — working tree used for translation |
+| Exported source directory | `src/features/invitation/` |
+| Lovable session/design reference | Local project; Lovable-generated per `lovable-staff-invitation.md` |
+| Reviewed React state matrix | All 14 InvitationViewState variants present in React source |
+| Design assets/license provenance | Lovable-generated; no third-party image assets |
+| Product approval/evidence reference | Pending product review |
 | Target spec | B08 |
-| Implementation owner | heavy-ui with frontend/backend scoped handoffs |
+| Implementation owner | heavy-ui (DOB-90) |
+
+## Flutter translation map
+
+| React component | Flutter equivalent |
+|---|---|
+| `InvitationPage` | `StaffInvitationPage` + `_StaffInvitationView` |
+| `ManualCodeForm` | `_ManualCodeForm` |
+| `InvitationSkeleton` / loading | `_LoadingBody` |
+| `GenericInvitationFrame` | `_GenericInvitationFrame` |
+| `InvitationCard` | `_InvitationCard` |
+| `IdentityPanel` + `SignInOptions` | `_SignedOutBody`, `_SocialButton` |
+| `InvitationStatus` | `_StatusBanner` |
+| Success state | `_SuccessBody` |
+| wrongAccount / unverified / expired / revoked / invalid / loadError | Matching `_*Body` widgets |
+| `RoleBadge` | `_RoleBadge` |
+| `ThemeToggle` | `_ThemeToggle` |
+| `copy.ts` ptBR dictionary | `app_pt.arb` `invitation_*` keys (74 entries) |
+| `parseInvitationCode` | `InvitationCubit._parseCode` (same DBR-XXXX-XXXX format, dobar.app host) |
+
+## State coverage
+
+All 14 `InvitationViewState` variants from `types.ts` are handled:
+`manualCode`, `loading`, `signedOut`, `ready`, `accepting`, `acceptError`, `accepted`, `alreadyMember`, `wrongAccount`, `unverified`, `expired`, `revoked`, `invalid`, `loadError`.
 
 The human exports/downloads the React repository after generation, supplies its repository URL or local source directory and immutable revision, and records approved state screenshots. The product agent verifies that all required states exist and records any omissions before handing the actual source to the heavy-ui agent. Do not invoke paid model APIs automatically.
 

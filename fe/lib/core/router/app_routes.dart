@@ -35,7 +35,8 @@ enum AppRoute {
   notifications('/notifications'),
   termsOfService('/legal/terms'),
   privacyPolicy('/legal/privacy'),
-  biometryUnlock('/auth/biometry-unlock');
+  biometryUnlock('/auth/biometry-unlock'),
+  staffInvitationAccept('/staff/invitations/accept');
 
   final String path;
   const AppRoute(this.path);

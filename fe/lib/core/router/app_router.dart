@@ -48,6 +48,7 @@ import 'package:barz/features/legal/domain/models/legal_document.dart';
 import 'package:barz/features/notifications/presentation/pages/notifications_screen.dart';
 import 'package:barz/features/notifications/presentation/bloc/notification_bloc.dart';
 import 'package:barz/features/home/presentation/pages/profile/profile_edit_page.dart';
+import 'package:barz/features/session/presentation/pages/staff_invitation_page.dart';
 import 'package:barz/features/user/presentation/bloc/user_bloc.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -57,6 +58,8 @@ const _publicRoutes = {
   '/login',
   '/auth/mfa-challenge',
   '/auth/biometry-unlock',
+  // B08: Invitation acceptance shows a generic frame when unauthenticated
+  '/staff/invitations/accept',
 };
 
 final appRouter = GoRouter(
@@ -330,6 +333,18 @@ final appRouter = GoRouter(
         value: getItInjector<UserBloc>(),
         child: const ProfileEditPage(),
       ),
+    ),
+    // B08-FE: Staff invitation acceptance — /staff/invitations/accept?code=<code>
+    GoRoute(
+      path: AppRoute.staffInvitationAccept.path,
+      name: AppRoute.staffInvitationAccept.name,
+      builder: (context, state) {
+        final code = state.uri.queryParameters['code'];
+        return BlocProvider.value(
+          value: getItInjector<SessionBloc>(),
+          child: StaffInvitationPage(initialCode: code),
+        );
+      },
     ),
   ],
 );

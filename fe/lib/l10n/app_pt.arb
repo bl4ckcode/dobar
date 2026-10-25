@@ -804,5 +804,79 @@
   "details_business_registration": "Registro do Estabelecimento",
   "details_location_method": "Método de Localização",
   "campaign_type_banner": "BANNER",
-  "campaign_type_push": "PUSH"
+  "campaign_type_push": "PUSH",
+
+  "invitation_header_back": "Voltar",
+  "invitation_loading": "Carregando convite…",
+  "invitation_eyebrow": "Convite para equipe",
+  "invitation_title": "Você recebeu um convite",
+  "invitation_generic_hint": "Os detalhes do convite aparecem depois que você entrar com a conta convidada.",
+  "invitation_sent_to": "Enviado para",
+  "invitation_role_label": "Função",
+  "invitation_permissions_title": "O que você poderá fazer",
+  "invitation_valid_until": "Válido até {date}",
+  "@invitation_valid_until": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "invitation_sign_in_title": "Entre para continuar",
+  "invitation_sign_in_hint": "Use a mesma conta ou telefone que recebeu o convite.",
+  "invitation_google": "Continuar com Google",
+  "invitation_apple": "Continuar com Apple",
+  "invitation_phone": "Continuar com telefone",
+  "invitation_connected_as": "Você está conectado como",
+  "invitation_switch_account": "Trocar conta",
+  "invitation_verified": "Verificado",
+  "invitation_not_verified": "Não verificado",
+  "invitation_accept_cta": "Aceitar convite",
+  "invitation_accept_support": "Ao aceitar, você terá acesso ao espaço de trabalho deste estabelecimento.",
+  "invitation_dismiss": "Agora não",
+  "invitation_accepting": "Aceitando convite…",
+  "invitation_success_title": "Convite aceito!",
+  "invitation_success_body": "Agora você faz parte de {venue} como {role}.",
+  "@invitation_success_body": {
+    "placeholders": {
+      "venue": { "type": "String" },
+      "role": { "type": "String" }
+    }
+  },
+  "invitation_already_member_title": "Você já faz parte da equipe.",
+  "invitation_already_member_body": "Seu acesso a {venue} como {role} está ativo.",
+  "@invitation_already_member_body": {
+    "placeholders": {
+      "venue": { "type": "String" },
+      "role": { "type": "String" }
+    }
+  },
+  "invitation_enter_workspace": "Entrar no estabelecimento",
+  "invitation_wrong_account_title": "Este convite foi enviado para outra conta.",
+  "invitation_wrong_account_body": "Entre com a conta ou o telefone que recebeu o convite para continuar.",
+  "invitation_unverified_title": "Confirme seu e-mail ou telefone para continuar.",
+  "invitation_unverified_body_email": "Enviaremos um link de confirmação para o e-mail da sua conta.",
+  "invitation_unverified_body_phone": "Enviaremos um código por SMS para o telefone da sua conta.",
+  "invitation_verify_email": "Confirmar e-mail",
+  "invitation_verify_phone": "Confirmar telefone",
+  "invitation_expired_title": "Este convite expirou.",
+  "invitation_revoked_title": "Este convite foi cancelado.",
+  "invitation_request_new": "Peça um novo convite ao responsável pelo estabelecimento.",
+  "invitation_invalid_title": "Não foi possível usar este convite.",
+  "invitation_invalid_body": "Confira o link ou código com a pessoa que enviou o convite.",
+  "invitation_load_error_title": "Não foi possível carregar o convite. Tente novamente.",
+  "invitation_accept_error_title": "Não foi possível confirmar sua entrada. Tente novamente.",
+  "invitation_retry": "Tentar novamente",
+  "invitation_back_to_onboarding": "Voltar ao início",
+  "invitation_manual_title": "Aceitar convite",
+  "invitation_manual_intro": "Recebeu um convite para trabalhar em um estabelecimento? Informe o código abaixo.",
+  "invitation_manual_label": "Código do convite",
+  "invitation_manual_help": "Cole o código recebido por e-mail ou mensagem",
+  "invitation_manual_placeholder": "Ex.: DBR-7K4M-29QX",
+  "invitation_manual_submit": "Continuar",
+  "invitation_manual_error_empty": "Informe o código do convite.",
+  "invitation_manual_error_malformed": "Código inválido. Confira e tente novamente.",
+  "invitation_role_owner": "Proprietário",
+  "invitation_role_admin": "Administrador",
+  "invitation_role_manager": "Gerente",
+  "invitation_role_cashier": "Caixa",
+  "invitation_role_staff": "Equipe"
 }

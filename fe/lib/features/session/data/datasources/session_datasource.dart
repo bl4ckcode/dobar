@@ -1,6 +1,7 @@
 import 'package:barz/core/api/api_endpoints.dart';
 import 'package:barz/core/network/exceptions.dart';
 import 'package:barz/features/session/domain/models/bar_access.dart';
+import 'package:barz/features/session/domain/models/invitation_preview.dart';
 import 'package:dio/dio.dart';
 
 abstract class SessionDatasource {
@@ -9,6 +10,11 @@ abstract class SessionDatasource {
 
   /// Accept a staff invitation using invitation code
   Future<BarAccess> acceptInvitation(String invitationCode);
+
+  /// Preview an invitation for the authenticated user (recipient-bound details).
+  /// Returns [InvitationPreview] on 200; throws [ServerException] with a
+  /// category error_code on mismatched/expired/invalid codes.
+  Future<InvitationPreview> previewInvitation(String invitationCode);
 }
 
 class SessionNetworkDatasource implements SessionDatasource {
@@ -53,6 +59,26 @@ class SessionNetworkDatasource implements SessionDatasource {
     } on DioException catch (e) {
       throw ServerException(
         e.response?.data?['message'] ?? 'Failed to accept invitation',
+        e.response?.statusCode,
+      );
+    }
+  }
+
+  @override
+  Future<InvitationPreview> previewInvitation(String invitationCode) async {
+    try {
+      final response = await dio.post(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.previewInvitation}',
+        data: {'invitation_code': invitationCode},
+      );
+      return InvitationPreview.fromJson(
+        response.data as Map<String, dynamic>,
+      );
+    } on DioException catch (e) {
+      throw ServerException(
+        e.response?.data?['error_code'] ??
+            e.response?.data?['message'] ??
+            'Failed to preview invitation',
         e.response?.statusCode,
       );
     }
