@@ -18,3 +18,9 @@ Prepare a scoped review or an explicitly requested Git operation. This skill doe
 ## Checks and escalation
 
 Keep canonical communication/error contracts current when affected, confirm relevant tests, and account for CI-managed migration execution. Inspect workflow filenames from the current checkout rather than the legacy document's historical filename. Surface conflicting guidance before a dependent operation; do not discard the preserved instructions silently.
+
+## Branch and title conventions
+
+For authorized task branches, use `fix/dob-85-cashier-order-expiry`, `feat/dob-89-staff-invitation-acceptance`, or `docs/dob-88-lovable-prompts` as the naming pattern. Commit subjects and PR titles use `fix: DOB-85: cashier order expiry`, `feat: DOB-89: staff invitation acceptance`, or `docs: DOB-88: refine Lovable prompts`. Include a direct Linear issue link in the PR body, the relevant spec/criteria, validation results, and material blockers.
+
+These conventions do not authorize automatic commits, pushes, PR publication or deployment. The opt-in task/PR automation, isolated worktrees, develop/dev environment and release-to-main flow are proposed in [P01](../../../.specs/platform/P01-development-pr-workflow.md); they are not implemented by this skill update. Preserve current root Git safeguards until that workflow is implemented and explicitly invoked.

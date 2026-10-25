@@ -4,7 +4,7 @@
 
 1. Root and affected-area `AGENTS.md` define operational constraints.
 2. [MVP source](q4_2026/Dobar_MVP_v0.1.md) and approved specs define desired behavior; specs carry testable acceptance and handoffs.
-3. [FE ↔ BE](FE_BE_COMMUNICATION.md), [BE ↔ DPE](BE_DPE_COMMUNICATION.md), and [FE API errors](../fe/.docs/API_ERROR_CONTRACT.md) are canonical durable integration summaries/designs. Area architecture/workflow documents supply implementation context.
+3. [FE ↔ BE](FE_BE_COMMUNICATION.md) and [BE ↔ DPE](BE_DPE_COMMUNICATION.md) are rolling handoffs containing only the latest update per sender and minimal source links. Schemas/routes define full wire behavior; [FE API errors](../fe/.docs/API_ERROR_CONTRACT.md) defines the error design. Area architecture/workflow documents supply implementation context.
 4. Implementation and reproducible test observations establish what the current checkout does. They do not automatically supersede approved intent. When implementation contradicts a contract or spec, record both, attach evidence, and create corrective work.
 
 Never promote a historical “complete”, “deployed”, or “verified” label to current evidence. Validation requires a named check, outcome, relevant revision/environment, and usable evidence. Keep delivery status separate from verification; blocked/skipped checks cannot satisfy acceptance. The [workflow guide](AGENT_WORKFLOW.md) describes the executable tooling.
@@ -27,3 +27,5 @@ Do not silently resolve semantic contradictions during automated context scans. 
 ## Historical context
 
 [Consolidation snapshots](archive/agent-context-2026-10-22/README.md) preserve earlier requirements, rate-card details, decisions, and examples. They are excluded from canonical context. Old FE and DPE API-summary paths point to root contracts. There is no current `dpe/.docs` tree; old links to it are historical.
+
+Retain these existing snapshots as history; do not add routine handoff archives. New communication changes replace the corresponding sender entry and rely on Git/Linear for past versions.

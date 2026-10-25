@@ -18,6 +18,11 @@ def main(argv=None):
     parser.add_argument(
         "--root", type=Path, default=Path(__file__).resolve().parents[2]
     )
+    parser.add_argument(
+        "--catalog",
+        default="mvp-v0.1",
+        help="Spec catalog under .specs (default: mvp-v0.1)",
+    )
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("validate")
     tickets = commands.add_parser("tickets").add_subparsers(
@@ -39,7 +44,7 @@ def main(argv=None):
     check.add_argument("--output", type=Path)
     args = parser.parse_args(argv)
     try:
-        repo = Repository(args.root)
+        repo = Repository(args.root, args.catalog)
         if args.command == "validate":
             report = repo.validate()
             print(json_text(report), end="")
@@ -47,7 +52,11 @@ def main(argv=None):
         require_valid(repo)
         if args.command == "tickets":
             if args.ticket_command == "export":
-                output = args.output or repo.root / ".agent-workflow/tickets"
+                output = args.output or repo.root / ".agent-workflow" / (
+                    "tickets"
+                    if repo.catalog == "mvp-v0.1"
+                    else f"{repo.catalog}-tickets"
+                )
                 report = export_tickets(repo, output)
             else:
                 items = drafts(repo, [args.spec])

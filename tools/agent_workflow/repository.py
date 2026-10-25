@@ -4,6 +4,7 @@ import hashlib
 import json
 import re
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
 
@@ -87,9 +88,14 @@ class Spec:
 
 
 class Repository:
-    def __init__(self, root: Path):
+    def __init__(self, root: Path, catalog: str = "mvp-v0.1"):
         self.root = root.resolve()
-        self.spec_dir = self.root / ".specs/mvp-v0.1"
+        if not re.fullmatch(r"[a-z0-9][a-z0-9.-]*", catalog) or catalog in {".", ".."}:
+            raise WorkflowError(
+                "Catalog must be a local name such as mvp-v0.1 or platform"
+            )
+        self.catalog = catalog
+        self.spec_dir = self.local(self.root / ".specs", catalog)
         self.manifest = read_json(self.spec_dir / "manifest.json")
         self.specs = {}
         for name in self.manifest["specs"]:
@@ -144,16 +150,25 @@ class Repository:
             | {f"B{i:02}" for i in range(1, 13)}
             | {"S01", "S02"}
         )
+        if self.catalog != "mvp-v0.1":
+            declared = self.manifest.get("expected_ids")
+            if (
+                not isinstance(declared, list)
+                or not declared
+                or any(not isinstance(value, str) for value in declared)
+            ):
+                raise WorkflowError("Additional catalogs require explicit expected_ids")
+            expected = set(declared)
         if set(self.specs) != expected:
             fail(
                 "spec-inventory",
                 self.spec_dir,
-                f"Expected 25 journeys; missing {sorted(expected - self.specs.keys())}; extra {sorted(self.specs.keys() - expected)}",
+                f"Expected {len(expected)} specs; missing {sorted(expected - self.specs.keys())}; extra {sorted(self.specs.keys() - expected)}",
             )
         manifest_paths = {s.path for s in self.specs.values()}
         for path in self.spec_dir.glob("*.md"):
             if (
-                re.match(r"[CBS]\d{2}[-_]", path.name)
+                re.match(r"[A-Z]\d{2}[-_]", path.name)
                 and path.resolve() not in manifest_paths
             ):
                 fail("unindexed-spec", path, "Spec is absent from manifest")
@@ -283,9 +298,14 @@ class Repository:
                         "Validated metadata requires a readable verification_evidence report",
                     )
             checks = meta.get("checks", [])
-            if not {"foundation", "product-e2e"} <= set(checks):
+            required_checks = set(
+                self.manifest.get("required_checks", ["foundation", "product-e2e"])
+            )
+            if not required_checks <= set(checks):
                 fail(
-                    "spec-checks", spec.path, "foundation and product-e2e are required"
+                    "spec-checks",
+                    spec.path,
+                    f"Required catalog checks: {', '.join(sorted(required_checks))}",
                 )
             for check in checks:
                 if check not in self.checks:
@@ -370,6 +390,7 @@ class Repository:
                     )
 
         self.validate_coverage(fail)
+        self.validate_communication_docs(fail)
         managed = (
             list(self.spec_dir.rglob("*.md"))
             + [v[0] for v in self.roles.values()]
@@ -403,6 +424,50 @@ class Repository:
             "findings": findings,
             "product_verification": "unverified",
         }
+
+    def validate_communication_docs(self, fail):
+        for name, senders in (
+            ("FE_BE_COMMUNICATION.md", ("frontend", "backend")),
+            ("BE_DPE_COMMUNICATION.md", ("backend", "DPE")),
+        ):
+            path = self.root / "docs" / name
+            if not path.exists():
+                continue
+            text = path.read_text()
+            if len(text.splitlines()) > 80:
+                fail(
+                    "communication-size",
+                    path,
+                    "Rolling communication docs must stay within 80 lines; use Git/Linear for history",
+                )
+            headings = re.findall(r"(?m)^## (.+)$", text)
+            expected = [
+                "Contract references",
+                *[f"Latest {sender} update" for sender in senders],
+            ]
+            if sorted(headings) != sorted(expected):
+                fail(
+                    "communication-sections",
+                    path,
+                    "Keep one contract-reference section and one latest update per sender",
+                )
+            match = re.search(r"(?m)^Last updated: (\d{4}-\d{2}-\d{2})$", text)
+            try:
+                date.fromisoformat(match.group(1) if match else "")
+            except ValueError:
+                fail("communication-date", path, "Use Last updated: YYYY-MM-DD")
+            for sender in senders:
+                section = re.search(
+                    rf"(?ms)^## Latest {sender} update\n(.*?)(?=^## |\Z)", text
+                )
+                if section and not re.search(
+                    r"(?m)^- Date: \d{4}-\d{2}-\d{2}", section.group(1)
+                ):
+                    fail(
+                        "communication-date",
+                        path,
+                        f"Latest {sender} update needs its own date",
+                    )
 
     def validate_coverage(self, fail):
         path = self.local(self.spec_dir, self.manifest["requirements"])

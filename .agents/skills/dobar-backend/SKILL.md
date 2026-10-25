@@ -22,3 +22,7 @@ Read the spec, [BE instructions](../../../be/AGENTS.md), [architecture](../../..
 ## Boundaries, checks, and escalation
 
 From `be`, use the existing Python environment and relevant `pytest` targets, including auth/permission failures and transaction/idempotency behavior when affected. Follow the local no-comments/docstrings convention for new backend code. Preserve deployed endpoints/data and use GitHub Actions for deployment; do not deploy manually. Deliver patch, contract/migration implications, and exact test results. Escalate incompatible migrations, unresolved role policy, or payment responsibility changes before dependent work.
+
+## Communication handoff
+
+When this task changes an integration boundary, use [dobar-communication-docs](../dobar-communication-docs/SKILL.md). Replace the latest entry for the sending area, retain the other side's entry, update the date and remove superseded text. Git/Linear carry history; do not append a change log or a full API catalog.

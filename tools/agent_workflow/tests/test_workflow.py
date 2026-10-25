@@ -37,6 +37,105 @@ class WorkflowTests(unittest.TestCase):
         self.assertEqual(report["status"], "passed")
         self.assertEqual(report["product_verification"], "unverified")
 
+    def platform_repo(self):
+        directory = self.root / ".specs/platform"
+        meta = dict(self.repo.spec("B08").meta)
+        meta.update(id="P01", source_requirements=["REQ-P01"], labels=["platform"])
+        write_document(
+            directory / "P01-workflow.md", meta, "- **P01-AC01** — Workflow behavior.\n"
+        )
+        coverage = json.loads((self.repo.spec_dir / "requirements.json").read_text())
+        coverage["requirements"] = [
+            {
+                "id": "REQ-P01",
+                "source": "mvp",
+                "source_text": "Workflow behavior",
+                "specs": ["P01"],
+                "criteria": ["P01-AC01"],
+            }
+        ]
+        atomic_json(directory / "requirements.json", coverage)
+        atomic_json(
+            directory / "manifest.json",
+            {
+                "expected_ids": ["P01"],
+                "specs": ["P01-workflow.md"],
+                "requirements": "requirements.json",
+            },
+        )
+        return Repository(self.root, "platform")
+
+    def test_additional_catalog_coverage_and_ticket_identity(self):
+        repo = self.platform_repo()
+        self.assertEqual(repo.validate()["status"], "passed")
+        item = drafts(repo)[0]
+        self.assertEqual(item["key"], "dobar:platform:P01")
+        self.assertIn("platform", item["labels"])
+        self.assertEqual(self.items[0]["key"], "dobar:mvp-v0.1:B08")
+        self.assertIn(
+            "--catalog platform verify --spec P01", handoff(repo, "P01", "frontend")
+        )
+        repo.manifest["expected_ids"].append("P02")
+        self.assertIn(
+            "spec-inventory",
+            {finding["code"] for finding in repo.validate()["findings"]},
+        )
+
+    def test_catalog_cli_exports_separately_and_substitutes_check_context(self):
+        repo = self.platform_repo()
+        with patch("sys.stdout"):
+            self.assertEqual(
+                main(
+                    [
+                        "--root",
+                        str(self.root),
+                        "--catalog",
+                        "platform",
+                        "tickets",
+                        "export",
+                    ]
+                ),
+                0,
+            )
+        self.assertTrue(
+            (self.root / ".agent-workflow/platform-tickets/tickets.json").exists()
+        )
+        self.assertFalse((self.root / ".agent-workflow/tickets").exists())
+        repo.checks["foundation"]["command"] = [
+            "{python}",
+            "-c",
+            "import sys; assert sys.argv[1:] == ['platform', 'P01']",
+            "{catalog}",
+            "{spec}",
+        ]
+        with patch(
+            "tools.agent_workflow.verification.checkout_fingerprint",
+            return_value="checkout",
+        ):
+            report = verify(repo, "P01")
+        self.assertEqual(report["results"][0]["status"], "passed")
+        self.assertEqual(report["status"], "incomplete")
+
+    def test_catalog_paths_cannot_escape_repository(self):
+        for catalog in ("../other", "/tmp", ".", "..", "platform/subdir"):
+            with self.subTest(catalog=catalog), self.assertRaises(WorkflowError):
+                Repository(self.root, catalog)
+
+    def test_rolling_communication_rejects_history_missing_dates_and_growth(self):
+        path = self.root / "docs/FE_BE_COMMUNICATION.md"
+        content = "# FE / BE\n\nLast updated: 2026-10-23\n\n## Contract references\n\n## Latest frontend update\n\n- Date: 2026-10-22\n\n## Latest backend update\n\n- Date: 2026-10-23\n"
+        path.write_text(content)
+        self.assertEqual(self.repo.validate()["status"], "passed")
+        for suffix in ("\n## Latest frontend update\n", "\n## Old updates\n"):
+            path.write_text(content + suffix)
+            self.assertIn("communication-sections", self.codes())
+        path.write_text(content.replace("2026-10-23", "2026-99-99"))
+        self.assertIn("communication-date", self.codes())
+        path.write_text(content.replace("- Date: 2026-10-22", "Undated frontend entry"))
+        self.assertIn("communication-date", self.codes())
+        path.write_text(content + "\n" * 81)
+        self.assertIn("communication-size", self.codes())
+
     def test_dependency_cycles_and_unknown_roles_fail(self):
         self.repo.specs["B08"].meta["depends_on"] = ["B07"]
         self.repo.specs["B07"].meta["depends_on"] = ["B08"]

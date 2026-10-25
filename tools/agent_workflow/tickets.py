@@ -73,7 +73,7 @@ def drafts(repo: Repository, spec_ids: list[str] | None = None) -> list[dict]:
         )
     for identifier in sorted(spec_ids or repo.specs):
         spec = repo.spec(identifier)
-        key = f"dobar:mvp-v0.1:{identifier}"
+        key = f"dobar:{repo.catalog}:{identifier}"
         path = repo.relative(spec.path)
         body = portable_body(repo, spec.path, spec.body)
         revision = hashlib.sha256(spec.path.read_bytes()).hexdigest()
@@ -88,7 +88,8 @@ def drafts(repo: Repository, spec_ids: list[str] | None = None) -> list[dict]:
                 "labels": (
                     [config["feature_label"]] if config.get("feature_label") else []
                 )
-                + [area_labels[area] for area in spec.meta["areas"]],
+                + [area_labels[area] for area in spec.meta["areas"]]
+                + spec.meta.get("labels", []),
                 "priority": {"P0": 1, "P1": 2, "P2": 3}[spec.meta["priority"]],
                 "description": owned_content(key, common + body),
             }
@@ -132,7 +133,7 @@ def export_tickets(repo: Repository, output: Path) -> dict:
             }
         )
     )
-    text = "# Dobar MVP Linear drafts\n\nGenerated from repository specs. Local drafts; this file does not create Linear issues.\n\n"
+    text = f"# Dobar {repo.catalog} Linear drafts\n\nGenerated from repository specs. Local drafts; this file does not create Linear issues.\n\n"
     for item in items:
         text += f"## {item['title']}\n\nKey: `{item['key']}`; labels: {', '.join(item['labels'])}.\n\n{item['description']}\n\n"
     (output / "tickets.md").write_text(text)

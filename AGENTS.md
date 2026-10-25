@@ -8,6 +8,7 @@ Dobar is a monorepo: `fe` (Flutter), `be` (FastAPI), `dpe` (payment engine), and
 - Use [context authority and observed findings](docs/AGENT_CONTEXT.md), [FE ↔ BE contract](docs/FE_BE_COMMUNICATION.md), and [BE ↔ DPE contract](docs/BE_DPE_COMMUNICATION.md). Keep canonical contracts concise and update them with contract changes; old paths are compatibility links.
 - `docs` records durable decisions and current contracts; `.specs/mvp-v0.1` records intended behavior and acceptance criteria. Code evidence can reveal a contradiction; record it with a source reference rather than silently declaring either behavior validated.
 - For spec-driven work, use [the workflow guide](docs/AGENT_WORKFLOW.md), role profiles in `.agents/roles`, and canonical skill packages in `.agents/skills`. Model preferences guide explicit handoffs; never automatically invoke paid APIs.
+- For a contract handoff, use `dobar-communication-docs`: keep one latest entry per sending area and replace the old entry. Record history in Git/Linear. Existing journey specs are revised in place with stable acceptance IDs; create a new spec for an independently testable capability.
 
 ## Working rules
 

@@ -22,3 +22,7 @@ Read the spec and handoff, [FE instructions](../../../fe/AGENTS.md), [architectu
 ## Boundaries, checks, and escalation
 
 From `fe`, run relevant `flutter analyze` and `flutter test` targets. Run `dart run build_runner build --delete-conflicting-outputs` only when changed generated-model inputs require it, and inspect generated diffs. Add regression coverage for meaningful state/behavior changes; avoid tests that merely repeat layout constants. Deliver a scoped patch and exact evidence; report missing native-device/browser checks separately. Escalate API gaps through the planner instead of inventing backend support.
+
+## Communication handoff
+
+When this task changes an integration boundary, use [dobar-communication-docs](../dobar-communication-docs/SKILL.md). Replace the latest entry for the sending area, retain the other side's entry, update the date and remove superseded text. Git/Linear carry history; do not append a change log or a full API catalog.

@@ -2,7 +2,7 @@
   "version": 1,
   "checks": {
     "foundation": {
-      "command": ["{python}", "-m", "tools.agent_workflow", "validate"],
+      "command": ["{python}", "-m", "tools.agent_workflow", "--catalog", "{catalog}", "validate"],
       "cwd": ".",
       "timeout": 60,
       "purpose": "Spec coverage, metadata, references, dependencies, and skill discovery; does not verify product behavior."
@@ -12,6 +12,12 @@
       "cwd": ".",
       "timeout": 120,
       "purpose": "Workflow regression tests with a fake Linear service."
+    },
+    "workflow-e2e": {
+      "command": null,
+      "cwd": ".",
+      "timeout": 300,
+      "reason": "P01 task/worktree/PR and dev-deployment lifecycle is specified, not implemented or verified."
     },
     "product-e2e": {
       "command": null,

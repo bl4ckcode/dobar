@@ -21,3 +21,7 @@ Require observed behavior, expected behavior or spec criterion, reproduction con
 ## Boundaries, checks, and escalation
 
 Run the regression and appropriate affected-area checks once the fix is complete; broaden only when evidence justifies it. Keep implementation status separate from verification, and report blocked environments. Deliver cause, changed behavior, test results, and remaining uncertainties. Do not stage/commit/deploy or retry live money-moving operations as part of debugging without explicit authorization. Escalate missing expected behavior or an unbounded fix while continuing safe independent diagnosis.
+
+## Spec and ticket hygiene
+
+Use the existing journey spec when the defect belongs to it. Add or refine acceptance before implementation, preserving criterion IDs, and link the bug issue; do not create a duplicate spec for each fix. Apply the [Linear skill](../dobar-linear/SKILL.md) to retain scope labels, `Bug` type and the current sprint when available. For boundary changes, replace the appropriate sender entry using [rolling communication notes](../dobar-communication-docs/SKILL.md).

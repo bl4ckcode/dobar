@@ -112,7 +112,9 @@ def verify(repo: Repository, spec_id: str, skip=None):
         ):
             raise WorkflowError(f"Check {name}: command must be an argument list")
         command = [
-            arg.replace("{python}", sys.executable).replace("{spec}", spec_id)
+            arg.replace("{python}", sys.executable)
+            .replace("{spec}", spec_id)
+            .replace("{catalog}", repo.catalog)
             for arg in command
         ]
         cwd = repo.local(repo.root, check.get("cwd", "."))
@@ -204,5 +206,6 @@ def handoff(repo: Repository, spec_id: str, role_id: str):
         or "None."
     )
     text += f"\n\n## Journey spec\n\nSource: `{repo.relative(spec.path)}`\n\n{spec.body.strip()}"
-    text += f"\n\n## Verification handoff\n\nRun `python -m tools.agent_workflow verify --spec {spec_id}` and attach the report. Required checks: {', '.join(spec.meta['checks'])}. An incomplete report cannot establish validation. Include changed files, contract changes, acceptance evidence, and remaining blockers. Never stage, commit, or deploy automatically.\n"
+    catalog_option = f"--catalog {repo.catalog} " if repo.catalog != "mvp-v0.1" else ""
+    text += f"\n\n## Verification handoff\n\nRun `python -m tools.agent_workflow {catalog_option}verify --spec {spec_id}` and attach the report. Required checks: {', '.join(spec.meta['checks'])}. An incomplete report cannot establish validation. Include changed files, contract changes, acceptance evidence, and remaining blockers. Never stage, commit, or deploy automatically.\n"
     return text

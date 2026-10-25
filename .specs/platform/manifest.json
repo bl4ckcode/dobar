@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "expected_ids": ["P01"],
+  "required_checks": ["foundation", "workflow-e2e"],
+  "specs": ["P01-development-pr-workflow.md"],
+  "requirements": "requirements.json"
+}

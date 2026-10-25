@@ -4,7 +4,9 @@ owner: product
 
 # Dobar MVP agent workflow
 
-This is the operating guide for the repository-backed MVP workflow. [Context authority and observed contradictions](AGENT_CONTEXT.md) distinguish current implementation from intended behavior. [The spec index](../.specs/mvp-v0.1/README.md) maps all journeys to [the MVP source](q4_2026/Dobar_MVP_v0.1.md). Specs and Linear are intent; executable evidence establishes verification.
+This is the operating guide for repository-backed specifications and agent work. [Context authority and observed contradictions](AGENT_CONTEXT.md) distinguish current implementation from intended behavior. [The MVP spec index](../.specs/mvp-v0.1/README.md) maps journeys to [the MVP source](q4_2026/Dobar_MVP_v0.1.md); [platform specs](../.specs/platform/README.md) cover independent infrastructure capabilities. Specs and Linear are intent; executable evidence establishes verification.
+
+For copyable VS Code prompts and the distinction between orchestration, generated handoffs, implementation and verification, start with the [developer how-to](AGENT_WORKFLOW_HOWTO.md).
 
 ## Approved launch decisions
 
@@ -57,6 +59,8 @@ flutter test test/features/payments/checkout_wire_contract_test.dart
 
 ## Route and hand off work
 
+Revise an existing journey spec for refinements, missed requirements and bugs in that journey. Preserve its spec/acceptance IDs; append new criterion IDs and link the driving issue. B05-AC05 is the existing operating-day expiry criterion for DOB-85. Create a new spec for an independent capability; use Git/Linear to revisit history rather than making dated spec copies or appending a changelog. Reset affected verification claims after behavior changes and update requirement mappings/source snapshots after reviewing their coverage.
+
 1. Product/GPT updates a journey spec and its source requirement/acceptance mapping. Preserve stable IDs. A change to a source snapshot requires reviewing coverage and refreshing its SHA-256 in [requirements](../.specs/mvp-v0.1/requirements.json).
 2. For FE/BE/DPE dependencies, Gemini receives the `cross-repo-planner` handoff and returns ordered tasks and contract decisions. Planning must distinguish observed wire behavior from requested changes.
 3. GPT produces the Lovable prompt. A human runs Lovable, exports the actual React source and records repository, immutable revision, entrypoints and assets in the [source handoff](../.specs/mvp-v0.1/pilot/react-source-handoff.md). The current export is pending, not fabricated.
@@ -66,6 +70,8 @@ flutter test test/features/payments/checkout_wire_contract_test.dart
 Skills are canonical under `.agents/skills`; Claude and Cline use relative links under their project skill directories. Gemini supports `.agents/skills` directly. `CLAUDE.md` and `GEMINI.md` point to the same root/area instructions. Client discovery conventions are documented by [Gemini](https://geminicli.com/docs/cli/skills/), [Claude](https://code.claude.com/docs/en/skills), and [Cline](https://docs.cline.bot/customization/skills); actual loading depends on the installed client and workspace trust.
 
 ## Linear preview and synchronization
+
+Every issue needs its actual area labels: `barz-fe`, `barz-be`, `payments`, or `platform`; cross-area work can have several. Preserve useful existing labels such as `dobar-dpe`, `security`, `infra` and `ui`. Use `Bug` for defects/hotfixes, `Improvement` for minor adjustments, and `Feature` for new capability. New bugs/hotfixes/minor adjustments without an explicit cycle go to the team's current cycle. Preserve existing cycles and leave major features/epics for deliberate scheduling. If there is no current cycle, report that fact and leave it unset; never invent or select a past/future sprint.
 
 Supply `LINEAR_API_KEY` through your environment or secret manager. The CLI does not store or print it. Personal API keys use Linear's documented Authorization header. `LINEAR_TEAM_KEY` defaults to `DOB`; optional `LINEAR_PROJECT_ID` must identify an existing project associated with that team. The reviewed DOB labels are configured in `tools/agent_workflow/linear-config.json`: `barz-fe`, `barz-be`, and `payments`, with `Feature` on parent issues. Existing unambiguous configured labels are required; change this mapping when using another workspace. The CLI never creates teams/projects/labels. A connected Linear tool can consume the same exported issue payloads and persist returned UUIDs to the same mapping; this does not expose its connection credentials to the headless CLI.
 
@@ -87,3 +93,24 @@ Review [B08](../.specs/mvp-v0.1/B08-staff-invitation-acceptance.md), its [React 
 Foundation delivery is complete when 25 specs cover every source requirement, all skills and references validate, deterministic exports repeat identically, and fake-service tests prove safe sync reruns, partial failure recovery and preservation of human content. The current delivery does not claim product E2E, provider sandbox, native-device execution, or an exported React revision.
 
 Pull requests and scheduled GitHub Actions run deterministic context/coverage checks and workflow tests. Semantic contradictions remain source-backed findings for review in [context findings](AGENT_CONTEXT.md); the scanner does not rewrite business intent or create external tickets. The source approach is adapted from [Basis's agent-ergonomic monorepo](https://www.getbasis.ai/blogs/how-we-made-our-monorepo-ergonomic-for-agents).
+
+## Rolling communication notes
+
+Use [dobar-communication-docs](../.agents/skills/dobar-communication-docs/SKILL.md) whenever an integration boundary changes. FE/BE and BE/DPE docs each retain a document date, minimal schema/source references, and only the last update from each sending area. Replace the changed sender's entry, retain the other sender's entry/date, and remove superseded text. Full wire definitions live in schemas/routes; historical changes live in Git/Linear. Do not create new Markdown archives for routine changes. Validation enforces the two-entry structure, dates, links and an 80-line limit per document.
+
+## Platform work and future task-to-PR automation
+
+The confirmed branch model is task branches → PRs to `develop` → shared dev deployment; release PRs promote `develop` → protected `main` → production. [P01](../.specs/platform/P01-development-pr-workflow.md) specifies isolated environments/worktrees, quality gates and the opt-in task lifecycle. This behavior is planned, not enabled by writing its spec. Current no-automatic-commit/push/deploy safeguards remain active.
+
+Use `fix/dob-85-cashier-order-expiry`, `feat/dob-89-staff-invitation-acceptance` and `docs/dob-88-lovable-prompts` for authorized branch work. Commit subjects and PR titles use `fix: DOB-85: cashier order expiry` or the corresponding `feat:`/`docs:` prefix. PR bodies link the actual Linear issue directly and summarize spec criteria, behavior, tests and compatibility. Future automatic review is separate from P01; the owner decides merges.
+
+The default CLI catalog remains the fixed 25 MVP journeys. Use `--catalog platform` before the command for the independent platform catalog:
+
+```sh
+python -m tools.agent_workflow --catalog platform validate
+python -m tools.agent_workflow --catalog platform handoff --spec P01 --role cross-repo-planner
+python -m tools.agent_workflow --catalog platform tickets export
+python -m tools.agent_workflow --catalog platform verify --spec P01
+```
+
+`workflow-e2e` stays blocked until P01 is implemented and its runner exists. Catalog validation and ticket export do not provision dev resources, publish PRs or change branch protections.

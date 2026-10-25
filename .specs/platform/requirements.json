@@ -1,0 +1,125 @@
+{
+  "version": 1,
+  "sources": [
+    {
+      "id": "workflow-policies",
+      "path": "docs/AGENT_WORKFLOW.md",
+      "sha256": "7fbd6e4ed322a767ef1a2777b066b643c552e3e5ef7ca320c9606818dd4ed473"
+    }
+  ],
+  "requirements": [
+    {
+      "id": "P01-R01",
+      "source": "workflow-policies",
+      "source_text": "Provide an isolated dev environment with no production data, credentials, or payment side effects.",
+      "specs": [
+        "P01"
+      ],
+      "criteria": [
+        "P01-AC01"
+      ]
+    },
+    {
+      "id": "P01-R02",
+      "source": "workflow-policies",
+      "source_text": "Develop deploys to dev; task PRs target develop; release PRs promote develop to main.",
+      "specs": [
+        "P01"
+      ],
+      "criteria": [
+        "P01-AC02"
+      ]
+    },
+    {
+      "id": "P01-R03",
+      "source": "workflow-policies",
+      "source_text": "An explicitly picked-up prompt/spec task creates a separate branch/worktree and resolves its Linear identity.",
+      "specs": [
+        "P01"
+      ],
+      "criteria": [
+        "P01-AC03",
+        "P01-AC06"
+      ]
+    },
+    {
+      "id": "P01-R04",
+      "source": "workflow-policies",
+      "source_text": "Branches use fix/, feat/, or docs/.",
+      "specs": [
+        "P01"
+      ],
+      "criteria": [
+        "P01-AC04"
+      ]
+    },
+    {
+      "id": "P01-R05",
+      "source": "workflow-policies",
+      "source_text": "Commit messages and PR titles use fix:, feat:, or docs: and reference the Linear issue; PR descriptions link it directly.",
+      "specs": [
+        "P01"
+      ],
+      "criteria": [
+        "P01-AC04"
+      ]
+    },
+    {
+      "id": "P01-R06",
+      "source": "workflow-policies",
+      "source_text": "Finished tasks with passing local and remote checks create or update a PR for owner review.",
+      "specs": [
+        "P01"
+      ],
+      "criteria": [
+        "P01-AC05"
+      ]
+    },
+    {
+      "id": "P01-R07",
+      "source": "workflow-policies",
+      "source_text": "Protect main after dev and CI are ready; retain owner merge decision and a future automatic-review integration point.",
+      "specs": [
+        "P01"
+      ],
+      "criteria": [
+        "P01-AC07",
+        "P01-AC09"
+      ]
+    },
+    {
+      "id": "P01-R08",
+      "source": "workflow-policies",
+      "source_text": "Issues have barz-fe/barz-be/payments/platform area labels and bug/minor work uses the current cycle when available.",
+      "specs": [
+        "P01"
+      ],
+      "criteria": [
+        "P01-AC08"
+      ]
+    },
+    {
+      "id": "P01-R09",
+      "source": "workflow-policies",
+      "source_text": "Preserve user changes, recover safely after partial failures, and avoid duplicate task artifacts.",
+      "specs": [
+        "P01"
+      ],
+      "criteria": [
+        "P01-AC03",
+        "P01-AC06"
+      ]
+    },
+    {
+      "id": "P01-R10",
+      "source": "workflow-policies",
+      "source_text": "Deliver a reviewable spec for implementation in a separate agent chat; do not enable the infrastructure in this documentation task.",
+      "specs": [
+        "P01"
+      ],
+      "criteria": [
+        "P01-AC10"
+      ]
+    }
+  ]
+}

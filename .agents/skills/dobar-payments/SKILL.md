@@ -23,3 +23,7 @@ Read the spec, [DPE instructions](../../../dpe/AGENTS.md), [architecture](../../
 ## Boundaries, checks, and escalation
 
 Run relevant mocked gateway/API/contract `pytest` checks from `dpe`, plus configured `ruff check .` and `mypy dobar_payment/` when relevant. Validate FE/BE/DPE contract fixtures from one checkout. Run provider sandbox cases separately and record provider request references without secrets; unavailable credentials are blocked evidence. Live charges/refunds and deployment require explicit task authorization. Output deterministic results, sandbox evidence, and remaining reconciliation risks; escalate ambiguous monetary ownership or provider capabilities before money-moving changes.
+
+## Communication handoff
+
+When this task changes an integration boundary, use [dobar-communication-docs](../dobar-communication-docs/SKILL.md). Replace the latest entry for the sending area, retain the other side's entry, update the date and remove superseded text. Git/Linear carry history; do not append a change log or a full API catalog.

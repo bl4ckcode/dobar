@@ -26,6 +26,10 @@ jobs:
       - name: Validate canonical context and MVP coverage
         id: validate
         run: python -m tools.agent_workflow validate
+      - name: Validate platform specifications
+        id: platform_specs
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+        run: python -m tools.agent_workflow --catalog platform validate
       - name: Test workflow tooling
         id: tests
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
@@ -42,6 +46,7 @@ jobs:
         if: always()
         env:
           VALIDATE_RESULT: ${{ steps.validate.outcome }}
+          PLATFORM_SPECS_RESULT: ${{ steps.platform_specs.outcome }}
           TEST_RESULT: ${{ steps.tests.outcome }}
           CHECKOUT_CONTRACTS_RESULT: ${{ steps.checkout_contracts.outcome }}
           JOB_RESULT: ${{ job.status }}
@@ -51,6 +56,7 @@ jobs:
             echo '## Agent foundation checks'
             echo "- Event: $EVENT_NAME"
             echo "- Context/coverage validation: $VALIDATE_RESULT"
+            echo "- Platform specification validation: $PLATFORM_SPECS_RESULT"
             echo "- Workflow tests: $TEST_RESULT"
             echo "- Shared Pix wire contracts: $CHECKOUT_CONTRACTS_RESULT"
             echo "- Job outcome before report: $JOB_RESULT"
