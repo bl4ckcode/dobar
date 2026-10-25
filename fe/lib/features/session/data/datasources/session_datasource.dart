@@ -58,7 +58,9 @@ class SessionNetworkDatasource implements SessionDatasource {
       return BarAccess.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
       throw ServerException(
-        e.response?.data?['message'] ?? 'Failed to accept invitation',
+        e.response?.data?['error_code'] ??
+            e.response?.data?['message'] ??
+            'Failed to accept invitation',
         e.response?.statusCode,
       );
     }

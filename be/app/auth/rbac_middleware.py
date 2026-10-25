@@ -83,6 +83,8 @@ class AuthUser:
     phone_number: Optional[str]
     is_active: bool
     user_type: str  # "client" or "business"
+    email_verified: bool = False
+    phone_verified: bool = False
     display_name: Optional[str] = None
     avatar_url: Optional[str] = None
     fcm_token: Optional[str] = None
@@ -205,6 +207,8 @@ async def get_current_user(
         email=user["email"],
         phone_number=user["phone_number"],
         is_active=user["is_active"],
+        email_verified=bool(user["email_verified"]),
+        phone_verified=bool(user["phone_verified"]),
         user_type=profile["user_type"] if profile else UserType.CLIENT.value,
         display_name=profile["display_name"] if profile else None,
         avatar_url=profile["avatar_url"] if profile else None,

@@ -113,12 +113,8 @@ async def invite_staff_simple(
         )
         if existing_staff and existing_staff["is_active"]:
             raise HTTPException(status_code=409, detail="User already staff at this bar")
-        
-        # Add to bar directly
-        await add_user_to_bar(existing_user["id"], invite.bar_id, role, user.id)
-        status_val = "accepted"
-    else:
-        status_val = "pending"
+    # All invitations start pending — no auto-accept, even for existing users.
+    status_val = "pending"
     
     # Create invitation record
     invitation_data = {

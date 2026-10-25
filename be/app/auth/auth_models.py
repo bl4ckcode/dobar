@@ -15,6 +15,8 @@ class User(Base):
     apple_id = Column(String, unique=True, nullable=True)  # Apple ID for OAuth
     facebook_id = Column(String, unique=True, nullable=True)  # Facebook ID for OAuth
     is_active = Column(Boolean, default=True)  # Whether the user is active
+    email_verified = Column(Boolean, default=False, nullable=False)  # Email ownership verified
+    phone_verified = Column(Boolean, default=False, nullable=False)  # Phone ownership verified
     
     # Dobar PRO features
     subscription_tier = Column(String(20), default=ConsumerSubscriptionTier.REGULAR.value, index=True)

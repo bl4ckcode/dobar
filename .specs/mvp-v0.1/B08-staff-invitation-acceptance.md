@@ -23,11 +23,11 @@ Deliver the staff invitation acceptance pilot journey for the Belo Horizonte MVP
 
 ## Current implementation evidence and gaps
 
-Onboarding accept dialog shows coming-soon; SessionDatasource sends JSON invitation_code while BE accepts a query parameter. BE acceptance returns message/bar_id/role without bar_name/permissions required by BarAccess. Acceptance checks pending and expiry but not verified recipient contact, then writes membership/status separately.
+Independent checkout verification on 2026-10-25 found the FE invitation page and BE preview/JSON-plus-query/full-access response declarations implemented. This supersedes the preimplementation gap descriptions embedded in the generated FE/heavy-ui handoffs. Real database records break the new recipient checks (`.get()` is unsupported); verified-contact enforcement, PostgreSQL write-result handling, migration compatibility and current-membership replay remain defective. FE issuer-token parsing and acceptance error propagation also failed focused probes. Login resume and the product journey remain incomplete.
 
-Implement the missing screen and login-resume link handling, resolve request/response mismatch, bind acceptance to verified contact, make membership/status atomic and handle repeated acceptance safely. B07 issuance/delivery is a prerequisite, not a completed capability.
+The [criterion evidence and actionable follow-ups](pilot/validation-checklist.md) distinguish raw database checks from dictionary/mock diagnostics. B07 pending-only issuance/delivery remains a separate prerequisite; current issuance still grants existing users membership before explicit acceptance. No whole-journey validation is claimed.
 
-Observed source references (inspection only; no runtime or E2E validation):
+Observed source references (see the criterion record for executed checks and their limits):
 
 - [fe/lib/ui/business/widgets/business_onboarding_view.dart](../../fe/lib/ui/business/widgets/business_onboarding_view.dart)
 - [fe/lib/features/session/data/datasources/session_datasource.dart](../../fe/lib/features/session/data/datasources/session_datasource.dart)
@@ -57,7 +57,7 @@ Use [FE/BE contract](../../docs/FE_BE_COMMUNICATION.md) for durable interfaces; 
 
 ## Delivery and verification
 
-Delivery: ready for planning/implementation, subject to listed dependencies. Verification: unverified. Source inspection is the only evidence so far; no product E2E/provider/device checks have run. A passing foundation check validates artifact structure only. Independent verifier must assess every criterion before changing verification status.
+Delivery remains incomplete, subject to the listed dependencies and verification findings. Verification: unverified; the independent 2026-10-25 checks found backend and FE contract failures. Product E2E is blocked because no runner is configured. See the [criterion record](pilot/validation-checklist.md); passing foundation checks establish artifact structure only.
 
 ## Source requirements
 

@@ -9,6 +9,8 @@ status: ready-for-planning-and-implementation
 
 Prepared 2026-10-24 from this checkout. Assignment: [DOB-91](https://linear.app/dobarecosystem/issue/DOB-91), parent [DOB-89](https://linear.app/dobarecosystem/issue/DOB-89). Implement BE preview/acceptance; preserve the existing FE patch. This is a source-based assignment, not independent validation of DOB-90 or evidence of a working invitation journey. Recheck changed source and live issue context when available before implementation.
 
+Independent verification on 2026-10-25: implementation is present but fails backend/consumer checks. The producer gap below records the assignment's earlier baseline, not today's endpoint availability. Use the [current criterion evidence and follow-ups](validation-checklist.md) and [latest BE communication entry](../../../docs/FE_BE_COMMUNICATION.md) for observed behavior. The author-reported 14 FE tests were rerun successfully; they do not cover the failing real-record, issuer-token, error-envelope or login-resume paths. No product code was repaired by verification.
+
 ## Required context and ownership
 
 - Read [root instructions](../../../AGENTS.md), [BE instructions](../../../be/AGENTS.md), [backend skill](../../../.agents/skills/dobar-backend/SKILL.md), and [communication skill](../../../.agents/skills/dobar-communication-docs/SKILL.md). Follow the BE architecture/workflow links. Use the cross-repo planning skill only for unresolved boundary decisions.

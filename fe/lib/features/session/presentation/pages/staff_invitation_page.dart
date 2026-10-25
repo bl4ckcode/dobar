@@ -389,7 +389,7 @@ class _UnverifiedBody extends StatelessWidget {
               : l10n.invitation_unverified_body_phone),
       const SizedBox(height: 16),
       FilledButton(
-        onPressed: () {},
+        onPressed: () => context.push(AppRoute.profileEdit.path),
         style: FilledButton.styleFrom(
           backgroundColor: barzGold, foregroundColor: barzDark,
           minimumSize: const Size.fromHeight(52),

@@ -260,7 +260,7 @@ async def update_profile(
         await database.execute(
             User.__table__.update()
             .where(User.id == current_user.id)
-            .values(email=data.email)
+            .values(email=data.email, email_verified=False)
         )
     
     if data.phone_number is not None:
@@ -272,7 +272,7 @@ async def update_profile(
         await database.execute(
             User.__table__.update()
             .where(User.id == current_user.id)
-            .values(phone_number=data.phone_number)
+            .values(phone_number=data.phone_number, phone_verified=False)
         )
     
     return await get_profile(current_user)

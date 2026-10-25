@@ -55,7 +55,7 @@ class InvitationCubit extends Cubit<InvitationState> {
     }
     final result = await _sessionUsecase.previewInvitation(code);
     result.fold(
-      (failure) => _mapFailureToState(failure.errorMessage, code),
+      (failure) => _mapPreviewFailureToState(failure.errorMessage, code),
       (preview) => emit(InvitationReady(code: code, preview: preview)),
     );
   }
@@ -66,21 +66,7 @@ class InvitationCubit extends Cubit<InvitationState> {
     emit(InvitationAccepting(code: code, preview: preview));
     final result = await _sessionUsecase.acceptInvitation(code);
     result.fold(
-      (failure) {
-        final err = failure.errorMessage;
-        if (err.contains(_codeAlreadyUsed)) {
-          final s = _sessionBloc.state;
-          if (s is SessionReady) {
-            final existing =
-                s.session.barAccess.where((b) => b.barName == preview.venueName);
-            if (existing.isNotEmpty) {
-              emit(InvitationAlreadyMember(code: code, access: existing.first));
-              return;
-            }
-          }
-        }
-        emit(InvitationAcceptError(code: code, preview: preview, message: err));
-      },
+      (failure) => _mapAcceptFailureToState(failure.errorMessage, code, preview),
       (barAccess) {
         _sessionBloc
           ..add(SessionEvent.barCreated(newBar: barAccess))
@@ -94,21 +80,60 @@ class InvitationCubit extends Cubit<InvitationState> {
 
   Future<void> retry(String code) => _loadPreview(code);
 
-  void _mapFailureToState(String errorCode, String code) {
+  void _mapPreviewFailureToState(String errorCode, String code) {
     switch (errorCode) {
       case _codeExpired:
         emit(InvitationExpired(code: code));
+        break;
       case _codeRevoked:
         emit(InvitationRevoked(code: code));
+        break;
       case _codeMismatch:
         emit(InvitationWrongAccount(code: code));
+        break;
       case _codeUnverified:
         emit(InvitationUnverified(code: code, contactType: 'email'));
+        break;
       case _codeAlreadyUsed:
       case _codeInvalid:
         emit(InvitationInvalid(code: code));
+        break;
       default:
         emit(InvitationLoadError(code: code, message: errorCode));
+    }
+  }
+
+  void _mapAcceptFailureToState(String errorCode, String code, InvitationPreview preview) {
+    switch (errorCode) {
+      case _codeExpired:
+        emit(InvitationAcceptError(code: code, preview: preview, message: _codeExpired));
+        break;
+      case _codeRevoked:
+        emit(InvitationAcceptError(code: code, preview: preview, message: _codeRevoked));
+        break;
+      case _codeMismatch:
+        emit(InvitationAcceptError(code: code, preview: preview, message: _codeMismatch));
+        break;
+      case _codeUnverified:
+        emit(InvitationAcceptError(code: code, preview: preview, message: _codeUnverified));
+        break;
+      case _codeAlreadyUsed:
+        final s = _sessionBloc.state;
+        if (s is SessionReady) {
+          final existing =
+              s.session.barAccess.where((b) => b.barName == preview.venueName);
+          if (existing.isNotEmpty) {
+            emit(InvitationAlreadyMember(code: code, access: existing.first));
+            break;
+          }
+        }
+        emit(InvitationAcceptError(code: code, preview: preview, message: _codeAlreadyUsed));
+        break;
+      case _codeInvalid:
+        emit(InvitationAcceptError(code: code, preview: preview, message: _codeInvalid));
+        break;
+      default:
+        emit(InvitationAcceptError(code: code, preview: preview, message: errorCode));
     }
   }
 
@@ -143,6 +168,7 @@ class InvitationCubit extends Cubit<InvitationState> {
   static String? _normalizeCode(String raw) {
     final m = _codeRe.firstMatch(raw.replaceAll(RegExp(r'\s+'), ''));
     if (m == null) return null;
-    return 'DBR-${m.group(1)!.toUpperCase()}-${m.group(2)!.toUpperCase()}';
+    // Preserve issuer output as-is (URL-safe); do not force uppercase.
+    return 'DBR-${m.group(1)!}-${m.group(2)!}';
   }
 }

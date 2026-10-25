@@ -78,6 +78,14 @@ class ErrorCode(str, Enum):
     # Cart Errors
     CART_ITEM_NOT_FOUND = "CART_ITEM_NOT_FOUND"
     CART_EMPTY = "CART_EMPTY"
+
+    # Invitation Errors
+    INVITATION_EXPIRED = "INVITATION_EXPIRED"
+    INVITATION_REVOKED = "INVITATION_REVOKED"
+    INVITATION_CONTACT_MISMATCH = "INVITATION_CONTACT_MISMATCH"
+    INVITATION_CONTACT_UNVERIFIED = "INVITATION_CONTACT_UNVERIFIED"
+    INVITATION_INVALID = "INVITATION_INVALID"
+    INVITATION_ALREADY_USED = "INVITATION_ALREADY_USED"
     
     # Promotion Errors
     PROMOTION_EXPIRED = "PROMOTION_EXPIRED"
@@ -134,6 +142,12 @@ ERROR_MESSAGES: Dict[ErrorCode, str] = {
     
     ErrorCode.CART_ITEM_NOT_FOUND: "Cart item not found",
     ErrorCode.CART_EMPTY: "Cart is empty",
+    ErrorCode.INVITATION_EXPIRED: "Invitation expired",
+    ErrorCode.INVITATION_REVOKED: "Invitation revoked",
+    ErrorCode.INVITATION_CONTACT_MISMATCH: "Invitation recipient does not match authenticated user",
+    ErrorCode.INVITATION_CONTACT_UNVERIFIED: "Invitation recipient is not verified",
+    ErrorCode.INVITATION_INVALID: "Invitation not found",
+    ErrorCode.INVITATION_ALREADY_USED: "Invitation already used",
     
     ErrorCode.PROMOTION_EXPIRED: "Promotion has expired",
     ErrorCode.PROMOTION_NOT_APPLICABLE: "Promotion is not applicable",

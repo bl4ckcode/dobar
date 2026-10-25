@@ -13,6 +13,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:barz/core/router/app_routes.dart';
+import 'package:go_router/go_router.dart';
 import 'package:barz/features/authentication/presentation/bloc/login_bloc.dart';
 import 'package:barz/features/authentication/presentation/bloc/login_event.dart';
 import 'package:barz/features/authentication/presentation/bloc/login_state.dart';
@@ -22,7 +23,8 @@ import 'package:flutter_lucide/flutter_lucide.dart';
 import 'login_sms_validation_page.dart';
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  final String? pendingInvitationCode;
+  const LoginPage({super.key, this.pendingInvitationCode});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -31,6 +33,7 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   late LoginBloc _loginBloc;
   String? _phoneNumber;
+  String? _pendingInvitationCode;
   final BiometryService _biometryService = getItInjector<BiometryService>();
 
   late final AnimationController _glowController;
@@ -64,6 +67,10 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     _shimmerAnim = Tween<double>(begin: -1.0, end: 2.0).animate(
       CurvedAnimation(parent: _shimmerController, curve: Curves.easeInOut),
     );
+
+    _pendingInvitationCode =
+        widget.pendingInvitationCode ??
+        (ModalRoute.of(context)?.settings.arguments as Map?)?['pendingInvitationCode'] as String?;
   }
 
   @override
@@ -141,6 +148,12 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
             } else if (state is Success) {
               if (Navigator.of(context).canPop()) {
                 Navigator.of(context).pop();
+              }
+
+              // Resume staff-invitation acceptance after login if a code is pending.
+              if (_pendingInvitationCode != null && _pendingInvitationCode!.isNotEmpty) {
+                GoRouter.of(context).go('${AppRoute.staffInvitationAccept.path}?code=${Uri.encodeComponent(_pendingInvitationCode!)}');
+                return;
               }
 
               if (state.needsOnboarding) {

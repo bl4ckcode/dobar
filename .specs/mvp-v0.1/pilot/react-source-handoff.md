@@ -10,7 +10,7 @@ status: translated
 | Field | Current value |
 |---|---|
 | Source repository URL | `/Users/carlosalves/Documents/PDev/staff-hub-invitations` (local) |
-| Immutable commit SHA | Pending human — working tree used for translation |
+| Immutable commit SHA | Translation revision still needs author confirmation. Independent inspection on 2026-10-25 found clean local HEAD `55ce9b5ddf04e9baa1200241208cb97e732c7e0f`; this does not establish which revision was translated or approved. |
 | Exported source directory | `src/features/invitation/` |
 | Lovable session/design reference | Local project; Lovable-generated per `lovable-staff-invitation.md` |
 | Reviewed React state matrix | All 14 InvitationViewState variants present in React source |
@@ -52,4 +52,4 @@ The human exports/downloads the React repository after generation, supplies its 
 4. Keep generated UI fixture state out of production acceptance decisions. Backend preview/accept responses authorize state changes; update canonical FE/BE contract in the implementation.
 5. Run targeted analyzer/widget/BLoC/contract checks. Run code generation only when relevant annotations/localization inputs changed, following FE instructions. Record source revision, changed behavior, command outcomes and screenshots for independent verification.
 
-Translation stays blocked until actual source provenance is available; prompt review and backend contract/security work can proceed independently.
+React source is available and the recorded Flutter translation exists. Translation-revision confirmation and product approval remain incomplete; the observed clean HEAD above does not supply retrospective approval. Independent contract failures and remaining browser/accessibility checks are recorded in the [B08 criterion evidence](validation-checklist.md).

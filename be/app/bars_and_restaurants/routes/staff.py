@@ -2,7 +2,8 @@
 Staff Management Routes - Endpoints for managing bar staff
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import Body
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
 from datetime import datetime, timezone, timedelta
@@ -19,7 +20,16 @@ from ...auth.rbac_models import (
     BarRole, Permission, BarStaff, StaffInvitation, UserProfile, get_permissions_for_role
 )
 from ...auth.auth_models import User
-from ...errors import APIError
+from ...bars_and_restaurants.models.relational_models import Bar
+from ...errors import APIError, ErrorCode
+
+
+def _record_get(record, key, default=None):
+    """Safe accessor for databases.Record objects (which lack .get())."""
+    try:
+        return record[key]
+    except (KeyError, IndexError):
+        return default
 
 
 staff_router = APIRouter(prefix="/bars/{bar_id}/staff", tags=["Staff Management"])
@@ -65,6 +75,28 @@ class MyBarsResponse(BaseModel):
     bar_name: str
     role: str
     permissions: List[str]
+
+
+class InvitationCodeRequest(BaseModel):
+    invitation_code: str
+
+
+class InvitationPreviewResponse(BaseModel):
+    venue_name: str
+    venue_address: Optional[str] = None
+    venue_image_url: Optional[str] = None
+    role: str
+    masked_recipient: str
+    expires_at: datetime
+    permissions: List[str]
+
+
+class AcceptInvitationResponse(BaseModel):
+    bar_id: int
+    bar_name: str
+    role: str
+    permissions: List[str]
+    message: str
 
 
 # ROUTES
@@ -257,27 +289,192 @@ async def get_my_bars(user: AuthUser = Depends(get_current_user)):
     return result
 
 
-@my_bars_router.post("/accept-invitation")
-async def accept_invitation(invitation_code: str, user: AuthUser = Depends(get_current_user)):
-    """Accept a staff invitation."""
+def _mask_recipient(email, phone):
+    if email:
+        local, _, domain = email.partition("@")
+        if len(local) <= 2:
+            masked_local = local[0] + "*" * max(len(local)-1, 1)
+        else:
+            masked_local = local[0] + "*" * (len(local)-2) + local[-1]
+        return f"{masked_local}@{domain}"
+    if phone:
+        digits = "".join(ch for ch in phone if ch.isdigit())
+        if len(digits) <= 4:
+            return "*" * len(digits)
+        return "*" * (len(digits)-4) + digits[-4:]
+    return ""
+
+
+def _normalize_phone(value):
+    return "".join(ch for ch in (value or "") if ch.isdigit())
+
+
+def _recipient_matches(invitation, user):
+    if _record_get(invitation, "email"):
+        if not user.email:
+            return False
+        if _record_get(invitation, "email").strip().lower() != user.email.strip().lower():
+            return False
+    if _record_get(invitation, "phone"):
+        if not user.phone_number:
+            return False
+        if _normalize_phone(_record_get(invitation, "phone")) != _normalize_phone(user.phone_number):
+            return False
+    return True
+
+
+def _require_verified_contact(invitation, user):
+    """Fail closed: matching contact must be server-verified on the user."""
+    invitation_email = _record_get(invitation, "email")
+    invitation_phone = _record_get(invitation, "phone")
+    if invitation_email and not user.email_verified:
+        raise APIError(
+            403, ErrorCode.INVITATION_CONTACT_UNVERIFIED,
+            "Invitation recipient email is not verified",
+        )
+    if invitation_phone and not user.phone_verified:
+        raise APIError(
+            403, ErrorCode.INVITATION_CONTACT_UNVERIFIED,
+            "Invitation recipient phone is not verified",
+        )
+
+
+def _invitation_expired(invitation):
+    expires_at = invitation["expires_at"]
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    return expires_at < datetime.now(timezone.utc)
+
+
+@my_bars_router.post("/invitations/preview", response_model=InvitationPreviewResponse)
+async def preview_invitation(payload: InvitationCodeRequest, user: AuthUser = Depends(get_current_user)):
     invitation = await database.fetch_one(
         StaffInvitation.__table__.select().where(
-            StaffInvitation.invitation_code == invitation_code
+            StaffInvitation.invitation_code == payload.invitation_code
         )
     )
     if not invitation:
-        raise APIError.not_found("Invitation")
-    if invitation["status"] != "pending":
-        raise HTTPException(status_code=400, detail=f"Invitation is {invitation['status']}")
-    if invitation["expires_at"] < datetime.now(timezone.utc):
-        raise HTTPException(status_code=400, detail="Invitation expired")
-    
-    role = BarRole(invitation["role"])
-    await add_user_to_bar(user.id, invitation["bar_id"], role, invitation["invited_by_id"])
-    
-    await database.execute(
-        StaffInvitation.__table__.update()
-        .where(StaffInvitation.id == invitation["id"])
-        .values(status="accepted", accepted_at=datetime.now(timezone.utc))
+        raise APIError(404, ErrorCode.INVITATION_INVALID, "Invitation not found")
+    if invitation["status"] == "revoked":
+        raise APIError(410, ErrorCode.INVITATION_REVOKED, "Invitation revoked")
+    if invitation["status"] == "expired" or _invitation_expired(invitation):
+        raise APIError(410, ErrorCode.INVITATION_EXPIRED, "Invitation expired")
+    if invitation["status"] == "accepted":
+        accepted_by = invitation.get("accepted_by_user_id")
+        if accepted_by is not None and accepted_by != user.id:
+            raise APIError(409, ErrorCode.INVITATION_ALREADY_USED, "Invitation already used")
+        if accepted_by not in (None, user.id):
+            raise APIError(410, ErrorCode.BAD_REQUEST, "Invitation already used")
+    if not _recipient_matches(invitation, user):
+        raise APIError(403, ErrorCode.INVITATION_CONTACT_MISMATCH, "Invitation recipient does not match authenticated user")
+    _require_verified_contact(invitation, user)
+
+    bar = await database.fetch_one(
+        Bar.__table__.select().where(Bar.id == invitation["bar_id"])
     )
-    return {"message": "Invitation accepted", "bar_id": invitation["bar_id"], "role": invitation["role"]}
+    if not bar:
+        raise APIError(404, ErrorCode.NOT_FOUND, "Bar not found")
+
+    role = BarRole(invitation["role"])
+    permissions = [p.value for p in get_permissions_for_role(role)]
+    expires_at = invitation["expires_at"]
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+
+    return InvitationPreviewResponse(
+        venue_name=bar["name"],
+        venue_address=_record_get(bar, "address"),
+        venue_image_url=_record_get(bar, "logo_url") or _record_get(bar, "cover_url"),
+        role=invitation["role"],
+        masked_recipient=_mask_recipient(_record_get(invitation, "email"), _record_get(invitation, "phone")),
+        expires_at=expires_at,
+        permissions=permissions,
+    )
+
+
+@my_bars_router.post("/accept-invitation", response_model=AcceptInvitationResponse)
+async def accept_invitation(
+    payload: Optional[InvitationCodeRequest] = Body(None),
+    invitation_code: Optional[str] = Query(None),
+    user: AuthUser = Depends(get_current_user),
+):
+    if payload is not None and invitation_code is not None and payload.invitation_code != invitation_code:
+        raise APIError(400, ErrorCode.BAD_REQUEST, "Conflicting invitation_code values")
+    code = payload.invitation_code if payload is not None else invitation_code
+    if not code:
+        raise APIError(400, ErrorCode.VALIDATION_ERROR, "invitation_code is required")
+
+    invitation = await database.fetch_one(
+        StaffInvitation.__table__.select().where(
+            StaffInvitation.invitation_code == code
+        )
+    )
+    if not invitation:
+        raise APIError(404, ErrorCode.INVITATION_INVALID, "Invitation not found")
+    if invitation["status"] == "revoked":
+        raise APIError(410, ErrorCode.INVITATION_REVOKED, "Invitation revoked")
+    if invitation["status"] == "expired" or _invitation_expired(invitation):
+        raise APIError(410, ErrorCode.INVITATION_EXPIRED, "Invitation expired")
+    if not _recipient_matches(invitation, user):
+        raise APIError(403, ErrorCode.INVITATION_CONTACT_MISMATCH, "Invitation recipient does not match authenticated user")
+    _require_verified_contact(invitation, user)
+
+    accepted_by = _record_get(invitation, "accepted_by_user_id")
+    if invitation["status"] == "accepted":
+        if accepted_by is not None and accepted_by != user.id:
+            raise APIError(409, ErrorCode.INVITATION_ALREADY_USED, "Invitation already used by another user")
+        # Replay: return current active membership, never restore removed access.
+        current_staff = await database.fetch_one(
+            BarStaff.__table__.select().where(
+                (BarStaff.user_id == user.id) &
+                (BarStaff.bar_id == invitation["bar_id"]) &
+                (BarStaff.is_active == True)
+            )
+        )
+        bar = await database.fetch_one(Bar.__table__.select().where(Bar.id == invitation["bar_id"]))
+        if current_staff:
+            current_role = BarRole(current_staff["role"])
+            current_permissions = [p.value for p in get_permissions_for_role(current_role)]
+            return AcceptInvitationResponse(
+                bar_id=invitation["bar_id"],
+                bar_name=bar["name"] if bar else "",
+                role=current_role.value,
+                permissions=current_permissions,
+                message="Invitation already accepted",
+            )
+        raise APIError(403, ErrorCode.INVITATION_ALREADY_USED, "Invitation already accepted; no active membership")
+
+    if invitation["status"] != "pending":
+        raise APIError(410, ErrorCode.INVITATION_ALREADY_USED, "Invitation is not pending")
+
+    role = BarRole(invitation["role"])
+    bar = await database.fetch_one(Bar.__table__.select().where(Bar.id == invitation["bar_id"]))
+    if not bar:
+        raise APIError(404, ErrorCode.NOT_FOUND, "Bar not found")
+
+    async with database.transaction():
+        await add_user_to_bar(user.id, invitation["bar_id"], role, invitation["invited_by_id"])
+        result = await database.execute(
+            StaffInvitation.__table__.update()
+            .where(
+                (StaffInvitation.id == invitation["id"]) &
+                (StaffInvitation.status == "pending")
+            )
+            .values(
+                status="accepted",
+                accepted_at=datetime.now(timezone.utc),
+                accepted_by_user_id=user.id,
+            )
+            .returning(StaffInvitation.c.id)
+        )
+        if not result:
+            raise APIError(409, ErrorCode.CONFLICT, "Invitation already used")
+
+    permissions = [p.value for p in get_permissions_for_role(role)]
+    return AcceptInvitationResponse(
+        bar_id=invitation["bar_id"],
+        bar_name=bar["name"],
+        role=invitation["role"],
+        permissions=permissions,
+        message="Invitation accepted",
+    )
