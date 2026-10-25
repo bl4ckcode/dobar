@@ -162,7 +162,8 @@ async def invite_staff(
         )
     
     invitation_code = secrets.token_urlsafe(16)
-    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+    # Use naive UTC — StaffInvitation.expires_at is DateTime(timezone=False)
+    expires_at_naive = datetime.utcnow() + timedelta(days=7)
     
     if existing_user:
         existing_staff = await database.fetch_one(
@@ -172,11 +173,8 @@ async def invite_staff(
         )
         if existing_staff and existing_staff["is_active"]:
             raise HTTPException(status_code=409, detail="User already staff at this bar")
-        
-        await add_user_to_bar(existing_user["id"], bar_id, role, auth.user.id)
-        status_val = "accepted"
-    else:
-        status_val = "pending"
+    # All invitations start pending — no auto-accept, even for existing users.
+    status_val = "pending"
     
     invitation_data = {
         "bar_id": bar_id,
@@ -185,7 +183,7 @@ async def invite_staff(
         "role": role.value,
         "invitation_code": invitation_code,
         "status": status_val,
-        "expires_at": expires_at,
+        "expires_at": expires_at_naive,
         "invited_by_id": auth.user.id,
     }
     
@@ -196,7 +194,7 @@ async def invite_staff(
     return StaffInvitationResponse(
         id=inv_id, bar_id=bar_id, email=email, phone=phone,
         role=role.value, status=status_val, invitation_code=invitation_code,
-        expires_at=expires_at
+        expires_at=expires_at_naive
     )
 
 
@@ -231,7 +229,7 @@ async def update_staff_role(
     await database.execute(
         BarStaff.__table__.update()
         .where(BarStaff.id == staff_id)
-        .values(role=new_role.value, updated_at=datetime.now(timezone.utc))
+        .values(role=new_role.value, updated_at=datetime.utcnow())
     )
     
     return {
@@ -262,7 +260,7 @@ async def remove_staff(
     await database.execute(
         BarStaff.__table__.update()
         .where(BarStaff.id == staff_id)
-        .values(is_active=False, updated_at=datetime.now(timezone.utc))
+        .values(is_active=False, updated_at=datetime.utcnow())
     )
     return {"message": "Staff member removed"}
 
@@ -310,15 +308,20 @@ def _normalize_phone(value):
 
 
 def _recipient_matches(invitation, user):
-    if _record_get(invitation, "email"):
+    inv_email = _record_get(invitation, "email")
+    inv_phone = _record_get(invitation, "phone")
+    # Reject malformed invitations where both contacts are NULL — fail closed.
+    if not inv_email and not inv_phone:
+        return False
+    if inv_email:
         if not user.email:
             return False
-        if _record_get(invitation, "email").strip().lower() != user.email.strip().lower():
+        if inv_email.strip().lower() != user.email.strip().lower():
             return False
-    if _record_get(invitation, "phone"):
+    if inv_phone:
         if not user.phone_number:
             return False
-        if _normalize_phone(_record_get(invitation, "phone")) != _normalize_phone(user.phone_number):
+        if _normalize_phone(inv_phone) != _normalize_phone(user.phone_number):
             return False
     return True
 
@@ -331,11 +334,13 @@ def _require_verified_contact(invitation, user):
         raise APIError(
             403, ErrorCode.INVITATION_CONTACT_UNVERIFIED,
             "Invitation recipient email is not verified",
+            details={"contact_type": ["email"]},
         )
     if invitation_phone and not user.phone_verified:
         raise APIError(
             403, ErrorCode.INVITATION_CONTACT_UNVERIFIED,
             "Invitation recipient phone is not verified",
+            details={"contact_type": ["phone"]},
         )
 
 
@@ -360,7 +365,7 @@ async def preview_invitation(payload: InvitationCodeRequest, user: AuthUser = De
     if invitation["status"] == "expired" or _invitation_expired(invitation):
         raise APIError(410, ErrorCode.INVITATION_EXPIRED, "Invitation expired")
     if invitation["status"] == "accepted":
-        accepted_by = invitation.get("accepted_by_user_id")
+        accepted_by = _record_get(invitation, "accepted_by_user_id")
         if accepted_by is not None and accepted_by != user.id:
             raise APIError(409, ErrorCode.INVITATION_ALREADY_USED, "Invitation already used")
         if accepted_by not in (None, user.id):
@@ -375,7 +380,10 @@ async def preview_invitation(payload: InvitationCodeRequest, user: AuthUser = De
     if not bar:
         raise APIError(404, ErrorCode.NOT_FOUND, "Bar not found")
 
-    role = BarRole(invitation["role"])
+    try:
+        role = BarRole(invitation["role"])
+    except ValueError:
+        raise APIError(422, ErrorCode.VALIDATION_ERROR, "Invalid role stored in invitation")
     permissions = [p.value for p in get_permissions_for_role(role)]
     expires_at = invitation["expires_at"]
     if expires_at.tzinfo is None:
@@ -413,12 +421,8 @@ async def accept_invitation(
         raise APIError(404, ErrorCode.INVITATION_INVALID, "Invitation not found")
     if invitation["status"] == "revoked":
         raise APIError(410, ErrorCode.INVITATION_REVOKED, "Invitation revoked")
-    if invitation["status"] == "expired" or _invitation_expired(invitation):
-        raise APIError(410, ErrorCode.INVITATION_EXPIRED, "Invitation expired")
-    if not _recipient_matches(invitation, user):
-        raise APIError(403, ErrorCode.INVITATION_CONTACT_MISMATCH, "Invitation recipient does not match authenticated user")
-    _require_verified_contact(invitation, user)
-
+    # Accepted check before expiry: a same-user replay after expiry returns
+    # current active access, never 410, and never restores removed access.
     accepted_by = _record_get(invitation, "accepted_by_user_id")
     if invitation["status"] == "accepted":
         if accepted_by is not None and accepted_by != user.id:
@@ -443,17 +447,36 @@ async def accept_invitation(
                 message="Invitation already accepted",
             )
         raise APIError(403, ErrorCode.INVITATION_ALREADY_USED, "Invitation already accepted; no active membership")
+    if invitation["status"] == "expired" or _invitation_expired(invitation):
+        raise APIError(410, ErrorCode.INVITATION_EXPIRED, "Invitation expired")
+    if not _recipient_matches(invitation, user):
+        contact_types = []
+        if _record_get(invitation, "email"):
+            contact_types.append("email")
+        if _record_get(invitation, "phone"):
+            contact_types.append("phone")
+        raise APIError(
+            403, ErrorCode.INVITATION_CONTACT_MISMATCH,
+            "Invitation recipient does not match authenticated user",
+            details={"contact_type": contact_types},
+        )
+    _require_verified_contact(invitation, user)
 
     if invitation["status"] != "pending":
         raise APIError(410, ErrorCode.INVITATION_ALREADY_USED, "Invitation is not pending")
 
-    role = BarRole(invitation["role"])
+    try:
+        role = BarRole(invitation["role"])
+    except ValueError:
+        raise APIError(422, ErrorCode.VALIDATION_ERROR, "Invalid role stored in invitation")
     bar = await database.fetch_one(Bar.__table__.select().where(Bar.id == invitation["bar_id"]))
     if not bar:
         raise APIError(404, ErrorCode.NOT_FOUND, "Bar not found")
 
     async with database.transaction():
         await add_user_to_bar(user.id, invitation["bar_id"], role, invitation["invited_by_id"])
+        # Use naive UTC datetime — StaffInvitation.accepted_at is DateTime(timezone=False)
+        now_naive = datetime.utcnow()
         result = await database.execute(
             StaffInvitation.__table__.update()
             .where(
@@ -462,10 +485,10 @@ async def accept_invitation(
             )
             .values(
                 status="accepted",
-                accepted_at=datetime.now(timezone.utc),
+                accepted_at=now_naive,
                 accepted_by_user_id=user.id,
             )
-            .returning(StaffInvitation.c.id)
+            .returning(StaffInvitation.__table__.c.id)
         )
         if not result:
             raise APIError(409, ErrorCode.CONFLICT, "Invitation already used")

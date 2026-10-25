@@ -475,22 +475,24 @@ async def add_user_to_bar(
     )
     
     if existing:
-        # Update existing record
+        # Update existing record — use naive UTC for DateTime(timezone=False) columns
+        now_naive = datetime.utcnow()
         await database.execute(
             BarStaff.__table__.update()
             .where(BarStaff.id == existing["id"])
-            .values(role=role.value, is_active=True, updated_at=datetime.now(timezone.utc))
+            .values(role=role.value, is_active=True, updated_at=now_naive)
         )
         return {"action": "updated", "role": role.value}
     
-    # Create new record
+    # Create new record — use naive UTC for DateTime(timezone=False) columns
+    now_naive = datetime.utcnow()
     staff_data = {
         "user_id": user_id,
         "bar_id": bar_id,
         "role": role.value,
         "is_active": True,
         "invited_by_id": invited_by_id,
-        "accepted_at": datetime.now(timezone.utc),
+        "accepted_at": now_naive,
     }
     
     await database.execute(BarStaff.__table__.insert().values(**staff_data))
@@ -524,6 +526,6 @@ async def remove_user_from_bar(user_id: int, bar_id: int) -> bool:
     result = await database.execute(
         BarStaff.__table__.update()
         .where((BarStaff.user_id == user_id) & (BarStaff.bar_id == bar_id))
-        .values(is_active=False, updated_at=datetime.now(timezone.utc))
+        .values(is_active=False, updated_at=datetime.utcnow())
     )
     return result > 0

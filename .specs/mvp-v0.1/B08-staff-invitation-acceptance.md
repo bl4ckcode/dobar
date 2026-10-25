@@ -23,9 +23,9 @@ Deliver the staff invitation acceptance pilot journey for the Belo Horizonte MVP
 
 ## Current implementation evidence and gaps
 
-Independent checkout verification on 2026-10-25 found the FE invitation page and BE preview/JSON-plus-query/full-access response declarations implemented. This supersedes the preimplementation gap descriptions embedded in the generated FE/heavy-ui handoffs. Real database records break the new recipient checks (`.get()` is unsupported); verified-contact enforcement, PostgreSQL write-result handling, migration compatibility and current-membership replay remain defective. FE issuer-token parsing and acceptance error propagation also failed focused probes. Login resume and the product journey remain incomplete.
+Independent backend verification on 2026-10-25 at HEAD `8844c697` plus the working-tree fixes found actual-record preview, contact guards, both pending-only issuers, SQLite JSON/query acceptance/readback and late accepted replay working with synthetic verification flags. The new verification migration passed a bounded real PostgreSQL upgrade preserving an existing user. Application inserts still bind NULL verification flags, however, and valid PostgreSQL acceptance fails on timezone-aware values bound to timezone-naive timestamp columns. The staff/auth suite reports 27 failed, 5 passed and 3 errors; concurrent SQLite acceptance returns 200/500. No auth provider path establishes verified state, and malformed persisted contact/role checks fail. Earlier FE parsing/login findings were not rerun in this backend-only pass. Login resume and the product journey remain incomplete.
 
-The [criterion evidence and actionable follow-ups](pilot/validation-checklist.md) distinguish raw database checks from dictionary/mock diagnostics. B07 pending-only issuance/delivery remains a separate prerequisite; current issuance still grants existing users membership before explicit acceptance. No whole-journey validation is claimed.
+The [criterion evidence and actionable follow-ups](pilot/validation-checklist.md) supersede older backend handoff results and separate passed components from failed, blocked and skipped checks. Both issuer components now remain pending without membership; B07 authorization/delivery and the remaining FE/product journey still require evidence. No whole-journey validation is claimed.
 
 Observed source references (see the criterion record for executed checks and their limits):
 
@@ -57,7 +57,7 @@ Use [FE/BE contract](../../docs/FE_BE_COMMUNICATION.md) for durable interfaces; 
 
 ## Delivery and verification
 
-Delivery remains incomplete, subject to the listed dependencies and verification findings. Verification: unverified; the independent 2026-10-25 checks found backend and FE contract failures. Product E2E is blocked because no runner is configured. See the [criterion record](pilot/validation-checklist.md); passing foundation checks establish artifact structure only.
+Delivery remains incomplete, subject to the listed dependencies and verification findings. Verification: unverified; the independent 2026-10-25 backend checks found runtime failures, and frontend/product criteria remain incomplete. Product E2E is blocked because no runner is configured. See the [criterion record](pilot/validation-checklist.md); passing foundation checks establish artifact structure only.
 
 ## Source requirements
 

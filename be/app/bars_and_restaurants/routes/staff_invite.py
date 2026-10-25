@@ -101,7 +101,8 @@ async def invite_staff_simple(
         )
     
     invitation_code = secrets.token_urlsafe(16)
-    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+    # Use naive UTC — StaffInvitation.expires_at is DateTime(timezone=False)
+    expires_at = datetime.utcnow() + timedelta(days=7)
     
     if existing_user:
         # Check if already a staff member

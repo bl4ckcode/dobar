@@ -35,7 +35,7 @@ status: translated
 | `RoleBadge` | `_RoleBadge` |
 | `ThemeToggle` | `_ThemeToggle` |
 | `copy.ts` ptBR dictionary | `app_pt.arb` `invitation_*` keys (74 entries) |
-| `parseInvitationCode` | `InvitationCubit._parseCode` (same DBR-XXXX-XXXX format, dobar.app host) |
+| `parseInvitationCode` | `InvitationCubit._parseCode` retains the DBR pattern and legacy dobar.app link parsing; current FE preserves captured character case, but still rejects actual opaque issuer tokens and canonical pasted `?code=` links in independent probes. |
 
 ## State coverage
 

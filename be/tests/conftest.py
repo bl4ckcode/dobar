@@ -238,7 +238,9 @@ async def test_user_in_db(cleanup_database):
         "firebase_uid": "test_firebase_uid_123",
         "phone_number": "+1234567890",
         "email": "test@example.com",
-        "is_active": True
+        "is_active": True,
+        "email_verified": False,
+        "phone_verified": False,
     }
     user_id = await test_database.execute(User.__table__.insert().values(**user_data))
     return {"id": user_id, **user_data}

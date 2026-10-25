@@ -23,6 +23,8 @@ class TestBarContextHeaders:
             "phone_number": f"+1500000{abs(hash(email_suffix)) % 100000:05d}",
             "email": f"{email_suffix}@test.com",
             "is_active": True,
+            "email_verified": False,
+            "phone_verified": False,
         }
         user_id = await database.execute(User.__table__.insert().values(**user_data))
         return {"id": user_id, **user_data}

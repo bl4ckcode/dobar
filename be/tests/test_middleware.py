@@ -25,7 +25,9 @@ class TestAuthenticationMiddleware:
         user_data = {
             "email": "test@example.com",
             "google_id": "test_google_id",
-            "is_active": True
+            "is_active": True,
+            "email_verified": False,
+            "phone_verified": False,
         }
         user_id = await database.execute(User.__table__.insert().values(**user_data))
         
@@ -64,7 +66,9 @@ class TestAuthenticationMiddleware:
         user_data = {
             "email": "expired@example.com",
             "google_id": "test_google_id_expired",
-            "is_active": True
+            "is_active": True,
+            "email_verified": False,
+            "phone_verified": False,
         }
         user_id = await database.execute(User.__table__.insert().values(**user_data))
         

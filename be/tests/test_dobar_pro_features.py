@@ -33,7 +33,9 @@ async def pro_user_in_db(cleanup_database):
         "phone_number": "+1999999999",
         "email": "pro@example.com",
         "is_active": True,
-        "subscription_tier": "pro"
+        "subscription_tier": "pro",
+        "email_verified": False,
+        "phone_verified": False,
     }
     user_id = await database.execute(User.__table__.insert().values(**user_data))
     return {"id": user_id, **user_data}

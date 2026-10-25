@@ -260,7 +260,13 @@ async def phone_login(request: Request, firebase_user=Depends(verify_firebase_to
     
     if not user:
         is_new = True
-        user_data = {"firebase_uid": firebase_uid, "phone_number": phone_number, "is_active": True}
+        user_data = {
+            "firebase_uid": firebase_uid,
+            "phone_number": phone_number,
+            "is_active": True,
+            "phone_verified": True,   # Firebase phone-login is an authenticated phone claim
+            "email_verified": False,
+        }
         user_id = await database.execute(User.__table__.insert().values(**user_data))
         user = await database.fetch_one(User.__table__.select().where(User.id == user_id))
     
@@ -305,7 +311,13 @@ async def google_login(request: Request, login_data: GoogleLogin):
     
     if not user:
         is_new = True
-        user_data = {"google_id": google_id, "email": email, "is_active": True}
+        user_data = {
+            "google_id": google_id,
+            "email": email,
+            "is_active": True,
+            "email_verified": True,   # Google OAuth provides a verified email claim
+            "phone_verified": False,
+        }
         if firebase_uid:
             user_data["firebase_uid"] = firebase_uid
         user_id = await database.execute(User.__table__.insert().values(**user_data))
@@ -359,7 +371,13 @@ async def apple_login(request: Request, login_data: AppleLogin):
     
     if not user:
         is_new = True
-        user_data = {"apple_id": apple_id, "email": email, "is_active": True}
+        user_data = {
+            "apple_id": apple_id,
+            "email": email,
+            "is_active": True,
+            "email_verified": bool(email),  # Apple OAuth email is verified when present
+            "phone_verified": False,
+        }
         if firebase_uid:
             user_data["firebase_uid"] = firebase_uid
         user_id = await database.execute(User.__table__.insert().values(**user_data))
