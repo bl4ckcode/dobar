@@ -1,4 +1,4 @@
-name: Deploy to Fly.io
+name: Deploy BE to Fly.io
 
 on:
   push:

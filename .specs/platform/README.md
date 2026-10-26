@@ -10,6 +10,8 @@ Independent platform capabilities live outside the fixed 25-journey MVP inventor
 |---|---|---|
 | [P01](P01-development-pr-workflow.md) | Isolated dev environment, task worktrees/branches, tested PRs and protected-main rollout | Ready / unverified; implementation is follow-on work |
 
+[P01 planning and handoffs](handoffs/P01-orchestration.md) records the source audit, acceptance gaps, dependency-ordered assignments and verification requirements. Start with its cross-repo-planner handoff; implementation and rollout have not started.
+
 ```sh
 python -m tools.agent_workflow --catalog platform validate
 python -m tools.agent_workflow --catalog platform handoff --spec P01 --role cross-repo-planner
