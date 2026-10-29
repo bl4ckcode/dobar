@@ -34,8 +34,8 @@ class DioNetwork {
       appAPI.interceptors.add(
         LogInterceptor(
           responseBody: true,
-          requestBody: true,
-          requestHeader: true,
+          requestBody: false,
+          requestHeader: false,
           responseHeader: false,
           error: false,
           logPrint: (obj) => print('[DIO] $obj'),

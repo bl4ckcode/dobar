@@ -34,6 +34,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   late LoginBloc _loginBloc;
   String? _phoneNumber;
   String? _pendingInvitationCode;
+  bool _resolvedRouteArguments = false;
   final BiometryService _biometryService = getItInjector<BiometryService>();
 
   late final AnimationController _glowController;
@@ -67,7 +68,14 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     _shimmerAnim = Tween<double>(begin: -1.0, end: 2.0).animate(
       CurvedAnimation(parent: _shimmerController, curve: Curves.easeInOut),
     );
+  }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_resolvedRouteArguments) return;
+    _resolvedRouteArguments = true;
+    // Inherited lookups such as ModalRoute.of are not allowed in initState.
     _pendingInvitationCode =
         widget.pendingInvitationCode ??
         (ModalRoute.of(context)?.settings.arguments as Map?)?['pendingInvitationCode'] as String?;

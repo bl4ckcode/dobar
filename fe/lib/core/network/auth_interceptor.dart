@@ -34,7 +34,7 @@ class AuthInterceptor extends QueuedInterceptor {
     _accessToken ??= await tokenStorage?.getAccessToken();
     _refreshToken ??= await tokenStorage?.getRefreshToken();
 
-    if (_accessToken != null) {
+    if (_accessToken != null && !_isAuthEndpoint(options.path)) {
       options.headers['Authorization'] = 'Bearer $_accessToken';
     }
     options.headers['Accept'] = 'application/json';

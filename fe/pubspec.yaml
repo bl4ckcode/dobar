@@ -32,7 +32,7 @@ dependencies:
   web: ^1.1.1                       # Web platform interop (for JS API calls)
   
   # --- STORAGE (CRITICAL FOR PAYMENTS) ---
-  shared_preferences: ^2.5.3
+  shared_preferences: ^2.5.6
   flutter_secure_storage: ^11.0.0    # Encrypted storage for tokens
   hive: ^2.2.3                      # Local NoSQL database for offline cache
   hive_flutter: ^1.1.0              # Hive Flutter integration
@@ -121,6 +121,12 @@ dev_dependencies:
   freezed: ^3.2.3                   # Updated to v3
   flutter_launcher_icons: ^0.14.4   # Added
   flutter_native_splash: ^2.4.6     # Added
+
+dependency_overrides:
+  # 2.6.0 switched iOS/macOS to Pigeon FFI, which fails NSString lookup on iOS 27.
+  shared_preferences_foundation: 2.5.6
+  # 2.6.0 switched to direct Foundation FFI, which fails NSArray lookup on iOS 27.
+  path_provider_foundation: 2.5.1
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

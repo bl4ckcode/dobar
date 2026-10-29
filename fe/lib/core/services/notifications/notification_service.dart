@@ -131,6 +131,14 @@ class NotificationService {
   Future<void> _initializeAsync() async {
     if (_initialized) return;
 
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      debugPrint(
+        '[FCM] Remote notifications are disabled on iOS until APNs is configured',
+      );
+      _initialized = true;
+      return;
+    }
+
     try {
       // Check current permission status first (doesn't prompt)
       final currentSettings = await _fcm.getNotificationSettings();
@@ -160,6 +168,13 @@ class NotificationService {
   /// Request permission and initialize - call this when user needs notifications
   /// e.g., after login, or when they enable a notification-dependent feature
   Future<bool> requestPermissionAndInitialize() async {
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      debugPrint(
+        '[FCM] Remote notifications are disabled on iOS until APNs is configured',
+      );
+      return false;
+    }
+
     try {
       final settings = await _fcm.requestPermission(
         alert: true,
@@ -186,7 +201,6 @@ class NotificationService {
   }
 
   Future<void> _setupNotifications() async {
-    // Get FCM token
     _fcmToken = await _fcm.getToken();
     if (_fcmToken != null) {
       debugPrint('[FCM] Token: ${_fcmToken!.substring(0, 20)}...');

@@ -58,28 +58,16 @@ class AppInitializer {
   }
 
   Future<void> _registerFcmToken() async {
-    try {
-      if (Platform.isIOS) {
-        final apnsToken = await FirebaseMessaging.instance.getAPNSToken();
-        if (apnsToken == null) {
-          _debugLog('⏳ Waiting for APNS token on iOS...');
-          // On iOS, FCM registration needs APNS token. If null, we'll wait 
-          // and retry or rely on onTokenRefresh if the system handles it.
-          // We'll attempt a short delay and retry once.
-          await Future.delayed(const Duration(seconds: 3));
-          final retryToken = await FirebaseMessaging.instance.getAPNSToken();
-          if (retryToken == null) {
-            _debugLog('⚠️ APNS token still null after retry.');
-            // We don't return here because getToken() might still work if 
-            // swizzling is enabled, but it's safer to wait.
-          }
-        }
-      }
+    if (Platform.isIOS) {
+      _debugLog('FCM registration is disabled on iOS until APNs is configured.');
+      return;
+    }
 
+    try {
       final token = await FirebaseMessaging.instance.getToken();
       if (token == null) return;
 
-      final platform = Platform.isIOS ? 'ios' : 'android';
+      const platform = 'android';
       await _dio.put(
         '${ApiEndpoints.baseUrl}${ApiEndpoints.fcmToken}',
         data: {'token': token, 'platform': platform},
