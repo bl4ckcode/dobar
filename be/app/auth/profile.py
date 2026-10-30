@@ -496,17 +496,25 @@ async def update_fcm_token(
     return {"message": "FCM token updated"}
 
 
+@profile_router.get("/pro-benefits")
+async def get_pro_benefits(current_user: AuthUser = Depends(get_current_user)):
+    from app.bars_and_restaurants.services.pro_coupon_service import get_allowance
+    return await get_allowance(current_user.id, current_user.is_pro())
+
+
 @profile_router.delete("/data")
 async def delete_user_data(current_user: AuthUser = Depends(get_current_user)):
     from .auth_models import User, Token, RefreshToken
     from .mfa_models import MFASecret
     from .recovery_models import RecoveryToken
-    from app.bars_and_restaurants.models.wallet_models import UserWallet, CashbackLedger
+    from app.bars_and_restaurants.models.wallet_models import UserWallet, CashbackLedger, ProCouponUsage
     from app.bars_and_restaurants.models.cart_models import Cart, CartItem, OrderItem
     from app.bars_and_restaurants.models.relational_models import Order
     import hashlib
 
     uid = current_user.id
+
+    await database.execute(ProCouponUsage.__table__.delete().where(ProCouponUsage.user_id == uid))
 
     await database.execute(CartItem.__table__.delete().where(
         CartItem.cart_id.in_(

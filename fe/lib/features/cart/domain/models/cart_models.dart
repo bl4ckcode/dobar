@@ -72,15 +72,18 @@ class Promotion {
   });
 
   factory Promotion.fromJson(Map<String, dynamic> json) {
+    final resolvedType = (json['promotion_type'] ?? json['type'] ?? 'discount') as String;
     return Promotion(
       id: json['id']?.toString() ?? '',
-      name: json['name'] ?? 'Promotion',
+      name: (json['title'] ?? json['name'] ?? 'Promotion') as String,
       benefit: json['benefit_text'] ?? '',
-      type: json['type'] ?? 'discount',
-      value: (json['value'] as num?)?.toDouble() ?? 0.0,
+      type: resolvedType,
+      value: ((json['discount_value'] ?? json['value']) as num?)?.toDouble() ?? 0.0,
       active: json['is_active_by_default'] ?? false,
     );
   }
+
+  bool get requiresPro => type == 'cashback';
 
   Promotion copyWith({bool? active}) {
     return Promotion(
@@ -91,11 +94,6 @@ class Promotion {
       value: value,
       active: active ?? this.active,
     );
-  }
-
-  double? get cashbackPercentage {
-    final match = RegExp(r'(\d+)%').firstMatch(benefit);
-    return match != null ? double.tryParse(match.group(1)!) : null;
   }
 }
 

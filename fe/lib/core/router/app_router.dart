@@ -278,7 +278,11 @@ final appRouter = GoRouter(
       name: AppRoute.cart.name,
       builder: (context, state) {
         final barId = state.extra as int?;
-        return CartPage(barId: barId);
+        return BlocProvider.value(
+          value: getItInjector<SessionBloc>(),
+          child: CartPage(barId: barId,
+          )
+        );
       },
     ),
     GoRoute(

@@ -66,6 +66,7 @@ class ApiEndpoints {
 
   // Profile endpoints (updated to /me prefix)
   static const String profile = '/me/profile';
+  static const String proBenefits = '/me/pro-benefits';
   static const String acceptTerms = '/me/accept-terms';
   static const String acceptPrivacy = '/me/accept-privacy';
   static const String userDataExclusion = '/me/data';

@@ -548,13 +548,16 @@ async def get_bar_promotions(bar_id: int):
     
     result = []
     current_time = int(time.time())
-    
+
     for promo in promotions:
         promo_dict = dict(promo)
-        # Handle image URL signing if present
         if promo_dict.get("image_url"):
             promo_dict["image_url"] = generate_presigned_url(extract_s3_key(promo_dict["image_url"]))
             promo_dict["image_url_expiration"] = current_time + 3600
+        promo_dict["name"] = promo_dict.get("title")
+        promo_dict["type"] = promo_dict.get("promotion_type", "discount")
+        promo_dict["value"] = promo_dict.get("discount_value", 0.0)
+        promo_dict["requires_pro"] = promo_dict.get("promotion_type") == "cashback"
         result.append(promo_dict)
-    
+
     return result

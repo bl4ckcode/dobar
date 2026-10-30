@@ -212,45 +212,49 @@ class CartService:
                 related_field="location_identifier"
             ))
 
-        # 3. Calculate Discounts (Promotions)
-        discount_total = 0.0
+        # 3. Calculate Discounts and Pro Cashback (Promotions)
+        from app.bars_and_restaurants.services.pro_coupon_service import (
+            validate_and_partition_promotions, get_allowance
+        )
+        from app.auth.auth_models import User
+
+        user_row = await database.fetch_one(User.__table__.select().where(User.id == user_id))
+        is_pro = user_row["subscription_tier"] == "pro" if user_row else False
+
+        promo_result = await validate_and_partition_promotions(
+            user_id=user_id,
+            is_pro=is_pro,
+            bar_id=bar_id,
+            subtotal=subtotal,
+            active_promotion_ids=request.active_promotion_ids or [],
+            strict=False
+        )
+
+        for issue in promo_result["validation_issues"]:
+            validation_issues.append(CartValidationIssue(
+                severity=issue["severity"],
+                message=issue["message"],
+                related_field=issue.get("related_field")
+            ))
+
+        discount_total = float(promo_result["discount_amount"])
+        cashback_earned = float(promo_result["cashback_amount"])
+        accepted_ids = promo_result["accepted_promotion_ids"]
+
         applied_promos = []
-        
-        if request.active_promotion_ids:
-            # Fetch promos from DB (could be cached too)
-            # Simple logic for now: Percentage discount
-            query = Promotion.__table__.select().where(Promotion.id.in_(request.active_promotion_ids))
-            promos = await database.fetch_all(query)
-            
-            for p in promos:
-                p_dict = dict(p)
-                if not p_dict["is_active"]:
-                    validation_issues.append(CartValidationIssue(
-                        severity="warning",
-                        message=f"Promotion {p_dict['title']} is no longer active",
-                        related_field="active_promotion_ids"
-                    ))
-                    continue
-                    
-                # Apply discount
-                if p_dict["discount_type"] == "percentage":
-                    # Simple calculation: apply to subtotal
-                    # In real app, might apply to specific items
-                    promo_amt = subtotal * (p_dict["discount_value"] / 100.0)
-                    discount_total += promo_amt
-                    applied_promos.append(PromotionApplied(
-                        id=p_dict["id"],
-                        name=p_dict["title"],
-                        amount=promo_amt
-                    ))
-        
+        if promo_result["discount_amount"] > 0:
+            applied_promos.append(PromotionApplied(id=0, name="Desconto", amount=discount_total))
+
+        allowance = await get_allowance(user_id, is_pro)
+
         # 4. Final Totals
-        tax_rate = 0.0 # simplified
+        tax_rate = 0.0
         tip = 0.0
         delivery_fee = 0.0
-        
+
         total = subtotal - discount_total + (subtotal * tax_rate) + tip + delivery_fee
-        
+
+        from app.bars_and_restaurants.schemas.cart import ProCouponAllowance
         return CartResponse(
             items=items_view,
             total_items=total_items,
@@ -262,5 +266,8 @@ class CartService:
             total=total,
             validation_issues=validation_issues,
             location_status=location_status,
-            available_promotions=applied_promos
+            available_promotions=applied_promos,
+            pro_coupon_allowance=ProCouponAllowance(**allowance),
+            cashback_earned=cashback_earned,
+            accepted_promotion_ids=accepted_ids,
         )

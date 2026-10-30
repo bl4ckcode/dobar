@@ -39,7 +39,7 @@ from app.bars_and_restaurants.models.relational_models import (
 )
 from app.bars_and_restaurants.models.cart_models import OrderItem, OrderStatusHistory, Cart, CartItem
 from app.bars_and_restaurants.models.bank_account import BarBankAccount
-from app.bars_and_restaurants.models.wallet_models import CashbackLedger, UserWallet, BarWallet
+from app.bars_and_restaurants.models.wallet_models import CashbackLedger, UserWallet, BarWallet, ProCouponUsage
 from app.advertising.models import (
     AdvertisingSubscription, AdvertisingCampaign, AdvertisingImpression,
     RegionPricing, AdvertisingInvoice

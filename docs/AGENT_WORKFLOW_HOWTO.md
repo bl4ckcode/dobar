@@ -137,6 +137,7 @@ Investigate and fix a cashier operating-day expiry regression in the
 DOB-85 / B05 area, if reproducible on this checkout.
 Expected behavior: B05-AC05. Observed behavior: [describe failure].
 Reproduction/environment: [steps, venue hours/timezone, timestamps].
+Affected revision: [commit and relevant local changes].
 
 Read AGENTS.md, be/AGENTS.md and:
 - .agents/skills/dobar-bugfix/SKILL.md
@@ -148,10 +149,25 @@ editing, identify the cause, make a narrow compatible correction and
 run a meaningful regression check. If it does not reproduce, report
 the evidence rather than forcing a patch. Reuse/refine B05 in place
 if acceptance needs clarification. Use dobar-communication-docs if
-the boundary behavior changes. Do not commit, push or deploy.
+the boundary behavior changes.
+
+If no safe fix is possible, state whether the outcome is not reproduced,
+blocked by missing evidence, needs a product decision, or is a feature
+candidate. Save diagnosis in .agent-workflow/reports/[issue-or-slug]-diagnosis.md,
+a complete Linear draft in .agent-workflow/tickets/[issue-or-slug].md,
+and an actionable assignment in .agent-workflow/handoffs/[issue-or-slug]-[role].md
+when another role must act. Include evidence limits, missing inputs/decisions,
+receiving role, prerequisites, scope, acceptance/checks and a starting prompt.
+Do not create a standalone bug/design spec or invent source requirements.
+Return exact artifact paths and publication state. Prepare local drafts only;
+do not publish Linear changes, commit, push or deploy.
 ```
 
 A bounded bug needs no orchestration session. If diagnosis reveals several incompatible contracts or an unresolved product decision, return that specific finding and request a planning decision; do not silently turn the fix into a broad refactor.
+
+Bug diagnosis, ticket drafts and assignment handoffs use ignored `.agent-workflow/` paths; they are not durable journey specs. Refine the existing journey's acceptance in place when supported by approved intent. Product decides whether a genuinely independent capability needs a new registered spec. A report's presence under `.specs/mvp-v0.1` does not register it with the workflow CLI.
+
+To authorize publication as part of a future bug assignment, replace the draft-only boundary with: “Use dobar-linear to search for an existing matching issue, then create or update only this bug's issue in the DOB team. Preserve human content, apply affected-area/type labels and the current cycle when applicable, read back the result, and link its actual ID/URL from the draft and handoff. If access is unavailable, deliver local artifacts and the reason.” An unresolved benefit or feature decision still goes to product; publication does not make it ready to implement. The spec exporter generates feature parent/area tasks, so do not synchronize an entire journey to register a standalone bug.
 
 ## Scenario 5: Independently verify implementation
 

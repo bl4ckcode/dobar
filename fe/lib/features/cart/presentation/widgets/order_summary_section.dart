@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:barz/core/design/tokens/colors.dart';
 import '../../domain/models/cart_models.dart';
+import '../../domain/models/cart_model.dart';
 
 class OrderSummarySection extends StatefulWidget {
   final List<CartItem> items;
@@ -13,6 +14,9 @@ class OrderSummarySection extends StatefulWidget {
   final bool isPro;
   final bool isExpanded;
   final VoidCallback onToggle;
+  final ProCouponAllowance? proCouponAllowance;
+  final double cashbackPreview;
+  final List<String> acceptedPromotionIds;
 
   const OrderSummarySection({
     super.key,
@@ -26,6 +30,9 @@ class OrderSummarySection extends StatefulWidget {
     this.overrideTotal,
     this.overrideDiscount,
     this.isLoading = false,
+    this.proCouponAllowance,
+    this.cashbackPreview = 0.0,
+    this.acceptedPromotionIds = const [],
   });
 
   @override
@@ -48,11 +55,7 @@ class _OrderSummarySectionState extends State<OrderSummarySection> {
         (widget.coupon?.calculateDiscount(subtotal) ?? 0);
 
     final activePromos = widget.promotions.where((p) => p.active).toList();
-    final cashbackPercentage = activePromos.fold<double>(
-      0,
-      (sum, p) => sum + (p.cashbackPercentage ?? 0),
-    );
-    final cashbackAmount = subtotal * (cashbackPercentage / 100);
+    final cashbackAmount = widget.cashbackPreview;
 
     final total = widget.overrideTotal ?? (subtotal - couponDiscount);
 
@@ -129,7 +132,7 @@ class _OrderSummarySectionState extends State<OrderSummarySection> {
                       if (cashbackAmount > 0) ...[
                         const SizedBox(height: 10),
                         _SummaryRow(
-                          label: widget.isPro ? 'Cashback (PRO 10%)' : 'Cashback (${cashbackPercentage.toInt()}%)',
+                          label: widget.isPro ? 'Cashback (PRO 10%)' : 'Cashback',
                           value: '+\$${cashbackAmount.toStringAsFixed(2)}',
                           isDark: isDark,
                           isHighlight: true,

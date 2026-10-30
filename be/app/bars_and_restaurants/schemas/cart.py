@@ -107,9 +107,11 @@ class CheckoutResponse(BaseModel):
     payment_status: str
     payment_id: Optional[str] = None
     total: float
+    discount: float = 0.0
+    cashback_earned: float = 0.0
     estimated_ready_time: Optional[datetime] = None
     message: str = "Order created successfully"
-    
+
     # PIX payment fields (for async payment confirmation)
     pix_qr_code: Optional[str] = None
     pix_copia_e_cola: Optional[str] = None
@@ -161,6 +163,17 @@ class CartItemView(BaseModel):
     picture: Optional[str] = None
     special_instructions: Optional[str] = None
 
+class ProCouponAllowance(BaseModel):
+    is_pro: bool = False
+    period_key: str = ""
+    timezone: str = "America/Sao_Paulo"
+    period_resets_at: str = ""
+    monthly_limit: int = 0
+    used_count: int = 0
+    reserved_count: int = 0
+    remaining_count: int = 0
+
+
 class CartResponse(BaseModel):
     items: List[CartItemView]
     total_items: int
@@ -170,11 +183,14 @@ class CartResponse(BaseModel):
     tip: float
     delivery_fee: float
     total: float
-    
+
     validation_issues: List[CartValidationIssue] = []
     location_status: Optional[LocationStatus] = None
-    available_promotions: List[PromotionApplied] = [] # Reusing PromotionApplied or creating new one? 
-    # PromotionApplied in file is {id, name, amount}, seems fine but might need more info like "why eligible"
-    
+    available_promotions: List[PromotionApplied] = []
+
+    pro_coupon_allowance: Optional[ProCouponAllowance] = None
+    cashback_earned: float = 0.0
+    accepted_promotion_ids: List[int] = []
+
     class Config:
         from_attributes = True

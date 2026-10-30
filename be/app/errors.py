@@ -92,6 +92,10 @@ class ErrorCode(str, Enum):
     PROMOTION_NOT_APPLICABLE = "PROMOTION_NOT_APPLICABLE"
     OFFER_ALREADY_REDEEMED = "OFFER_ALREADY_REDEEMED"
 
+    # Pro Coupon Errors
+    PRO_SUBSCRIPTION_REQUIRED = "PRO_SUBSCRIPTION_REQUIRED"
+    PRO_COUPON_QUOTA_EXCEEDED = "PRO_COUPON_QUOTA_EXCEEDED"
+
 
 # Default user-facing messages for each error code
 ERROR_MESSAGES: Dict[ErrorCode, str] = {
@@ -152,6 +156,9 @@ ERROR_MESSAGES: Dict[ErrorCode, str] = {
     ErrorCode.PROMOTION_EXPIRED: "Promotion has expired",
     ErrorCode.PROMOTION_NOT_APPLICABLE: "Promotion is not applicable",
     ErrorCode.OFFER_ALREADY_REDEEMED: "Offer has already been redeemed",
+
+    ErrorCode.PRO_SUBSCRIPTION_REQUIRED: "Dobar Pro subscription required for cashback promotions",
+    ErrorCode.PRO_COUPON_QUOTA_EXCEEDED: "Monthly Pro coupon allowance exhausted",
 }
 
 
@@ -342,6 +349,16 @@ class APIError(Exception):
     @classmethod
     def cart_empty(cls, message: Optional[str] = None):
         return cls(400, ErrorCode.CART_EMPTY, message)
+
+    # ============== Pro Coupon Errors ==============
+
+    @classmethod
+    def pro_subscription_required(cls, message: Optional[str] = None):
+        return cls(403, ErrorCode.PRO_SUBSCRIPTION_REQUIRED, message)
+
+    @classmethod
+    def pro_coupon_quota_exceeded(cls, message: Optional[str] = None):
+        return cls(409, ErrorCode.PRO_COUPON_QUOTA_EXCEEDED, message)
 
 
 # ============== Gateway Error Mapping ==============

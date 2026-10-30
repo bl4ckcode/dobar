@@ -119,3 +119,31 @@ class BarWallet(Base):
     @property
     def total_balance(self) -> Decimal:
         return self.available_balance + self.reserved_balance
+
+
+class ProCouponStatus(str, enum.Enum):
+    RESERVED = "RESERVED"
+    REDEEMED = "REDEEMED"
+    RELEASED = "RELEASED"
+    REFUNDED = "REFUNDED"
+
+
+class ProCouponUsage(Base):
+    __tablename__ = "pro_coupon_usages"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    promotion_id = Column(Integer, ForeignKey("promotions.id", ondelete="SET NULL"), nullable=True, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id", ondelete="SET NULL"), nullable=True, index=True)
+    period_key = Column(String(7), nullable=False, index=True)
+    status = Column(SQLEnum(ProCouponStatus), nullable=False, default=ProCouponStatus.RESERVED, index=True)
+    cashback_amount = Column(Numeric(10, 2), nullable=True)
+    cashback_ledger_id = Column(Integer, ForeignKey("cashback_ledger.id", ondelete="SET NULL"), nullable=True)
+    bar_id = Column(Integer, ForeignKey("bars.id", ondelete="SET NULL"), nullable=True)
+    created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), onupdate=lambda: datetime.now(timezone.utc), nullable=False)
+
+    __table_args__ = (
+        Index("idx_pro_coupon_user_period_status", "user_id", "period_key", "status"),
+        Index("uq_pro_coupon_order_promo", "order_id", "promotion_id", unique=True),
+    )

@@ -217,6 +217,70 @@ class LocationStatus {
   }
 }
 
+class ProCouponAllowance {
+  final bool isPro;
+  final String subscriptionTier;
+  final String periodKey;
+  final String timezone;
+  final DateTime? periodResetsAt;
+  final int monthlyLimit;
+  final int usedCount;
+  final int reservedCount;
+  final int remainingCount;
+
+  ProCouponAllowance({
+    required this.isPro,
+    required this.subscriptionTier,
+    required this.periodKey,
+    required this.timezone,
+    this.periodResetsAt,
+    required this.monthlyLimit,
+    required this.usedCount,
+    required this.reservedCount,
+    required this.remainingCount,
+  });
+
+  factory ProCouponAllowance.fromJson(Map<String, dynamic> json) {
+    return ProCouponAllowance(
+      isPro: json['is_pro'] ?? false,
+      subscriptionTier: json['subscription_tier'] ?? 'regular',
+      periodKey: json['period_key'] ?? '',
+      timezone: json['timezone'] ?? 'America/Sao_Paulo',
+      periodResetsAt: json['period_resets_at'] != null
+          ? DateTime.tryParse(json['period_resets_at'])
+          : null,
+      monthlyLimit: json['monthly_limit'] ?? 0,
+      usedCount: json['used_count'] ?? 0,
+      reservedCount: json['reserved_count'] ?? 0,
+      remainingCount: json['remaining_count'] ?? 0,
+    );
+  }
+}
+
+class CashbackPreview {
+  final double cashbackEarned;
+  final ProCouponAllowance? allowance;
+  final List<int> acceptedPromotionIds;
+
+  const CashbackPreview({
+    this.cashbackEarned = 0.0,
+    this.allowance,
+    this.acceptedPromotionIds = const [],
+  });
+
+  factory CashbackPreview.fromJson(Map<String, dynamic> json) {
+    return CashbackPreview(
+      cashbackEarned: (json['cashback_earned'] as num?)?.toDouble() ?? 0.0,
+      allowance: json['pro_coupon_allowance'] != null
+          ? ProCouponAllowance.fromJson(json['pro_coupon_allowance'])
+          : null,
+      acceptedPromotionIds: (json['accepted_promotion_ids'] as List<dynamic>?)
+          ?.map((e) => (e as num).toInt())
+          .toList() ?? [],
+    );
+  }
+}
+
 abstract class CartModel {
   int get id;
   int get userId;
@@ -237,6 +301,9 @@ abstract class CartModel {
   LocationStatus? get locationStatus;
   DateTime get createdAt;
   DateTime get updatedAt;
+  double get cashbackEarned;
+  ProCouponAllowance? get proCouponAllowance;
+  List<int> get acceptedPromotionIds;
 
   CartModel copyWith({
     List<CartItemModel>? items,
@@ -254,6 +321,9 @@ abstract class CartModel {
     List<PromotionApplied>? appliedPromotions,
     List<ValidationIssue>? validationIssues,
     LocationStatus? locationStatus,
+    double? cashbackEarned,
+    ProCouponAllowance? proCouponAllowance,
+    List<int>? acceptedPromotionIds,
   });
 
   factory CartModel({
@@ -274,6 +344,9 @@ abstract class CartModel {
     List<PromotionApplied> appliedPromotions,
     List<ValidationIssue> validationIssues,
     LocationStatus? locationStatus,
+    double cashbackEarned,
+    ProCouponAllowance? proCouponAllowance,
+    List<int> acceptedPromotionIds,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) = _CartModelImpl;
@@ -321,6 +394,12 @@ class _CartModelImpl implements CartModel {
   final DateTime createdAt;
   @override
   final DateTime updatedAt;
+  @override
+  final double cashbackEarned;
+  @override
+  final ProCouponAllowance? proCouponAllowance;
+  @override
+  final List<int> acceptedPromotionIds;
 
   _CartModelImpl({
     required this.id,
@@ -340,6 +419,9 @@ class _CartModelImpl implements CartModel {
     this.appliedPromotions = const [],
     this.validationIssues = const [],
     this.locationStatus,
+    this.cashbackEarned = 0.0,
+    this.proCouponAllowance,
+    this.acceptedPromotionIds = const [],
     required this.createdAt,
     required this.updatedAt,
   }) : subtotalAfterBundles = subtotalAfterBundles ?? subtotal,
@@ -362,6 +444,9 @@ class _CartModelImpl implements CartModel {
     List<PromotionApplied>? appliedPromotions,
     List<ValidationIssue>? validationIssues,
     LocationStatus? locationStatus,
+    double? cashbackEarned,
+    ProCouponAllowance? proCouponAllowance,
+    List<int>? acceptedPromotionIds,
   }) {
     return _CartModelImpl(
       id: id,
@@ -381,6 +466,9 @@ class _CartModelImpl implements CartModel {
       appliedPromotions: appliedPromotions ?? this.appliedPromotions,
       validationIssues: validationIssues ?? this.validationIssues,
       locationStatus: locationStatus ?? this.locationStatus,
+      cashbackEarned: cashbackEarned ?? this.cashbackEarned,
+      proCouponAllowance: proCouponAllowance ?? this.proCouponAllowance,
+      acceptedPromotionIds: acceptedPromotionIds ?? this.acceptedPromotionIds,
       createdAt: createdAt,
       updatedAt: DateTime.now(),
     );
@@ -430,6 +518,13 @@ class _CartModelImpl implements CartModel {
       locationStatus: json['location_status'] != null
           ? LocationStatus.fromJson(json['location_status'])
           : null,
+      cashbackEarned: (json['cashback_earned'] as num?)?.toDouble() ?? 0.0,
+      proCouponAllowance: json['pro_coupon_allowance'] != null
+          ? ProCouponAllowance.fromJson(json['pro_coupon_allowance'])
+          : null,
+      acceptedPromotionIds: (json['accepted_promotion_ids'] as List<dynamic>?)
+          ?.map((e) => (e as num).toInt())
+          .toList() ?? [],
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : DateTime.now(),
@@ -456,6 +551,9 @@ class _CartModelImpl implements CartModel {
       'subtotal_after_bundles': subtotalAfterBundles,
       'bundle_hint': bundleHint,
       'available_promotions': appliedPromotions.map((e) => e.toJson()).toList(),
+      'cashback_earned': cashbackEarned,
+      if (proCouponAllowance != null) 'pro_coupon_allowance': {},
+      'accepted_promotion_ids': acceptedPromotionIds,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -506,6 +604,8 @@ class CheckoutResult {
   final String paymentStatus;
   final double total;
   final String message;
+  final double discount;
+  final double cashbackEarned;
 
   CheckoutResult({
     required this.orderId,
@@ -513,6 +613,8 @@ class CheckoutResult {
     required this.paymentStatus,
     required this.total,
     required this.message,
+    this.discount = 0.0,
+    this.cashbackEarned = 0.0,
   });
 
   factory CheckoutResult.fromJson(Map<String, dynamic> json) {
@@ -522,6 +624,8 @@ class CheckoutResult {
       paymentStatus: json['payment_status'] ?? 'pending',
       total: (json['total'] as num?)?.toDouble() ?? 0.0,
       message: json['message'] ?? '',
+      discount: (json['discount'] as num?)?.toDouble() ?? 0.0,
+      cashbackEarned: (json['cashback_earned'] as num?)?.toDouble() ?? 0.0,
     );
   }
 }

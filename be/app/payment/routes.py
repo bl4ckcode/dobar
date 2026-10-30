@@ -680,7 +680,54 @@ async def dpe_webhook(
             )
             
         await transaction.commit()
-        
+
+        # Pro coupon lifecycle outside transaction (non-critical)
+        if new_payment_status == "paid":
+            try:
+                from app.bars_and_restaurants.services.pro_coupon_service import (
+                    redeem_reserved_coupons, release_reserved_coupons
+                )
+                from app.bars_and_restaurants.models.wallet_models import ProCouponUsage, ProCouponStatus
+                reserved = await database.fetch_all(
+                    ProCouponUsage.__table__.select().where(
+                        (ProCouponUsage.order_id == order_id) &
+                        (ProCouponUsage.status == ProCouponStatus.RESERVED)
+                    )
+                )
+                if reserved:
+                    from decimal import Decimal
+                    from app.bars_and_restaurants.services.wallet_service import WalletService
+                    from app.bars_and_restaurants.schemas.wallet import EarnCashbackRequest
+                    from app.bars_and_restaurants.models.wallet_models import FundingSource
+                    from app.database import SessionLocal
+                    total_cb = sum(Decimal(str(r["cashback_amount"] or 0)) for r in reserved)
+                    if total_cb > 0:
+                        db = SessionLocal()
+                        try:
+                            cashback_req = EarnCashbackRequest(
+                                user_id=db_order["user_id"],
+                                order_id=order_id,
+                                bar_id=db_order["bar_id"],
+                                order_total=total_cb,
+                                cashback_percentage=Decimal("1"),
+                                funded_by=FundingSource.BAR,
+                                expires_days=90
+                            )
+                            ledger, _ = WalletService.earn_cashback(db, cashback_req, auto_available=False)
+                            await redeem_reserved_coupons(order_id, ledger.id)
+                        finally:
+                            db.close()
+                    else:
+                        await redeem_reserved_coupons(order_id)
+            except Exception as cb_err:
+                print(f"Webhook: failed pro coupon redemption for order {order_id}: {cb_err}")
+        elif new_payment_status == "failed":
+            try:
+                from app.bars_and_restaurants.services.pro_coupon_service import release_reserved_coupons
+                await release_reserved_coupons(order_id)
+            except Exception as rel_err:
+                print(f"Webhook: failed pro coupon release for order {order_id}: {rel_err}")
+
         # If status changed, publish to WebSocket
         if new_order_status != db_order["status"]:
             await OrderQueue.publish_status_change(
@@ -689,9 +736,9 @@ async def dpe_webhook(
                 old_status=db_order["status"],
                 new_status=new_order_status
             )
-            
+
         return {"status": "processed", "payment_status": new_payment_status}
-        
+
     except Exception as e:
         await transaction.rollback()
         raise HTTPException(status_code=500, detail=str(e))
