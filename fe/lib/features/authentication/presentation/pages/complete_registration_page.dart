@@ -4,6 +4,7 @@ import 'package:barz/features/user/domain/repositories/abstract_user_repository.
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:barz/core/router/app_routes.dart';
+import 'package:barz/l10n/app_localizations.dart';
 
 /// Complete Registration Page
 ///
@@ -14,12 +15,18 @@ class CompleteRegistrationPage extends StatefulWidget {
   final String? prefilledEmail;
   final String? prefilledName;
   final String? prefilledPhone;
+  final bool initialTermsAccepted;
+  final bool initialPrivacyAccepted;
+  final bool returnToCheckout;
 
   const CompleteRegistrationPage({
     super.key,
     this.prefilledEmail,
     this.prefilledName,
     this.prefilledPhone,
+    this.initialTermsAccepted = false,
+    this.initialPrivacyAccepted = false,
+    this.returnToCheckout = false,
   });
 
   @override
@@ -41,6 +48,8 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
     super.initState();
     _nameController.text = widget.prefilledName ?? '';
     _emailController.text = widget.prefilledEmail ?? '';
+    _termsAccepted = widget.initialTermsAccepted;
+    _privacyAccepted = widget.initialPrivacyAccepted;
   }
 
   @override
@@ -63,6 +72,7 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
     setState(() => _isLoading = true);
 
     try {
+      final l10n = AppLocalizations.of(context)!;
       final userRepository = getItInjector<UserRepository>();
 
       // Update user profile with collected data
@@ -76,7 +86,9 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
         (failure) async {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Error: ${failure.errorMessage}')),
+              SnackBar(
+                content: Text(l10n.registration_error(failure.errorMessage)),
+              ),
             );
           }
         },
@@ -90,16 +102,23 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
           }
 
           if (mounted) {
-            // Navigate to home
-            context.go('/');
+            if (widget.returnToCheckout) {
+              context.pop(true);
+            } else {
+              AppRoute.home.go(context);
+            }
           }
         },
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: ${e.toString()}')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)!.registration_error(e.toString()),
+            ),
+          ),
+        );
       }
     } finally {
       if (mounted) {
@@ -110,6 +129,7 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: barzGoldSoft,
       appBar: AppBar(
@@ -127,7 +147,7 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
               children: [
                 // Header
                 Text(
-                  'Complete Your Profile',
+                  l10n.registration_title,
                   style: barzTextTheme.headlineMedium?.copyWith(
                     color: barzDark,
                     fontWeight: FontWeight.bold,
@@ -135,7 +155,7 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
                 ),
                 const SizedBox(height: BarzSpacing.sm),
                 Text(
-                  'Just a few more details to get started',
+                  l10n.registration_subtitle,
                   style: barzTextTheme.bodyLarge?.copyWith(
                     color: textSecondary,
                   ),
@@ -145,8 +165,8 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
                 // Name Field
                 BarzTextField(
                   controller: _nameController,
-                  label: 'Full Name',
-                  hintText: 'Enter your full name',
+                  label: l10n.registration_full_name,
+                  hintText: l10n.registration_full_name_hint,
                   prefixIcon: const Icon(Icons.person_outline),
                   textInputAction: TextInputAction.next,
                   onChanged: (_) => setState(() {}),
@@ -156,8 +176,8 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
                 // Email Field
                 BarzTextField(
                   controller: _emailController,
-                  label: 'Email',
-                  hintText: 'Enter your email address',
+                  label: l10n.registration_email,
+                  hintText: l10n.registration_email_hint,
                   prefixIcon: const Icon(Icons.email_outlined),
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.done,
@@ -170,8 +190,8 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
                   value: _termsAccepted,
                   onChanged: (value) =>
                       setState(() => _termsAccepted = value ?? false),
-                  text: 'I agree to the ',
-                  linkText: 'Terms of Service',
+                  text: l10n.registration_agree_prefix,
+                  linkText: l10n.login_terms,
                   onLinkTap: () {
                     AppRoute.termsOfService.push(context);
                   },
@@ -181,8 +201,8 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
                   value: _privacyAccepted,
                   onChanged: (value) =>
                       setState(() => _privacyAccepted = value ?? false),
-                  text: 'I agree to the ',
-                  linkText: 'Privacy Policy',
+                  text: l10n.registration_agree_prefix,
+                  linkText: l10n.login_privacy,
                   onLinkTap: () {
                     AppRoute.privacyPolicy.push(context);
                   },
@@ -192,7 +212,7 @@ class _CompleteRegistrationPageState extends State<CompleteRegistrationPage> {
                 // Submit Button
                 BarzButton.primary(
                   onPressed: _isFormValid ? _completeRegistration : null,
-                  label: 'Get Started',
+                  label: l10n.registration_get_started,
                   isLoading: _isLoading,
                 ),
                 const SizedBox(height: BarzSpacing.lg),

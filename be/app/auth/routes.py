@@ -51,6 +51,34 @@ async def get_user_by_email(email: str):
     return await database.fetch_one(query)
 
 
+async def mark_phone_claim_verified(user, phone_number: str | None):
+    if not phone_number:
+        return
+    current_phone = user["phone_number"]
+    if current_phone and current_phone != phone_number:
+        return
+    await database.execute(
+        User.__table__.update().where(User.id == user["id"]).values(
+            phone_number=phone_number,
+            phone_verified=True,
+        )
+    )
+
+
+async def mark_email_claim_verified(user, email: str | None):
+    if not email:
+        return
+    current_email = user["email"]
+    if current_email and current_email.lower() != email.lower():
+        return
+    await database.execute(
+        User.__table__.update().where(User.id == user["id"]).values(
+            email=email,
+            email_verified=True,
+        )
+    )
+
+
 def calculate_expiration(provider_expiration: int = None) -> tuple[datetime, datetime]:
     """
     Calculate access and refresh token expiration times.
@@ -269,6 +297,8 @@ async def phone_login(request: Request, firebase_user=Depends(verify_firebase_to
         }
         user_id = await database.execute(User.__table__.insert().values(**user_data))
         user = await database.fetch_one(User.__table__.select().where(User.id == user_id))
+    else:
+        await mark_phone_claim_verified(user, phone_number)
     
     return await build_login_response(
         user_id=user["id"],
@@ -283,7 +313,8 @@ async def google_login(request: Request, login_data: GoogleLogin):
     token_info = await verify_google_token(login_data.id_token)
     google_id = token_info["sub"]
     firebase_uid = token_info.get("firebase_uid")  # Firebase UID if verified via Firebase
-    email = token_info.get("email") or login_data.email
+    trusted_email = token_info.get("email")
+    email = trusted_email or login_data.email
     display_name = token_info.get("name") or login_data.display_name
     
     user = await get_user_by_google_id(google_id)
@@ -315,7 +346,7 @@ async def google_login(request: Request, login_data: GoogleLogin):
             "google_id": google_id,
             "email": email,
             "is_active": True,
-            "email_verified": True,   # Google OAuth provides a verified email claim
+            "email_verified": bool(trusted_email),
             "phone_verified": False,
         }
         if firebase_uid:
@@ -328,6 +359,8 @@ async def google_login(request: Request, login_data: GoogleLogin):
             await database.execute(
                 UserProfile.__table__.insert().values(user_id=user["id"], display_name=display_name)
             )
+    else:
+        await mark_email_claim_verified(user, trusted_email)
     
     return await build_login_response(
         user_id=user["id"],
@@ -343,7 +376,8 @@ async def apple_login(request: Request, login_data: AppleLogin):
     token_info = await verify_apple_token(login_data.id_token)
     apple_id = token_info["sub"]
     firebase_uid = token_info.get("firebase_uid")  # Firebase UID if verified via Firebase
-    email = token_info.get("email") or login_data.email
+    trusted_email = token_info.get("email")
+    email = trusted_email or login_data.email
     display_name = login_data.display_name
     
     user = await get_user_by_apple_id(apple_id)
@@ -375,7 +409,7 @@ async def apple_login(request: Request, login_data: AppleLogin):
             "apple_id": apple_id,
             "email": email,
             "is_active": True,
-            "email_verified": bool(email),  # Apple OAuth email is verified when present
+            "email_verified": bool(trusted_email),
             "phone_verified": False,
         }
         if firebase_uid:
@@ -388,6 +422,8 @@ async def apple_login(request: Request, login_data: AppleLogin):
             await database.execute(
                 UserProfile.__table__.insert().values(user_id=user["id"], display_name=display_name)
             )
+    else:
+        await mark_email_claim_verified(user, trusted_email)
     
     return await build_login_response(
         user_id=user["id"],

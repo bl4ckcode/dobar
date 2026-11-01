@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
+import 'package:barz/l10n/app_localizations.dart';
 import '../design_system.dart';
 
 enum BarBadge { promo, happyHour, cashback }
@@ -65,9 +67,7 @@ class BarCard extends StatelessWidget {
                       colors: [
                         Colors.transparent,
                         theme.brightness == Brightness.light
-                            ? const Color(0xFFFFFDE7).withValues(
-                                alpha: 0.8,
-                              )
+                            ? const Color(0xFFFFFDE7).withValues(alpha: 0.8)
                             : colors.surface.withValues(alpha: 0.8),
                       ],
                     ),
@@ -114,7 +114,9 @@ class BarCard extends StatelessWidget {
                     child: Wrap(
                       spacing: 4,
                       runSpacing: 4,
-                      children: badges.map((b) => _BadgePill(badge: b)).toList(),
+                      children: badges
+                          .map((b) => _BadgePill(badge: b))
+                          .toList(),
                     ),
                   ),
               ],
@@ -185,28 +187,45 @@ class _BadgePill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final (String label, IconData icon, Color bg, Color fg) = switch (badge) {
-      BarBadge.promo => ('Deal', Icons.local_offer, const Color(0xFFE8F5E9), const Color(0xFF2E7D32)),
-      BarBadge.happyHour => ('Happy H.', Icons.local_bar, const Color(0xFFFFF3E0), const Color(0xFFE65100)),
-      BarBadge.cashback => ('Cashback', Icons.currency_exchange, const Color(0xFFE3F2FD), const Color(0xFF1565C0)),
+      BarBadge.promo => (
+        l10n.home_badge_promotion,
+        LucideIcons.tag,
+        barzGold,
+        barzDark,
+      ),
+      BarBadge.happyHour => (
+        l10n.home_badge_happy_hour,
+        LucideIcons.clock_3,
+        const Color(0xFFFF8A3D),
+        barzDark,
+      ),
+      BarBadge.cashback => (
+        l10n.home_badge_cashback,
+        LucideIcons.coins,
+        const Color(0xFF22B985),
+        barzDark,
+      ),
     };
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+      constraints: const BoxConstraints(minHeight: 24),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: bg.withValues(alpha: 0.92),
-        borderRadius: BorderRadius.circular(6),
+        color: bg,
+        borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 9, color: fg),
-          const SizedBox(width: 2),
+          Icon(icon, size: 13, color: fg),
+          const SizedBox(width: 5),
           Text(
             label,
             style: TextStyle(
-              fontSize: 8,
-              fontWeight: FontWeight.w700,
+              fontSize: 10,
+              fontWeight: FontWeight.w600,
               color: fg,
               height: 1.2,
             ),

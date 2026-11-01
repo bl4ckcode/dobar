@@ -11,8 +11,16 @@ abstract class Failure extends Equatable {
 
 class ServerFailure extends Failure {
   final int? statusCode;
+  final Map<String, dynamic> details;
 
-  const ServerFailure(super.errorMessage, this.statusCode);
+  const ServerFailure(
+    super.errorMessage,
+    this.statusCode, {
+    this.details = const {},
+  });
+
+  @override
+  List<Object> get props => [errorMessage, statusCode ?? -1, details];
 }
 
 class CacheFailure extends Failure {

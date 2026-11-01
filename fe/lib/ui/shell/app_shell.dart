@@ -34,9 +34,10 @@ class _AppShellState extends State<AppShell> {
         listener: (context, state) {
           state.whenOrNull(
             ready: (session, forceClientMode, error) {
-              if (!forceClientMode &&
-                  (session.isBusiness || session.barAccess.isNotEmpty)) {
+              if (!forceClientMode && session.barAccess.isNotEmpty) {
                 context.go(AppRoute.businessDashboard.path);
+              } else if (!forceClientMode && session.isBusiness) {
+                context.go(AppRoute.staffInvitationAccept.path);
               }
             },
             loggedOut: () {

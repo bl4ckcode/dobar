@@ -5,7 +5,6 @@ import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/authentication/presentation/widgets/login_buttons_widget.dart';
 import 'package:barz/features/authentication/presentation/widgets/login_fields_widget.dart';
 import 'package:barz/features/user/domain/repositories/abstract_user_repository.dart';
-import 'package:barz/shared/presentation/loading_util.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -19,6 +18,10 @@ import 'package:barz/features/authentication/presentation/bloc/login_event.dart'
 import 'package:barz/features/authentication/presentation/bloc/login_state.dart';
 import 'package:barz/features/authentication/domain/usecases/login_usecase.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
+import 'package:barz/core/theme/theme_cubit.dart';
+import 'package:barz/core/router/route_arguments.dart';
+import 'package:barz/features/authentication/presentation/navigation/post_login_destination.dart';
+import 'package:barz/l10n/app_localizations.dart';
 
 import 'login_sms_validation_page.dart';
 
@@ -33,8 +36,7 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   late LoginBloc _loginBloc;
   String? _phoneNumber;
-  String? _pendingInvitationCode;
-  bool _resolvedRouteArguments = false;
+  bool _isLoading = false;
   final BiometryService _biometryService = getItInjector<BiometryService>();
 
   late final AnimationController _glowController;
@@ -71,17 +73,6 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (_resolvedRouteArguments) return;
-    _resolvedRouteArguments = true;
-    // Inherited lookups such as ModalRoute.of are not allowed in initState.
-    _pendingInvitationCode =
-        widget.pendingInvitationCode ??
-        (ModalRoute.of(context)?.settings.arguments as Map?)?['pendingInvitationCode'] as String?;
-  }
-
-  @override
   void dispose() {
     _loginBloc.close();
     _glowController.dispose();
@@ -96,6 +87,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   }
 
   Future<void> _promptBiometryThenNavigate(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
     final available = await _biometryService.isAvailable;
     if (available &&
         !_biometryService.isEnabled &&
@@ -105,18 +97,16 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
         context: context,
         barrierDismissible: false,
         builder: (ctx) => AlertDialog(
-          title: const Text('Enable Biometric Login'),
-          content: const Text(
-            'Would you like to use Face ID or fingerprint for faster login next time?',
-          ),
+          title: Text(l10n.login_biometry_title),
+          content: Text(l10n.login_biometry_body),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(false),
-              child: const Text('Not now'),
+              child: Text(l10n.login_biometry_later),
             ),
             TextButton(
               onPressed: () => Navigator.of(ctx).pop(true),
-              child: const Text('Enable'),
+              child: Text(l10n.login_biometry_enable),
             ),
           ],
         ),
@@ -124,7 +114,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
 
       if (wantBiometry == true) {
         final authenticated = await _biometryService.authenticate(
-          'Confirm your identity to enable biometric login',
+          l10n.login_biometry_reason,
         );
         if (authenticated) {
           await _biometryService.enable();
@@ -143,44 +133,33 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     final colors = context.dobarColors;
     final isDark = context.isDark;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: colors.background,
       body: PopScope(
         onPopInvokedWithResult: (left, right) {},
         child: BlocListener<LoginBloc, LoginState>(
           bloc: _loginBloc,
           listener: (context, state) {
-            if (state is Loading) {
-              LoadingUtil.showLoadingDialog(context);
-            } else if (state is Success) {
-              if (Navigator.of(context).canPop()) {
-                Navigator.of(context).pop();
-              }
-
-              // Resume staff-invitation acceptance after login if a code is pending.
-              if (_pendingInvitationCode != null && _pendingInvitationCode!.isNotEmpty) {
-                GoRouter.of(context).go('${AppRoute.staffInvitationAccept.path}?code=${Uri.encodeComponent(_pendingInvitationCode!)}');
-                return;
-              }
-
-              if (state.needsOnboarding) {
-                AppRoute.goOnboarding(context, phone: state.phoneNumber);
-                return;
-              }
-
-              if (state.isProfileComplete) {
+            if (mounted) {
+              setState(() => _isLoading = state is Loading);
+            }
+            if (state is Success) {
+              final destination = resolvePostLoginDestination(
+                state: state,
+                pendingInvitationCode: widget.pendingInvitationCode,
+              );
+              if (destination == PostLoginDestination.home) {
                 _promptBiometryThenNavigate(context);
               } else {
-                AppRoute.goCompleteRegistration(
+                navigateAfterLogin(
                   context,
-                  email: state.email,
-                  name: state.displayName,
+                  state: state,
+                  pendingInvitationCode: widget.pendingInvitationCode,
                 );
               }
             } else if (state is CodeSent) {
-              Navigator.of(context).pop();
-
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -188,99 +167,159 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                     verificationId: state.verificationId,
                     phoneNumber: state.phoneNumber,
                     loginBloc: _loginBloc,
+                    pendingInvitationCode: widget.pendingInvitationCode,
                   ),
                 ),
               );
+            } else if (state is MfaRequired) {
+              context.push(
+                AppRoute.mfaChallenge.path,
+                extra: MfaChallengeArguments(
+                  token: state.mfaToken,
+                  pendingInvitationCode: widget.pendingInvitationCode,
+                ),
+              );
             } else if (state is Failure) {
-              if (Navigator.of(context).canPop()) {
-                Navigator.of(context).pop();
-              }
-
               ScaffoldMessenger.of(
                 context,
               ).showSnackBar(SnackBar(content: Text(state.error)));
             }
           },
           child: ResponsiveCenterContainer(
-            backgroundColor: Colors.white,
+            backgroundColor: colors.background,
             child: Stack(
               children: [
                 const _AtmosphericBackground(),
                 _GhostCocktail(isDark: isDark),
                 SafeArea(
-                  child: LayoutBuilder(
-                    builder: (context, constraints) {
-                      return SingleChildScrollView(
-                        physics: const BouncingScrollPhysics(),
-                        child: ConstrainedBox(
-                          constraints: BoxConstraints(
-                            minHeight: constraints.maxHeight,
-                          ),
-                          child: IntrinsicHeight(
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 20,
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+                      child: Column(
+                        children: [
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: IconButton(
+                              tooltip: isDark
+                                  ? l10n.login_theme_to_light
+                                  : l10n.login_theme_to_dark,
+                              onPressed: () =>
+                                  context.read<ThemeCubit>().toggleTheme(),
+                              style: IconButton.styleFrom(
+                                minimumSize: const Size(44, 44),
+                                backgroundColor: colors.surface.withValues(
+                                  alpha: 0.9,
+                                ),
+                                side: BorderSide(color: colors.surfaceElevated),
+                                shape: const CircleBorder(),
                               ),
-                              child: Column(
-                                children: [
-                                  const SizedBox(height: 10),
-                                  _LogoArea(
-                                    glowAnim: _glowAnim,
-                                    shimmerAnim: _shimmerAnim,
-                                    isDark: isDark,
-                                  ).animate().fadeIn(duration: 600.ms).scale(
-                                        begin: const Offset(0.9, 0.9),
-                                        curve: Curves.easeOutBack,
-                                      ),
-                                  const SizedBox(height: 20),
-                                  Text(
-                                        'Your night. Your bar.',
-                                        style: GoogleFonts.oswald(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w400,
-                                          letterSpacing: 4.0,
-                                          color: Colors.black.withValues(alpha: 0.8),
-                                        ),
-                                      )
-                                      .animate()
-                                      .fadeIn(delay: 200.ms, duration: 600.ms)
-                                      .slideY(begin: 0.3, end: 0),
-                                  const SizedBox(height: 32),
-                                  _PhoneCard(
-                                    colors: colors,
-                                    isDark: isDark,
-                                    onLoginPressed: (phone) =>
-                                        setState(() => _phoneNumber = phone),
-                                  )
-                                      .animate()
-                                      .fadeIn(delay: 400.ms, duration: 600.ms)
-                                      .slideY(begin: 0.2, end: 0),
-                                  const SizedBox(height: 16),
-                                  _GoldCTAButton(
-                                    enabled: _phoneNumber != null,
-                                    onPressed: _handleLogin,
-                                  )
-                                      .animate()
-                                      .fadeIn(delay: 500.ms, duration: 600.ms)
-                                      .slideY(begin: 0.2, end: 0),
-                                  const SizedBox(height: 16),
-                                  _OrDivider(colors: colors),
-                                  const SizedBox(height: 20),
-                                  LoginButtonsWidget(loginBloc: _loginBloc)
-                                      .animate()
-                                      .fadeIn(delay: 700.ms, duration: 600.ms)
-                                      .slideY(begin: 0.2, end: 0),
-                                  const SizedBox(height: 16),
-                                  _LegalText(colors: colors),
-                                  const SizedBox(height: 40),
-                                ],
+                              icon: Icon(
+                                isDark ? LucideIcons.sun : LucideIcons.moon,
+                                color: colors.labelSecondary,
+                                size: 19,
                               ),
                             ),
                           ),
-                        ),
-                      );
-                    },
+                          _LogoArea(
+                                glowAnim: _glowAnim,
+                                shimmerAnim: _shimmerAnim,
+                                isDark: isDark,
+                              )
+                              .animate()
+                              .fadeIn(duration: 600.ms)
+                              .scale(
+                                begin: const Offset(0.9, 0.9),
+                                curve: Curves.easeOutBack,
+                              ),
+                          const SizedBox(height: 20),
+                          Text(
+                                l10n.login_tagline.toUpperCase(),
+                                style: GoogleFonts.oswald(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w400,
+                                  letterSpacing: 4.0,
+                                  color: colors.labelPrimary.withValues(
+                                    alpha: 0.8,
+                                  ),
+                                ),
+                              )
+                              .animate()
+                              .fadeIn(delay: 200.ms, duration: 600.ms)
+                              .slideY(begin: 0.3, end: 0),
+                          const SizedBox(height: 32),
+                          ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxWidth: 384,
+                                ),
+                                child: _PhoneCard(
+                                  colors: colors,
+                                  isDark: isDark,
+                                  label: l10n.login_phone_label,
+                                  hint: l10n.login_phone_hint,
+                                  onLoginPressed: (phone) =>
+                                      setState(() => _phoneNumber = phone),
+                                ),
+                              )
+                              .animate()
+                              .fadeIn(delay: 400.ms, duration: 600.ms)
+                              .slideY(begin: 0.2, end: 0),
+                          const SizedBox(height: 16),
+                          ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxWidth: 384,
+                                ),
+                                child: _GoldCTAButton(
+                                  label: l10n.login_continue,
+                                  enabled: _phoneNumber != null && !_isLoading,
+                                  loading: _isLoading,
+                                  onPressed: _handleLogin,
+                                ),
+                              )
+                              .animate()
+                              .fadeIn(delay: 500.ms, duration: 600.ms)
+                              .slideY(begin: 0.2, end: 0),
+                          const SizedBox(height: 12),
+                          TextButton(
+                            onPressed: () =>
+                                AppRoute.recoveryInitiate.push(context),
+                            child: Text(
+                              l10n.login_trouble,
+                              style: TextStyle(
+                                color: colors.labelSecondary,
+                                decoration: TextDecoration.underline,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 384),
+                            child: _OrDivider(
+                              colors: colors,
+                              label: l10n.login_or_continue_with,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          ConstrainedBox(
+                                constraints: const BoxConstraints(
+                                  maxWidth: 384,
+                                ),
+                                child: LoginButtonsWidget(
+                                  loginBloc: _loginBloc,
+                                ),
+                              )
+                              .animate()
+                              .fadeIn(delay: 700.ms, duration: 600.ms)
+                              .slideY(begin: 0.2, end: 0),
+                          const SizedBox(height: 16),
+                          ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 384),
+                            child: _LegalText(colors: colors),
+                          ),
+                          const SizedBox(height: 40),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ],
@@ -297,15 +336,17 @@ class _AtmosphericBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.dobarColors;
     return Positioned.fill(
       child: Container(
         decoration: BoxDecoration(
+          color: colors.background,
           gradient: RadialGradient(
             center: const Alignment(0, -0.2),
             radius: 0.8,
             colors: [
               barzGold.withValues(alpha: 0.12),
-              Colors.white.withValues(alpha: 0),
+              colors.background.withValues(alpha: 0),
             ],
             stops: const [0.0, 1.0],
           ),
@@ -328,7 +369,7 @@ class _GhostCocktail extends StatelessWidget {
       child: Align(
         alignment: Alignment.bottomCenter,
         child: Opacity(
-          opacity: 0.12,
+          opacity: isDark ? 0.10 : 0.15,
           child: Image.asset(
             'assets/icons/cocktail-ghost.png',
             width: 360,
@@ -354,22 +395,22 @@ class _LogoArea extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 140,
-      width: 140,
+      height: 176,
+      width: 176,
       child: Stack(
         alignment: Alignment.center,
         children: [
           AnimatedBuilder(
             animation: glowAnim,
             builder: (_, child) => Container(
-              width: 140,
-              height: 140,
+              width: 176,
+              height: 176,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: RadialGradient(
                   colors: [
                     barzGold.withValues(alpha: glowAnim.value * 0.4),
-                    Colors.white,
+                    context.dobarColors.background.withValues(alpha: 0),
                   ],
                   stops: const [0.0, 0.8],
                 ),
@@ -379,9 +420,9 @@ class _LogoArea extends StatelessWidget {
           Hero(
             tag: 'logo',
             child: Image.asset(
-              'assets/icons/dobar-logo-animated-transparent.gif',
-              height: 140,
-              width: 140,
+              'assets/icons/dobar-logo.png',
+              height: 176,
+              width: 176,
               fit: BoxFit.contain,
             ),
           ),
@@ -394,11 +435,15 @@ class _LogoArea extends StatelessWidget {
 class _PhoneCard extends StatelessWidget {
   final DobarColors colors;
   final bool isDark;
+  final String label;
+  final String hint;
   final void Function(String?) onLoginPressed;
 
   const _PhoneCard({
     required this.colors,
     required this.isDark,
+    required this.label,
+    required this.hint,
     required this.onLoginPressed,
   });
 
@@ -409,17 +454,17 @@ class _PhoneCard extends StatelessWidget {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 40, sigmaY: 40),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.white.withValues(alpha: 0.7),
-            borderRadius: BorderRadius.circular(20),
+            color: colors.surface.withValues(alpha: 0.68),
+            borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: Colors.white.withValues(alpha: 0.4),
+              color: colors.surfaceElevated.withValues(alpha: 0.8),
               width: 1,
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withValues(alpha: 0.04),
+                color: colors.labelPrimary.withValues(alpha: 0.06),
                 blurRadius: 32,
                 offset: const Offset(0, 16),
               ),
@@ -429,16 +474,16 @@ class _PhoneCard extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'PHONE NUMBER',
+                label.toUpperCase(),
                 style: GoogleFonts.oswald(
                   fontSize: 11,
                   letterSpacing: 2.5,
                   fontWeight: FontWeight.w500,
-                  color: Colors.black54,
+                  color: colors.labelSecondary,
                 ),
               ),
               const SizedBox(height: 12),
-              LoginFieldsWidget(onLoginPressed: onLoginPressed),
+              LoginFieldsWidget(hintText: hint, onLoginPressed: onLoginPressed),
             ],
           ),
         ),
@@ -448,10 +493,17 @@ class _PhoneCard extends StatelessWidget {
 }
 
 class _GoldCTAButton extends StatefulWidget {
+  final String label;
   final bool enabled;
+  final bool loading;
   final VoidCallback onPressed;
 
-  const _GoldCTAButton({required this.enabled, required this.onPressed});
+  const _GoldCTAButton({
+    required this.label,
+    required this.enabled,
+    this.loading = false,
+    required this.onPressed,
+  });
 
   @override
   State<_GoldCTAButton> createState() => _GoldCTAButtonState();
@@ -494,17 +546,32 @@ class _GoldCTAButtonState extends State<_GoldCTAButton> {
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(
-                    'CONTINUE',
-                    style: GoogleFonts.oswald(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 3.0,
-                      color: barzDark,
+                  if (widget.loading)
+                    const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: barzDark,
+                      ),
+                    )
+                  else ...[
+                    Text(
+                      widget.label.toUpperCase(),
+                      style: GoogleFonts.oswald(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 3.0,
+                        color: barzDark,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  const Icon(LucideIcons.arrow_right, color: barzDark, size: 20),
+                    const SizedBox(width: 8),
+                    const Icon(
+                      LucideIcons.arrow_right,
+                      color: barzDark,
+                      size: 20,
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -517,30 +584,27 @@ class _GoldCTAButtonState extends State<_GoldCTAButton> {
 
 class _OrDivider extends StatelessWidget {
   final DobarColors colors;
-  const _OrDivider({required this.colors});
+  final String label;
+  const _OrDivider({required this.colors, required this.label});
 
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(
-          child: Container(height: 1, color: Colors.black.withValues(alpha: 0.08)),
-        ),
+        Expanded(child: Container(height: 1, color: colors.surfaceElevated)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16),
           child: Text(
-            'OR CONTINUE WITH',
+            label.toUpperCase(),
             style: GoogleFonts.oswald(
               fontSize: 10,
               letterSpacing: 2.5,
               fontWeight: FontWeight.w400,
-              color: Colors.black38,
+              color: colors.labelSecondary,
             ),
           ),
         ),
-        Expanded(
-          child: Container(height: 1, color: Colors.black.withValues(alpha: 0.08)),
-        ),
+        Expanded(child: Container(height: 1, color: colors.surfaceElevated)),
       ],
     );
   }
@@ -552,36 +616,39 @@ class _LegalText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: RichText(
         textAlign: TextAlign.center,
         text: TextSpan(
-          text: 'By continuing, you agree to our ',
+          text: l10n.login_legal_prefix,
           style: TextStyle(
-            color: Colors.black45,
+            color: colors.labelSecondary,
             fontSize: 11,
             height: 1.5,
           ),
           children: <TextSpan>[
             TextSpan(
-              text: 'Terms of Service',
+              text: l10n.login_terms,
               style: TextStyle(
                 color: barzGoldDark,
                 fontWeight: FontWeight.w500,
                 decoration: TextDecoration.underline,
               ),
-              recognizer: TapGestureRecognizer()..onTap = () {},
+              recognizer: TapGestureRecognizer()
+                ..onTap = () => AppRoute.termsOfService.push(context),
             ),
-            const TextSpan(text: ' and '),
+            TextSpan(text: l10n.login_legal_and),
             TextSpan(
-              text: 'Privacy Policy',
+              text: l10n.login_privacy,
               style: TextStyle(
                 color: barzGoldDark,
                 fontWeight: FontWeight.w500,
                 decoration: TextDecoration.underline,
               ),
-              recognizer: TapGestureRecognizer()..onTap = () {},
+              recognizer: TapGestureRecognizer()
+                ..onTap = () => AppRoute.privacyPolicy.push(context),
             ),
           ],
         ),

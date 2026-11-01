@@ -22,10 +22,16 @@ class UserModel {
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final UserType userType;
+  final bool hasSelectedUserType;
   final String? countryCode;
 
-  /// Check if user has completed onboarding (has country set)
-  bool get hasCompletedOnboarding => countryCode != null;
+  bool get hasCompletedOnboarding => countryCode != null && hasSelectedUserType;
+
+  bool get hasCompletedRegistration =>
+      displayName?.trim().isNotEmpty == true &&
+      email?.trim().isNotEmpty == true &&
+      termsAccepted &&
+      privacyAccepted;
 
   UserModel({
     this.id,
@@ -48,6 +54,7 @@ class UserModel {
     this.createdAt,
     this.updatedAt,
     this.userType = UserType.client,
+    this.hasSelectedUserType = false,
     this.countryCode,
   });
 
@@ -87,6 +94,9 @@ class UserModel {
           ? DateTime.parse(json['updated_at'])
           : null,
       userType: UserType.fromString(json['user_type'] as String?),
+      hasSelectedUserType:
+          json['user_type'] is String &&
+          (json['user_type'] as String).trim().isNotEmpty,
       countryCode: json['country_code'] as String?,
     );
   }
@@ -113,6 +123,7 @@ class UserModel {
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
       'user_type': userType.name,
+      'country_code': countryCode,
     };
   }
 }

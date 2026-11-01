@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
+import 'package:barz/l10n/app_localizations.dart';
 import '../design_system.dart';
 
 class HomeConnectedHeader extends StatelessWidget {
@@ -34,124 +34,149 @@ class HomeConnectedHeader extends StatelessWidget {
   }
 
   Widget _buildAppBarRow(BuildContext context, DobarColors colors) {
+    final l10n = AppLocalizations.of(context)!;
+    final countLabel = unreadNotifications > 99
+        ? '99+'
+        : unreadNotifications.toString();
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           if (nearbyBarName != null)
             Expanded(
-              child:
-                  GestureDetector(
-                        onTap: onBarTap,
-                        child: Container(
-                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                          decoration: BoxDecoration(
-                            color: colors.surface.withValues(alpha: 0.9),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                              color: colors.buttonPrimary,
-                              width: 1,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.1),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
+              child: Semantics(
+                button: true,
+                label: l10n.home_nearby_checkin_prompt(nearbyBarName!),
+                child: InkWell(
+                  onTap: onBarTap,
+                  borderRadius: BorderRadius.circular(999),
+                  child: Container(
+                    constraints: const BoxConstraints(minHeight: 52),
+                    padding: const EdgeInsets.fromLTRB(6, 5, 12, 5),
+                    decoration: BoxDecoration(
+                      color: colors.surface.withValues(alpha: 0.95),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: colors.surfaceElevated,
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: const BoxDecoration(
+                            color: barzGold,
+                            shape: BoxShape.circle,
                           ),
-                          child: Row(
+                          child: const Icon(
+                            LucideIcons.map_pin,
+                            color: barzDark,
+                            size: 19,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(
-                                Icons.place,
-                                color: colors.buttonPrimary,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: RichText(
-                                  text: TextSpan(
-                                    style: TextStyle(
-                                      color: colors.labelPrimary,
-                                      fontFamily: 'Inter',
-                                      fontSize: 14,
-                                    ),
-                                    children: [
-                                      const TextSpan(text: 'Are you here: '),
-                                      TextSpan(
-                                        text: nearbyBarName,
-                                        style: const TextStyle(
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      const TextSpan(
-                                        text: '? Make a check-in!',
-                                      ),
-                                    ],
-                                  ),
+                              Text(
+                                l10n.home_nearby_prefix,
+                                style: TextStyle(
+                                  color: colors.labelSecondary,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w500,
                                 ),
                               ),
-                              const SizedBox(width: 8),
-                              Icon(
-                                Icons.arrow_forward_ios,
-                                color: colors.labelSecondary,
-                                size: 14,
+                              Text(
+                                nearbyBarName!,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: colors.labelPrimary,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ],
                           ),
                         ),
-                      )
-                      .animate(
-                        onPlay: (controller) =>
-                            controller.repeat(reverse: true),
-                      )
-                      .scale(
-                        begin: const Offset(1, 1),
-                        end: const Offset(1.05, 1.05),
-                        duration: 1500.ms,
-                        curve: Curves.easeInOut,
-                      ),
+                        const SizedBox(width: 8),
+                        Icon(
+                          LucideIcons.chevron_right,
+                          color: colors.labelSecondary,
+                          size: 18,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             )
           else
             const SizedBox.shrink(),
           if (onNotificationTap != null && unreadNotifications > 0)
-            GestureDetector(
-              onTap: onNotificationTap,
-              child: Container(
-                width: 40,
-                height: 40,
-                margin: const EdgeInsets.only(left: 16),
-                decoration: BoxDecoration(
-                  color: colors.buttonPrimary,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Stack(
-                  alignment: Alignment.center,
-                  children: [
-                    Icon(
-                      LucideIcons.bell,
-                      color: colors.buttonOnPrimary,
-                      size: 20,
+            Padding(
+              padding: const EdgeInsets.only(left: 10),
+              child: Semantics(
+                button: true,
+                label: l10n.home_notifications(countLabel),
+                child: InkWell(
+                  onTap: onNotificationTap,
+                  customBorder: const CircleBorder(),
+                  child: Container(
+                    width: 52,
+                    height: 52,
+                    decoration: BoxDecoration(
+                      color: colors.surface.withValues(alpha: 0.95),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: colors.surfaceElevated,
+                        width: 1.5,
+                      ),
                     ),
-                    if (unreadNotifications > 0)
-                      Positioned(
-                        right: 8,
-                        top: 8,
-                        child: Container(
-                          width: 10,
-                          height: 10,
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: colors.buttonPrimary,
-                              width: 2,
+                    child: Stack(
+                      clipBehavior: Clip.none,
+                      alignment: Alignment.center,
+                      children: [
+                        Icon(
+                          LucideIcons.bell,
+                          color: colors.labelPrimary,
+                          size: 20,
+                        ),
+                        Positioned(
+                          right: -2,
+                          top: -3,
+                          child: Container(
+                            constraints: const BoxConstraints(
+                              minWidth: 20,
+                              minHeight: 20,
+                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 4),
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).colorScheme.error,
+                              borderRadius: BorderRadius.circular(999),
+                              border: Border.all(
+                                color: colors.background,
+                                width: 2,
+                              ),
+                            ),
+                            alignment: Alignment.center,
+                            child: Text(
+                              countLabel,
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 9,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                         ),
-                      ),
-                  ],
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),

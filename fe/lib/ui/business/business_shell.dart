@@ -17,7 +17,6 @@ import 'business_settings_page.dart';
 import 'cashier_page.dart';
 import 'menu_management_page.dart';
 import 'staff_management_page.dart';
-import 'widgets/business_onboarding_view.dart';
 import 'widgets/business_side_menu.dart';
 
 /// Responsive breakpoint for switching between mobile and web layouts
@@ -67,6 +66,15 @@ class _BusinessShellState extends State<BusinessShell> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _selectedIndex = 0;
   late List<BusinessNavItem> _currentNavItems = [];
+  bool _redirectingNoBar = false;
+
+  void _redirectToInvitation() {
+    if (_redirectingNoBar) return;
+    _redirectingNoBar = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.go(AppRoute.staffInvitationAccept.path);
+    });
+  }
 
   void navigateToTab(int index) {
     if (index >= 0 && index < _currentNavItems.length) {
@@ -98,7 +106,10 @@ class _BusinessShellState extends State<BusinessShell> {
 
           // New business user with no bars - show onboarding
           if (session.barAccess.isEmpty) {
-            return const BusinessOnboardingView();
+            _redirectToInvitation();
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
           }
 
           // Has bars but none selected - auto-select first or show selector
@@ -117,7 +128,9 @@ class _BusinessShellState extends State<BusinessShell> {
           }
 
           if (activeBar == null) {
-            return const BusinessOnboardingView();
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
           }
 
           // Build navigation items based on permissions
@@ -171,9 +184,11 @@ class _BusinessShellState extends State<BusinessShell> {
 
     // For mobile bottom nav, we only show the first 5 items
     final bottomNavItems = navItems.take(5).toList();
-    
+
     // Ensure selected index is valid for bottom nav
-    final bottomNavIndex = _selectedIndex < bottomNavItems.length ? _selectedIndex : 0;
+    final bottomNavIndex = _selectedIndex < bottomNavItems.length
+        ? _selectedIndex
+        : 0;
 
     return Scaffold(
       key: _scaffoldKey,

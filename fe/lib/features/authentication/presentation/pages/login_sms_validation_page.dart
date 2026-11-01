@@ -8,17 +8,22 @@ import 'package:barz/features/authentication/presentation/bloc/login_event.dart'
 import 'package:barz/features/authentication/presentation/bloc/login_state.dart';
 import 'package:pinput/pinput.dart';
 import 'package:sms_autofill/sms_autofill.dart';
+import 'package:barz/core/router/app_routes.dart';
+import 'package:barz/core/router/route_arguments.dart';
+import 'package:barz/features/authentication/presentation/navigation/post_login_destination.dart';
 
 class LoginValidatePhoneNumberPage extends StatefulWidget {
   final String verificationId;
   final String phoneNumber;
   final LoginBloc loginBloc;
+  final String? pendingInvitationCode;
 
   const LoginValidatePhoneNumberPage({
     super.key,
     required this.verificationId,
     required this.phoneNumber,
     required this.loginBloc,
+    this.pendingInvitationCode,
   });
 
   @override
@@ -113,19 +118,19 @@ class _LoginValidatePhoneNumberPageState
         bloc: widget.loginBloc,
         listener: (context, state) {
           if (state is Success) {
-            if (state.needsOnboarding) {
-              context.go('/onboarding', extra: {'phone': state.phoneNumber});
-              return;
-            }
-
-            if (state.isProfileComplete) {
-              context.go('/');
-            } else {
-              context.go(
-                '/complete-registration',
-                extra: {'email': state.email, 'name': state.displayName},
-              );
-            }
+            navigateAfterLogin(
+              context,
+              state: state,
+              pendingInvitationCode: widget.pendingInvitationCode,
+            );
+          } else if (state is MfaRequired) {
+            context.push(
+              AppRoute.mfaChallenge.path,
+              extra: MfaChallengeArguments(
+                token: state.mfaToken,
+                pendingInvitationCode: widget.pendingInvitationCode,
+              ),
+            );
           } else if (state is Failure) {
             ScaffoldMessenger.of(
               context,

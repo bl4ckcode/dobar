@@ -29,7 +29,7 @@ The [criterion evidence and actionable follow-ups](pilot/validation-checklist.md
 
 Observed source references (see the criterion record for executed checks and their limits):
 
-- [fe/lib/ui/business/widgets/business_onboarding_view.dart](../../fe/lib/ui/business/widgets/business_onboarding_view.dart)
+- [fe/lib/features/session/presentation/pages/staff_invitation_page.dart](../../fe/lib/features/session/presentation/pages/staff_invitation_page.dart)
 - [fe/lib/features/session/data/datasources/session_datasource.dart](../../fe/lib/features/session/data/datasources/session_datasource.dart)
 - [fe/lib/features/session/domain/models/bar_access.dart](../../fe/lib/features/session/domain/models/bar_access.dart)
 - [be/app/bars_and_restaurants/routes/staff.py](../../be/app/bars_and_restaurants/routes/staff.py)

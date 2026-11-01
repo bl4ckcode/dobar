@@ -50,6 +50,7 @@ import 'package:barz/features/notifications/presentation/bloc/notification_bloc.
 import 'package:barz/features/home/presentation/pages/profile/profile_edit_page.dart';
 import 'package:barz/features/session/presentation/pages/staff_invitation_page.dart';
 import 'package:barz/features/user/presentation/bloc/user_bloc.dart';
+import 'package:barz/core/router/route_arguments.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 final _businessShellNavigatorKey = GlobalKey<NavigatorState>();
@@ -96,7 +97,15 @@ final appRouter = GoRouter(
     GoRoute(
       path: AppRoute.login.path,
       name: AppRoute.login.name,
-      builder: (context, state) => const LoginPage(),
+      builder: (context, state) {
+        final args = state.extra;
+        final pendingCode = args is LoginRouteArguments
+            ? args.pendingInvitationCode
+            : args is Map
+            ? args['pendingInvitationCode'] as String?
+            : null;
+        return LoginPage(pendingInvitationCode: pendingCode);
+      },
     ),
     GoRoute(
       path: AppRoute.biometryUnlock.path,
@@ -115,12 +124,22 @@ final appRouter = GoRouter(
     GoRoute(
       path: AppRoute.completeRegistration.path,
       name: AppRoute.completeRegistration.name,
+      redirect: (context, state) {
+        final args = state.extra;
+        if (args is CompleteRegistrationArguments && args.returnToCheckout) {
+          return null;
+        }
+        return AppRoute.home.path;
+      },
       builder: (context, state) {
-        final extra = state.extra as Map<String, String?>?;
+        final extra = state.extra as CompleteRegistrationArguments;
         return CompleteRegistrationPage(
-          prefilledEmail: extra?['email'],
-          prefilledName: extra?['name'],
-          prefilledPhone: extra?['phone'],
+          prefilledEmail: extra.prefilledEmail,
+          prefilledName: extra.prefilledName,
+          prefilledPhone: extra.prefilledPhone,
+          initialTermsAccepted: extra.termsAccepted,
+          initialPrivacyAccepted: extra.privacyAccepted,
+          returnToCheckout: extra.returnToCheckout,
         );
       },
     ),
@@ -128,8 +147,18 @@ final appRouter = GoRouter(
       path: AppRoute.mfaChallenge.path,
       name: AppRoute.mfaChallenge.name,
       builder: (context, state) {
-        final extra = state.extra as Map<String, dynamic>?;
-        return MfaChallengePage(mfaToken: extra?['token'] as String? ?? '');
+        final extra = state.extra;
+        if (extra is MfaChallengeArguments) {
+          return MfaChallengePage(
+            mfaToken: extra.token,
+            pendingInvitationCode: extra.pendingInvitationCode,
+          );
+        }
+        final legacy = extra as Map<String, dynamic>?;
+        return MfaChallengePage(
+          mfaToken: legacy?['token'] as String? ?? '',
+          pendingInvitationCode: legacy?['pendingInvitationCode'] as String?,
+        );
       },
     ),
     GoRoute(
@@ -263,7 +292,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: AppRoute.createBar.path,
       name: AppRoute.createBar.name,
-      builder: (context, state) => const CreateBarPage(),
+      builder: (context, state) => CreateBarPage(
+        fromOnboarding:
+            (state.extra as CreateBarArguments?)?.fromOnboarding ?? false,
+      ),
     ),
     GoRoute(
       path: AppRoute.checkin.path,
@@ -280,8 +312,7 @@ final appRouter = GoRouter(
         final barId = state.extra as int?;
         return BlocProvider.value(
           value: getItInjector<SessionBloc>(),
-          child: CartPage(barId: barId,
-          )
+          child: CartPage(barId: barId),
         );
       },
     ),

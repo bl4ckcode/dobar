@@ -17,7 +17,7 @@ class SessionRepositoryImpl implements SessionRepository {
       final result = await _datasource.getMyBars();
       return Right(result);
     } on ServerException catch (e) {
-      return Left(ServerFailure(e.message, e.statusCode));
+      return Left(ServerFailure(e.message, e.statusCode, details: e.details));
     } catch (e) {
       return Left(ServerFailure(e.toString(), null));
     }
@@ -31,7 +31,7 @@ class SessionRepositoryImpl implements SessionRepository {
       final result = await _datasource.acceptInvitation(invitationCode);
       return Right(result);
     } on ServerException catch (e) {
-      return Left(ServerFailure(e.message, e.statusCode));
+      return Left(ServerFailure(e.message, e.statusCode, details: e.details));
     } catch (e) {
       return Left(ServerFailure(e.toString(), null));
     }
@@ -45,7 +45,7 @@ class SessionRepositoryImpl implements SessionRepository {
       final result = await _datasource.previewInvitation(invitationCode);
       return Right(result);
     } on ServerException catch (e) {
-      return Left(ServerFailure(e.message, e.statusCode));
+      return Left(ServerFailure(e.message, e.statusCode, details: e.details));
     } catch (e) {
       return Left(ServerFailure(e.toString(), null));
     }

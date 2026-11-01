@@ -474,17 +474,8 @@ async def add_user_to_bar(
         )
     )
     
-    if existing:
-        # Update existing record — use naive UTC for DateTime(timezone=False) columns
-        now_naive = datetime.utcnow()
-        await database.execute(
-            BarStaff.__table__.update()
-            .where(BarStaff.id == existing["id"])
-            .values(role=role.value, is_active=True, updated_at=now_naive)
-        )
-        return {"action": "updated", "role": role.value}
-    
-    # Create new record — use naive UTC for DateTime(timezone=False) columns
+    # PostgreSQL and SQLite both support this conflict-safe form. The unique
+    # membership constraint makes concurrent invitation acceptance idempotent.
     now_naive = datetime.utcnow()
     staff_data = {
         "user_id": user_id,
@@ -494,8 +485,24 @@ async def add_user_to_bar(
         "invited_by_id": invited_by_id,
         "accepted_at": now_naive,
     }
-    
-    await database.execute(BarStaff.__table__.insert().values(**staff_data))
+    await database.execute(
+        """
+        INSERT INTO bar_staff (
+            user_id, bar_id, role, is_active, invited_by_id,
+            accepted_at, updated_at
+        ) VALUES (
+            :user_id, :bar_id, :role, :is_active, :invited_by_id,
+            :accepted_at, :updated_at
+        )
+        ON CONFLICT (user_id, bar_id) DO UPDATE SET
+            role = excluded.role,
+            is_active = excluded.is_active,
+            invited_by_id = excluded.invited_by_id,
+            accepted_at = excluded.accepted_at,
+            updated_at = excluded.updated_at
+        """,
+        {**staff_data, "updated_at": now_naive},
+    )
     
     # Update user profile to business type if not already
     profile = await database.fetch_one(
@@ -518,7 +525,10 @@ async def add_user_to_bar(
             )
         )
     
-    return {"action": "created", "role": role.value}
+    return {
+        "action": "updated" if existing else "created",
+        "role": role.value,
+    }
 
 
 async def remove_user_from_bar(user_id: int, bar_id: int) -> bool:

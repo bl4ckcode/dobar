@@ -15,7 +15,7 @@ Read the spec and handoff, [FE instructions](../../../fe/AGENTS.md), [architectu
 
 - Keep presentation in widgets/BLoC/Cubit, domain behavior behind repository interfaces/use cases, and networking/storage in data implementations. Register dependencies through existing `lib/shared/app_injections.dart` patterns.
 - Extend existing GoRouter guards/deep-link behavior; retain pending invitation context across login and refresh. Client gating never replaces backend authorization.
-- Use `AppLocalizations` and existing `lib/l10n/*.arb` resources; use semantic DobarColors/theme tokens for labels, surfaces, and actions. Test Portuguese copy, narrow/wide layouts, and both themes.
+- Use `AppLocalizations` and existing `lib/l10n/*.arb` resources. For every presentation surface changed, inventory user-visible hardcoded copy in that surface, extract it into consistently named ARB keys for every supported locale, and regenerate localization output; do not expand into unrelated screens. Use semantic DobarColors/theme tokens for labels, surfaces, and actions. Test Portuguese copy, narrow/wide layouts, and both themes.
 - Inspect actual request/response models. Maintain compatibility, distinguish transport/provider/validation errors, and update the canonical contract when an approved interface changes.
 - For payment UI, use provider tokens and backend-confirmed state. Never add secret provider keys, raw-card logging, client-authoritative charge amounts, or redirect-only success.
 

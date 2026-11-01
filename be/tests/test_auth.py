@@ -1,6 +1,8 @@
 import pytest
 from httpx import AsyncClient
 from unittest.mock import patch, MagicMock, AsyncMock
+from app.database import database
+from app.auth.auth_models import User
 
 
 @pytest.mark.auth
@@ -33,6 +35,12 @@ class TestPhoneAuthentication:
                 "/auth/phone-login",
                 headers={"Authorization": "Bearer mock_firebase_token"}
             )
+
+            await database.execute(
+                User.__table__.update()
+                .where(User.firebase_uid == mock_firebase_token["uid"])
+                .values(phone_verified=False)
+            )
             
             response2 = await client.post(
                 "/auth/phone-login",
@@ -43,6 +51,12 @@ class TestPhoneAuthentication:
         assert response2.status_code == 200
         assert response1.json()["is_new_user"] == True
         assert response2.json()["is_new_user"] == False
+        user = await database.fetch_one(
+            User.__table__.select().where(
+                User.firebase_uid == mock_firebase_token["uid"]
+            )
+        )
+        assert user["phone_verified"] is True
     
     @pytest.mark.asyncio
     async def test_phone_login_invalid_token(self, client: AsyncClient):
@@ -105,12 +119,21 @@ class TestGoogleAuthentication:
             }
             
             response1 = await client.post("/auth/google-login", json=sample_google_login)
+            await database.execute(
+                User.__table__.update()
+                .where(User.google_id == "google_existing_789")
+                .values(email_verified=False)
+            )
             response2 = await client.post("/auth/google-login", json=sample_google_login)
         
         assert response1.status_code == 200
         assert response2.status_code == 200
         assert response1.json()["is_new_user"] == True
         assert response2.json()["is_new_user"] == False
+        user = await database.fetch_one(
+            User.__table__.select().where(User.google_id == "google_existing_789")
+        )
+        assert user["email_verified"] is True
     
     @pytest.mark.asyncio
     async def test_google_login_missing_fields(self, client: AsyncClient):
@@ -154,6 +177,32 @@ class TestAppleAuthentication:
         
         assert response.status_code == 200
         assert response.json()["is_new_user"] == True
+
+    @pytest.mark.asyncio
+    async def test_apple_relogin_marks_matching_email_verified(
+        self, client: AsyncClient, sample_apple_login
+    ):
+        with patch("app.auth.routes.verify_apple_token", new_callable=AsyncMock) as mock_verify:
+            mock_verify.return_value = {
+                "sub": "apple_existing_789",
+                "email": "apple-existing@test.com",
+                "name": None,
+                "provider": "apple",
+            }
+            first = await client.post("/auth/apple-login", json=sample_apple_login)
+            await database.execute(
+                User.__table__.update()
+                .where(User.apple_id == "apple_existing_789")
+                .values(email_verified=False)
+            )
+            second = await client.post("/auth/apple-login", json=sample_apple_login)
+
+        assert first.status_code == 200
+        assert second.status_code == 200
+        user = await database.fetch_one(
+            User.__table__.select().where(User.apple_id == "apple_existing_789")
+        )
+        assert user["email_verified"] is True
     
     @pytest.mark.asyncio
     async def test_apple_login_missing_fields(self, client: AsyncClient):

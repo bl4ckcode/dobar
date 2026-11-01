@@ -1,31 +1,39 @@
 import 'package:barz/core/design/design_system.dart';
-import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/authentication/presentation/bloc/login_bloc.dart';
 import 'package:barz/features/authentication/presentation/bloc/login_event.dart';
 import 'package:barz/features/authentication/presentation/bloc/login_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
+import 'package:barz/features/authentication/presentation/navigation/post_login_destination.dart';
 
 class MfaChallengePage extends StatelessWidget {
   final String mfaToken;
+  final String? pendingInvitationCode;
 
-  const MfaChallengePage({super.key, required this.mfaToken});
+  const MfaChallengePage({
+    super.key,
+    required this.mfaToken,
+    this.pendingInvitationCode,
+  });
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => getItInjector<LoginBloc>(),
-      child: _MfaChallengeView(mfaToken: mfaToken),
+      child: _MfaChallengeView(
+        mfaToken: mfaToken,
+        pendingInvitationCode: pendingInvitationCode,
+      ),
     );
   }
 }
 
 class _MfaChallengeView extends StatefulWidget {
   final String mfaToken;
+  final String? pendingInvitationCode;
 
-  const _MfaChallengeView({required this.mfaToken});
+  const _MfaChallengeView({required this.mfaToken, this.pendingInvitationCode});
 
   @override
   State<_MfaChallengeView> createState() => _MfaChallengeViewState();
@@ -67,28 +75,17 @@ class _MfaChallengeViewState extends State<_MfaChallengeView> {
       ),
       body: BlocConsumer<LoginBloc, LoginState>(
         listener: (context, state) {
-          state.maybeWhen(
-            success: (isComplete, needsOnboarding, phone, email, name) {
-              if (needsOnboarding) {
-                AppRoute.goOnboarding(context, phone: phone);
-              } else if (!isComplete) {
-                AppRoute.goCompleteRegistration(
-                  context,
-                  email: email,
-                  name: name,
-                  phone: phone,
-                );
-              } else {
-                context.go(AppRoute.home.path);
-              }
-            },
-            failure: (error) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Verification Failed: $error')),
-              );
-            },
-            orElse: () {},
-          );
+          if (state is Success) {
+            navigateAfterLogin(
+              context,
+              state: state,
+              pendingInvitationCode: widget.pendingInvitationCode,
+            );
+          } else if (state is Failure) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Verification Failed: ${state.error}')),
+            );
+          }
         },
         builder: (context, state) {
           final isLoading = state.maybeWhen(

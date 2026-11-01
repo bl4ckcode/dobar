@@ -35,6 +35,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:barz/core/design/tokens/dobar_colors.dart';
+import 'package:barz/core/router/route_arguments.dart';
 
 class CheckoutArguments {
   final List<CartItem> items;
@@ -71,6 +72,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
   String? _selectedCardId;
   bool _isProcessing = false;
   bool _isWaitingForProfile = false;
+  bool _isOpeningRegistration = false;
   bool _isWaitingForDocument = false;
   int? _cachedBarId;
   Timer? _pixPollTimer;
@@ -87,13 +89,13 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
     final expMonth = m.expiryMonth ?? 0;
     final expYear = m.expiryYear ?? 0;
-    
+
     final monthStr = expMonth.toString().padLeft(2, '0');
     final yearFullStr = expYear.toString().padLeft(2, '0');
-    final yearStr = yearFullStr.length >= 2 
-        ? yearFullStr.substring(yearFullStr.length - 2) 
+    final yearStr = yearFullStr.length >= 2
+        ? yearFullStr.substring(yearFullStr.length - 2)
         : yearFullStr;
-        
+
     final expiry = '$monthStr/$yearStr';
 
     return SavedCard(
@@ -165,15 +167,23 @@ class _CheckoutPageState extends State<CheckoutPage> {
     return MultiBlocListener(
       listeners: [
         BlocListener<CartBloc, CartState>(listener: _listenToCartState),
-        BlocListener<PaymentBloc, PaymentState>(listener: _listenToPaymentState),
+        BlocListener<PaymentBloc, PaymentState>(
+          listener: _listenToPaymentState,
+        ),
         BlocListener<UserBloc, UserState>(
           listener: (context, state) {
             if (_isWaitingForProfile && state.user != null) {
               setState(() => _isWaitingForProfile = false);
-              _handlePayment(context, widget.arguments!);
+              if (state.user!.hasCompletedRegistration) {
+                _handlePayment(context, widget.arguments!);
+              } else {
+                _openCompleteRegistration(state.user!);
+              }
             } else if (_isWaitingForDocument && state.user != null) {
               final user = state.user!;
-              final hasCpf = user.documents.any((d) => d.type == DocumentType.cpf);
+              final hasCpf = user.documents.any(
+                (d) => d.type == DocumentType.cpf,
+              );
               if (hasCpf && !state.isUpdating) {
                 setState(() => _isWaitingForDocument = false);
                 _handlePayment(context, widget.arguments!);
@@ -190,96 +200,96 @@ class _CheckoutPageState extends State<CheckoutPage> {
               _buildHeader(context, l10n, isDark),
               Expanded(
                 child: BlocBuilder<PaymentBloc, PaymentState>(
-                    builder: (context, paymentState) {
-                      final savedCards = paymentState.savedCards
-                          .map(_fromPaymentMethod)
-                          .toList();
+                  builder: (context, paymentState) {
+                    final savedCards = paymentState.savedCards
+                        .map(_fromPaymentMethod)
+                        .toList();
 
-                      if (_selectedCardId == null && savedCards.isNotEmpty) {
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          if (mounted) {
-                            setState(() => _selectedCardId = savedCards.first.id);
-                          }
-                        });
-                      }
+                    if (_selectedCardId == null && savedCards.isNotEmpty) {
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) {
+                          setState(() => _selectedCardId = savedCards.first.id);
+                        }
+                      });
+                    }
 
-                      return SingleChildScrollView(
-                        padding: const EdgeInsets.only(bottom: 120),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: 24),
-                            CheckoutOrderSummary(
-                                  items: orderItems,
-                                  subtotal: args.subtotal,
-                                  discount: orderDiscount,
-                                  cashback: cashback,
-                                  total: args.total,
-                                  isPro: isPro,
-                                )
-                                .animate()
-                                .fadeIn(duration: 600.ms)
-                                .slideY(begin: 0.1, end: 0),
+                    return SingleChildScrollView(
+                      padding: const EdgeInsets.only(bottom: 120),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 24),
+                          CheckoutOrderSummary(
+                                items: orderItems,
+                                subtotal: args.subtotal,
+                                discount: orderDiscount,
+                                cashback: cashback,
+                                total: args.total,
+                                isPro: isPro,
+                              )
+                              .animate()
+                              .fadeIn(duration: 600.ms)
+                              .slideY(begin: 0.1, end: 0),
 
-                            const SizedBox(height: 32),
+                          const SizedBox(height: 32),
 
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 24),
-                              child: Text(
-                                l10n.payment_methods_title,
-                                style: GoogleFonts.spaceGrotesk(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark ? Colors.white : Colors.black,
-                                ),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 24),
+                            child: Text(
+                              l10n.payment_methods_title,
+                              style: GoogleFonts.spaceGrotesk(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: isDark ? Colors.white : Colors.black,
                               ),
                             ),
+                          ),
 
-                            const SizedBox(height: 16),
+                          const SizedBox(height: 16),
 
-                            PaymentMethodsCard(
-                              savedCards: savedCards,
-                              selectedCardId: _selectedCardId,
-                              onSelectCard: (id) =>
-                                  setState(() => _selectedCardId = id),
-                              onAddCardComplete: _onAddCardComplete,
-                              paymentOptions: [
-                                PaymentOptionItem(
-                                  label: l10n.payment_method_pix,
-                                  icon: LucideIcons.qr_code,
-                                  iconColor: const Color(0xFF32BCAD),
-                                  onTap: () =>
-                                      setState(() => _selectedCardId = '__pix__'),
-                                ),
-                                PaymentOptionItem(
-                                  label: 'Nubank Pay',
-                                  icon: LucideIcons.wallet,
-                                  iconColor: const Color(0xFF8A05BE),
-                                  onTap: () => setState(
-                                    () => _selectedCardId = '__nubank__',
-                                  ),
-                                ),
-                              ],
-                              onApplePay: () =>
-                                  setState(() => _selectedCardId = '__apple__'),
-                              onGooglePay: () =>
-                                  setState(() => _selectedCardId = '__google__'),
-                              isDark: isDark,
-                              isLoadingCards: paymentState.isLoading,
-                            ).animate().fadeIn(delay: 200.ms),
-
-                            const Padding(
-                              padding: EdgeInsets.symmetric(
-                                horizontal: 24,
-                                vertical: 24,
+                          PaymentMethodsCard(
+                            savedCards: savedCards,
+                            selectedCardId: _selectedCardId,
+                            onSelectCard: (id) =>
+                                setState(() => _selectedCardId = id),
+                            onAddCardComplete: _onAddCardComplete,
+                            paymentOptions: [
+                              PaymentOptionItem(
+                                label: l10n.payment_method_pix,
+                                icon: LucideIcons.qr_code,
+                                iconColor: const Color(0xFF32BCAD),
+                                onTap: () =>
+                                    setState(() => _selectedCardId = '__pix__'),
                               ),
-                              child: SecurityIndicators(),
+                              PaymentOptionItem(
+                                label: 'Nubank Pay',
+                                icon: LucideIcons.wallet,
+                                iconColor: const Color(0xFF8A05BE),
+                                onTap: () => setState(
+                                  () => _selectedCardId = '__nubank__',
+                                ),
+                              ),
+                            ],
+                            onApplePay: () =>
+                                setState(() => _selectedCardId = '__apple__'),
+                            onGooglePay: () =>
+                                setState(() => _selectedCardId = '__google__'),
+                            isDark: isDark,
+                            isLoadingCards: paymentState.isLoading,
+                          ).animate().fadeIn(delay: 200.ms),
+
+                          const Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 24,
                             ),
-                          ],
-                        ),
-                      );
-                    },
-                  ),
+                            child: SecurityIndicators(),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
               ),
             ],
           ),
@@ -304,7 +314,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
           ),
           child: PayButton(
             total: widget.arguments?.total ?? 0,
-            isLoading: _isProcessing || _isWaitingForProfile,
+            isLoading:
+                _isProcessing || _isWaitingForProfile || _isOpeningRegistration,
             loadingLabel: _isWaitingForProfile ? 'Loading profile...' : null,
             onPressed: () => _handlePayment(context, widget.arguments!),
           ),
@@ -363,12 +374,19 @@ class _CheckoutPageState extends State<CheckoutPage> {
   }
 
   void _handlePayment(BuildContext context, CheckoutArguments args) {
-    if (_isProcessing || _isWaitingForProfile) return;
+    if (_isProcessing || _isWaitingForProfile || _isOpeningRegistration) {
+      return;
+    }
 
     final userState = context.read<UserBloc>().state;
     if (userState.user == null) {
       setState(() => _isWaitingForProfile = true);
       context.read<UserBloc>().add(const UserEvent.loadCurrentUser());
+      return;
+    }
+
+    if (!userState.user!.hasCompletedRegistration) {
+      _openCompleteRegistration(userState.user!);
       return;
     }
 
@@ -397,6 +415,27 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
+  Future<void> _openCompleteRegistration(UserModel user) async {
+    if (_isOpeningRegistration || !mounted) return;
+    setState(() => _isOpeningRegistration = true);
+    final completed = await context.push<bool>(
+      AppRoute.completeRegistration.path,
+      extra: CompleteRegistrationArguments(
+        prefilledEmail: user.email,
+        prefilledName: user.displayName,
+        prefilledPhone: user.phoneNumber,
+        termsAccepted: user.termsAccepted,
+        privacyAccepted: user.privacyAccepted,
+        returnToCheckout: true,
+      ),
+    );
+    if (!mounted) return;
+    setState(() => _isOpeningRegistration = false);
+    if (completed == true) {
+      context.read<UserBloc>().add(const UserEvent.loadCurrentUser());
+    }
+  }
+
   void _initiatePaymentProcess(BuildContext context, CheckoutResult result) {
     if (result.paymentStatus == 'completed') {
       if (mounted) setState(() => _isProcessing = false);
@@ -411,13 +450,15 @@ class _CheckoutPageState extends State<CheckoutPage> {
     if (user == null) {
       if (mounted) setState(() => _isProcessing = false);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('User session lost. Please log in again.')),
+        const SnackBar(
+          content: Text('User session lost. Please log in again.'),
+        ),
       );
       return;
     }
 
     final barId = _cachedBarId ?? 0;
-    
+
     String? documentNumber;
     if (user.documents.isNotEmpty) {
       final doc = user.documents.firstWhere(
@@ -451,7 +492,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
       barId: barId,
       amount: result.total,
       paymentType: paymentType,
-      paymentMethodId: paymentType == PaymentType.credit && _selectedCardId != null && !_selectedCardId!.startsWith('__')
+      paymentMethodId:
+          paymentType == PaymentType.credit &&
+              _selectedCardId != null &&
+              !_selectedCardId!.startsWith('__')
           ? int.tryParse(_selectedCardId!)
           : null,
       cardToken: null,
@@ -516,39 +560,40 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
   void _listenToPaymentState(BuildContext context, PaymentState state) {
     // Handle approved transaction (credit card or PIX confirmed via polling)
-    if (state.currentTransaction != null && 
+    if (state.currentTransaction != null &&
         state.currentTransaction!.status == TransactionStatus.approved &&
         _currentPixPayment != null) {
       _pixPollTimer?.cancel();
       if (mounted) setState(() => _isProcessing = false);
-      
+
       // Dismiss modal on success
       Navigator.of(context).pop(PixPaymentResult.approved);
-      
+
       // Clear pix payment state
       context.read<PaymentBloc>().add(const ClearPixPayment());
-      
+
       // Clear cart AFTER successful payment
       context.read<CartBloc>().add(cart_event.ClearCart());
-      
+
       // Navigate to tracking page
-      final orderId = _currentPixOrderId ?? state.currentTransaction!.orderId ?? 0;
+      final orderId =
+          _currentPixOrderId ?? state.currentTransaction!.orderId ?? 0;
       AppRoute.goOrder(context, orderId);
       return;
     }
-    
+
     // Handle PIX payment initiated - show QR code modal and start polling
     if (state.pixPayment != null && _currentPixPayment == null) {
       _pixPollTimer?.cancel();
-      
+
       // Store the pix payment for later reference
       _currentPixPayment = state.pixPayment;
-      
+
       // Store the orderId for navigation
       if (state.pixPayment!.orderId != null) {
         _currentPixOrderId = state.pixPayment!.orderId!;
       }
-      
+
       // Set up polling before showing modal
       _startPixPolling(state.pixPayment!.paymentId, _currentPixOrderId ?? 0);
 
@@ -557,7 +602,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
         PixPaymentModal.show(context, state.pixPayment!).then((result) {
           // Handle modal dismissal result
           if (!mounted) return;
-          if (result == PixPaymentResult.cancelled && _currentPixPayment != null && context.mounted) {
+          if (result == PixPaymentResult.cancelled &&
+              _currentPixPayment != null &&
+              context.mounted) {
             // User cancelled - clean up
             _pixPollTimer?.cancel();
             context.read<PaymentBloc>().add(const ClearPixPayment());
@@ -566,17 +613,17 @@ class _CheckoutPageState extends State<CheckoutPage> {
       }
       return;
     }
-    
+
     // Handle errors
     if (state.error != null) {
       _pixPollTimer?.cancel();
       if (mounted) setState(() => _isProcessing = false);
-      
+
       // Dismiss any open modal
       if (Navigator.canPop(context)) {
         Navigator.of(context).pop(PixPaymentResult.cancelled);
       }
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(state.error!), backgroundColor: Colors.red),
       );
@@ -655,13 +702,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
                     final number = controller.text.trim();
                     if (number.isNotEmpty) {
                       context.read<UserBloc>().add(
-                            UserEvent.addDocument(
-                              UserDocument(
-                                type: DocumentType.cpf,
-                                number: number,
-                              ),
-                            ),
-                          );
+                        UserEvent.addDocument(
+                          UserDocument(type: DocumentType.cpf, number: number),
+                        ),
+                      );
                       Navigator.pop(modalContext);
                       // After saving, we wait for the update in the listener
                       setState(() => _isWaitingForDocument = true);

@@ -19,7 +19,7 @@ Architecture:
 - Permissions are granular and role-based
 """
 
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Enum, Table
+from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, DateTime, Enum, Table, UniqueConstraint
 from sqlalchemy.orm import relationship
 from datetime import datetime
 import enum
@@ -193,6 +193,9 @@ class BarStaff(Base):
     - João is also CASHIER at his friend's "Boteco da Esquina"
     """
     __tablename__ = "bar_staff"
+    __table_args__ = (
+        UniqueConstraint("user_id", "bar_id", name="uq_bar_staff_user_bar"),
+    )
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), index=True)

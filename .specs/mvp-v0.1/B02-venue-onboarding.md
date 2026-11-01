@@ -29,7 +29,7 @@ Existing onboarding entry is not proof of draft persistence. Specify resume chec
 Observed source references (inspection only; no runtime or E2E validation):
 
 - [fe/lib/ui/business/forms/business_details_form.dart](../../fe/lib/ui/business/forms/business_details_form.dart)
-- [fe/lib/ui/business/widgets/business_onboarding_view.dart](../../fe/lib/ui/business/widgets/business_onboarding_view.dart)
+- [fe/lib/features/onboarding/presentation/pages/onboarding_page.dart](../../fe/lib/features/onboarding/presentation/pages/onboarding_page.dart)
 - [be/app/bars_and_restaurants/routes/bars.py](../../be/app/bars_and_restaurants/routes/bars.py)
 - [be/app/bars_and_restaurants/routes/bank_accounts.py](../../be/app/bars_and_restaurants/routes/bank_accounts.py)
 

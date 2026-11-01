@@ -79,18 +79,6 @@ enum AppRoute {
   static void goOnboarding(BuildContext context, {String? phone}) {
     context.go('/onboarding', extra: {'phone': phone});
   }
-
-  static void goCompleteRegistration(
-    BuildContext context, {
-    String? email,
-    String? name,
-    String? phone,
-  }) {
-    context.go(
-      '/complete-registration',
-      extra: {'email': email, 'name': name, 'phone': phone},
-    );
-  }
 }
 
 extension AppRouteX on AppRoute {

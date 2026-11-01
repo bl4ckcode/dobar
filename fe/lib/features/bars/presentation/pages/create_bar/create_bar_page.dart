@@ -6,6 +6,9 @@ import 'package:barz/core/design/design_system.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/bars/domain/usecases/bar_usecase.dart';
 import 'package:barz/l10n/app_localizations.dart';
+import 'package:barz/core/router/app_routes.dart';
+import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
+import 'package:barz/features/session/presentation/bloc/session_event.dart';
 import 'steps/find_bar_step.dart';
 import 'steps/basic_info_step.dart';
 import 'steps/photos_step.dart';
@@ -14,7 +17,9 @@ import 'steps/bank_account_step.dart';
 import 'steps/review_step.dart';
 
 class CreateBarPage extends StatefulWidget {
-  const CreateBarPage({super.key});
+  final bool fromOnboarding;
+
+  const CreateBarPage({super.key, this.fromOnboarding = false});
 
   @override
   State<CreateBarPage> createState() => _CreateBarPageState();
@@ -108,7 +113,12 @@ class _CreateBarPageState extends State<CreateBarPage> {
             backgroundColor: successGreen,
           ),
         );
-        context.pop(true);
+        if (widget.fromOnboarding) {
+          getItInjector<SessionBloc>().add(const SessionEvent.initialize());
+          AppRoute.home.go(context);
+        } else {
+          context.pop(true);
+        }
       },
     );
   }
@@ -307,7 +317,11 @@ class _CreateBarPageState extends State<CreateBarPage> {
           FilledButton(
             onPressed: () {
               Navigator.pop(ctx);
-              context.pop();
+              if (widget.fromOnboarding) {
+                AppRoute.onboarding.go(context);
+              } else {
+                context.pop();
+              }
             },
             style: FilledButton.styleFrom(backgroundColor: errorRed),
             child: Text(l10n.discard),

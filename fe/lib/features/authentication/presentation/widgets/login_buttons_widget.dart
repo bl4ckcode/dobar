@@ -9,6 +9,7 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:barz/features/authentication/presentation/bloc/login_bloc.dart';
 import 'package:barz/features/authentication/presentation/bloc/login_event.dart';
+import 'package:barz/l10n/app_localizations.dart';
 
 import 'login_buttons_platform.dart'
     if (dart.library.io) 'login_buttons_platform_io.dart';
@@ -98,9 +99,6 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
 
         if (firebaseIdToken != null) {
           final tokenExpiration = _extractExpFromJwt(idToken);
-          debugPrint(
-            "Firebase ID Token: ${firebaseIdToken.substring(0, 50)}...",
-          );
           widget.loginBloc.add(
             LoginEvent.googleLoginPressed(
               key: user.email,
@@ -191,14 +189,9 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
             : null,
       );
 
-      debugPrint(
-        "Apple Identity Token: ${appleCredential.identityToken?.substring(0, 50)}...",
-      );
-
-      final oauthCredential = OAuthProvider('apple.com').credential(
-        idToken: appleCredential.identityToken,
-        rawNonce: rawNonce,
-      );
+      final oauthCredential = OAuthProvider(
+        'apple.com',
+      ).credential(idToken: appleCredential.identityToken, rawNonce: rawNonce);
 
       final userCredential = await FirebaseAuth.instance.signInWithCredential(
         oauthCredential,
@@ -209,9 +202,6 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
         final tokenExpiration = appleCredential.identityToken != null
             ? _extractExpFromJwt(appleCredential.identityToken!)
             : null;
-        debugPrint(
-          "Firebase ID Token from Apple: ${firebaseIdToken.substring(0, 50)}...",
-        );
         widget.loginBloc.add(
           LoginEvent.appleLoginPressed(
             key:
@@ -232,6 +222,7 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -244,7 +235,7 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
           _buildSocialButton(
             onPressed: _signInWithGoogle,
             icon: 'assets/icons/google.png',
-            label: 'Continue with Google',
+            label: l10n.login_google,
           ),
         if (kIsWeb || isIOSPlatform()) const SizedBox(height: BarzSpacing.sm),
         // Apple sign-in: web and iOS
@@ -252,7 +243,7 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
           _buildSocialButton(
             onPressed: _signInWithApple,
             icon: 'assets/icons/apple.png',
-            label: 'Continue with Apple',
+            label: l10n.login_apple,
           ),
       ],
     );
@@ -277,9 +268,11 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
     required String icon,
     required String label,
   }) {
+    final colors = context.dobarColors;
+    final isApple = icon.contains('apple');
     return SizedBox(
       width: double.infinity,
-      height: TouchTargets.minimum,
+      height: 52,
       child: OutlinedButton.icon(
         onPressed: onPressed,
         style: OutlinedButton.styleFrom(
@@ -287,16 +280,21 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
             vertical: ButtonSpacing.paddingVertical,
             horizontal: ButtonSpacing.paddingHorizontal,
           ),
-          side: const BorderSide(color: barzDark, width: 2),
+          backgroundColor: isApple
+              ? (context.isDark ? colors.labelPrimary : barzDark)
+              : colors.surface,
+          side: BorderSide(color: colors.surfaceElevated),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(BarzRadii.md),
+            borderRadius: BorderRadius.circular(12),
           ),
         ),
         icon: Image.asset(icon, height: 24, width: 24),
         label: Text(
           label,
           style: barzTextTheme.labelLarge?.copyWith(
-            color: barzDark,
+            color: isApple
+                ? (context.isDark ? colors.background : Colors.white)
+                : colors.labelPrimary,
             fontWeight: FontWeight.w600,
           ),
         ),

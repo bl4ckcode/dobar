@@ -44,6 +44,85 @@ The spec-backed [staff invitation acceptance prompt](../../.specs/mvp-v0.1/pilot
 
 ## Client Shell (Consumer App)
 
+### Onboarding Page — Light/Dark Visual Refinement
+Lovable export used for Flutter translation: [`bl4ckcode/velvet-entry`](https://github.com/bl4ckcode/velvet-entry) at revision `2640ae5acbeda301726129a0d09af15c9b564404` (`src/pages/Onboarding.tsx`, `src/components/OnboardingToolbar.tsx`, `src/lib/i18n.ts`, and `src/index.css`). Only onboarding is in the current translation scope; login remains a later refinement.
+
+"Build an exportable React + TypeScript visual prototype for a focused refinement of the existing Dobar/Barz onboarding screen. This is a design handoff for a later Flutter translation; do not invent backend calls or change the existing onboarding flow.
+
+**CONTEXT:**
+The screen appears after authentication. A user selects exactly one role (`Customer` or `Business`), confirms a supported country (which may be auto-detected from the phone number), and continues. Preserve those interactions, the enabled/disabled/loading button states, and the existing compact single-page structure.
+
+**SCOPE — ONLY THESE REFINEMENTS:**
+1. Make the entire screen polished and fully adaptive in both light and dark themes.
+2. Replace the generic icon above the title with one pretty icon that communicates nightlife and welcome at a glance. Prefer a clean Lucide `Wine`, `Martini`, or `Sparkles` treatment inside a restrained branded container; do not use an emoji or a detailed illustration.
+3. Keep the role cards, country selector, and primary action recognizable. Improve contrast, spacing, selected/focus states, and visual hierarchy without redesigning the journey.
+
+**VISUAL DIRECTION:**
+- Industrial Modern, premium nightlife, friendly rather than intimidating.
+- Use semantic equivalents of Dobar tokens: gold `#FFDE59` for primary/selected accents, deep black `#0A0A0A` for dark backgrounds, matte surfaces `#121212` and `#1A1A1A`, and warm light surfaces rather than stark gray.
+- In light theme, use dark readable labels and subtle warm surfaces. In dark theme, use light labels and layered dark surfaces. Never hardcode a color that becomes illegible in the other theme.
+- Role cards must have equally strong unselected states and an unmistakable selected state using border, surface, icon, and text—not color alone.
+- Use one consistent icon family (Lucide) for the hero, customer, business, country, and dropdown affordance.
+
+**COPY / LOCALIZATION PREVIEW:**
+- Show Brazilian Portuguese as the default preview: `Bem-vindo ao Dobar!`, `Vamos configurar sua conta`, `Eu sou...`, `Cliente`, `Encontre bares e peça bebidas`, `Estabelecimento`, `Gerencie meu bar`, `Meu país`, `Selecione seu país`, `Detectado automaticamente pelo seu telefone`, `Continuar`, and `Configurando...`.
+- Keep every text value in a small localization dictionary and include English and Spanish preview values. Do not embed copy directly inside presentational components.
+- Country labels must also come from localization data; preserve country codes and flags as data.
+
+**INTERACTION & ACCESSIBILITY:**
+- Provide light/dark preview controls for design review only.
+- Include default, selected, focus-visible, disabled, and submitting states.
+- Preserve logical keyboard focus order, screen-reader labels, 44px minimum touch targets, readable contrast, and reduced-motion behavior.
+- Use only subtle entrance/selection transitions; no looping animation is required.
+
+**TECHNICAL HANDOFF:**
+- Produce an exportable responsive React + TypeScript screen with clearly separated theme tokens and localized copy objects.
+- Keep role identifiers `client` and `business` and ISO country codes unchanged.
+- Mock submission locally and visibly label it as a prototype; do not claim persistence or successful API integration."
+
+---
+
+### Home Connected — Toolbar, Category Pills, and Badges Only
+Lovable export used for Flutter translation: [`bl4ckcode/pixel-perfect-replica`](https://github.com/bl4ckcode/pixel-perfect-replica) at revision `5ca36e1b1a3994f9fdf29e0c02f8121c053efc47` (`src/components/dobar/controls.tsx`, `src/components/dobar/copy.ts`, `src/routes/index.tsx`, and `src/styles.css`). Only the toolbar, category pills, and compact badges are in scope.
+
+"Build an exportable React + TypeScript visual prototype that refines only the toolbar/category selection items and compact badges in the existing Dobar/Barz connected home screen. The page background, bottom navigation, content sections, venue cards, drink cards, data, and navigation behavior are already approved and must remain visually unchanged.
+
+**CONTEXT:**
+The current top content toolbar has horizontal category pills for Bars, Restaurants, and Clubs. Venue cards can show one promotion badge (`Happy Hour`, `Cashback`, or generic promotion), drink cards can show a `Hot` badge, and the floating header can show a nearby-venue check-in prompt plus a notification button. These elements currently clash with the otherwise polished screen.
+
+**SCOPE — ONLY THESE SURFACES:**
+1. Category selection pills: Bars, Restaurants, Clubs.
+2. Venue promotion badges: Happy Hour, Cashback, Promotion.
+3. Drink `Hot` badge.
+4. Nearby-venue prompt and notification badge/button in the top toolbar.
+Do not redesign any card, page background, section heading, carousel, bottom navigation, or central check-in action.
+
+**DESIGN DIRECTION:**
+- Use the existing semantic design-system colors rather than unrelated pastel badge palettes: gold for selection and premium promotion emphasis, semantic success green for cashback, warm warning/accent for Happy Hour or Hot, neutral elevated surfaces for inactive controls, and semantic error only for notification count/attention.
+- Every item uses a pretty icon from one coherent Lucide family. Suggested meanings: `Wine` for Bars, `UtensilsCrossed` for Restaurants, `Music2` or `PartyPopper` for Clubs, `Clock3` for Happy Hour, `RefreshCcw` or `Coins` for Cashback, `Tag` for Promotion, `Flame` for Hot, `MapPin` for nearby venue, and `Bell` for notifications. If an exact icon is unavailable, choose the closest pretty icon with the same meaning.
+- Avoid mixing filled Material-style glyphs with outline Lucide glyphs in the same control row.
+- Pills and badges should share radius, border weight, icon sizing, label weight, and vertical alignment so they feel like one system.
+- Keep compact badges readable over photography by using an opaque or high-opacity semantic surface and sufficient contrast; avoid heavy shadows and novelty gradients.
+
+**STATES & BEHAVIOR:**
+- Category pills need unselected, selected, hover, pressed, keyboard-focus, and disabled examples. Selected state must be clear without color alone.
+- Preserve the current behavior where tapping a category navigates to Find filtered by its existing ID: `bar`, `restaurant`, or `club`; do not turn the toolbar into an in-place filter.
+- Venue badges remain mutually exclusive with current priority: Happy Hour > Cashback > Promotion.
+- Show notification examples for zero (hidden), a dot/small count, and `99+`; include an accessible label.
+- Nearby-venue prompt remains tappable and must handle a long venue name without overflow.
+
+**THEMES, COPY, AND ACCESSIBILITY:**
+- Demonstrate light and dark themes using semantic Dobar tokens: `#FFDE59`, `#0A0A0A`, `#121212`, `#1A1A1A`, and success `#00B37E`, with accessible derived foreground/border colors.
+- Keep all labels localization-ready and preview Brazilian Portuguese first, plus English and Spanish. Do not hardcode copy inside presentational components.
+- Respect reduced motion. Use a short selection transition and restrained notification attention; do not continuously scale the whole toolbar.
+- Maintain 44px touch targets, visible focus rings, screen-reader names, and text scaling without clipping.
+
+**TECHNICAL HANDOFF:**
+- Deliver these controls as isolated React + TypeScript components plus a small contextual home-screen preview.
+- Keep mock state local, clearly marked as prototype-only. Do not add APIs, change response models, or claim backend integration."
+
+---
+
 ### Check-in Page Redesign
 "Build a premium, immersive Check-in experience for a nightlife bar ordering app called **Dobar/Barz**.
 

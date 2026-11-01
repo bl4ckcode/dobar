@@ -57,11 +57,15 @@ class SessionNetworkDatasource implements SessionDatasource {
 
       return BarAccess.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
+      final data = e.response?.data;
       throw ServerException(
-        e.response?.data?['error_code'] ??
-            e.response?.data?['message'] ??
-            'Failed to accept invitation',
+        data is Map
+            ? data['error_code'] ?? data['message']
+            : 'Failed to accept invitation',
         e.response?.statusCode,
+        details: data is Map && data['details'] is Map
+            ? Map<String, dynamic>.from(data['details'] as Map)
+            : const {},
       );
     }
   }
@@ -73,15 +77,17 @@ class SessionNetworkDatasource implements SessionDatasource {
         '${ApiEndpoints.baseUrl}${ApiEndpoints.previewInvitation}',
         data: {'invitation_code': invitationCode},
       );
-      return InvitationPreview.fromJson(
-        response.data as Map<String, dynamic>,
-      );
+      return InvitationPreview.fromJson(response.data as Map<String, dynamic>);
     } on DioException catch (e) {
+      final data = e.response?.data;
       throw ServerException(
-        e.response?.data?['error_code'] ??
-            e.response?.data?['message'] ??
-            'Failed to preview invitation',
+        data is Map
+            ? data['error_code'] ?? data['message']
+            : 'Failed to preview invitation',
         e.response?.statusCode,
+        details: data is Map && data['details'] is Map
+            ? Map<String, dynamic>.from(data['details'] as Map)
+            : const {},
       );
     }
   }

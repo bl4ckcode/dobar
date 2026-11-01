@@ -8,6 +8,7 @@ import 'package:barz/features/authentication/domain/usecases/login_usecase.dart'
 import 'package:barz/features/user/domain/repositories/abstract_user_repository.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:barz/core/rbac/user_type.dart';
 import 'login_event.dart';
 import 'login_state.dart' hide Failure;
 
@@ -57,7 +58,11 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
         emit(
           LoginState.success(
             isProfileComplete: profileResult.isComplete,
-            needsOnboarding: profileResult.needsOnboarding,
+            needsOnboarding:
+                authResponse?.isNewUser == true ||
+                profileResult.needsOnboarding,
+            isNewUser: authResponse?.isNewUser ?? false,
+            userType: profileResult.userType,
             phoneNumber: phoneNumber ?? _currentPhoneNumber,
             email: profileResult.email ?? email,
             displayName: profileResult.name,
@@ -68,7 +73,15 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
   }
 
   /// Check if user profile is complete and if onboarding is needed
-  Future<({bool isComplete, bool needsOnboarding, String? email, String? name})>
+  Future<
+    ({
+      bool isComplete,
+      bool needsOnboarding,
+      String? email,
+      String? name,
+      UserType? userType,
+    })
+  >
   _checkProfileComplete() async {
     if (userRepository == null) {
       return (
@@ -76,6 +89,7 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
         needsOnboarding: false,
         email: null,
         name: null,
+        userType: null,
       );
     }
 
@@ -92,6 +106,7 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
                 needsOnboarding: false,
                 email: null,
                 name: null,
+                userType: null,
               ); // Don't block on server errors
             }
           }
@@ -101,23 +116,18 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
             needsOnboarding: true,
             email: null,
             name: null,
+            userType: null,
           );
         },
         (user) {
-          final isComplete =
-              user.displayName != null &&
-              user.displayName!.isNotEmpty &&
-              user.email != null &&
-              user.email!.isNotEmpty &&
-              user.termsAccepted &&
-              user.privacyAccepted;
-          // Check if user needs onboarding (no country_code set)
+          final isComplete = user.hasCompletedRegistration;
           final needsOnboarding = !user.hasCompletedOnboarding;
           return (
             isComplete: isComplete,
             needsOnboarding: needsOnboarding,
             email: user.email,
             name: user.displayName,
+            userType: user.hasSelectedUserType ? user.userType : null,
           );
         },
       );
@@ -127,6 +137,7 @@ class LoginBloc extends Bloc<LoginEvent, LoginState> {
         needsOnboarding: false,
         email: null,
         name: null,
+        userType: null,
       ); // Don't block on unexpected errors
     }
   }

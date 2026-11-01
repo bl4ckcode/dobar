@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/core/design/design_system.dart';
@@ -431,7 +432,10 @@ class _HomeConnectedViewState extends State<HomeConnectedView>
               style: TextStyle(color: Colors.red[700]),
             ),
             const SizedBox(height: 12),
-            ElevatedButton(onPressed: onRetry, child: const Text('Retry')),
+            ElevatedButton(
+              onPressed: onRetry,
+              child: Text(AppLocalizations.of(context)!.home_retry),
+            ),
           ],
         ),
       ),
@@ -461,13 +465,17 @@ class _HomeConnectedViewState extends State<HomeConnectedView>
   Widget _buildCategoriesSection(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final categories = [
-      (icon: Icons.local_bar, label: l10n.category_bars, id: 'bar'),
+      (icon: LucideIcons.wine, label: l10n.category_bars, id: 'bar'),
       (
-        icon: Icons.restaurant,
+        icon: LucideIcons.utensils_crossed,
         label: l10n.category_restaurants,
         id: 'restaurant',
       ),
-      (icon: Icons.nightlife, label: l10n.category_clubs, id: 'club'),
+      (
+        icon: LucideIcons.party_popper,
+        label: l10n.category_clubs,
+        id: 'club',
+      ),
     ];
 
     return SizedBox(
@@ -690,16 +698,16 @@ class _HomeConnectedViewState extends State<HomeConnectedView>
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.deepOrange,
+                      color: const Color(0xFFFF8A3D),
                       borderRadius: BorderRadius.circular(999),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(
-                          Icons.whatshot,
-                          size: 12,
-                          color: Colors.white,
+                          LucideIcons.flame,
+                          size: 13,
+                          color: barzDark,
                         ),
                         const SizedBox(width: 4),
                         Text(
@@ -707,7 +715,7 @@ class _HomeConnectedViewState extends State<HomeConnectedView>
                           style: const TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: barzDark,
                           ),
                         ),
                       ],

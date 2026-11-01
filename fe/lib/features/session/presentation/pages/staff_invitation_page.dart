@@ -11,10 +11,13 @@ import 'package:barz/features/session/domain/models/invitation_preview.dart';
 import 'package:barz/features/session/domain/usecases/session_usecase.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
 import 'package:barz/features/session/presentation/bloc/session_event.dart';
+import 'package:barz/features/session/presentation/bloc/session_state.dart';
 import 'package:barz/features/session/presentation/cubit/invitation_cubit.dart';
 import 'package:barz/features/session/presentation/cubit/invitation_state.dart';
 import 'package:barz/l10n/app_localizations.dart';
 import 'package:intl/intl.dart';
+import 'package:barz/core/theme/theme_cubit.dart';
+import 'package:barz/core/router/route_arguments.dart';
 
 /// B08-FE DOB-90: Staff invitation acceptance page.
 /// Route: /staff/invitations/accept?code=<code>
@@ -44,41 +47,119 @@ class _StaffInvitationView extends StatelessWidget {
     final colors = context.dobarColors;
     return Scaffold(
       backgroundColor: colors.background,
-      appBar: AppBar(
-        backgroundColor: colors.background,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(LucideIcons.arrow_left),
-          tooltip: l10n.invitation_header_back,
-          onPressed: () => context.canPop()
-              ? context.pop()
-              : context.go(AppRoute.businessDashboard.path),
-        ),
-        title: Text('Dobar',
-            style: TextStyle(
-                color: colors.labelPrimary, fontWeight: FontWeight.bold)),
-        actions: const [_ThemeToggle()],
-      ),
-      body: BlocBuilder<InvitationCubit, InvitationState>(
-        builder: (context, state) => Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(vertical: 24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 480),
-              child: Padding(
-                padding: EdgeInsets.symmetric(
-                    horizontal: context.isMobileLayout ? 24 : 0),
-                child: AnimatedSwitcher(
-                  duration: 350.ms,
-                  child: KeyedSubtree(
-                    key: ValueKey(state.runtimeType),
-                    child: _bodyFor(context, state, l10n),
-                  ),
-                ),
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: CustomPaint(
+              painter: _IndustrialPainter(
+                background: colors.background,
+                grid: colors.labelPrimary.withValues(alpha: 0.045),
+                glow: colors.buttonPrimary.withValues(alpha: 0.12),
               ),
             ),
           ),
-        ),
+          SafeArea(
+            child: Column(
+              children: [
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 1024),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    child: Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(LucideIcons.arrow_left, size: 20),
+                          tooltip: l10n.invitation_header_back,
+                          onPressed: () => _dismissInvitation(context),
+                        ),
+                        Container(
+                          width: 32,
+                          height: 32,
+                          alignment: Alignment.center,
+                          decoration: BoxDecoration(
+                            color: colors.buttonPrimary,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            'D',
+                            style: TextStyle(
+                              color: colors.buttonOnPrimary,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Dobar',
+                            style: TextStyle(
+                              color: colors.labelPrimary,
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        const _ThemeToggle(),
+                      ],
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: BlocBuilder<InvitationCubit, InvitationState>(
+                    builder: (context, state) => LayoutBuilder(
+                      builder: (context, constraints) {
+                        final compact = constraints.maxWidth < 600;
+                        return Center(
+                          child: SingleChildScrollView(
+                            padding: EdgeInsets.symmetric(
+                              vertical: compact ? 0 : 24,
+                              horizontal: compact ? 0 : 24,
+                            ),
+                            child: Container(
+                              width: double.infinity,
+                              constraints: const BoxConstraints(maxWidth: 480),
+                              padding: EdgeInsets.all(compact ? 24 : 32),
+                              decoration: BoxDecoration(
+                                color: colors.surface,
+                                borderRadius: compact
+                                    ? null
+                                    : BorderRadius.circular(16),
+                                border: Border.all(
+                                  color: colors.surfaceElevated,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.18),
+                                    blurRadius: 50,
+                                    offset: const Offset(0, 20),
+                                  ),
+                                ],
+                              ),
+                              child: AnimatedSwitcher(
+                                duration:
+                                    MediaQuery.disableAnimationsOf(context)
+                                    ? Duration.zero
+                                    : 350.ms,
+                                child: KeyedSubtree(
+                                  key: ValueKey(state.runtimeType),
+                                  child: _bodyFor(context, state, l10n),
+                                ),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -89,30 +170,48 @@ class _StaffInvitationView extends StatelessWidget {
     AppLocalizations l10n,
   ) {
     return switch (state) {
-      InvitationManualCode() =>
-        _ManualCodeForm(initialCode: state.initialCode),
+      InvitationManualCode() => _ManualCodeForm(initialCode: state.initialCode),
       InvitationLoading() => _LoadingBody(l10n: l10n),
-      InvitationSignedOut() =>
-        _SignedOutBody(code: state.code, l10n: l10n),
-      InvitationReady() =>
-        _ReadyBody(code: state.code, preview: state.preview, l10n: l10n),
-      InvitationAccepting() =>
-        _AcceptingBody(preview: state.preview, l10n: l10n),
+      InvitationSignedOut() => _SignedOutBody(code: state.code, l10n: l10n),
+      InvitationReady() => _ReadyBody(
+        code: state.code,
+        preview: state.preview,
+        l10n: l10n,
+      ),
+      InvitationAccepting() => _AcceptingBody(
+        preview: state.preview,
+        l10n: l10n,
+      ),
       InvitationAcceptError() => _AcceptErrorBody(
-          code: state.code, preview: state.preview, l10n: l10n),
+        code: state.code,
+        preview: state.preview,
+        l10n: l10n,
+      ),
       InvitationAccepted() => _SuccessBody(
-          preview: state.preview, access: state.access, isNew: true, l10n: l10n),
+        preview: state.preview,
+        access: state.access,
+        isNew: true,
+        l10n: l10n,
+      ),
       InvitationAlreadyMember() => _SuccessBody(
-          preview: null, access: state.access, isNew: false, l10n: l10n),
-      InvitationWrongAccount() =>
-        _WrongAccountBody(code: state.code, l10n: l10n),
+        preview: null,
+        access: state.access,
+        isNew: false,
+        l10n: l10n,
+      ),
+      InvitationWrongAccount() => _WrongAccountBody(
+        code: state.code,
+        l10n: l10n,
+      ),
       InvitationUnverified() => _UnverifiedBody(
-          code: state.code, contactType: state.contactType, l10n: l10n),
+        code: state.code,
+        contactType: state.contactType,
+        l10n: l10n,
+      ),
       InvitationExpired() => _TerminalBody(kind: 'expired', l10n: l10n),
       InvitationRevoked() => _TerminalBody(kind: 'revoked', l10n: l10n),
       InvitationInvalid() => _TerminalBody(kind: 'invalid', l10n: l10n),
-      InvitationLoadError() =>
-        _LoadErrorBody(code: state.code, l10n: l10n),
+      InvitationLoadError() => _LoadErrorBody(code: state.code, l10n: l10n),
     };
   }
 }
@@ -124,17 +223,21 @@ class _LoadingBody extends StatelessWidget {
   const _LoadingBody({required this.l10n});
   @override
   Widget build(BuildContext context) {
-    return Column(children: [
-      _GenericInvitationFrame(),
-      const SizedBox(height: 20),
-      Semantics(
-        liveRegion: true,
-        child: Text(l10n.invitation_loading,
-            style: TextStyle(color: context.dobarColors.labelSecondary)),
-      ),
-      const SizedBox(height: 12),
-      const CircularProgressIndicator(),
-    ]);
+    return Column(
+      children: [
+        _GenericInvitationFrame(),
+        const SizedBox(height: 20),
+        Semantics(
+          liveRegion: true,
+          child: Text(
+            l10n.invitation_loading,
+            style: TextStyle(color: context.dobarColors.labelSecondary),
+          ),
+        ),
+        const SizedBox(height: 12),
+        const CircularProgressIndicator(),
+      ],
+    );
   }
 }
 
@@ -145,27 +248,67 @@ class _SignedOutBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.dobarColors;
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      _GenericInvitationFrame(),
-      const SizedBox(height: 24),
-      Text(l10n.invitation_sign_in_title,
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: colors.labelPrimary)),
-      const SizedBox(height: 4),
-      Text(l10n.invitation_sign_in_hint,
-          style: TextStyle(fontSize: 14, color: colors.labelSecondary)),
-      const SizedBox(height: 16),
-      _SocialButton(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _GenericInvitationFrame(),
+        const SizedBox(height: 24),
+        Text(
+          l10n.invitation_sign_in_title,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: colors.labelPrimary,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          l10n.invitation_sign_in_hint,
+          style: TextStyle(fontSize: 14, color: colors.labelSecondary),
+        ),
+        const SizedBox(height: 16),
+        _SocialButton(
           icon: LucideIcons.mail,
           label: l10n.invitation_google,
-          onTap: () => context.push(AppRoute.login.path,
-              extra: {'pendingInvitationCode': code})),
-      const SizedBox(height: 8),
-      _SocialButton(
+          onTap: () => context.go(
+            AppRoute.login.path,
+            extra: LoginRouteArguments(
+              pendingInvitationCode: code,
+              preferredProvider: 'google',
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        _SocialButton(
+          icon: Icons.apple,
+          label: l10n.invitation_apple,
+          onTap: () => context.go(
+            AppRoute.login.path,
+            extra: LoginRouteArguments(
+              pendingInvitationCode: code,
+              preferredProvider: 'apple',
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        _SocialButton(
           icon: LucideIcons.smartphone,
           label: l10n.invitation_phone,
-          onTap: () => context.push(AppRoute.login.path,
-              extra: {'pendingInvitationCode': code})),
-    ]);
+          onTap: () => context.go(
+            AppRoute.login.path,
+            extra: LoginRouteArguments(
+              pendingInvitationCode: code,
+              preferredProvider: 'phone',
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextButton(
+          onPressed: () => _dismissInvitation(context),
+          child: Text(l10n.invitation_dismiss),
+        ),
+      ],
+    );
   }
 }
 
@@ -173,36 +316,53 @@ class _ReadyBody extends StatelessWidget {
   final String code;
   final InvitationPreview preview;
   final AppLocalizations l10n;
-  const _ReadyBody({required this.code, required this.preview, required this.l10n});
+  const _ReadyBody({
+    required this.code,
+    required this.preview,
+    required this.l10n,
+  });
   @override
   Widget build(BuildContext context) {
     final cubit = context.read<InvitationCubit>();
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      _InvitationCard(preview: preview, l10n: l10n),
-      const SizedBox(height: 16),
-      Text(l10n.invitation_accept_support,
-          style: TextStyle(fontSize: 13, color: context.dobarColors.labelSecondary),
-          textAlign: TextAlign.center),
-      const SizedBox(height: 16),
-      FilledButton(
-        onPressed: () => cubit.acceptInvitation(code, preview),
-        style: FilledButton.styleFrom(
-          backgroundColor: barzGold, foregroundColor: barzDark,
-          minimumSize: const Size.fromHeight(52),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _InvitationCard(preview: preview, l10n: l10n),
+        const SizedBox(height: 16),
+        Text(
+          l10n.invitation_accept_support,
+          style: TextStyle(
+            fontSize: 13,
+            color: context.dobarColors.labelSecondary,
+          ),
+          textAlign: TextAlign.center,
         ),
-        child: Text(l10n.invitation_accept_cta,
-            style: const TextStyle(fontWeight: FontWeight.bold)),
-      ),
-      const SizedBox(height: 8),
-      TextButton(
-        onPressed: () => context.canPop()
-            ? context.pop()
-            : context.go(AppRoute.businessDashboard.path),
-        child: Text(l10n.invitation_dismiss,
-            style: TextStyle(color: context.dobarColors.labelSecondary)),
-      ),
-    ]);
+        const SizedBox(height: 16),
+        FilledButton(
+          onPressed: () => cubit.acceptInvitation(code, preview),
+          style: FilledButton.styleFrom(
+            backgroundColor: barzGold,
+            foregroundColor: barzDark,
+            minimumSize: const Size.fromHeight(52),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: Text(
+            l10n.invitation_accept_cta,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextButton(
+          onPressed: () => _dismissInvitation(context),
+          child: Text(
+            l10n.invitation_dismiss,
+            style: TextStyle(color: context.dobarColors.labelSecondary),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -212,31 +372,49 @@ class _AcceptingBody extends StatelessWidget {
   const _AcceptingBody({required this.preview, required this.l10n});
   @override
   Widget build(BuildContext context) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      _InvitationCard(preview: preview, l10n: l10n),
-      const SizedBox(height: 20),
-      Semantics(
-        liveRegion: true,
-        child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-          const SizedBox(width: 20, height: 20,
-              child: CircularProgressIndicator(strokeWidth: 2)),
-          const SizedBox(width: 12),
-          Text(l10n.invitation_accepting,
-              style: TextStyle(color: context.dobarColors.labelSecondary)),
-        ]),
-      ),
-      const SizedBox(height: 12),
-      FilledButton(
-        onPressed: null,
-        style: FilledButton.styleFrom(
-          backgroundColor: barzGold,
-          minimumSize: const Size.fromHeight(52),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _InvitationCard(preview: preview, l10n: l10n),
+        const SizedBox(height: 20),
+        Semantics(
+          liveRegion: true,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                l10n.invitation_accepting,
+                style: TextStyle(color: context.dobarColors.labelSecondary),
+              ),
+            ],
+          ),
         ),
-        child: Text(l10n.invitation_accept_cta,
-            style: const TextStyle(fontWeight: FontWeight.bold, color: barzDark)),
-      ),
-    ]);
+        const SizedBox(height: 12),
+        FilledButton(
+          onPressed: null,
+          style: FilledButton.styleFrom(
+            backgroundColor: barzGold,
+            minimumSize: const Size.fromHeight(52),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: Text(
+            l10n.invitation_accept_cta,
+            style: const TextStyle(
+              fontWeight: FontWeight.bold,
+              color: barzDark,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -244,35 +422,50 @@ class _AcceptErrorBody extends StatelessWidget {
   final String code;
   final InvitationPreview preview;
   final AppLocalizations l10n;
-  const _AcceptErrorBody({required this.code, required this.preview, required this.l10n});
+  const _AcceptErrorBody({
+    required this.code,
+    required this.preview,
+    required this.l10n,
+  });
   @override
   Widget build(BuildContext context) {
     final cubit = context.read<InvitationCubit>();
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      _InvitationCard(preview: preview, l10n: l10n),
-      const SizedBox(height: 16),
-      _StatusBanner(tone: _StatusTone.error, icon: LucideIcons.wifi_off,
-          title: l10n.invitation_accept_error_title),
-      const SizedBox(height: 16),
-      FilledButton(
-        onPressed: () => cubit.acceptInvitation(code, preview),
-        style: FilledButton.styleFrom(
-          backgroundColor: barzGold, foregroundColor: barzDark,
-          minimumSize: const Size.fromHeight(52),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _InvitationCard(preview: preview, l10n: l10n),
+        const SizedBox(height: 16),
+        _StatusBanner(
+          tone: _StatusTone.error,
+          icon: LucideIcons.wifi_off,
+          title: l10n.invitation_accept_error_title,
         ),
-        child: Text(l10n.invitation_retry,
-            style: const TextStyle(fontWeight: FontWeight.bold)),
-      ),
-      const SizedBox(height: 8),
-      TextButton(
-        onPressed: () => context.canPop()
-            ? context.pop()
-            : context.go(AppRoute.businessDashboard.path),
-        child: Text(l10n.invitation_dismiss,
-            style: TextStyle(color: context.dobarColors.labelSecondary)),
-      ),
-    ]);
+        const SizedBox(height: 16),
+        FilledButton(
+          onPressed: () => cubit.acceptInvitation(code, preview),
+          style: FilledButton.styleFrom(
+            backgroundColor: barzGold,
+            foregroundColor: barzDark,
+            minimumSize: const Size.fromHeight(52),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: Text(
+            l10n.invitation_retry,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextButton(
+          onPressed: () => _dismissInvitation(context),
+          child: Text(
+            l10n.invitation_dismiss,
+            style: TextStyle(color: context.dobarColors.labelSecondary),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -281,54 +474,83 @@ class _SuccessBody extends StatelessWidget {
   final BarAccess access;
   final bool isNew;
   final AppLocalizations l10n;
-  const _SuccessBody({this.preview, required this.access, required this.isNew, required this.l10n});
+  const _SuccessBody({
+    this.preview,
+    required this.access,
+    required this.isNew,
+    required this.l10n,
+  });
   @override
   Widget build(BuildContext context) {
     final venueName = preview?.venueName ?? access.barName;
     final role = _localizedRole(preview?.role ?? access.role.name, l10n);
     return Semantics(
       liveRegion: true,
-      child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-        Container(
-          width: 80, height: 80,
-          decoration: BoxDecoration(
-              color: pixGreen.withValues(alpha: 0.15), shape: BoxShape.circle),
-          child: const Icon(LucideIcons.circle_check, size: 44, color: pixGreen),
-        ).animate().scale(duration: 350.ms, curve: Curves.elasticOut),
-        const SizedBox(height: 20),
-        Text(
-          isNew ? l10n.invitation_success_title : l10n.invitation_already_member_title,
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold,
-              color: context.dobarColors.labelPrimary),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 8),
-        Text(
-          isNew
-              ? l10n.invitation_success_body(venueName, role)
-              : l10n.invitation_already_member_body(venueName, role),
-          style: TextStyle(fontSize: 14, color: context.dobarColors.labelSecondary),
-          textAlign: TextAlign.center,
-        ),
-        const SizedBox(height: 24),
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton(
-            onPressed: () {
-              context.read<SessionBloc>()
-                  .add(SessionEvent.switchActiveBar(barId: access.barId));
-              context.go(AppRoute.businessDashboard.path);
-            },
-            style: FilledButton.styleFrom(
-              backgroundColor: barzGold, foregroundColor: barzDark,
-              minimumSize: const Size.fromHeight(52),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: pixGreen.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
             ),
-            child: Text(l10n.invitation_enter_workspace,
-                style: const TextStyle(fontWeight: FontWeight.bold)),
+            child: const Icon(
+              LucideIcons.circle_check,
+              size: 44,
+              color: pixGreen,
+            ),
+          ).animate().scale(duration: 350.ms, curve: Curves.elasticOut),
+          const SizedBox(height: 20),
+          Text(
+            isNew
+                ? l10n.invitation_success_title
+                : l10n.invitation_already_member_title,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: context.dobarColors.labelPrimary,
+            ),
+            textAlign: TextAlign.center,
           ),
-        ),
-      ]),
+          const SizedBox(height: 8),
+          Text(
+            isNew
+                ? l10n.invitation_success_body(venueName, role)
+                : l10n.invitation_already_member_body(venueName, role),
+            style: TextStyle(
+              fontSize: 14,
+              color: context.dobarColors.labelSecondary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: () {
+                context.read<SessionBloc>().add(
+                  SessionEvent.switchActiveBar(barId: access.barId),
+                );
+                context.go(AppRoute.businessDashboard.path);
+              },
+              style: FilledButton.styleFrom(
+                backgroundColor: barzGold,
+                foregroundColor: barzDark,
+                minimumSize: const Size.fromHeight(52),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                l10n.invitation_enter_workspace,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -339,33 +561,43 @@ class _WrongAccountBody extends StatelessWidget {
   const _WrongAccountBody({required this.code, required this.l10n});
   @override
   Widget build(BuildContext context) {
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      _GenericInvitationFrame(),
-      const SizedBox(height: 16),
-      _StatusBanner(tone: _StatusTone.warning, icon: LucideIcons.shield_alert,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _GenericInvitationFrame(),
+        const SizedBox(height: 16),
+        _StatusBanner(
+          tone: _StatusTone.warning,
+          icon: LucideIcons.shield_alert,
           title: l10n.invitation_wrong_account_title,
-          body: l10n.invitation_wrong_account_body),
-      const SizedBox(height: 16),
-      FilledButton(
-        onPressed: () => context.push(AppRoute.login.path,
-            extra: {'pendingInvitationCode': code}),
-        style: FilledButton.styleFrom(
-          backgroundColor: barzGold, foregroundColor: barzDark,
-          minimumSize: const Size.fromHeight(52),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          body: l10n.invitation_wrong_account_body,
         ),
-        child: Text(l10n.invitation_switch_account,
-            style: const TextStyle(fontWeight: FontWeight.bold)),
-      ),
-      const SizedBox(height: 8),
-      TextButton(
-        onPressed: () => context.canPop()
-            ? context.pop()
-            : context.go(AppRoute.businessDashboard.path),
-        child: Text(l10n.invitation_dismiss,
-            style: TextStyle(color: context.dobarColors.labelSecondary)),
-      ),
-    ]);
+        const SizedBox(height: 16),
+        FilledButton(
+          onPressed: () => _restartAuthentication(context, code),
+          style: FilledButton.styleFrom(
+            backgroundColor: barzGold,
+            foregroundColor: barzDark,
+            minimumSize: const Size.fromHeight(52),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: Text(
+            l10n.invitation_switch_account,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextButton(
+          onPressed: () => _dismissInvitation(context),
+          child: Text(
+            l10n.invitation_dismiss,
+            style: TextStyle(color: context.dobarColors.labelSecondary),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -373,42 +605,59 @@ class _UnverifiedBody extends StatelessWidget {
   final String code;
   final String contactType;
   final AppLocalizations l10n;
-  const _UnverifiedBody({required this.code, required this.contactType, required this.l10n});
+  const _UnverifiedBody({
+    required this.code,
+    required this.contactType,
+    required this.l10n,
+  });
   @override
   Widget build(BuildContext context) {
     final isEmail = contactType == 'email';
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      _GenericInvitationFrame(),
-      const SizedBox(height: 16),
-      _StatusBanner(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _GenericInvitationFrame(),
+        const SizedBox(height: 16),
+        _StatusBanner(
           tone: _StatusTone.warning,
           icon: LucideIcons.mail_warning,
           title: l10n.invitation_unverified_title,
           body: isEmail
               ? l10n.invitation_unverified_body_email
-              : l10n.invitation_unverified_body_phone),
-      const SizedBox(height: 16),
-      FilledButton(
-        onPressed: () => context.push(AppRoute.profileEdit.path),
-        style: FilledButton.styleFrom(
-          backgroundColor: barzGold, foregroundColor: barzDark,
-          minimumSize: const Size.fromHeight(52),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              : l10n.invitation_unverified_body_phone,
         ),
-        child: Text(
-          isEmail ? l10n.invitation_verify_email : l10n.invitation_verify_phone,
-          style: const TextStyle(fontWeight: FontWeight.bold),
+        const SizedBox(height: 16),
+        FilledButton(
+          onPressed: () => _restartAuthentication(
+            context,
+            code,
+            preferredProvider: isEmail ? 'google' : 'phone',
+          ),
+          style: FilledButton.styleFrom(
+            backgroundColor: barzGold,
+            foregroundColor: barzDark,
+            minimumSize: const Size.fromHeight(52),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: Text(
+            isEmail
+                ? l10n.invitation_verify_email
+                : l10n.invitation_verify_phone,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
         ),
-      ),
-      const SizedBox(height: 8),
-      TextButton(
-        onPressed: () => context.canPop()
-            ? context.pop()
-            : context.go(AppRoute.businessDashboard.path),
-        child: Text(l10n.invitation_dismiss,
-            style: TextStyle(color: context.dobarColors.labelSecondary)),
-      ),
-    ]);
+        const SizedBox(height: 8),
+        TextButton(
+          onPressed: () => _dismissInvitation(context),
+          child: Text(
+            l10n.invitation_dismiss,
+            style: TextStyle(color: context.dobarColors.labelSecondary),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -422,29 +671,37 @@ class _TerminalBody extends StatelessWidget {
     final title = kind == 'expired'
         ? l10n.invitation_expired_title
         : kind == 'revoked'
-            ? l10n.invitation_revoked_title
-            : l10n.invitation_invalid_title;
-    final body = isInvalid ? l10n.invitation_invalid_body : l10n.invitation_request_new;
+        ? l10n.invitation_revoked_title
+        : l10n.invitation_invalid_title;
+    final body = isInvalid
+        ? l10n.invitation_invalid_body
+        : l10n.invitation_request_new;
     final icon = kind == 'expired'
         ? LucideIcons.clock
         : kind == 'revoked'
-            ? LucideIcons.ban
-            : LucideIcons.circle_x;
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      _GenericInvitationFrame(),
-      const SizedBox(height: 16),
-      _StatusBanner(
+        ? LucideIcons.ban
+        : LucideIcons.circle_x;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _GenericInvitationFrame(),
+        const SizedBox(height: 16),
+        _StatusBanner(
           tone: isInvalid ? _StatusTone.error : _StatusTone.neutral,
-          icon: icon, title: title, body: body),
-      const SizedBox(height: 16),
-      TextButton(
-        onPressed: () => context.canPop()
-            ? context.pop()
-            : context.go(AppRoute.businessDashboard.path),
-        child: Text(l10n.invitation_back_to_onboarding,
-            style: TextStyle(color: context.dobarColors.labelSecondary)),
-      ),
-    ]);
+          icon: icon,
+          title: title,
+          body: body,
+        ),
+        const SizedBox(height: 16),
+        TextButton(
+          onPressed: () => _dismissInvitation(context),
+          child: Text(
+            l10n.invitation_back_to_onboarding,
+            style: TextStyle(color: context.dobarColors.labelSecondary),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -455,31 +712,42 @@ class _LoadErrorBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final cubit = context.read<InvitationCubit>();
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      _GenericInvitationFrame(),
-      const SizedBox(height: 16),
-      _StatusBanner(tone: _StatusTone.error, icon: LucideIcons.wifi_off,
-          title: l10n.invitation_load_error_title),
-      const SizedBox(height: 16),
-      FilledButton(
-        onPressed: () => cubit.retry(code),
-        style: FilledButton.styleFrom(
-          backgroundColor: barzGold, foregroundColor: barzDark,
-          minimumSize: const Size.fromHeight(52),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _GenericInvitationFrame(),
+        const SizedBox(height: 16),
+        _StatusBanner(
+          tone: _StatusTone.error,
+          icon: LucideIcons.wifi_off,
+          title: l10n.invitation_load_error_title,
         ),
-        child: Text(l10n.invitation_retry,
-            style: const TextStyle(fontWeight: FontWeight.bold)),
-      ),
-      const SizedBox(height: 8),
-      TextButton(
-        onPressed: () => context.canPop()
-            ? context.pop()
-            : context.go(AppRoute.businessDashboard.path),
-        child: Text(l10n.invitation_dismiss,
-            style: TextStyle(color: context.dobarColors.labelSecondary)),
-      ),
-    ]);
+        const SizedBox(height: 16),
+        FilledButton(
+          onPressed: () => cubit.retry(code),
+          style: FilledButton.styleFrom(
+            backgroundColor: barzGold,
+            foregroundColor: barzDark,
+            minimumSize: const Size.fromHeight(52),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: Text(
+            l10n.invitation_retry,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextButton(
+          onPressed: () => _dismissInvitation(context),
+          child: Text(
+            l10n.invitation_dismiss,
+            style: TextStyle(color: context.dobarColors.labelSecondary),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -490,28 +758,46 @@ class _GenericInvitationFrame extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.dobarColors;
     final l10n = AppLocalizations.of(context)!;
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      Container(
-        height: 140, width: double.infinity,
-        decoration: BoxDecoration(
-            color: colors.surface, borderRadius: BorderRadius.circular(16)),
-        child: const Center(
-            child: Icon(LucideIcons.store, size: 40, color: barzGold)),
-      ),
-      const SizedBox(height: 16),
-      Text(l10n.invitation_eyebrow,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          height: 140,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: const Center(
+            child: Icon(LucideIcons.store, size: 40, color: barzGold),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Text(
+          l10n.invitation_eyebrow,
           style: const TextStyle(
-              fontSize: 11, fontWeight: FontWeight.w700,
-              letterSpacing: 1.2, color: barzGold)),
-      const SizedBox(height: 4),
-      Text(l10n.invitation_title,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.2,
+            color: barzGold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          l10n.invitation_title,
           style: TextStyle(
-              fontSize: 24, fontWeight: FontWeight.bold,
-              color: colors.labelPrimary)),
-      const SizedBox(height: 4),
-      Text(l10n.invitation_generic_hint,
-          style: TextStyle(fontSize: 13, color: colors.labelSecondary)),
-    ]);
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: colors.labelPrimary,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          l10n.invitation_generic_hint,
+          style: TextStyle(fontSize: 13, color: colors.labelSecondary),
+        ),
+      ],
+    );
   }
 }
 
@@ -524,97 +810,184 @@ class _InvitationCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.dobarColors;
     final roleName = _localizedRole(preview.role, l10n);
-    final expiry = DateFormat('dd/MM/yyyy HH:mm', 'pt_BR')
-        .format(preview.expiresAt.toLocal());
-    return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-      ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: preview.venueImageUrl != null
-            ? Image.network(preview.venueImageUrl!,
-                height: 140, width: double.infinity, fit: BoxFit.cover,
-                errorBuilder: (_, err, stack) => _fallback(colors))
-            : _fallback(colors),
-      ),
-      const SizedBox(height: 16),
-      Text(l10n.invitation_eyebrow,
-          style: const TextStyle(
-              fontSize: 11, fontWeight: FontWeight.w700,
-              letterSpacing: 1.2, color: barzGold)),
-      const SizedBox(height: 4),
-      Text(l10n.invitation_title,
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold,
-              color: colors.labelPrimary)),
-      const SizedBox(height: 4),
-      Text(preview.venueName,
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600,
-              color: colors.labelPrimary)),
-      if (preview.venueAddress != null) ...[
-        const SizedBox(height: 4),
-        Row(children: [
-          Icon(LucideIcons.map_pin, size: 14, color: colors.labelSecondary),
-          const SizedBox(width: 4),
-          Expanded(child: Text(preview.venueAddress!,
-              style: TextStyle(fontSize: 13, color: colors.labelSecondary))),
-        ]),
-      ],
-      const SizedBox(height: 12),
-      Container(
-        decoration: BoxDecoration(
-          color: colors.surface,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: colors.navBackground),
+    final expiry = DateFormat(
+      'dd/MM/yyyy HH:mm',
+      'pt_BR',
+    ).format(preview.expiresAt.toLocal());
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: preview.venueImageUrl != null
+              ? Image.network(
+                  preview.venueImageUrl!,
+                  height: 140,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, err, stack) => _fallback(colors),
+                )
+              : _fallback(colors),
         ),
-        padding: const EdgeInsets.all(12),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(children: [
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(l10n.invitation_role_label,
-                  style: TextStyle(fontSize: 12, color: colors.labelSecondary)),
-              const SizedBox(height: 4),
-              _RoleBadge(role: roleName),
-            ])),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(l10n.invitation_sent_to,
-                  style: TextStyle(fontSize: 12, color: colors.labelSecondary)),
-              const SizedBox(height: 4),
-              Text(preview.maskedRecipient,
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
-                      color: colors.labelPrimary)),
-            ])),
-          ]),
-          const SizedBox(height: 8),
-          Row(children: [
-            Icon(LucideIcons.calendar_clock, size: 14, color: colors.labelSecondary),
-            const SizedBox(width: 4),
-            Text(l10n.invitation_valid_until(expiry),
-                style: TextStyle(fontSize: 12, color: colors.labelSecondary)),
-          ]),
-        ]),
-      ),
-      if (preview.permissions.isNotEmpty) ...[
+        const SizedBox(height: 16),
+        Text(
+          l10n.invitation_eyebrow,
+          style: const TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 1.2,
+            color: barzGold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          l10n.invitation_title,
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: colors.labelPrimary,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          preview.venueName,
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w600,
+            color: colors.labelPrimary,
+          ),
+        ),
+        if (preview.venueAddress != null) ...[
+          const SizedBox(height: 4),
+          Row(
+            children: [
+              Icon(LucideIcons.map_pin, size: 14, color: colors.labelSecondary),
+              const SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  preview.venueAddress!,
+                  style: TextStyle(fontSize: 13, color: colors.labelSecondary),
+                ),
+              ),
+            ],
+          ),
+        ],
         const SizedBox(height: 12),
-        Text(l10n.invitation_permissions_title,
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
-                color: colors.labelPrimary)),
-        const SizedBox(height: 8),
-        ...preview.permissions.map((p) => Padding(
-          padding: const EdgeInsets.symmetric(vertical: 3),
-          child: Row(children: [
-            const Icon(LucideIcons.check, size: 14, color: barzGold),
-            const SizedBox(width: 8),
-            Text(_localizedPermission(p),
-                style: TextStyle(fontSize: 13, color: colors.labelPrimary)),
-          ]),
-        )),
+        Container(
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: colors.navBackground),
+          ),
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.invitation_role_label,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: colors.labelSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        _RoleBadge(role: roleName),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.invitation_sent_to,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: colors.labelSecondary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          preview.maskedRecipient,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: colors.labelPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(
+                    LucideIcons.calendar_clock,
+                    size: 14,
+                    color: colors.labelSecondary,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    l10n.invitation_valid_until(expiry),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: colors.labelSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        if (preview.permissions.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          Text(
+            l10n.invitation_permissions_title,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: colors.labelPrimary,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ...preview.permissions.map(
+            (p) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 3),
+              child: Row(
+                children: [
+                  const Icon(LucideIcons.check, size: 14, color: barzGold),
+                  const SizedBox(width: 8),
+                  Text(
+                    _localizedPermission(p, l10n),
+                    style: TextStyle(fontSize: 13, color: colors.labelPrimary),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ],
-    ]);
+    );
   }
 
   Widget _fallback(DobarColors colors) => Container(
-    height: 140, width: double.infinity,
+    height: 140,
+    width: double.infinity,
     decoration: BoxDecoration(
-        color: colors.surface, borderRadius: BorderRadius.circular(16)),
-    child: const Center(child: Icon(LucideIcons.store, size: 40, color: barzGold)),
+      color: colors.surface,
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: const Center(
+      child: Icon(LucideIcons.store, size: 40, color: barzGold),
+    ),
   );
 }
 
@@ -625,10 +998,17 @@ class _RoleBadge extends StatelessWidget {
   Widget build(BuildContext context) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
     decoration: BoxDecoration(
-        color: barzGold.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(20)),
-    child: Text(role, style: const TextStyle(
-        fontSize: 12, fontWeight: FontWeight.bold, color: barzGold)),
+      color: barzGold.withValues(alpha: 0.15),
+      borderRadius: BorderRadius.circular(20),
+    ),
+    child: Text(
+      role,
+      style: const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.bold,
+        color: barzGold,
+      ),
+    ),
   );
 }
 
@@ -639,20 +1019,36 @@ class _StatusBanner extends StatelessWidget {
   final IconData icon;
   final String title;
   final String? body;
-  const _StatusBanner(
-      {required this.tone, required this.icon, required this.title, this.body});
+  const _StatusBanner({
+    required this.tone,
+    required this.icon,
+    required this.title,
+    this.body,
+  });
   @override
   Widget build(BuildContext context) {
     final colors = context.dobarColors;
     final (borderColor, bgColor, iconColor) = switch (tone) {
       _StatusTone.error => (
-          const Color(0xFFFF4B4B), const Color(0x14FF4B4B), const Color(0xFFFF4B4B)),
+        const Color(0xFFFF4B4B),
+        const Color(0x14FF4B4B),
+        const Color(0xFFFF4B4B),
+      ),
       _StatusTone.warning => (
-          barzGold, barzGold.withValues(alpha: 0.1), barzGoldDark),
+        barzGold,
+        barzGold.withValues(alpha: 0.1),
+        barzGoldDark,
+      ),
       _StatusTone.success => (
-          pixGreen, pixGreen.withValues(alpha: 0.1), pixGreen),
+        pixGreen,
+        pixGreen.withValues(alpha: 0.1),
+        pixGreen,
+      ),
       _StatusTone.neutral => (
-          colors.navBackground, colors.surface, colors.labelSecondary),
+        colors.navBackground,
+        colors.surface,
+        colors.labelSecondary,
+      ),
     };
     return Semantics(
       container: true,
@@ -664,18 +1060,38 @@ class _StatusBanner extends StatelessWidget {
           border: Border.all(color: borderColor.withValues(alpha: 0.4)),
           borderRadius: BorderRadius.circular(12),
         ),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(icon, color: iconColor, size: 22),
-          const SizedBox(width: 12),
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text(title, style: TextStyle(fontWeight: FontWeight.w600,
-                fontSize: 15, color: colors.labelPrimary)),
-            if (body != null) ...[
-              const SizedBox(height: 4),
-              Text(body!, style: TextStyle(fontSize: 13, color: colors.labelSecondary)),
-            ],
-          ])),
-        ]),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, color: iconColor, size: 22),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                      color: colors.labelPrimary,
+                    ),
+                  ),
+                  if (body != null) ...[
+                    const SizedBox(height: 4),
+                    Text(
+                      body!,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: colors.labelSecondary,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -685,7 +1101,11 @@ class _SocialButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  const _SocialButton({required this.icon, required this.label, required this.onTap});
+  const _SocialButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
   @override
   Widget build(BuildContext context) {
     final colors = context.dobarColors;
@@ -718,8 +1138,12 @@ class _ManualCodeFormState extends State<_ManualCodeForm> {
     super.initState();
     _ctrl = TextEditingController(text: widget.initialCode);
   }
+
   @override
-  void dispose() { _ctrl.dispose(); super.dispose(); }
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
 
   void _submit() {
     final v = _ctrl.text.trim();
@@ -736,58 +1160,92 @@ class _ManualCodeFormState extends State<_ManualCodeForm> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final colors = context.dobarColors;
-    return Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-      Container(
-        width: 48, height: 48,
-        decoration: BoxDecoration(
-            color: barzGold, borderRadius: BorderRadius.circular(12)),
-        child: const Icon(LucideIcons.key_round, color: barzDark, size: 24),
-      ),
-      const SizedBox(height: 16),
-      Text(l10n.invitation_manual_title,
-          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold,
-              color: colors.labelPrimary)),
-      const SizedBox(height: 4),
-      Text(l10n.invitation_manual_intro,
-          style: TextStyle(fontSize: 14, color: colors.labelSecondary)),
-      const SizedBox(height: 20),
-      Text(l10n.invitation_manual_label,
-          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
-              color: colors.labelPrimary)),
-      const SizedBox(height: 4),
-      Text(l10n.invitation_manual_help,
-          style: TextStyle(fontSize: 12, color: colors.labelSecondary)),
-      const SizedBox(height: 8),
-      TextField(
-        controller: _ctrl,
-        autocorrect: false,
-        textCapitalization: TextCapitalization.characters,
-        style: TextStyle(fontFamily: 'monospace', letterSpacing: 1.5,
-            color: colors.labelPrimary),
-        decoration: InputDecoration(
-          hintText: l10n.invitation_manual_placeholder,
-          hintStyle: TextStyle(color: colors.labelSecondary,
-              fontFamily: 'sans-serif', letterSpacing: 0),
-          errorText: _error,
-          filled: true, fillColor: colors.surface,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-          contentPadding:
-              const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: barzGold,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Icon(LucideIcons.key_round, color: barzDark, size: 24),
         ),
-        onSubmitted: (_) => _submit(),
-      ),
-      const SizedBox(height: 16),
-      FilledButton(
-        onPressed: _submit,
-        style: FilledButton.styleFrom(
-          backgroundColor: barzGold, foregroundColor: barzDark,
-          minimumSize: const Size.fromHeight(52),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        const SizedBox(height: 16),
+        Text(
+          l10n.invitation_manual_title,
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: colors.labelPrimary,
+          ),
         ),
-        child: Text(l10n.invitation_manual_submit,
-            style: const TextStyle(fontWeight: FontWeight.bold)),
-      ),
-    ]);
+        const SizedBox(height: 4),
+        Text(
+          l10n.invitation_manual_intro,
+          style: TextStyle(fontSize: 14, color: colors.labelSecondary),
+        ),
+        const SizedBox(height: 20),
+        Text(
+          l10n.invitation_manual_label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: colors.labelPrimary,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          l10n.invitation_manual_help,
+          style: TextStyle(fontSize: 12, color: colors.labelSecondary),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _ctrl,
+          autocorrect: false,
+          textCapitalization: TextCapitalization.characters,
+          style: TextStyle(
+            fontFamily: 'monospace',
+            letterSpacing: 1.5,
+            color: colors.labelPrimary,
+          ),
+          decoration: InputDecoration(
+            hintText: l10n.invitation_manual_placeholder,
+            hintStyle: TextStyle(
+              color: colors.labelSecondary,
+              fontFamily: 'sans-serif',
+              letterSpacing: 0,
+            ),
+            errorText: _error,
+            filled: true,
+            fillColor: colors.surface,
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 14,
+            ),
+          ),
+          onSubmitted: (_) => _submit(),
+        ),
+        const SizedBox(height: 16),
+        FilledButton(
+          onPressed: _submit,
+          style: FilledButton.styleFrom(
+            backgroundColor: barzGold,
+            foregroundColor: barzDark,
+            minimumSize: const Size.fromHeight(52),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          child: Text(
+            l10n.invitation_manual_submit,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+        ),
+      ],
+    );
   }
 }
 
@@ -796,34 +1254,120 @@ class _ThemeToggle extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = context.isDark;
+    final l10n = AppLocalizations.of(context)!;
     return IconButton(
       icon: Icon(isDark ? LucideIcons.sun : LucideIcons.moon),
-      tooltip: isDark ? 'Ativar tema claro' : 'Ativar tema escuro',
-      onPressed: () {},
+      tooltip: isDark ? l10n.login_theme_to_light : l10n.login_theme_to_dark,
+      onPressed: () => context.read<ThemeCubit>().toggleTheme(),
     );
   }
 }
 
 // Helpers
 
-String _localizedRole(String role, AppLocalizations l10n) {
-  switch (role.toLowerCase()) {
-    case 'owner': return l10n.invitation_role_owner;
-    case 'admin': return l10n.invitation_role_admin;
-    case 'manager': return l10n.invitation_role_manager;
-    case 'cashier': return l10n.invitation_role_cashier;
-    default: return l10n.invitation_role_staff;
+class _IndustrialPainter extends CustomPainter {
+  final Color background;
+  final Color grid;
+  final Color glow;
+
+  const _IndustrialPainter({
+    required this.background,
+    required this.grid,
+    required this.glow,
+  });
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    canvas.drawRect(Offset.zero & size, Paint()..color = background);
+    final glowPaint = Paint()
+      ..shader = RadialGradient(colors: [glow, glow.withValues(alpha: 0)])
+          .createShader(
+            Rect.fromCircle(
+              center: Offset(size.width / 2, 0),
+              radius: size.width * 0.55,
+            ),
+          );
+    canvas.drawRect(Offset.zero & size, glowPaint);
+    final gridPaint = Paint()
+      ..color = grid
+      ..strokeWidth = 1;
+    for (double x = 0; x < size.width; x += 40) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
+    }
+    for (double y = 0; y < size.height; y += 40) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _IndustrialPainter oldDelegate) =>
+      oldDelegate.background != background ||
+      oldDelegate.grid != grid ||
+      oldDelegate.glow != glow;
+}
+
+void _dismissInvitation(BuildContext context) {
+  if (context.canPop()) {
+    context.pop();
+  } else {
+    AppRoute.onboarding.go(context);
   }
 }
 
-String _localizedPermission(String permission) {
+Future<void> _restartAuthentication(
+  BuildContext context,
+  String code, {
+  String? preferredProvider,
+}) async {
+  final sessionBloc = context.read<SessionBloc>();
+  sessionBloc.add(const SessionEvent.logout());
+  try {
+    await sessionBloc.stream
+        .firstWhere((state) => state is SessionLoggedOut)
+        .timeout(const Duration(seconds: 5));
+  } catch (_) {}
+  if (!context.mounted) return;
+  context.go(
+    AppRoute.login.path,
+    extra: LoginRouteArguments(
+      pendingInvitationCode: code,
+      preferredProvider: preferredProvider,
+    ),
+  );
+}
+
+String _localizedRole(String role, AppLocalizations l10n) {
+  switch (role.toLowerCase()) {
+    case 'owner':
+      return l10n.invitation_role_owner;
+    case 'admin':
+      return l10n.invitation_role_admin;
+    case 'manager':
+      return l10n.invitation_role_manager;
+    case 'cashier':
+      return l10n.invitation_role_cashier;
+    default:
+      return l10n.invitation_role_staff;
+  }
+}
+
+String _localizedPermission(String permission, AppLocalizations l10n) {
   switch (permission) {
-    case 'order:view': return 'Ver e acompanhar pedidos';
-    case 'order:process': return 'Lancar e editar pedidos';
-    case 'billing:manage': return 'Fechar contas e receber pagamentos';
-    case 'menu:edit': return 'Editar cardapio e precos';
-    case 'staff:manage': return 'Convidar e gerenciar a equipe';
-    case 'analytics:view': return 'Ver relatorios de vendas';
-    default: return permission;
+    case 'order:view':
+      return l10n.invitation_permission_view_orders;
+    case 'order:process':
+      return l10n.invitation_permission_manage_orders;
+    case 'billing:manage':
+      return l10n.invitation_permission_close_bills;
+    case 'menu:edit':
+      return l10n.invitation_permission_manage_menu;
+    case 'staff:manage':
+      return l10n.invitation_permission_manage_staff;
+    case 'analytics:view':
+      return l10n.invitation_permission_view_reports;
+    case 'table:manage':
+      return l10n.invitation_permission_manage_tables;
+    default:
+      return permission;
   }
 }

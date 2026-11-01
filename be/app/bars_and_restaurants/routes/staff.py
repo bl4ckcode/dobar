@@ -473,11 +473,10 @@ async def accept_invitation(
     if not bar:
         raise APIError(404, ErrorCode.NOT_FOUND, "Bar not found")
 
+    claimed_invitation = False
     async with database.transaction():
-        await add_user_to_bar(user.id, invitation["bar_id"], role, invitation["invited_by_id"])
-        # Use naive UTC datetime — StaffInvitation.accepted_at is DateTime(timezone=False)
         now_naive = datetime.utcnow()
-        result = await database.execute(
+        claimed_row = await database.fetch_one(
             StaffInvitation.__table__.update()
             .where(
                 (StaffInvitation.id == invitation["id"]) &
@@ -490,8 +489,46 @@ async def accept_invitation(
             )
             .returning(StaffInvitation.__table__.c.id)
         )
-        if not result:
-            raise APIError(409, ErrorCode.CONFLICT, "Invitation already used")
+        claimed_invitation = claimed_row is not None
+        if claimed_invitation:
+            await add_user_to_bar(
+                user.id,
+                invitation["bar_id"],
+                role,
+                invitation["invited_by_id"],
+            )
+
+    if not claimed_invitation:
+        current_invitation = await database.fetch_one(
+            StaffInvitation.__table__.select().where(
+                StaffInvitation.id == invitation["id"]
+            )
+        )
+        if (
+            current_invitation
+            and current_invitation["status"] == "accepted"
+            and _record_get(current_invitation, "accepted_by_user_id") == user.id
+        ):
+            current_staff = await database.fetch_one(
+                BarStaff.__table__.select().where(
+                    (BarStaff.user_id == user.id)
+                    & (BarStaff.bar_id == invitation["bar_id"])
+                    & (BarStaff.is_active == True)
+                )
+            )
+            if current_staff:
+                current_role = BarRole(current_staff["role"])
+                return AcceptInvitationResponse(
+                    bar_id=invitation["bar_id"],
+                    bar_name=bar["name"],
+                    role=current_role.value,
+                    permissions=[
+                        permission.value
+                        for permission in get_permissions_for_role(current_role)
+                    ],
+                    message="Invitation already accepted",
+                )
+        raise APIError(409, ErrorCode.INVITATION_ALREADY_USED, "Invitation already used")
 
     permissions = [p.value for p in get_permissions_for_role(role)]
     return AcceptInvitationResponse(

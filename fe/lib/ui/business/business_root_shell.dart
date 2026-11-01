@@ -9,7 +9,6 @@ import 'package:barz/features/session/presentation/bloc/session_state.dart';
 import 'package:barz/features/session/presentation/bloc/session_event.dart';
 import 'package:barz/features/session/domain/models/bar_access.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
-import 'widgets/business_onboarding_view.dart';
 
 const double kBusinessWebBreakpoint = 768.0;
 
@@ -24,6 +23,15 @@ class BusinessRootShell extends StatefulWidget {
 
 class _BusinessRootShellState extends State<BusinessRootShell> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  bool _redirectingNoBar = false;
+
+  void _redirectToInvitation() {
+    if (_redirectingNoBar) return;
+    _redirectingNoBar = true;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.go(AppRoute.staffInvitationAccept.path);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,7 +56,10 @@ class _BusinessRootShellState extends State<BusinessRootShell> {
           final activeBar = session.activeBar;
 
           if (session.barAccess.isEmpty) {
-            return const BusinessOnboardingView();
+            _redirectToInvitation();
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
           }
 
           if (activeBar == null && session.barAccess.isNotEmpty) {
@@ -65,7 +76,9 @@ class _BusinessRootShellState extends State<BusinessRootShell> {
           }
 
           if (activeBar == null) {
-            return const BusinessOnboardingView();
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
           }
 
           final isWide =
@@ -963,41 +976,41 @@ class _DrawerTile extends StatelessWidget {
                 ),
               ),
               Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: onTap,
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                height: 56,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  children: [
-                    Icon(
-                      icon,
-                      color: isSelected
-                          ? barzDark
-                          : (isWarning ? Colors.redAccent : Colors.white70),
-                      size: 24,
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: onTap,
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    height: 56,
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      children: [
+                        Icon(
+                          icon,
+                          color: isSelected
+                              ? barzDark
+                              : (isWarning ? Colors.redAccent : Colors.white70),
+                          size: 24,
+                        ),
+                        const SizedBox(width: 16),
+                        Text(
+                          label,
+                          style: TextStyle(
+                            color: isSelected
+                                ? barzDark
+                                : (isWarning ? Colors.redAccent : Colors.white),
+                            fontSize: 16,
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.w500,
+                            fontFamily: "Inter",
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 16),
-                    Text(
-                      label,
-                      style: TextStyle(
-                        color: isSelected
-                            ? barzDark
-                            : (isWarning ? Colors.redAccent : Colors.white),
-                        fontSize: 16,
-                        fontWeight: isSelected
-                            ? FontWeight.bold
-                            : FontWeight.w500,
-                        fontFamily: "Inter",
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
               ),
-            ),
-          ),
             ],
           );
         },

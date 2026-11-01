@@ -8,6 +8,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:barz/l10n/app_localizations.dart';
 
 class MockLoginUsecase extends Mock implements LoginUsecase {}
 
@@ -33,7 +34,12 @@ void main() {
     tester,
   ) async {
     await tester.pumpWidget(
-      MaterialApp(theme: getBarzLightTheme(), home: const LoginPage()),
+      MaterialApp(
+        theme: getBarzLightTheme(),
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: const LoginPage(),
+      ),
     );
     await tester.pump(const Duration(milliseconds: 1));
 

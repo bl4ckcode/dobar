@@ -1,4 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
+import 'package:barz/core/rbac/user_type.dart';
 
 part 'login_state.freezed.dart';
 
@@ -18,6 +19,10 @@ sealed class LoginState with _$LoginState {
 
     /// Whether user needs to complete onboarding (select role + country)
     @Default(false) bool needsOnboarding,
+
+    @Default(false) bool isNewUser,
+
+    UserType? userType,
 
     /// Phone number for country auto-detection in onboarding
     String? phoneNumber,

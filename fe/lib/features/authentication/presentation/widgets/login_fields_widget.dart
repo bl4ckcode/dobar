@@ -4,8 +4,13 @@ import 'package:phone_form_field/phone_form_field.dart';
 
 class LoginFieldsWidget extends StatefulWidget {
   final void Function(String? phoneNumber) onLoginPressed;
+  final String hintText;
 
-  const LoginFieldsWidget({super.key, required this.onLoginPressed});
+  const LoginFieldsWidget({
+    super.key,
+    required this.onLoginPressed,
+    required this.hintText,
+  });
 
   @override
   State<LoginFieldsWidget> createState() => _LoginFieldsWidgetState();
@@ -35,8 +40,10 @@ class _LoginFieldsWidgetState extends State<LoginFieldsWidget> {
       child: PhoneFormField(
         initialValue: PhoneNumber.parse('+55'),
         decoration: InputDecoration(
-          hintText: 'Enter your phone number',
-          hintStyle: TextStyle(color: colors.labelSecondary.withValues(alpha: 0.5)),
+          hintText: widget.hintText,
+          hintStyle: TextStyle(
+            color: colors.labelSecondary.withValues(alpha: 0.5),
+          ),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(BarzRadii.md),
             borderSide: BorderSide.none,
@@ -59,7 +66,9 @@ class _LoginFieldsWidgetState extends State<LoginFieldsWidget> {
           ),
           errorStyle: const TextStyle(height: 0, fontSize: 0),
           contentPadding: const EdgeInsets.all(InputSpacing.paddingHorizontal),
-          counterStyle: TextStyle(color: colors.labelSecondary.withValues(alpha: 0.6)),
+          counterStyle: TextStyle(
+            color: colors.labelSecondary.withValues(alpha: 0.6),
+          ),
           filled: true,
           fillColor: Colors.transparent, // Controlled by parent container
         ),
