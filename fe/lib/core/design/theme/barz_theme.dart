@@ -322,6 +322,21 @@ ThemeData getBarzDarkTheme() {
     useMaterial3: true,
     brightness: Brightness.dark,
     colorScheme: barzDarkColorScheme,
+    filledButtonTheme: FilledButtonThemeData(
+      style: ButtonStyle(
+        textStyle: WidgetStatePropertyAll(barzTextTheme.labelLarge),
+      ),
+    ),
+    outlinedButtonTheme: OutlinedButtonThemeData(
+      style: ButtonStyle(
+        textStyle: WidgetStatePropertyAll(barzTextTheme.labelLarge),
+      ),
+    ),
+    textButtonTheme: TextButtonThemeData(
+      style: ButtonStyle(
+        textStyle: WidgetStatePropertyAll(barzTextTheme.labelLarge),
+      ),
+    ),
     textTheme: barzTextTheme.apply(
       bodyColor: textOnDark,
       displayColor: textOnDark,

@@ -1,7 +1,5 @@
-import 'package:barz/core/router/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:barz/core/rbac/rbac.dart';
 import 'package:barz/core/design/design_system.dart';
@@ -66,16 +64,6 @@ class _BusinessShellState extends State<BusinessShell> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   int _selectedIndex = 0;
   late List<BusinessNavItem> _currentNavItems = [];
-  bool _redirectingNoBar = false;
-
-  void _redirectToInvitation() {
-    if (_redirectingNoBar) return;
-    _redirectingNoBar = true;
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.go(AppRoute.staffInvitationAccept.path);
-    });
-  }
-
   void navigateToTab(int index) {
     if (index >= 0 && index < _currentNavItems.length) {
       setState(() => _selectedIndex = index);
@@ -84,93 +72,82 @@ class _BusinessShellState extends State<BusinessShell> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocListener<SessionBloc, SessionState>(
-      listener: (context, state) {
-        if (state is SessionLoggedOut) {
-          AppRoute.login.go(context);
-        }
-        if (state is SessionReady && state.forceClientMode) {
-          context.go(AppRoute.home.path);
-        }
-      },
-      child: BlocBuilder<SessionBloc, SessionState>(
-        builder: (context, state) {
-          if (state is! SessionReady) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-
-          final session = state.session;
-          final activeBar = session.activeBar;
-
-          // New business user with no bars - show onboarding
-          if (session.barAccess.isEmpty) {
-            _redirectToInvitation();
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-
-          // Has bars but none selected - auto-select first or show selector
-          if (activeBar == null && session.barAccess.isNotEmpty) {
-            // Auto-select first bar
-            WidgetsBinding.instance.addPostFrameCallback((_) {
-              context.read<SessionBloc>().add(
-                SessionEvent.switchActiveBar(
-                  barId: session.barAccess.first.barId,
-                ),
-              );
-            });
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-
-          if (activeBar == null) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-
-          // Build navigation items based on permissions
-          final navItems = _buildNavItems(context, activeBar);
-          _currentNavItems = navItems;
-
-          // Ensure selected index is valid
-          if (_selectedIndex >= navItems.length) {
-            _selectedIndex = 0;
-          }
-
-          // Wrap in BusinessNavigation for child widgets to access navigation
-          return BusinessNavigation(
-            navigateToTab: navigateToTab,
-            currentIndex: _selectedIndex,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final isWebLayout =
-                    constraints.maxWidth >= kBusinessWebBreakpoint;
-
-                if (isWebLayout) {
-                  return _buildWebLayout(
-                    context,
-                    session.barAccess,
-                    activeBar,
-                    navItems,
-                  );
-                } else {
-                  return _buildMobileLayout(
-                    context,
-                    session.barAccess,
-                    activeBar,
-                    navItems,
-                  );
-                }
-              },
-            ),
+    return BlocBuilder<SessionBloc, SessionState>(
+      builder: (context, state) {
+        if (state is! SessionReady) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
           );
-        },
-      ),
+        }
+
+        final session = state.session;
+        final activeBar = session.activeBar;
+
+        // New business user with no bars - show onboarding
+        if (session.barAccess.isEmpty) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        // Has bars but none selected - auto-select first or show selector
+        if (activeBar == null && session.barAccess.isNotEmpty) {
+          // Auto-select first bar
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            context.read<SessionBloc>().add(
+              SessionEvent.switchActiveBar(
+                barId: session.barAccess.first.barId,
+              ),
+            );
+          });
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        if (activeBar == null) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        // Build navigation items based on permissions
+        final navItems = _buildNavItems(context, activeBar);
+        _currentNavItems = navItems;
+
+        // Ensure selected index is valid
+        if (_selectedIndex >= navItems.length) {
+          _selectedIndex = 0;
+        }
+
+        // Wrap in BusinessNavigation for child widgets to access navigation
+        return BusinessNavigation(
+          navigateToTab: navigateToTab,
+          currentIndex: _selectedIndex,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isWebLayout =
+                  constraints.maxWidth >= kBusinessWebBreakpoint;
+
+              if (isWebLayout) {
+                return _buildWebLayout(
+                  context,
+                  session.barAccess,
+                  activeBar,
+                  navItems,
+                );
+              } else {
+                return _buildMobileLayout(
+                  context,
+                  session.barAccess,
+                  activeBar,
+                  navItems,
+                );
+              }
+            },
+          ),
+        );
+      },
     );
   }
 

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:barz/core/network/dio_network.dart';
 import 'package:barz/features/authentication/domain/usecases/login_usecase.dart';
@@ -16,11 +17,19 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
   final SessionUsecase _sessionUsecase;
   final LoginUsecase _loginUsecase;
 
-  SessionBloc({
-    required this._sessionUsecase,
-    required this._loginUsecase,
-  }) : super(const SessionState.initial()) {
+  SessionBloc({required this._sessionUsecase, required this._loginUsecase})
+    : super(const SessionState.initial()) {
     on<InitializeSession>(_onInitialize);
+    on<ClearPendingInvitation>((event, emit) {
+      final current = state;
+      if (current is SessionReady) {
+        emit(
+          current.copyWith(
+            session: current.session.withoutInvitation(event.code),
+          ),
+        );
+      }
+    });
     on<RefreshBarAccess>(_onRefreshBarAccess);
     on<SwitchActiveBar>(_onSwitchActiveBar);
     on<AcceptInvitation>(_onAcceptInvitation);
@@ -30,10 +39,46 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     on<SwitchToBusinessMode>(_onSwitchToBusinessMode);
   }
 
+  Future<SessionState>? _entryInitialization;
+  int _generation = 0;
+
+  Future<SessionState> initializeForEntry({bool force = false}) async {
+    if (_entryInitialization != null) return _entryInitialization!;
+    if (!force && (state is SessionReady || state is SessionError)) {
+      return state;
+    }
+    final completed = stream.firstWhere(
+      (s) => s is SessionReady || s is SessionError || s is SessionLoggedOut,
+    );
+    _entryInitialization = completed;
+    add(const SessionEvent.initialize());
+    try {
+      return await completed;
+    } finally {
+      _entryInitialization = null;
+    }
+  }
+
+  void forgetPendingInvitation(String code) {
+    add(SessionEvent.clearPendingInvitation(code: code));
+  }
+
+  Future<void> signOut() async {
+    if (state is SessionLoggedOut) {
+      await _loginUsecase.logout();
+      await DioNetwork.clearTokens();
+      return;
+    }
+    final completed = stream.firstWhere((s) => s is SessionLoggedOut);
+    add(const SessionEvent.logout());
+    await completed;
+  }
+
   Future<void> _onInitialize(
     InitializeSession event,
     Emitter<SessionState> emit,
   ) async {
+    final generation = _generation;
     final currentForceClientMode = state.maybeMap(
       ready: (s) => s.forceClientMode,
       orElse: () => false,
@@ -43,6 +88,7 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
 
     final result = await _sessionUsecase.initializeSession();
 
+    if (generation != _generation) return;
     result.fold(
       (failure) => emit(SessionState.error(message: failure.errorMessage)),
       (session) => emit(
@@ -59,24 +105,35 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     Emitter<SessionState> emit,
   ) async {
     final currentState = state;
-    if (currentState is! SessionReady) return;
-
+    if (currentState is! SessionReady) {
+      event.completion?.complete(false);
+      return;
+    }
     final result = await _sessionUsecase.refreshBarAccess();
-
-    result.fold(
-      (failure) {
-        // Keep current state on refresh failure
-      },
-      (bars) {
-        final newSession = currentState.session.withBarAccess(bars);
-        emit(
-          SessionState.ready(
-            session: newSession,
-            forceClientMode: currentState.forceClientMode,
-          ),
-        );
-      },
-    );
+    if (state.currentSession?.user.id != currentState.session.user.id) {
+      event.completion?.complete(false);
+      return;
+    }
+    result.fold((_) => event.completion?.complete(false), (bars) {
+      if (event.selectBarId != null &&
+          !bars.any((b) => b.barId == event.selectBarId)) {
+        event.completion?.complete(false);
+        return;
+      }
+      var session = currentState.session.withBarAccess(bars);
+      if (event.selectBarId != null) {
+        session = session.withActiveBar(event.selectBarId!);
+      }
+      emit(
+        SessionState.ready(
+          session: session,
+          forceClientMode: event.selectBarId == null
+              ? currentState.forceClientMode
+              : false,
+        ),
+      );
+      event.completion?.complete(true);
+    });
   }
 
   void _onSwitchActiveBar(SwitchActiveBar event, Emitter<SessionState> emit) {
@@ -119,11 +176,28 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     );
   }
 
+  Future<bool> refreshAndSelectVenue(int barId) async {
+    final completion = Completer<bool>();
+    add(
+      SessionEvent.refreshBarAccess(selectBarId: barId, completion: completion),
+    );
+    try {
+      return await completion.future.timeout(const Duration(seconds: 35));
+    } catch (_) {
+      return false;
+    }
+  }
+
   void _onBarCreated(BarCreated event, Emitter<SessionState> emit) {
     final currentState = state;
     if (currentState is! SessionReady) return;
 
-    final updatedBars = [...currentState.session.barAccess, event.newBar];
+    final updatedBars = [
+      ...currentState.session.barAccess.where(
+        (b) => b.barId != event.newBar.barId,
+      ),
+      event.newBar,
+    ];
     final newSession = currentState.session.withBarAccess(updatedBars);
     emit(
       SessionState.ready(
@@ -137,6 +211,7 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
     LogoutSession event,
     Emitter<SessionState> emit,
   ) async {
+    _generation++;
     await _loginUsecase.logout();
     await DioNetwork.clearTokens();
     emit(const SessionState.loggedOut());

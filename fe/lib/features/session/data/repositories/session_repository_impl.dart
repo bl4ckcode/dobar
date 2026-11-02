@@ -1,3 +1,4 @@
+import 'package:barz/features/session/domain/models/pending_invitation.dart';
 import 'package:dartz/dartz.dart';
 import 'package:barz/core/network/error/failures.dart';
 import 'package:barz/core/network/exceptions.dart';
@@ -10,6 +11,18 @@ class SessionRepositoryImpl implements SessionRepository {
   final SessionDatasource _datasource;
 
   SessionRepositoryImpl(this._datasource);
+
+  @override
+  Future<Either<Failure, List<PendingInvitation>>>
+  getPendingInvitations() async {
+    try {
+      return Right(await _datasource.getPendingInvitations());
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message, e.statusCode, details: e.details));
+    } catch (_) {
+      return Left(ServerFailure('Failed to load invitations', null));
+    }
+  }
 
   @override
   Future<Either<Failure, List<BarAccess>>> getMyBars() async {

@@ -60,15 +60,18 @@ class AuthInterceptor extends QueuedInterceptor {
 
         if (refreshed) {
           try {
-            if (kDebugMode) print('[AUTH] Retrying request: ${err.requestOptions.path}');
-            
+            if (kDebugMode) {
+              print('[AUTH] Retrying request: ${err.requestOptions.path}');
+            }
+
             // Mark as retry to avoid infinite loop
             err.requestOptions.extra['is_retry'] = true;
-            
+
             // Update headers with the NEW token that was just saved
-            err.requestOptions.headers['Authorization'] = 'Bearer $_accessToken';
-            
-            // We can now safely use the main Dio for retry if we want, 
+            err.requestOptions.headers['Authorization'] =
+                'Bearer $_accessToken';
+
+            // We can now safely use the main Dio for retry if we want,
             // but refreshDio is also fine and avoids recursion overhead.
             final response = await _refreshDio.fetch(err.requestOptions);
             return handler.resolve(response);
@@ -78,12 +81,15 @@ class AuthInterceptor extends QueuedInterceptor {
         }
       }
 
-      // If we reach here, we are about to clear tokens. 
+      // If we reach here, we are about to clear tokens.
       // ONLY clear tokens if this wasn't a parallel request waiting for a refresh that MIGHT have succeeded.
       // Or if the refresh itself failed.
-      if (_refreshTokenCompleter == null || _refreshTokenCompleter!.isCompleted) {
+      if (_refreshTokenCompleter == null ||
+          _refreshTokenCompleter!.isCompleted) {
         await _clearTokens();
-        if (kDebugMode) print('[AUTH] Auth expired - triggering login redirect');
+        if (kDebugMode) {
+          print('[AUTH] Auth expired - triggering login redirect');
+        }
         onAuthExpired?.call();
       }
     }
@@ -91,7 +97,7 @@ class AuthInterceptor extends QueuedInterceptor {
     final message = _extractErrorMessage(err);
     if (kDebugMode) {
       print('[DIO] *** Error Response ***');
-      print('[DIO] uri: ${err.requestOptions.uri}');
+      print('[DIO] path: ${err.requestOptions.uri.path}');
       print('[DIO] status: ${err.response?.statusCode}');
       print('[DIO] message: ${message ?? err.message}');
     }
@@ -118,9 +124,9 @@ class AuthInterceptor extends QueuedInterceptor {
     if (_refreshTokenCompleter != null) {
       return _refreshTokenCompleter!.future;
     }
-    
+
     if (_refreshToken == null) return false;
-    
+
     _refreshTokenCompleter = Completer<bool>();
 
     try {
@@ -142,7 +148,7 @@ class AuthInterceptor extends QueuedInterceptor {
       if (kDebugMode) print('[AUTH] Token refresh failed: $e');
       _refreshTokenCompleter!.complete(false);
     } finally {
-      // Clear the completer after a short delay to allow pending requests 
+      // Clear the completer after a short delay to allow pending requests
       // in the same tick to catch the result if needed, or simply null it out.
       _refreshTokenCompleter = null;
     }
@@ -279,7 +285,9 @@ class AuthInterceptor extends QueuedInterceptor {
     final hasRefresh = storedRefresh != null && storedRefresh.isNotEmpty;
 
     if (kDebugMode) {
-      print('[AUTH] Checked storage - Access: ${storedAccess != null}, Refresh: $hasRefresh');
+      print(
+        '[AUTH] Checked storage - Access: ${storedAccess != null}, Refresh: $hasRefresh',
+      );
     }
 
     return hasRefresh;

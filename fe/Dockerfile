@@ -6,6 +6,7 @@ RUN rm -rf /usr/share/nginx/html/*
 
 # Copy Flutter web build to nginx html directory
 COPY build/web /usr/share/nginx/html
+COPY web/.well-known /usr/share/nginx/html/.well-known
 
 # Copy custom nginx config
 COPY nginx.conf /etc/nginx/nginx.conf

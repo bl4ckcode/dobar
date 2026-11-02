@@ -1,41 +1,37 @@
-import 'package:barz/features/authentication/presentation/bloc/login_state.dart';
-import 'package:barz/features/authentication/presentation/navigation/post_login_destination.dart';
+import 'package:barz/features/session/domain/models/entry_destination.dart';
+import 'package:barz/features/session/domain/models/user_session.dart';
+import 'package:barz/features/user/domain/models/user_model.dart';
+import 'package:barz/core/rbac/rbac.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  test('pending invitation has precedence over onboarding', () {
-    const state =
-        LoginState.success(isNewUser: true, needsOnboarding: true) as Success;
-
+  test(
+    'explicit intent precedes incomplete profile for every login method',
+    () {
+      for (final method in ['phone', 'google', 'apple', 'mfa', 'restored']) {
+        expect(
+          resolveEntry(
+            UserSession(user: UserModel()),
+            invitationCode: 'CaseSensitive_Token123',
+          ),
+          EntryDestination.invitation,
+          reason: method,
+        );
+      }
+    },
+  );
+  test('business profile without actual access needs editable setup', () {
     expect(
-      resolvePostLoginDestination(
-        state: state,
-        pendingInvitationCode: 'opaque_token_123456789',
+      resolveEntry(
+        UserSession(
+          user: UserModel(
+            userType: UserType.business,
+            countryCode: 'BR',
+            hasSelectedUserType: true,
+          ),
+        ),
       ),
-      PostLoginDestination.invitation,
-    );
-  });
-
-  test('new and incomplete users go to onboarding', () {
-    const newUser = LoginState.success(isNewUser: true) as Success;
-    const incomplete = LoginState.success(needsOnboarding: true) as Success;
-
-    expect(
-      resolvePostLoginDestination(state: newUser),
-      PostLoginDestination.onboarding,
-    );
-    expect(
-      resolvePostLoginDestination(state: incomplete),
-      PostLoginDestination.onboarding,
-    );
-  });
-
-  test('completed users go home regardless of registration fields', () {
-    const state = LoginState.success(isProfileComplete: false) as Success;
-
-    expect(
-      resolvePostLoginDestination(state: state),
-      PostLoginDestination.home,
+      EntryDestination.onboarding,
     );
   });
 }

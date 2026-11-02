@@ -1,3 +1,4 @@
+import 'package:barz/features/session/domain/models/pending_invitation.dart';
 import 'package:barz/core/rbac/rbac.dart';
 import 'package:barz/features/user/domain/models/user_model.dart';
 import 'bar_access.dart';
@@ -11,11 +12,13 @@ import 'bar_access.dart';
 /// The session is initialized after login by calling GET /me/profile
 class UserSession {
   final UserModel user;
+  final List<PendingInvitation> pendingInvitations;
   final List<BarAccess> barAccess;
   final BarAccess? activeBar;
 
   const UserSession({
     required this.user,
+    this.pendingInvitations = const [],
     this.barAccess = const [],
     this.activeBar,
   });
@@ -66,7 +69,12 @@ class UserSession {
       (access) => access.barId == barId,
       orElse: () => barAccess.first,
     );
-    return UserSession(user: user, barAccess: barAccess, activeBar: bar);
+    return UserSession(
+      user: user,
+      barAccess: barAccess,
+      activeBar: bar,
+      pendingInvitations: pendingInvitations,
+    );
   }
 
   /// Create a new session with updated bar access
@@ -74,6 +82,7 @@ class UserSession {
     return UserSession(
       user: user,
       barAccess: newBarAccess,
+      pendingInvitations: pendingInvitations,
       activeBar: newBarAccess.isNotEmpty
           ? (activeBar != null
                 ? newBarAccess.firstWhere(
@@ -84,6 +93,15 @@ class UserSession {
           : null,
     );
   }
+
+  UserSession withoutInvitation(String code) => UserSession(
+    user: user,
+    barAccess: barAccess,
+    activeBar: activeBar,
+    pendingInvitations: pendingInvitations
+        .where((item) => item.code != code)
+        .toList(),
+  );
 
   static UserSession empty() {
     return UserSession(

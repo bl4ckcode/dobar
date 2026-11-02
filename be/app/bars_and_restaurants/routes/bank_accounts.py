@@ -21,7 +21,7 @@ def get_bar_or_404(bar_id: int, db: Session) -> Bar:
 
 
 def check_bar_ownership(bar: Bar, user: AuthUser):
-    if bar.owner_id != user.user_id:
+    if bar.owner_id != user.id:
         raise APIError.forbidden("You don't have permission to manage this bar's bank account")
 
 

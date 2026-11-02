@@ -23,9 +23,11 @@ Deliver the staff invitation acceptance pilot journey for the Belo Horizonte MVP
 
 ## Current implementation evidence and gaps
 
-Independent backend verification on 2026-10-25 at HEAD `8844c697` plus the working-tree fixes found actual-record preview, contact guards, both pending-only issuers, SQLite JSON/query acceptance/readback and late accepted replay working with synthetic verification flags. The new verification migration passed a bounded real PostgreSQL upgrade preserving an existing user. Application inserts still bind NULL verification flags, however, and valid PostgreSQL acceptance fails on timezone-aware values bound to timezone-naive timestamp columns. The staff/auth suite reports 27 failed, 5 passed and 3 errors; concurrent SQLite acceptance returns 200/500. No auth provider path establishes verified state, and malformed persisted contact/role checks fail. Earlier FE parsing/login findings were not rerun in this backend-only pass. Login resume and the product journey remain incomplete.
+The current working tree implements shared entry resolution, authenticated verified-contact pending discovery, single/multiple invitation entry, provider preference/cancellation continuity, awaited abandonment, secure native/browser session intent storage, deduplicated cold/warm parsing, confirmed acceptance and exact venue access refresh. The invitation UI is mapped from React revision `55ce9b5ddf04e9baa1200241208cb97e732c7e0f`. The existing preview/acceptance shapes remain compatible.
 
-The [criterion evidence and actionable follow-ups](pilot/validation-checklist.md) supersede older backend handoff results and separate passed components from failed, blocked and skipped checks. Both issuer components now remain pending without membership; B07 authorization/delivery and the remaining FE/product journey still require evidence. No whole-journey validation is claimed.
+Local PostgreSQL discovery/acceptance/replay and preserved B02 draft checks pass with synthetic verified contacts. Flutter regressions cover decision precedence, errors, lifecycle races, parsing, native-storage mocks, acceptance/refresh separation, both themes, narrow/wide layouts, keyboard dismissal and Back. Screenshots and exact commands/results are in ignored `.agent-workflow/reports/business-entry`. These checks do not establish provider login or a signed-device journey. The older [pilot checklist](pilot/validation-checklist.md) remains a dated independent verification record; rerun its remaining auth/concurrency/product scenarios against the release candidate rather than treating that historical report as current validation.
+
+Browser-storage execution is blocked by local Chrome launch failure. Live association endpoint probes time out, and signed-device/iPhone entry remains a release prerequisite after backend-first CI/CD rollout with controlled test invitations/accounts. No deployment or whole-journey validation is claimed.
 
 Observed source references (see the criterion record for executed checks and their limits):
 
@@ -50,6 +52,11 @@ Use [FE/BE contract](../../docs/FE_BE_COMMUNICATION.md) for durable interfaces; 
 - **B08-AC05** — Expired, revoked, invalid and already-used-by-another-user invites show distinct safe outcomes; network errors preserve context and retry cannot create duplicate membership.
 - **B08-AC06** — React prompt, honest source-export metadata, FE/BE tasks and independent validation checklist are reviewable before translation; final Flutter UI supports light/dark, keyboard/screen readers and desktop/mobile browsers.
 
+- **B08-AC07** — Authenticated pending-invitation discovery returns only pending, unexpired invitations bound to verified matching contacts, with identifiers and preview fields for a one-invitation preview or multiple-invitation chooser. Any authentication provider may be used; discovery grants no membership. Preview/acceptance recheck contact/status/permissions.
+- **B08-AC08** — Canonical `https://dobar.app/staff/invitations/accept?code=…` and legacy `/convite/…` cold/warm links use one deduplicated handler, validate host/path and preserve opaque token case. Intent survives authentication and refresh in secure native storage/browser session storage; switching accounts retains it, and abandonment/acceptance/terminal invalidation clears it.
+- **B08-AC09** — Google/Apple choices initiate the selected provider once; phone opens phone entry. Cancellation preserves intent. Invitation Back/“Agora não” awaits sign-out and returns to login; manual code entry is only an explicit action. Success appears only after acceptance confirmation, and workspace entry refreshes access and selects exactly the accepted venue; failed refresh retries do not accept again.
+- **B08-AC10** — Invitation shell/card/branding/identity/role/permissions/success follow exported React revision `55ce9b5ddf04e9baa1200241208cb97e732c7e0f`. Both themes and narrow/wide layouts support keyboard dismissal and accessible focus. Native associated domains/verified filters and hosted association files use actual signing identifiers; live domain association and signed-device/iPhone evidence remain release prerequisites.
+
 ## Validation scenarios and evidence
 
 - Follow full pilot checklist for new/existing email and phone accounts; interrupt login, switch account, expire/revoke token, accept concurrently, replay response and verify minimum workspace permissions.
@@ -57,7 +64,7 @@ Use [FE/BE contract](../../docs/FE_BE_COMMUNICATION.md) for durable interfaces; 
 
 ## Delivery and verification
 
-Delivery remains incomplete, subject to the listed dependencies and verification findings. Verification: unverified; the independent 2026-10-25 backend checks found runtime failures, and frontend/product criteria remain incomplete. Product E2E is blocked because no runner is configured. See the [criterion record](pilot/validation-checklist.md); passing foundation checks establish artifact structure only.
+Entry corrections are implemented locally; release readiness remains incomplete. Verification: unverified pending the browser/provider/signed-device/product checks above. Passing foundation checks establish artifact structure only; Git/Linear retain prior implementation and verification history.
 
 ## Source requirements
 

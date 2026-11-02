@@ -1,0 +1,22 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": [
+          "NH779Z383B.com.dobar.app"
+        ],
+        "components": [
+          {
+            "/": "/staff/invitations/accept",
+            "?": {
+              "code": "*"
+            }
+          },
+          {
+            "/": "/convite/*"
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -91,6 +91,12 @@ class InvitationPreviewResponse(BaseModel):
     permissions: List[str]
 
 
+class PendingInvitationResponse(InvitationPreviewResponse):
+    invitation_id: int
+    invitation_code: str
+    bar_id: int
+
+
 class AcceptInvitationResponse(BaseModel):
     bar_id: int
     bar_name: str
@@ -321,7 +327,7 @@ def _recipient_matches(invitation, user):
     if inv_phone:
         if not user.phone_number:
             return False
-        if _normalize_phone(inv_phone) != _normalize_phone(user.phone_number):
+        if not _normalize_phone(inv_phone) or _normalize_phone(inv_phone) != _normalize_phone(user.phone_number):
             return False
     return True
 
@@ -349,6 +355,67 @@ def _invitation_expired(invitation):
     if expires_at.tzinfo is None:
         expires_at = expires_at.replace(tzinfo=timezone.utc)
     return expires_at < datetime.now(timezone.utc)
+
+
+@my_bars_router.get("/invitations/pending", response_model=List[PendingInvitationResponse])
+async def get_pending_invitations(user: AuthUser = Depends(get_current_user)):
+    from sqlalchemy import and_, or_, func
+
+    contacts = []
+    if user.email and user.email_verified:
+        contacts.append(func.lower(func.trim(StaffInvitation.email)) == user.email.strip().lower())
+    if user.phone_number and user.phone_verified:
+        contacts.append(
+            func.regexp_replace(StaffInvitation.phone, "[^0-9]", "", "g")
+            == _normalize_phone(user.phone_number)
+        )
+    if not contacts:
+        return []
+    invitations = await database.fetch_all(
+        StaffInvitation.__table__.select().where(and_(
+            StaffInvitation.status == "pending",
+            StaffInvitation.expires_at > datetime.utcnow(),
+            or_(*contacts),
+        )).order_by(StaffInvitation.expires_at, StaffInvitation.id)
+    )
+    result = []
+    for invitation in invitations:
+        if invitation["status"] != "pending" or _invitation_expired(invitation):
+            continue
+        if not _recipient_matches(invitation, user):
+            continue
+        try:
+            _require_verified_contact(invitation, user)
+        except APIError:
+            continue
+        bar = await database.fetch_one(Bar.__table__.select().where(Bar.id == invitation["bar_id"]))
+        if not bar:
+            continue
+        preview = _invitation_preview(invitation, bar)
+        result.append(PendingInvitationResponse(
+            **preview.model_dump(), invitation_id=invitation["id"],
+            invitation_code=invitation["invitation_code"], bar_id=invitation["bar_id"],
+        ))
+    return result
+
+
+def _invitation_preview(invitation, bar):
+    try:
+        role = BarRole(invitation["role"])
+    except ValueError:
+        raise APIError(422, ErrorCode.VALIDATION_ERROR, "Invalid role stored in invitation")
+    expires_at = invitation["expires_at"]
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    return InvitationPreviewResponse(
+        venue_name=bar["name"],
+        venue_address=_record_get(bar, "address"),
+        venue_image_url=_record_get(bar, "logo_url") or _record_get(bar, "cover_url"),
+        role=role.value,
+        masked_recipient=_mask_recipient(_record_get(invitation, "email"), _record_get(invitation, "phone")),
+        expires_at=expires_at,
+        permissions=[p.value for p in get_permissions_for_role(role)],
+    )
 
 
 @my_bars_router.post("/invitations/preview", response_model=InvitationPreviewResponse)
@@ -380,24 +447,7 @@ async def preview_invitation(payload: InvitationCodeRequest, user: AuthUser = De
     if not bar:
         raise APIError(404, ErrorCode.NOT_FOUND, "Bar not found")
 
-    try:
-        role = BarRole(invitation["role"])
-    except ValueError:
-        raise APIError(422, ErrorCode.VALIDATION_ERROR, "Invalid role stored in invitation")
-    permissions = [p.value for p in get_permissions_for_role(role)]
-    expires_at = invitation["expires_at"]
-    if expires_at.tzinfo is None:
-        expires_at = expires_at.replace(tzinfo=timezone.utc)
-
-    return InvitationPreviewResponse(
-        venue_name=bar["name"],
-        venue_address=_record_get(bar, "address"),
-        venue_image_url=_record_get(bar, "logo_url") or _record_get(bar, "cover_url"),
-        role=invitation["role"],
-        masked_recipient=_mask_recipient(_record_get(invitation, "email"), _record_get(invitation, "phone")),
-        expires_at=expires_at,
-        permissions=permissions,
-    )
+    return _invitation_preview(invitation, bar)
 
 
 @my_bars_router.post("/accept-invitation", response_model=AcceptInvitationResponse)
@@ -427,6 +477,9 @@ async def accept_invitation(
     if invitation["status"] == "accepted":
         if accepted_by is not None and accepted_by != user.id:
             raise APIError(409, ErrorCode.INVITATION_ALREADY_USED, "Invitation already used by another user")
+        if not _recipient_matches(invitation, user):
+            raise APIError(403, ErrorCode.INVITATION_CONTACT_MISMATCH, "Invitation recipient does not match authenticated user")
+        _require_verified_contact(invitation, user)
         # Replay: return current active membership, never restore removed access.
         current_staff = await database.fetch_one(
             BarStaff.__table__.select().where(

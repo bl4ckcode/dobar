@@ -1,6 +1,7 @@
+import 'package:barz/features/session/presentation/entry_coordinator.dart';
+import 'package:barz/core/services/biometry_service.dart';
 import 'dart:ui';
 import 'package:barz/core/design/design_system.dart';
-import 'package:barz/core/services/biometry_service.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/authentication/presentation/widgets/login_buttons_widget.dart';
 import 'package:barz/features/authentication/presentation/widgets/login_fields_widget.dart';
@@ -27,7 +28,12 @@ import 'login_sms_validation_page.dart';
 
 class LoginPage extends StatefulWidget {
   final String? pendingInvitationCode;
-  const LoginPage({super.key, this.pendingInvitationCode});
+  final String? preferredProvider;
+  const LoginPage({
+    super.key,
+    this.pendingInvitationCode,
+    this.preferredProvider,
+  });
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -86,7 +92,10 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     }
   }
 
-  Future<void> _promptBiometryThenNavigate(BuildContext context) async {
+  Future<void> _promptBiometryThenNavigate(
+    BuildContext context,
+    Success state,
+  ) async {
     final l10n = AppLocalizations.of(context)!;
     final available = await _biometryService.isAvailable;
     if (available &&
@@ -125,7 +134,7 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
     }
 
     if (context.mounted) {
-      AppRoute.home.go(context);
+      await navigateAfterLogin(context, state: state);
     }
   }
 
@@ -146,18 +155,14 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
               setState(() => _isLoading = state is Loading);
             }
             if (state is Success) {
-              final destination = resolvePostLoginDestination(
-                state: state,
-                pendingInvitationCode: widget.pendingInvitationCode,
-              );
-              if (destination == PostLoginDestination.home) {
-                _promptBiometryThenNavigate(context);
-              } else {
+              if (widget.pendingInvitationCode != null) {
                 navigateAfterLogin(
                   context,
                   state: state,
                   pendingInvitationCode: widget.pendingInvitationCode,
                 );
+              } else {
+                _promptBiometryThenNavigate(context, state);
               }
             } else if (state is CodeSent) {
               Navigator.push(
@@ -306,6 +311,17 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                                 ),
                                 child: LoginButtonsWidget(
                                   loginBloc: _loginBloc,
+                                  preferredProvider: widget.preferredProvider,
+                                  onProviderCancelled:
+                                      widget.pendingInvitationCode == null
+                                      ? null
+                                      : () {
+                                          context.go(
+                                            EntryCoordinator.invitationLocation(
+                                              widget.pendingInvitationCode!,
+                                            ),
+                                          );
+                                        },
                                 ),
                               )
                               .animate()
@@ -315,6 +331,11 @@ class _LoginPageState extends State<LoginPage> with TickerProviderStateMixin {
                           ConstrainedBox(
                             constraints: const BoxConstraints(maxWidth: 384),
                             child: _LegalText(colors: colors),
+                          ),
+                          TextButton(
+                            onPressed: () =>
+                                AppRoute.staffInvitationAccept.go(context),
+                            child: Text(l10n.entry_manual_invitation),
                           ),
                           const SizedBox(height: 40),
                         ],

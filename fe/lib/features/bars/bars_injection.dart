@@ -1,3 +1,5 @@
+import 'package:barz/features/bars/domain/repositories/venue_draft_repository.dart';
+import 'package:barz/features/bars/data/repositories/venue_draft_repository_impl.dart';
 import 'package:barz/core/network/dio_network.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/bars/data/data_sources/bar_network_datasource.dart';
@@ -8,6 +10,9 @@ import 'package:barz/features/bars/presentation/bloc/bar_bloc.dart';
 import 'package:barz/features/bars/presentation/bloc/dashboard_bloc.dart';
 
 Future<void> initBarsInjection() async {
+  getItInjector.registerLazySingleton<VenueDraftRepository>(
+    () => VenueDraftRepositoryImpl(DioNetwork.appAPI),
+  );
   getItInjector.registerLazySingleton<BarNetworkDataSource>(
     () => BarNetworkDataSource(dio: DioNetwork.appAPI),
   );

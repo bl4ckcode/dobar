@@ -22,7 +22,7 @@ Deliver the business authentication and navigation journey for the Belo Horizont
 
 ## Current implementation evidence and gaps
 
-Business shells, side menu and SessionBloc exist; GET /me/bars returns venue-scoped role and permission access.
+Business shells, side menu and SessionBloc exist; GET /me/bars returns venue-scoped role and permission access. The current working tree centralizes entry resolution and adds verified pending-invitation discovery, editable saved onboarding choices, awaited Back sign-out and exact accepted-venue refresh. Local deterministic evidence lives in `.agent-workflow/reports/business-entry`; provider/browser/native acceptance remains separate.
 
 Validate session mode and venue switching, route guards and permission refresh in browsers. Existing enum has owner/admin/manager/cashier/staff, no Marketing role.
 
@@ -46,6 +46,9 @@ Use [FE/BE contract](../../docs/FE_BE_COMMUNICATION.md) for durable interfaces; 
 - **B01-AC02** — Owner/admin sees authorized dashboard, order operators see cashier, and campaign/staff/settings navigation follows explicit permissions for the selected venue.
 - **B01-AC03** — Venue switching and refreshed permissions update navigation and protected routes without carrying access from another venue.
 - **B01-AC04** — Browser refresh/deep links and expired sessions preserve a safe intended destination and resume only after authentication.
+
+- **B01-AC05** — One entry resolution runs after restored sessions, SMS, Google/Apple and MFA: explicit invitation, single/multiple verified matching invitations, actual venue access, editable onboarding for no-access business/incomplete profile, then completed customer home. Access is fetched even with incomplete profile; failed access/discovery requests offer retry rather than becoming empty lists.
+- **B01-AC06** — Shells do not independently redirect a zero-venue business to invitation entry. Onboarding Back/system Back awaits sign-out and clears invitation intent before login; saved profile choices/drafts remain. Submission deliberately enters Create Bar without a competing redirect.
 
 ## Validation scenarios and evidence
 

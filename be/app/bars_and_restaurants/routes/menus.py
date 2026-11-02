@@ -477,6 +477,26 @@ async def read_menu_items_legacy(menu_id: int):
     return {"items": []}
 
 
+async def authorize_menu_extraction(bar_id, user):
+    from app.auth.rbac_models import Permission, BarRole, BarStaff, get_permissions_for_role
+    import json
+    staff = await database.fetch_one(BarStaff.__table__.select().where(
+        (BarStaff.user_id == user.id) & (BarStaff.bar_id == bar_id) & (BarStaff.is_active == True)
+    ))
+    if not staff or not staff["accepted_at"]:
+        raise APIError.forbidden("Not authorized to import this venue menu")
+    try:
+        permissions = {p.value for p in get_permissions_for_role(BarRole(staff["role"]))}
+        if staff["custom_permissions"]:
+            custom = json.loads(staff["custom_permissions"])
+            if isinstance(custom, list):
+                permissions.update(value for value in custom if isinstance(value, str))
+    except (ValueError, TypeError):
+        permissions = set()
+    if Permission.MENU_CREATE.value not in permissions and Permission.MENU_EDIT.value not in permissions:
+        raise APIError.forbidden("Not authorized to import this venue menu")
+
+
 @menus_router.post("/extract", response_model=MenuExtractionResponse)
 async def extract_menu_unified(
     request: Request,
@@ -510,6 +530,7 @@ async def extract_menu_unified(
         if not bar:
             raise APIError.partner_not_found("Bar not found")
         
+        await authorize_menu_extraction(bar_id, current_user)
         try:
             result = await menu_extraction_service.extract_menu_from_url(
                 menu_url, 
@@ -555,6 +576,7 @@ async def extract_menu_unified(
     if not bar:
         raise APIError.partner_not_found("Bar not found")
     
+    await authorize_menu_extraction(bar_id, current_user)
     try:
         result = await menu_extraction_service.extract_menu(content, language_hint)
         return MenuExtractionResponse(**result)
@@ -576,6 +598,7 @@ async def extract_menu_from_url(
     if not bar:
         raise APIError.partner_not_found("Bar not found")
     
+    await authorize_menu_extraction(request.bar_id, current_user)
     from ..services.menu_extraction import menu_extraction_service
     
     try:

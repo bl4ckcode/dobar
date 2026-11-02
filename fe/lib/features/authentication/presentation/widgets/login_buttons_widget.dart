@@ -29,8 +29,15 @@ String generateNonce({int length = 32}) {
 
 class LoginButtonsWidget extends StatefulWidget {
   final LoginBloc loginBloc;
+  final String? preferredProvider;
+  final VoidCallback? onProviderCancelled;
 
-  const LoginButtonsWidget({super.key, required this.loginBloc});
+  const LoginButtonsWidget({
+    super.key,
+    required this.loginBloc,
+    this.preferredProvider,
+    this.onProviderCancelled,
+  });
 
   @override
   State<LoginButtonsWidget> createState() => _LoginButtonsWidgetState();
@@ -77,6 +84,31 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
       await signIn.initialize();
     } catch (e) {
       debugPrint("Google Sign-In init (non-fatal): $e");
+    }
+    if (!mounted) return;
+    if (widget.preferredProvider == 'google') {
+      if (kIsWeb) {
+        try {
+          final result = await FirebaseAuth.instance.signInWithPopup(
+            GoogleAuthProvider(),
+          );
+          final token = await result.user?.getIdToken();
+          if (token != null && mounted) {
+            widget.loginBloc.add(
+              LoginEvent.googleLoginPressed(
+                key: result.user?.email ?? '',
+                token: token,
+              ),
+            );
+          }
+        } catch (_) {
+          widget.onProviderCancelled?.call();
+        }
+      } else {
+        await _signInWithGoogle();
+      }
+    } else if (widget.preferredProvider == 'apple') {
+      await _signInWithApple();
     }
   }
 
@@ -150,12 +182,12 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
     } catch (e, stack) {
       debugPrint("[Google Sign-In] Error: $e");
       debugPrint("[Google Sign-In] Stack: $stack");
-      if (mounted) {
+      if (widget.preferredProvider != null) {
+        widget.onProviderCancelled?.call();
+      } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Google Sign-In failed: ${e.toString().split(':').last}',
-            ),
+            content: Text(AppLocalizations.of(context)!.login_provider_error),
           ),
         );
       }
@@ -217,6 +249,7 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
       }
     } catch (e) {
       debugPrint("Error signing in with Apple: $e");
+      if (mounted) widget.onProviderCancelled?.call();
     }
   }
 
@@ -231,7 +264,7 @@ class _LoginButtonsWidgetState extends State<LoginButtonsWidget> {
         // parent rebuild, which causes multiple DOM elements and warnings.
         if (kIsWeb)
           _cachedGoogleButtonWeb ?? _buildGoogleButtonWeb()
-        else if (isAndroidPlatform())
+        else
           _buildSocialButton(
             onPressed: _signInWithGoogle,
             icon: 'assets/icons/google.png',

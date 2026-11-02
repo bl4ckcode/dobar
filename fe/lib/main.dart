@@ -1,3 +1,6 @@
+import 'package:barz/features/session/data/storage/invitation_intent_store.dart';
+import 'package:barz/features/session/data/invitation_link_handler.dart';
+import 'package:barz/features/session/presentation/entry_coordinator.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
@@ -27,6 +30,7 @@ void main() async {
   await initInjections();
   await getItInjector<AppInitializer>().run();
 
+  await InvitationIntentStore.instance.restore();
   runApp(const DobarApp());
 
   if (!kIsWeb) {
@@ -48,6 +52,7 @@ class DobarApp extends StatefulWidget {
 }
 
 class DobarAppState extends State<DobarApp> with WidgetsBindingObserver {
+  InvitationLinkHandler? _invitationLinks;
   final GlobalKey<ScaffoldMessengerState> snackBarKey =
       GlobalKey<ScaffoldMessengerState>();
 
@@ -55,10 +60,22 @@ class DobarAppState extends State<DobarApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    if (!kIsWeb) {
+      _invitationLinks = InvitationLinkHandler(
+        onCode: (code) async {
+          await InvitationIntentStore.instance.save(code);
+          if (mounted) appRouter.go(EntryCoordinator.invitationLocation(code));
+        },
+      );
+      WidgetsBinding.instance.addPostFrameCallback(
+        (_) => _invitationLinks!.start(),
+      );
+    }
   }
 
   @override
   void dispose() {
+    _invitationLinks?.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }

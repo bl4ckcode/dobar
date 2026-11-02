@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.dobar.app",
+      "sha256_cert_fingerprints": [
+        "9F:DE:4B:A4:9E:EB:A5:82:4F:F8:9A:54:9F:1B:CA:3C:9C:36:0F:02:0C:37:C3:45:4E:20:94:E2:70:CD:76:9B"
+      ]
+    }
+  }
+]

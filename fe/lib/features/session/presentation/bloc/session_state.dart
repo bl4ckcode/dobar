@@ -42,7 +42,9 @@ sealed class SessionState with _$SessionState {
   UserType? get effectiveUserType => maybeMap(
     ready: (state) {
       if (state.forceClientMode) return UserType.client;
-      return state.session.userType;
+      return state.session.barAccess.isNotEmpty
+          ? UserType.business
+          : state.session.userType;
     },
     orElse: () => null,
   );

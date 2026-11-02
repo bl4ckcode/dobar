@@ -1,3 +1,5 @@
+import 'package:barz/features/session/presentation/bloc/session_state.dart';
+import 'package:barz/features/session/data/storage/invitation_intent_store.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/core/locale/locale_cubit.dart';
 import 'package:barz/core/theme/theme_cubit.dart';
@@ -7,7 +9,6 @@ import 'package:barz/features/onboarding/presentation/bloc/onboarding_bloc.dart'
 import 'package:barz/features/onboarding/presentation/bloc/onboarding_event.dart';
 import 'package:barz/features/onboarding/presentation/bloc/onboarding_state.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
-import 'package:barz/features/session/presentation/bloc/session_event.dart';
 import 'package:barz/l10n/app_localizations.dart';
 import 'package:barz/core/router/app_routes.dart';
 import 'package:barz/core/router/route_arguments.dart';
@@ -27,8 +28,16 @@ class OnboardingPage extends StatelessWidget {
     return BlocProvider(
       create: (_) {
         final bloc = getItInjector<OnboardingBloc>();
-        if (phoneNumber?.isNotEmpty ?? false) {
-          bloc.add(DetectCountryFromPhone(phoneNumber!));
+        final user = getItInjector<SessionBloc>().state.currentSession?.user;
+        final phone = phoneNumber ?? user?.phoneNumber;
+        if (phone?.isNotEmpty == true) {
+          bloc.add(DetectCountryFromPhone(phone!));
+        }
+        if (user?.hasSelectedUserType == true) {
+          bloc.add(SelectUserType(user!.userType.name));
+        }
+        if (user?.countryCode != null) {
+          bloc.add(SelectCountry(user!.countryCode!));
         }
         return bloc;
       },
@@ -44,9 +53,15 @@ class _OnboardingView extends StatelessWidget {
   Widget build(BuildContext context) {
     final colors = context.dobarColors;
     return BlocConsumer<OnboardingBloc, OnboardingState>(
-      listener: (context, state) {
+      listener: (context, state) async {
         if (state.isComplete) {
-          getItInjector<SessionBloc>().add(const SessionEvent.initialize());
+          final sessionState = await getItInjector<SessionBloc>()
+              .initializeForEntry(force: true);
+          if (!context.mounted) return;
+          if (sessionState is! SessionReady) {
+            AppRoute.home.go(context);
+            return;
+          }
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (!context.mounted) return;
             if (state.selectedUserType == 'business') {
@@ -68,52 +83,78 @@ class _OnboardingView extends StatelessWidget {
           );
         }
       },
-      builder: (context, state) => Scaffold(
-        backgroundColor: colors.background,
-        body: Stack(
-          children: [
-            const Positioned.fill(child: _AtmosphericBackground()),
-            const _GhostCocktail(),
-            SafeArea(
-              child: LayoutBuilder(
-                builder: (context, constraints) => SingleChildScrollView(
-                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
-                  child: Center(
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        maxWidth: 480,
-                        minHeight: constraints.maxHeight - 52,
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const Align(
-                            alignment: Alignment.centerRight,
-                            child: _OnboardingToolbar(),
+      builder: (context, state) => PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) {
+          if (!didPop && !state.isSubmitting) _abandon(context);
+        },
+        child: GestureDetector(
+          onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+          child: Scaffold(
+            backgroundColor: colors.background,
+            body: Stack(
+              children: [
+                const Positioned.fill(child: _AtmosphericBackground()),
+                const _GhostCocktail(),
+                SafeArea(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) => SingleChildScrollView(
+                      padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(
+                            maxWidth: 480,
+                            minHeight: constraints.maxHeight - 52,
                           ),
-                          const SizedBox(height: 56),
-                          const _Header()
-                              .animate()
-                              .fadeIn(duration: 400.ms)
-                              .slideY(begin: 0.08, end: 0),
-                          const SizedBox(height: 36),
-                          _RoleSelection(state: state),
-                          const SizedBox(height: 28),
-                          _CountrySelection(state: state),
-                          const SizedBox(height: 28),
-                          _ContinueButton(state: state),
-                        ],
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Row(
+                                children: [
+                                  IconButton(
+                                    tooltip: AppLocalizations.of(
+                                      context,
+                                    )!.invitation_header_back,
+                                    onPressed: state.isSubmitting
+                                        ? null
+                                        : () => _abandon(context),
+                                    icon: const Icon(LucideIcons.arrow_left),
+                                  ),
+                                  const Spacer(),
+                                  const _OnboardingToolbar(),
+                                ],
+                              ),
+                              const SizedBox(height: 56),
+                              const _Header()
+                                  .animate()
+                                  .fadeIn(duration: 400.ms)
+                                  .slideY(begin: 0.08, end: 0),
+                              const SizedBox(height: 36),
+                              _RoleSelection(state: state),
+                              const SizedBox(height: 28),
+                              _CountrySelection(state: state),
+                              const SizedBox(height: 28),
+                              _ContinueButton(state: state),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
   }
+}
+
+Future<void> _abandon(BuildContext context) async {
+  await InvitationIntentStore.instance.save(null);
+  await getItInjector<SessionBloc>().signOut();
+  if (context.mounted) AppRoute.login.go(context);
 }
 
 class _AtmosphericBackground extends StatelessWidget {
@@ -381,7 +422,12 @@ class _CountrySelection extends StatelessWidget {
             children: [
               Icon(LucideIcons.globe, size: 17, color: colors.labelSecondary),
               const SizedBox(width: 10),
-              Text(l10n.onboarding_country_hint),
+              Expanded(
+                child: Text(
+                  l10n.onboarding_country_hint,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
             ],
           ),
           items: CountryHelper.allCountries

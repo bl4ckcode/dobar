@@ -1,3 +1,7 @@
+import 'package:barz/features/session/presentation/entry_coordinator.dart';
+import 'package:barz/features/session/presentation/bloc/session_state.dart';
+import 'package:barz/features/session/data/storage/invitation_intent_store.dart';
+import 'package:barz/features/session/domain/models/pending_invitation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -10,8 +14,6 @@ import 'package:barz/features/session/domain/models/bar_access.dart';
 import 'package:barz/features/session/domain/models/invitation_preview.dart';
 import 'package:barz/features/session/domain/usecases/session_usecase.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
-import 'package:barz/features/session/presentation/bloc/session_event.dart';
-import 'package:barz/features/session/presentation/bloc/session_state.dart';
 import 'package:barz/features/session/presentation/cubit/invitation_cubit.dart';
 import 'package:barz/features/session/presentation/cubit/invitation_state.dart';
 import 'package:barz/l10n/app_localizations.dart';
@@ -23,143 +25,183 @@ import 'package:barz/core/router/route_arguments.dart';
 /// Route: /staff/invitations/accept?code=<code>
 class StaffInvitationPage extends StatelessWidget {
   final String? initialCode;
-  const StaffInvitationPage({super.key, this.initialCode});
+  final bool choose;
+  const StaffInvitationPage({super.key, this.initialCode, this.choose = false});
 
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
+      key: ValueKey((initialCode, choose)),
       create: (_) => InvitationCubit(
         sessionUsecase: getItInjector<SessionUsecase>(),
         sessionBloc: getItInjector<SessionBloc>(),
         initialCode: initialCode,
+        persistIntent: InvitationIntentStore.instance.save,
+        clearIntent: InvitationIntentStore.instance.clearIfMatching,
+        prepareSession: () async {
+          final bloc = getItInjector<SessionBloc>();
+          return await bloc.initializeForEntry(
+                force: bloc.state is SessionError,
+              )
+              is SessionReady;
+        },
       ),
-      child: const _StaffInvitationView(),
+      child: StaffInvitationView(choose: choose),
     );
   }
 }
 
-class _StaffInvitationView extends StatelessWidget {
-  const _StaffInvitationView();
+class StaffInvitationView extends StatelessWidget {
+  final bool choose;
+  const StaffInvitationView({super.key, this.choose = false});
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final colors = context.dobarColors;
-    return Scaffold(
-      backgroundColor: colors.background,
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: CustomPaint(
-              painter: _IndustrialPainter(
-                background: colors.background,
-                grid: colors.labelPrimary.withValues(alpha: 0.045),
-                glow: colors.buttonPrimary.withValues(alpha: 0.12),
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _dismissInvitation(context);
+      },
+      child: GestureDetector(
+        onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+        child: Scaffold(
+          backgroundColor: colors.background,
+          body: Stack(
+            children: [
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _IndustrialPainter(
+                    background: colors.background,
+                    grid: colors.labelPrimary.withValues(alpha: 0.045),
+                    glow: colors.buttonPrimary.withValues(alpha: 0.12),
+                  ),
+                ),
               ),
-            ),
-          ),
-          SafeArea(
-            child: Column(
-              children: [
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1024),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
-                    child: Row(
-                      children: [
-                        IconButton(
-                          icon: const Icon(LucideIcons.arrow_left, size: 20),
-                          tooltip: l10n.invitation_header_back,
-                          onPressed: () => _dismissInvitation(context),
+              SafeArea(
+                child: Column(
+                  children: [
+                    ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 1024),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
                         ),
-                        Container(
-                          width: 32,
-                          height: 32,
-                          alignment: Alignment.center,
-                          decoration: BoxDecoration(
-                            color: colors.buttonPrimary,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            'D',
-                            style: TextStyle(
-                              color: colors.buttonOnPrimary,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
+                        child: Row(
+                          children: [
+                            IconButton(
+                              icon: const Icon(
+                                LucideIcons.arrow_left,
+                                size: 20,
+                              ),
+                              tooltip: l10n.invitation_header_back,
+                              onPressed: () => _dismissInvitation(context),
                             ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            'Dobar',
-                            style: TextStyle(
-                              color: colors.labelPrimary,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                        ),
-                        const _ThemeToggle(),
-                      ],
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: BlocBuilder<InvitationCubit, InvitationState>(
-                    builder: (context, state) => LayoutBuilder(
-                      builder: (context, constraints) {
-                        final compact = constraints.maxWidth < 600;
-                        return Center(
-                          child: SingleChildScrollView(
-                            padding: EdgeInsets.symmetric(
-                              vertical: compact ? 0 : 24,
-                              horizontal: compact ? 0 : 24,
-                            ),
-                            child: Container(
-                              width: double.infinity,
-                              constraints: const BoxConstraints(maxWidth: 480),
-                              padding: EdgeInsets.all(compact ? 24 : 32),
+                            Container(
+                              width: 32,
+                              height: 32,
+                              alignment: Alignment.center,
                               decoration: BoxDecoration(
-                                color: colors.surface,
-                                borderRadius: compact
-                                    ? null
-                                    : BorderRadius.circular(16),
-                                border: Border.all(
-                                  color: colors.surfaceElevated,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.18),
-                                    blurRadius: 50,
-                                    offset: const Offset(0, 20),
-                                  ),
-                                ],
+                                color: colors.buttonPrimary,
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                              child: AnimatedSwitcher(
-                                duration:
-                                    MediaQuery.disableAnimationsOf(context)
-                                    ? Duration.zero
-                                    : 350.ms,
-                                child: KeyedSubtree(
-                                  key: ValueKey(state.runtimeType),
-                                  child: _bodyFor(context, state, l10n),
+                              child: Text(
+                                'D',
+                                style: TextStyle(
+                                  color: colors.buttonOnPrimary,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w800,
                                 ),
                               ),
                             ),
-                          ),
-                        );
-                      },
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Dobar',
+                                style: TextStyle(
+                                  color: colors.labelPrimary,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            const _ThemeToggle(),
+                          ],
+                        ),
+                      ),
                     ),
-                  ),
+                    Expanded(
+                      child: BlocBuilder<InvitationCubit, InvitationState>(
+                        builder: (context, state) => LayoutBuilder(
+                          builder: (context, constraints) {
+                            final compact = constraints.maxWidth < 600;
+                            return Center(
+                              child: SingleChildScrollView(
+                                padding: EdgeInsets.symmetric(
+                                  vertical: compact ? 12 : 24,
+                                  horizontal: compact ? 16 : 24,
+                                ),
+                                child: Container(
+                                  width: double.infinity,
+                                  constraints: const BoxConstraints(
+                                    maxWidth: 480,
+                                  ),
+                                  padding: EdgeInsets.all(compact ? 24 : 32),
+                                  clipBehavior: Clip.antiAlias,
+                                  decoration: BoxDecoration(
+                                    color: colors.surface,
+                                    borderRadius: BorderRadius.circular(16),
+                                    border: Border.all(
+                                      color: colors.surfaceElevated,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(
+                                          alpha: 0.18,
+                                        ),
+                                        blurRadius: 50,
+                                        offset: const Offset(0, 20),
+                                      ),
+                                    ],
+                                  ),
+                                  child: AnimatedSwitcher(
+                                    duration:
+                                        MediaQuery.disableAnimationsOf(context)
+                                        ? Duration.zero
+                                        : 350.ms,
+                                    child: KeyedSubtree(
+                                      key: ValueKey(state.runtimeType),
+                                      child: Focus(
+                                        autofocus:
+                                            state is! InvitationManualCode &&
+                                            state is! InvitationLoading,
+                                        skipTraversal: true,
+                                        child: Semantics(
+                                          liveRegion: true,
+                                          child:
+                                              choose &&
+                                                  state is InvitationManualCode
+                                              ? const _InvitationChooser()
+                                              : _bodyFor(context, state, l10n),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -329,6 +371,8 @@ class _ReadyBody extends StatelessWidget {
       children: [
         _InvitationCard(preview: preview, l10n: l10n),
         const SizedBox(height: 16),
+        _IdentityPanel(code: code, verifiedContact: true),
+        const SizedBox(height: 16),
         Text(
           l10n.invitation_accept_support,
           style: TextStyle(
@@ -469,7 +513,7 @@ class _AcceptErrorBody extends StatelessWidget {
   }
 }
 
-class _SuccessBody extends StatelessWidget {
+class _SuccessBody extends StatefulWidget {
   final InvitationPreview? preview;
   final BarAccess access;
   final bool isNew;
@@ -481,7 +525,19 @@ class _SuccessBody extends StatelessWidget {
     required this.l10n,
   });
   @override
+  State<_SuccessBody> createState() => _SuccessBodyState();
+}
+
+class _SuccessBodyState extends State<_SuccessBody> {
+  bool _loading = false;
+  bool _failed = false;
+  @override
   Widget build(BuildContext context) {
+    final preview = widget.preview;
+    final access = widget.access;
+    final l10n = widget.l10n;
+    final isNew = widget.isNew;
+
     final venueName = preview?.venueName ?? access.barName;
     final role = _localizedRole(preview?.role ?? access.role.name, l10n);
     return Semantics(
@@ -525,26 +581,49 @@ class _SuccessBody extends StatelessWidget {
             ),
             textAlign: TextAlign.center,
           ),
+          const SizedBox(height: 16),
+          _RoleBadge(role: preview?.role ?? access.role.name, label: role),
           const SizedBox(height: 24),
           SizedBox(
             width: double.infinity,
             child: FilledButton(
-              onPressed: () {
-                context.read<SessionBloc>().add(
-                  SessionEvent.switchActiveBar(barId: access.barId),
-                );
-                context.go(AppRoute.businessDashboard.path);
-              },
+              onPressed: _loading
+                  ? null
+                  : () async {
+                      setState(() {
+                        _loading = true;
+                        _failed = false;
+                      });
+                      final ready = await context
+                          .read<InvitationCubit>()
+                          .enterWorkspace(access.barId);
+                      if (!context.mounted) return;
+                      setState(() {
+                        _loading = false;
+                        _failed = !ready;
+                      });
+                      if (ready) {
+                        final active = getItInjector<SessionBloc>()
+                            .state
+                            .currentSession!
+                            .activeBar!;
+                        context.go(EntryCoordinator.workspaceLocation(active));
+                      }
+                    },
               style: FilledButton.styleFrom(
-                backgroundColor: barzGold,
-                foregroundColor: barzDark,
+                backgroundColor: pixGreen,
+                foregroundColor: Colors.white,
                 minimumSize: const Size.fromHeight(52),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
               ),
               child: Text(
-                l10n.invitation_enter_workspace,
+                _loading
+                    ? l10n.invitation_loading
+                    : _failed
+                    ? l10n.entry_refresh_retry
+                    : l10n.invitation_enter_workspace,
                 style: const TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
@@ -565,6 +644,8 @@ class _WrongAccountBody extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _GenericInvitationFrame(),
+        const SizedBox(height: 16),
+        _IdentityPanel(code: code),
         const SizedBox(height: 16),
         _StatusBanner(
           tone: _StatusTone.warning,
@@ -617,6 +698,8 @@ class _UnverifiedBody extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _GenericInvitationFrame(),
+        const SizedBox(height: 16),
+        _IdentityPanel(code: code),
         const SizedBox(height: 16),
         _StatusBanner(
           tone: _StatusTone.warning,
@@ -761,18 +844,8 @@ class _GenericInvitationFrame extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          height: 140,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            color: colors.surface,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: const Center(
-            child: Icon(LucideIcons.store, size: 40, color: barzGold),
-          ),
-        ),
-        const SizedBox(height: 16),
+        const _VenueVisual(),
+        const SizedBox(height: 20),
         Text(
           l10n.invitation_eyebrow,
           style: const TextStyle(
@@ -817,19 +890,8 @@ class _InvitationCard extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(16),
-          child: preview.venueImageUrl != null
-              ? Image.network(
-                  preview.venueImageUrl!,
-                  height: 140,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, err, stack) => _fallback(colors),
-                )
-              : _fallback(colors),
-        ),
-        const SizedBox(height: 16),
+        _VenueVisual(imageUrl: preview.venueImageUrl),
+        const SizedBox(height: 20),
         Text(
           l10n.invitation_eyebrow,
           style: const TextStyle(
@@ -877,54 +939,65 @@ class _InvitationCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: colors.surface,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: colors.navBackground),
+            border: Border.all(color: colors.surfaceElevated),
           ),
           padding: const EdgeInsets.all(12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.invitation_role_label,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: colors.labelSecondary,
-                          ),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  final width = constraints.maxWidth < 360
+                      ? constraints.maxWidth
+                      : (constraints.maxWidth - 12) / 2;
+                  return Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: [
+                      SizedBox(
+                        width: width,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l10n.invitation_role_label,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: colors.labelSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            _RoleBadge(role: preview.role, label: roleName),
+                          ],
                         ),
-                        const SizedBox(height: 4),
-                        _RoleBadge(role: roleName),
-                      ],
-                    ),
-                  ),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          l10n.invitation_sent_to,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: colors.labelSecondary,
-                          ),
+                      ),
+                      SizedBox(
+                        width: width,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              l10n.invitation_sent_to,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: colors.labelSecondary,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              preview.maskedRecipient,
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: colors.labelPrimary,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          preview.maskedRecipient,
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: colors.labelPrimary,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                      ),
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 8),
               Row(
@@ -935,11 +1008,13 @@ class _InvitationCard extends StatelessWidget {
                     color: colors.labelSecondary,
                   ),
                   const SizedBox(width: 4),
-                  Text(
-                    l10n.invitation_valid_until(expiry),
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: colors.labelSecondary,
+                  Expanded(
+                    child: Text(
+                      l10n.invitation_valid_until(expiry),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: colors.labelSecondary,
+                      ),
                     ),
                   ),
                 ],
@@ -965,9 +1040,14 @@ class _InvitationCard extends StatelessWidget {
                 children: [
                   const Icon(LucideIcons.check, size: 14, color: barzGold),
                   const SizedBox(width: 8),
-                  Text(
-                    _localizedPermission(p, l10n),
-                    style: TextStyle(fontSize: 13, color: colors.labelPrimary),
+                  Expanded(
+                    child: Text(
+                      _localizedPermission(p, l10n),
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: colors.labelPrimary,
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -977,39 +1057,93 @@ class _InvitationCard extends StatelessWidget {
       ],
     );
   }
+}
 
-  Widget _fallback(DobarColors colors) => Container(
-    height: 140,
-    width: double.infinity,
-    decoration: BoxDecoration(
-      color: colors.surface,
-      borderRadius: BorderRadius.circular(16),
-    ),
-    child: const Center(
-      child: Icon(LucideIcons.store, size: 40, color: barzGold),
-    ),
-  );
+class _VenueVisual extends StatelessWidget {
+  final String? imageUrl;
+  const _VenueVisual({this.imageUrl});
+  @override
+  Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < 600;
+    final padding = compact ? 24.0 : 32.0;
+    final height = compact ? 144.0 : 176.0;
+    return LayoutBuilder(
+      builder: (context, constraints) => SizedBox(
+        height: height - padding,
+        child: OverflowBox(
+          alignment: Alignment.topCenter,
+          minWidth: constraints.maxWidth + padding * 2,
+          maxWidth: constraints.maxWidth + padding * 2,
+          minHeight: height,
+          maxHeight: height,
+          child: Transform.translate(
+            offset: Offset(0, -padding),
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                ColoredBox(
+                  color: context.dobarColors.background,
+                  child: imageUrl == null
+                      ? const Center(
+                          child: Icon(
+                            LucideIcons.store,
+                            size: 40,
+                            color: barzGold,
+                          ),
+                        )
+                      : Image.network(
+                          imageUrl!,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => const Center(
+                            child: Icon(
+                              LucideIcons.store,
+                              size: 40,
+                              color: barzGold,
+                            ),
+                          ),
+                        ),
+                ),
+                DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        context.dobarColors.surface.withValues(alpha: 0),
+                        context.dobarColors.surface,
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _RoleBadge extends StatelessWidget {
   final String role;
-  const _RoleBadge({required this.role});
+  final String label;
+  const _RoleBadge({required this.role, required this.label});
   @override
-  Widget build(BuildContext context) => Container(
-    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-    decoration: BoxDecoration(
-      color: barzGold.withValues(alpha: 0.15),
-      borderRadius: BorderRadius.circular(20),
-    ),
-    child: Text(
-      role,
-      style: const TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.bold,
-        color: barzGold,
+  Widget build(BuildContext context) {
+    final ink = context.staffRoleInk(role);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: ink.withValues(alpha: 0.12),
+        border: Border.all(color: ink.withValues(alpha: 0.35)),
+        borderRadius: BorderRadius.circular(6),
       ),
-    ),
-  );
+      child: Text(
+        label,
+        style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: ink),
+      ),
+    );
+  }
 }
 
 enum _StatusTone { error, warning, success, neutral }
@@ -1163,14 +1297,17 @@ class _ManualCodeFormState extends State<_ManualCodeForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: barzGold,
-            borderRadius: BorderRadius.circular(12),
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: barzGold,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(LucideIcons.key_round, color: barzDark, size: 24),
           ),
-          child: const Icon(LucideIcons.key_round, color: barzDark, size: 24),
         ),
         const SizedBox(height: 16),
         Text(
@@ -1204,7 +1341,7 @@ class _ManualCodeFormState extends State<_ManualCodeForm> {
         TextField(
           controller: _ctrl,
           autocorrect: false,
-          textCapitalization: TextCapitalization.characters,
+          textCapitalization: TextCapitalization.none,
           style: TextStyle(
             fontFamily: 'monospace',
             letterSpacing: 1.5,
@@ -1306,12 +1443,11 @@ class _IndustrialPainter extends CustomPainter {
       oldDelegate.glow != glow;
 }
 
-void _dismissInvitation(BuildContext context) {
-  if (context.canPop()) {
-    context.pop();
-  } else {
-    AppRoute.onboarding.go(context);
-  }
+Future<void> _dismissInvitation(BuildContext context) async {
+  if (context.read<InvitationCubit>().state is InvitationAccepting) return;
+  await InvitationIntentStore.instance.save(null);
+  await getItInjector<SessionBloc>().signOut();
+  if (context.mounted) AppRoute.login.go(context);
 }
 
 Future<void> _restartAuthentication(
@@ -1319,13 +1455,8 @@ Future<void> _restartAuthentication(
   String code, {
   String? preferredProvider,
 }) async {
-  final sessionBloc = context.read<SessionBloc>();
-  sessionBloc.add(const SessionEvent.logout());
-  try {
-    await sessionBloc.stream
-        .firstWhere((state) => state is SessionLoggedOut)
-        .timeout(const Duration(seconds: 5));
-  } catch (_) {}
+  await InvitationIntentStore.instance.save(code);
+  await getItInjector<SessionBloc>().signOut();
   if (!context.mounted) return;
   context.go(
     AppRoute.login.path,
@@ -1334,6 +1465,136 @@ Future<void> _restartAuthentication(
       preferredProvider: preferredProvider,
     ),
   );
+}
+
+class _IdentityPanel extends StatelessWidget {
+  final String code;
+  final bool verifiedContact;
+  const _IdentityPanel({required this.code, this.verifiedContact = false});
+  @override
+  Widget build(BuildContext context) {
+    final user = getItInjector<SessionBloc>().state.currentSession?.user;
+    final l10n = AppLocalizations.of(context)!;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: context.dobarColors.background,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: context.dobarColors.surfaceElevated),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const CircleAvatar(child: Icon(LucideIcons.user_round, size: 20)),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.invitation_connected_as,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: context.dobarColors.labelSecondary,
+                      ),
+                    ),
+                    Text(
+                      user?.displayName ??
+                          user?.email ??
+                          user?.phoneNumber ??
+                          '',
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    if (verifiedContact)
+                      Text(
+                        l10n.invitation_verified,
+                        style: const TextStyle(color: pixGreen, fontSize: 12),
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          Align(
+            alignment: Alignment.centerRight,
+            child: TextButton(
+              onPressed: () => _restartAuthentication(context, code),
+              child: Text(l10n.invitation_switch_account),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InvitationChooser extends StatefulWidget {
+  const _InvitationChooser();
+  @override
+  State<_InvitationChooser> createState() => _InvitationChooserState();
+}
+
+class _InvitationChooserState extends State<_InvitationChooser> {
+  late Future<List<PendingInvitation>> _pending;
+  Future<List<PendingInvitation>> _load() async {
+    final result = await getItInjector<SessionUsecase>()
+        .getPendingInvitations();
+    return result.fold(
+      (_) => throw StateError('invitation discovery failed'),
+      (items) => items,
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _pending = _load();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return FutureBuilder<List<PendingInvitation>>(
+      future: _pending,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return FilledButton(
+            onPressed: () => setState(() {
+              _pending = _load();
+            }),
+            child: Text(l10n.invitation_retry),
+          );
+        }
+        if (!snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              l10n.entry_choose_invitation,
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            for (final invitation in snapshot.data!)
+              ListTile(
+                title: Text(invitation.preview.venueName),
+                subtitle: Text(_localizedRole(invitation.preview.role, l10n)),
+                trailing: const Icon(LucideIcons.chevron_right),
+                onTap: () =>
+                    context.read<InvitationCubit>().submitCode(invitation.code),
+              ),
+            if (snapshot.data!.isEmpty) Text(l10n.entry_no_invitations),
+            TextButton(
+              onPressed: () => _dismissInvitation(context),
+              child: Text(l10n.invitation_dismiss),
+            ),
+          ],
+        );
+      },
+    );
+  }
 }
 
 String _localizedRole(String role, AppLocalizations l10n) {

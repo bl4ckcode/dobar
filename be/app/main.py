@@ -1,3 +1,5 @@
+import asyncio
+from contextlib import suppress
 import json
 import os
 from dotenv import load_dotenv
@@ -11,10 +13,13 @@ from app.rate_limiter import limiter
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from .database import engine, Base, database
+from .logging_redaction import configure_invitation_log_redaction
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from .auth.routes import auth_router
 from .bars_and_restaurants.routes.bars import bars_router
+from .bars_and_restaurants.routes.onboarding import onboarding_router
+from .bars_and_restaurants.services.onboarding_projection import projection_worker
 from .bars_and_restaurants.routes.business_settings import business_settings_router
 from .bars_and_restaurants.routes.menus import menus_router
 from .bars_and_restaurants.routes.orders import orders_router, bar_orders_router
@@ -86,10 +91,18 @@ async def lifespan(app: FastAPI):
         print(f"⚠️  Redis connection failed (wallet locking disabled):")
         print(f"   Error: {type(e).__name__}: {str(e)}")
     
-    yield
+    projection_task = asyncio.create_task(projection_worker())
+    try:
+        yield
+    finally:
+        projection_task.cancel()
+        with suppress(asyncio.CancelledError):
+            await projection_task
     await close_dpe_client()
     await close_redis()
     await database.disconnect()
+
+configure_invitation_log_redaction()
 
 app = FastAPI(
     lifespan=lifespan,
@@ -209,6 +222,7 @@ app.mount("/legal", StaticFiles(directory="app/static/legal"), name="legal")
 app.include_router(auth_router)
 app.include_router(mfa_router)
 app.include_router(recovery_router)
+app.include_router(onboarding_router)
 app.include_router(bars_router)
 app.include_router(business_settings_router)
 app.include_router(menus_router)

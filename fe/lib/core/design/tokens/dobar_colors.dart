@@ -89,7 +89,15 @@ extension DobarColorsContext on BuildContext {
   DobarColors get dobarColors => Theme.of(this).extension<DobarColors>()!;
   bool get isDark => Theme.of(this).brightness == Brightness.dark;
   ThemeData get theme => Theme.of(this);
-  
+
+  Color staffRoleInk(String role) => switch (role) {
+    'owner' => isDark ? const Color(0xFFFFDE4E) : const Color(0xFF866300),
+    'admin' => isDark ? const Color(0xFF64A1EE) : const Color(0xFF1762B6),
+    'manager' => isDark ? const Color(0xFF44BE8D) : const Color(0xFF007651),
+    'cashier' => isDark ? const Color(0xFFBE8CE1) : const Color(0xFF7D45A2),
+    _ => dobarColors.labelSecondary,
+  };
+
   // Responsive layout helpers
   Size get screenSize => MediaQuery.of(this).size;
   double get screenWidth => screenSize.width;

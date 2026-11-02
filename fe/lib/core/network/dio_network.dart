@@ -33,12 +33,18 @@ class DioNetwork {
     if (kDebugMode) {
       appAPI.interceptors.add(
         LogInterceptor(
-          responseBody: true,
+          responseBody: false,
           requestBody: false,
           requestHeader: false,
           responseHeader: false,
           error: false,
-          logPrint: (obj) => print('[DIO] $obj'),
+          logPrint: (obj) {
+            final safe = obj.toString().replaceAllMapped(
+              RegExp(r'(invitation_code|code|codigo)=[^&\s]+'),
+              (match) => '${match[1]}=[REDACTED]',
+            );
+            print('[DIO] $safe');
+          },
         ),
       );
     }

@@ -1,3 +1,8 @@
+import 'dart:async';
+import 'package:barz/features/session/presentation/entry_coordinator.dart';
+import 'package:barz/features/session/presentation/bloc/session_state.dart';
+import 'package:barz/features/session/data/storage/invitation_intent_store.dart';
+import 'package:barz/features/session/domain/models/invitation_intent.dart';
 import 'package:barz/features/checkin/presentation/bloc/checkin_bloc.dart';
 import 'package:barz/features/checkin/presentation/bloc/checkin_event.dart';
 import 'package:barz/features/orders/presentation/bloc/order_bloc.dart';
@@ -54,6 +59,7 @@ import 'package:barz/core/router/route_arguments.dart';
 
 final rootNavigatorKey = GlobalKey<NavigatorState>();
 final _businessShellNavigatorKey = GlobalKey<NavigatorState>();
+String? _capturedInvitationLocation;
 
 const _publicRoutes = {
   '/login',
@@ -63,16 +69,52 @@ const _publicRoutes = {
   '/staff/invitations/accept',
 };
 
+class _SessionRouterRefresh extends ChangeNotifier {
+  late final StreamSubscription<SessionState> _subscription;
+  _SessionRouterRefresh(SessionBloc bloc) {
+    _subscription = bloc.stream.listen((_) => notifyListeners());
+  }
+  @override
+  void dispose() {
+    _subscription.cancel();
+    super.dispose();
+  }
+}
+
 final appRouter = GoRouter(
+  refreshListenable: _SessionRouterRefresh(getItInjector<SessionBloc>()),
   navigatorKey: rootNavigatorKey,
   initialLocation: AppRoute.home.path,
   redirect: (context, state) async {
+    final intent = InvitationIntentStore.instance;
+    if (state.uri.path.startsWith('/convite/')) {
+      final code = parseInvitationCode('https://dobar.app${state.uri}');
+      if (code != null) {
+        await intent.save(code);
+        return EntryCoordinator.invitationLocation(code);
+      }
+      return AppRoute.staffInvitationAccept.path;
+    }
+    if (state.uri.path == AppRoute.staffInvitationAccept.path &&
+        state.uri.queryParameters['code'] != null) {
+      final code = parseInvitationCode('https://dobar.app${state.uri}');
+      if (code != null && _capturedInvitationLocation != state.uri.toString()) {
+        _capturedInvitationLocation = state.uri.toString();
+        await intent.save(code);
+      }
+    }
+    if (state.uri.path != AppRoute.staffInvitationAccept.path) {
+      _capturedInvitationLocation = null;
+    }
     final isAuthenticated = await DioNetwork.isAuthenticated();
     final currentPath = state.matchedLocation;
     final isPublicRoute = _publicRoutes.contains(currentPath);
 
     if (!isAuthenticated) {
       if (isPublicRoute) return null;
+      if (intent.code != null) {
+        return EntryCoordinator.invitationLocation(intent.code!);
+      }
       return AppRoute.login.path;
     }
 
@@ -86,14 +128,34 @@ final appRouter = GoRouter(
       return null;
     }
 
-    if (currentPath == AppRoute.login.path ||
-        currentPath == AppRoute.biometryUnlock.path) {
-      return AppRoute.home.path;
+    final sessionBloc = getItInjector<SessionBloc>();
+    final businessEntry =
+        currentPath.startsWith('/business') &&
+        (sessionBloc.state is! SessionReady ||
+            sessionBloc.state.currentSession?.barAccess.isEmpty == true);
+    final coldSetupEntry =
+        (currentPath == AppRoute.onboarding.path ||
+            currentPath == AppRoute.createBar.path) &&
+        (sessionBloc.state is SessionInitial ||
+            sessionBloc.state is SessionLoggedOut);
+    if (currentPath == AppRoute.home.path ||
+        currentPath == AppRoute.login.path ||
+        currentPath == AppRoute.biometryUnlock.path ||
+        businessEntry ||
+        coldSetupEntry) {
+      final destination = await EntryCoordinator(
+        sessionBloc,
+      ).resolve(currentPath);
+      return destination == currentPath ? null : destination;
     }
 
     return null;
   },
   routes: [
+    GoRoute(
+      path: '/convite/:code',
+      builder: (_, _) => const StaffInvitationPage(),
+    ),
     GoRoute(
       path: AppRoute.login.path,
       name: AppRoute.login.name,
@@ -104,7 +166,13 @@ final appRouter = GoRouter(
             : args is Map
             ? args['pendingInvitationCode'] as String?
             : null;
-        return LoginPage(pendingInvitationCode: pendingCode);
+        return LoginPage(
+          pendingInvitationCode:
+              pendingCode ?? InvitationIntentStore.instance.code,
+          preferredProvider: args is LoginRouteArguments
+              ? args.preferredProvider
+              : null,
+        );
       },
     ),
     GoRoute(
@@ -377,7 +445,10 @@ final appRouter = GoRouter(
         final code = state.uri.queryParameters['code'];
         return BlocProvider.value(
           value: getItInjector<SessionBloc>(),
-          child: StaffInvitationPage(initialCode: code),
+          child: StaffInvitationPage(
+            initialCode: code,
+            choose: state.uri.queryParameters['choose'] == 'true',
+          ),
         );
       },
     ),

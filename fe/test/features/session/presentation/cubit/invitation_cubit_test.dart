@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
@@ -201,6 +202,69 @@ void main() {
       await c.submitCode('DBR-7K4M-29QX');
       expect(c.state, isA<InvitationLoadError>());
     });
+  });
+
+  test('refresh failure retries exact venue without accepting again', () async {
+    when(
+      () => usecase.acceptInvitation(any()),
+    ).thenAnswer((_) async => Right(_fakeAccess()));
+    when(
+      () => bloc.initializeForEntry(),
+    ).thenAnswer((_) async => const SessionState.initial());
+    var attempts = 0;
+    when(
+      () => bloc.refreshAndSelectVenue(42),
+    ).thenAnswer((_) async => ++attempts > 1);
+    final c = make();
+    await c.acceptInvitation('DBR-7K4M-29QX', _fakePreview());
+    expect(await c.enterWorkspace(42), false);
+    expect(await c.enterWorkspace(42), true);
+    verify(() => usecase.acceptInvitation(any())).called(1);
+    verify(() => bloc.refreshAndSelectVenue(42)).called(2);
+  });
+  test(
+    'duplicate accept taps issue one request and clear intent after confirmation',
+    () async {
+      final result = Completer<Either<Failure, BarAccess>>();
+      when(
+        () => usecase.acceptInvitation(any()),
+      ).thenAnswer((_) => result.future);
+      String? saved = 'DBR-7K4M-29QX';
+      final c = InvitationCubit(
+        sessionUsecase: usecase,
+        sessionBloc: bloc,
+        persistIntent: (code) async {
+          saved = code;
+        },
+      );
+      final first = c.acceptInvitation(saved!, _fakePreview());
+      await c.acceptInvitation(saved!, _fakePreview());
+      expect(saved, isNotNull);
+      result.complete(Right(_fakeAccess()));
+      await first;
+      expect(saved, null);
+      await c.acceptInvitation('DBR-7K4M-29QX', _fakePreview());
+      verify(() => usecase.acceptInvitation(any())).called(1);
+    },
+  );
+
+  test('new warm invitation supersedes an older in-flight preview', () async {
+    final old = Completer<Either<Failure, InvitationPreview>>();
+    when(
+      () => usecase.previewInvitation('Old_CaseSensitive123'),
+    ).thenAnswer((_) => old.future);
+    final latest = _fakePreview();
+    when(
+      () => usecase.previewInvitation('New_CaseSensitive123'),
+    ).thenAnswer((_) async => Right(latest));
+    final c = make();
+    final first = c.submitCode('Old_CaseSensitive123');
+    await Future<void>.delayed(Duration.zero);
+    await c.submitCode('New_CaseSensitive123');
+    old.complete(Right(_fakePreview()));
+    await first;
+    expect((c.state as InvitationReady).code, 'New_CaseSensitive123');
+    await c.close();
   });
 
   group('accept flow', () {

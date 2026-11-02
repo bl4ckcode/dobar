@@ -1,16 +1,23 @@
+import 'package:barz/features/session/domain/models/bar_access.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:barz/core/network/dio_network.dart';
 import 'package:barz/core/network/error/failures.dart';
 import 'package:barz/features/session/domain/models/invitation_preview.dart';
 import 'package:barz/features/session/domain/usecases/session_usecase.dart';
 import 'package:barz/features/session/presentation/bloc/session_bloc.dart';
-import 'package:barz/features/session/presentation/bloc/session_event.dart';
+import 'package:barz/features/session/domain/models/invitation_intent.dart';
 import 'invitation_state.dart';
 
 class InvitationCubit extends Cubit<InvitationState> {
   final SessionUsecase _sessionUsecase;
   final SessionBloc _sessionBloc;
   final Future<bool> Function() _isAuthenticated;
+  final Future<void> Function(String?) _persistIntent;
+  final Future<bool> Function() _prepareSession;
+  final Future<void> Function(String)? _clearIntent;
+  int _request = 0;
+  bool _accepting = false;
+  BarAccess? _acceptedAccess;
 
   static const _codeExpired = 'INVITATION_EXPIRED';
   static const _codeRevoked = 'INVITATION_REVOKED';
@@ -20,12 +27,15 @@ class InvitationCubit extends Cubit<InvitationState> {
   static const _codeInvalid = 'INVITATION_INVALID';
 
   InvitationCubit({
-    required SessionUsecase sessionUsecase,
-    required SessionBloc sessionBloc,
+    required this._sessionUsecase,
+    required this._sessionBloc,
     String? initialCode,
     Future<bool> Function()? isAuthenticated,
-  }) : _sessionUsecase = sessionUsecase,
-       _sessionBloc = sessionBloc,
+    Future<void> Function(String?)? persistIntent,
+    Future<bool> Function()? prepareSession,
+    this._clearIntent,
+  }) : _prepareSession = prepareSession ?? (() async => true),
+       _persistIntent = persistIntent ?? ((_) async {}),
        _isAuthenticated = isAuthenticated ?? DioNetwork.isAuthenticated,
        super(
          initialCode != null && initialCode.isNotEmpty
@@ -38,47 +48,82 @@ class InvitationCubit extends Cubit<InvitationState> {
   }
 
   Future<void> submitCode(String raw) async {
-    final code = _parseCode(raw);
+    final request = ++_request;
+    final code = parseInvitationCode(raw);
     if (code == null) {
       emit(InvitationLoadError(code: raw, message: 'INVALID_FORMAT'));
       return;
     }
-    await _loadPreview(code);
+    await _persistIntent(code);
+    if (isClosed || request != _request) return;
+    await _loadPreview(code, request);
   }
 
-  Future<void> _loadPreview(String code) async {
+  Future<void> _loadPreview(String code, int request) async {
     emit(InvitationLoading(code: code));
     final isAuth = await _isAuthenticated();
+    if (isClosed || request != _request) return;
     if (!isAuth) {
       emit(InvitationSignedOut(code: code));
       return;
     }
+    final prepared = await _prepareSession();
+    if (isClosed || request != _request) return;
+    if (!prepared) {
+      emit(InvitationLoadError(code: code, message: 'SESSION_LOAD_FAILED'));
+      return;
+    }
     final result = await _sessionUsecase.previewInvitation(code);
-    result.fold(
+    if (isClosed || request != _request) return;
+    await result.fold<Future<void>>(
       (failure) => _mapPreviewFailureToState(failure, code),
-      (preview) => emit(InvitationReady(code: code, preview: preview)),
+      (preview) async => emit(InvitationReady(code: code, preview: preview)),
     );
   }
 
-  Future<void> onLoginReturned(String code) => _loadPreview(code);
+  Future<void> onLoginReturned(String code) => submitCode(code);
 
   Future<void> acceptInvitation(String code, InvitationPreview preview) async {
+    if (_accepting || _acceptedAccess != null) return;
+    _accepting = true;
     emit(InvitationAccepting(code: code, preview: preview));
     final result = await _sessionUsecase.acceptInvitation(code);
-    result.fold((failure) => _mapAcceptFailureToState(failure, code, preview), (
-      barAccess,
-    ) {
-      _sessionBloc
-        ..add(SessionEvent.barCreated(newBar: barAccess))
-        ..add(const SessionEvent.refreshBarAccess());
-      emit(InvitationAccepted(code: code, preview: preview, access: barAccess));
-    });
+    _accepting = false;
+    await result.fold(
+      (failure) async {
+        if (!isClosed) await _mapAcceptFailureToState(failure, code, preview);
+      },
+      (barAccess) async {
+        _acceptedAccess = barAccess;
+        await _clear(code);
+        if (isClosed) return;
+        _sessionBloc.forgetPendingInvitation(code);
+        emit(
+          InvitationAccepted(code: code, preview: preview, access: barAccess),
+        );
+      },
+    );
   }
 
-  Future<void> retry(String code) => _loadPreview(code);
+  Future<bool> enterWorkspace(int barId) async {
+    await _sessionBloc.initializeForEntry();
+    return _sessionBloc.refreshAndSelectVenue(barId);
+  }
 
-  void _mapPreviewFailureToState(Failure failure, String code) {
+  Future<void> retry(String code) => submitCode(code);
+
+  Future<void> _mapPreviewFailureToState(Failure failure, String code) async {
+    final request = _request;
     final errorCode = failure.errorMessage;
+    if ([
+      _codeExpired,
+      _codeRevoked,
+      _codeAlreadyUsed,
+      _codeInvalid,
+    ].contains(errorCode)) {
+      await _clear(code);
+      if (isClosed || request != _request) return;
+    }
     switch (errorCode) {
       case _codeExpired:
         emit(InvitationExpired(code: code));
@@ -103,125 +148,33 @@ class InvitationCubit extends Cubit<InvitationState> {
     }
   }
 
-  void _mapAcceptFailureToState(
+  Future<void> _mapAcceptFailureToState(
     Failure failure,
     String code,
     InvitationPreview preview,
-  ) {
-    final errorCode = failure.errorMessage;
-    switch (errorCode) {
-      case _codeExpired:
-        emit(
-          InvitationAcceptError(
-            code: code,
-            preview: preview,
-            message: _codeExpired,
-          ),
-        );
-        break;
-      case _codeRevoked:
-        emit(
-          InvitationAcceptError(
-            code: code,
-            preview: preview,
-            message: _codeRevoked,
-          ),
-        );
-        break;
-      case _codeMismatch:
-        emit(
-          InvitationAcceptError(
-            code: code,
-            preview: preview,
-            message: _codeMismatch,
-          ),
-        );
-        break;
-      case _codeUnverified:
-        emit(
-          InvitationAcceptError(
-            code: code,
-            preview: preview,
-            message: _codeUnverified,
-          ),
-        );
-        break;
-      case _codeAlreadyUsed:
-        emit(
-          InvitationAcceptError(
-            code: code,
-            preview: preview,
-            message: _codeAlreadyUsed,
-          ),
-        );
-        break;
-      case _codeInvalid:
-        emit(
-          InvitationAcceptError(
-            code: code,
-            preview: preview,
-            message: _codeInvalid,
-          ),
-        );
-        break;
-      default:
-        emit(
-          InvitationAcceptError(
-            code: code,
-            preview: preview,
-            message: errorCode,
-          ),
-        );
+  ) async {
+    if ([
+      _codeExpired,
+      _codeRevoked,
+      _codeMismatch,
+      _codeUnverified,
+      _codeAlreadyUsed,
+      _codeInvalid,
+    ].contains(failure.errorMessage)) {
+      await _mapPreviewFailureToState(failure, code);
+    } else {
+      emit(
+        InvitationAcceptError(
+          code: code,
+          preview: preview,
+          message: failure.errorMessage,
+        ),
+      );
     }
   }
 
-  static String? _parseCode(String input) {
-    final trimmed = input.trim();
-    if (trimmed.isEmpty) return null;
-    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
-      try {
-        final uri = Uri.parse(trimmed);
-        final hosts = {
-          'dobar.app',
-          'www.dobar.app',
-          'localhost',
-          '127.0.0.1',
-          if (Uri.base.host.isNotEmpty) Uri.base.host.toLowerCase(),
-        };
-        if (!hosts.contains(uri.host.toLowerCase())) return null;
-        final fromQuery =
-            uri.queryParameters['code'] ?? uri.queryParameters['codigo'];
-        final pathMatch = RegExp(
-          r'^/convite/([^/]+)/?$',
-          caseSensitive: false,
-        ).firstMatch(uri.path);
-        final isCanonicalPath =
-            uri.path.toLowerCase() == '/staff/invitations/accept';
-        final candidate = fromQuery ?? pathMatch?.group(1);
-        if (isCanonicalPath && fromQuery == null) return null;
-        if (candidate == null) return null;
-        return _normalizeCode(Uri.decodeComponent(candidate));
-      } catch (_) {
-        return null;
-      }
-    }
-    return _normalizeCode(trimmed);
-  }
-
-  static final _codeRe = RegExp(
-    r'^DBR-?([A-Z0-9]{4})-?([A-Z0-9]{4})$',
-    caseSensitive: false,
-  );
-  static final _opaqueCodeRe = RegExp(r'^[A-Za-z0-9_-]{16,128}$');
-
-  static String? _normalizeCode(String raw) {
-    final compact = raw.trim().replaceAll(RegExp(r'\s+'), '');
-    final m = _codeRe.firstMatch(compact);
-    if (m != null) {
-      return 'DBR-${m.group(1)!.toUpperCase()}-${m.group(2)!.toUpperCase()}';
-    }
-    return _opaqueCodeRe.hasMatch(compact) ? compact : null;
-  }
+  Future<void> _clear(String code) =>
+      _clearIntent == null ? _persistIntent(null) : _clearIntent(code);
 
   static String _contactType(Failure failure) {
     if (failure is ServerFailure) {

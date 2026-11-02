@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:barz/features/session/domain/models/bar_access.dart';
 
@@ -5,11 +6,17 @@ part 'session_event.freezed.dart';
 
 @freezed
 sealed class SessionEvent with _$SessionEvent {
+  const factory SessionEvent.clearPendingInvitation({required String code}) =
+      ClearPendingInvitation;
+
   /// Initialize session after login - fetches user profile and bar access
   const factory SessionEvent.initialize() = InitializeSession;
 
   /// Refresh bar access list from API
-  const factory SessionEvent.refreshBarAccess() = RefreshBarAccess;
+  const factory SessionEvent.refreshBarAccess({
+    int? selectBarId,
+    Completer<bool>? completion,
+  }) = RefreshBarAccess;
 
   /// Switch the active bar for business users
   const factory SessionEvent.switchActiveBar({required int barId}) =

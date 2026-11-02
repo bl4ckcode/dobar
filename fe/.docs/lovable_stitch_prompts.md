@@ -4,6 +4,10 @@ The spec-backed [staff invitation acceptance prompt](../../.specs/mvp-v0.1/pilot
 
 ## Business Shell (Owner/Staff App)
 
+### Resumable Venue Onboarding — B02
+
+Use the [B02 Lovable prompt](../../.specs/mvp-v0.1/venue-onboarding/lovable-prompt.md) for the six-step Create Bar refinement: semantic light/dark themes, a top-right theme button throughout, mobile keyboard dismissal, optional setup, and explicit draft/save/resume/error states. It requests exportable React + TypeScript with simulated data. The [implementation plan](../../.specs/mvp-v0.1/venue-onboarding/implementation-plan.md) and [source handoff](../../.specs/mvp-v0.1/venue-onboarding/react-source-handoff.md) define the later authenticated persistence and Flutter work. Generation/export are pending; legacy editor briefs below do not define B02 wire contracts.
+
 ### Business Settings Page
 "Build a premium, high-end Business Settings page for bar owners and administrators.
 

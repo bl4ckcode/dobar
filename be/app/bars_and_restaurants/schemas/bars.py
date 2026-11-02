@@ -1,5 +1,5 @@
 from typing import Optional, Literal
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, field_validator
 from datetime import datetime
 from .bank_account import BankAccountCreate
 
@@ -53,10 +53,30 @@ class BarBase(BaseModel):
     owner_id: int
 
 
+    @field_validator("phone_number", "email", mode="before")
+    @classmethod
+    def legacy_absent_contact(cls, value):
+        return value or ""
+
+
 class Bar(BarBase):
+    email: EmailStr | Literal[""]
     id: int
     image_url: Optional[str] = None
     
+    @field_validator("logo_url", "cover_url", mode="after")
+    @classmethod
+    def draft_media_preview(cls, value):
+        if value and value.startswith("onboarding/"):
+            from ..services.image_upload import generate_presigned_url
+            return generate_presigned_url(value)
+        return value
+
+    @field_validator("photo_urls", mode="after")
+    @classmethod
+    def draft_gallery_previews(cls, values):
+        return [cls.draft_media_preview(value) for value in values] if values else values
+
     # Country & Business ID
     country_code: Optional[str] = "BR"
     business_id: Optional[str] = None

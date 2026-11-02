@@ -1,9 +1,12 @@
+import 'package:barz/features/session/domain/models/pending_invitation.dart';
 import 'package:dartz/dartz.dart';
 import 'package:barz/core/network/error/failures.dart';
 import 'package:barz/features/session/domain/models/bar_access.dart';
 import 'package:barz/features/session/domain/models/invitation_preview.dart';
 
 abstract class SessionRepository {
+  Future<Either<Failure, List<PendingInvitation>>> getPendingInvitations();
+
   /// Fetch all bars the user has access to
   Future<Either<Failure, List<BarAccess>>> getMyBars();
 
