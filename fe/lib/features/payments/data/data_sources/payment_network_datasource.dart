@@ -40,7 +40,7 @@ abstract class PaymentDatasource {
     String? payerDocument,
     int expiresIn,
   });
-  Future<Transaction> checkPaymentStatus(int transactionId);
+  Future<Transaction> checkPaymentStatus(String transactionId);
   Future<List<Transaction>> getTransactionHistory({int? limit, int? offset});
   Future<Transaction> refundTransaction(
     int transactionId, {
@@ -196,16 +196,16 @@ class PaymentNetworkDatasource implements PaymentDatasource {
     String? idempotencyKey,
   }) async {
     try {
-      final key = idempotencyKey ?? IdempotencyKey.forPayment(request.orderId);
+      final key = idempotencyKey ?? request.idempotencyKey ?? 'order-${request.orderId}-charge';
       final response = await dio.post(
         '${ApiEndpoints.baseUrl}${ApiEndpoints.paymentsV2Charge}',
         data: request.toJson(),
         options: Options(headers: {'X-Idempotency-Key': key}),
       );
-      return Transaction.fromJson(response.data);
+      return Transaction.fromJson({...Map<String, dynamic>.from(response.data), 'order_id': request.orderId});
     } on DioException catch (e) {
       throw ServerException(
-        e.response?.data?['detail'] ?? 'Failed to process payment',
+        e.response?.data?['message'] ?? e.response?.data?['detail'] ?? 'Failed to process payment',
         e.response?.statusCode,
       );
     }
@@ -217,16 +217,19 @@ class PaymentNetworkDatasource implements PaymentDatasource {
     String? idempotencyKey,
   }) async {
     try {
-      final key = idempotencyKey ?? IdempotencyKey.forPayment(request.orderId);
+      final key = idempotencyKey ?? request.idempotencyKey ?? 'order-${request.orderId}-charge';
       final response = await dio.post(
         '${ApiEndpoints.baseUrl}${ApiEndpoints.paymentsV2Charge}',
         data: request.toJson(),
         options: Options(headers: {'X-Idempotency-Key': key}),
       );
-      return PixPaymentResponse.fromJson(response.data);
+      if (const {'failed', 'declined', 'error'}.contains(response.data['status'])) {
+        throw ServerException('Payment declined', 402);
+      }
+      return PixPaymentResponse.fromJson({...Map<String, dynamic>.from(response.data), 'order_id': request.orderId});
     } on DioException catch (e) {
       throw ServerException(
-        e.response?.data?['detail'] ?? 'Failed to initiate PIX payment',
+        e.response?.data?['message'] ?? e.response?.data?['detail'] ?? 'Failed to initiate PIX payment',
         e.response?.statusCode,
       );
     }
@@ -269,10 +272,10 @@ class PaymentNetworkDatasource implements PaymentDatasource {
   }
 
   @override
-  Future<Transaction> checkPaymentStatus(int transactionId) async {
+  Future<Transaction> checkPaymentStatus(String transactionId) async {
     try {
       final response = await dio.get(
-        '${ApiEndpoints.baseUrl}${ApiEndpoints.payments}/$transactionId/status',
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.paymentsV2Charge.replaceFirst('/charge', '')}/${Uri.encodeComponent(transactionId)}',
       );
       return Transaction.fromJson(response.data);
     } on DioException catch (e) {

@@ -2,17 +2,23 @@
 Cart management routes.
 """
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, status, Header
 from sqlalchemy import and_
 from typing import List, Optional
 from decimal import Decimal
 from datetime import datetime, timedelta
 import uuid
+import hashlib
+import json
+
+from app.payment.models import IdempotencyKey
+from app.payment.order_payments import customer_for_payment, resolve_payment_method, charge_order, operation_key, settle_order_rewards
+from app.bars_and_restaurants.services.checkin import require_active_checkin
 
 from app.auth.rbac_middleware import get_current_user, AuthUser
 from app.errors import APIError
 from ..models.cart_models import Cart as CartModel, CartItem as CartItemModel, OrderItem as OrderItemModel, OrderStatusHistory as OrderStatusHistoryModel
-from ..models.relational_models import Order as OrderModel, Promotion as PromotionModel
+from ..models.relational_models import Order as OrderModel, Promotion as PromotionModel, Menu, MenuItem
 from ..schemas.cart import Cart, CartItem, CartItemCreate, CartItemUpdate, CheckoutRequest, CheckoutResponse, CartCalculateRequest, CartSyncRequest, CartResponse
 from app.database import database
 from app.payment import get_payment_gateway, PaymentGateway
@@ -278,18 +284,73 @@ async def clear_cart(current_user: AuthUser = Depends(get_current_user)):
     await database.execute(delete_query)
 
 
+async def checkout_order_response(user_id, order_id):
+    order = await database.fetch_one(OrderModel.__table__.select().where(
+        OrderModel.id == order_id, OrderModel.user_id == user_id
+    ))
+    if not order:
+        raise APIError.not_found("Order")
+    items = await database.fetch_all(OrderItemModel.__table__.select().where(OrderItemModel.order_id == order_id))
+    attempt = await database.fetch_one(IdempotencyKey.__table__.select().where(
+        IdempotencyKey.user_id == user_id, IdempotencyKey.request_path == f"/payments/v2/charge/{order_id}"
+    ).order_by(IdempotencyKey.id.desc()))
+    return CheckoutResponse(
+        payment_attempt_key=(attempt["response_body"] or {}).get("client_key") if attempt else None,
+        order_id=order["id"], bar_id=order["bar_id"], status=order["status"],
+        payment_status=order["payment_status"], payment_id=order["payment_id"],
+        total=order["total_price"], discount=order["discount"] or 0,
+        estimated_ready_time=order["estimated_ready_time"],
+        items=[{"menu_item_id": item["menu_item_id"], "menu_item_name": item["menu_item_name"],
+                "quantity": item["quantity"], "unit_price": item["unit_price"]} for item in items],
+    )
+
+
+@cart_router.get("/checkout/pending", response_model=Optional[CheckoutResponse])
+async def pending_checkout(current_user: AuthUser = Depends(get_current_user)):
+    attempts = await database.fetch_all(IdempotencyKey.__table__.select().where(
+        IdempotencyKey.user_id == current_user.id, IdempotencyKey.request_path == "/cart/checkout"
+    ).order_by(IdempotencyKey.id.desc()))
+    for attempt in attempts:
+        body = attempt["response_body"] or {}
+        if body.get("deferred") and body.get("order_id"):
+            order = await database.fetch_one(OrderModel.__table__.select().where(
+                OrderModel.id == body["order_id"], OrderModel.user_id == current_user.id,
+                OrderModel.payment_status.in_(["pending", "failed"]),
+                OrderModel.status.notin_(["cancelled", "completed", "expired"]),
+            ))
+            if order:
+                return await checkout_order_response(current_user.id, order["id"])
+    return None
+
+
 @cart_router.post("/checkout", response_model=CheckoutResponse, status_code=status.HTTP_201_CREATED)
 async def checkout(
     checkout_request: CheckoutRequest,
     current_user: AuthUser = Depends(get_current_user),
-    payment_gateway: PaymentGateway = Depends(get_payment_gateway)
+    payment_gateway: PaymentGateway = Depends(get_payment_gateway),
+    x_idempotency_key: Optional[str] = Header(None, alias="X-Idempotency-Key"),
 ):
     from app.redis_client import WalletLock
     from ..services.connection_manager import manager
     
-    idempotency_key = str(uuid.uuid4())
-    
+    if checkout_request.defer_payment and not x_idempotency_key:
+        raise APIError.validation_error("Deferred checkout requires X-Idempotency-Key")
+    idempotency_key = operation_key(current_user.id, "/cart/checkout", x_idempotency_key or str(uuid.uuid4()))
+    fingerprint = hashlib.sha256(json.dumps(checkout_request.model_dump(mode="json"), sort_keys=True).encode()).hexdigest()
+
     async with WalletLock(current_user.id, idempotency_key):
+        cached = await database.fetch_one(IdempotencyKey.__table__.select().where(IdempotencyKey.key == idempotency_key))
+        if cached:
+            body = cached["response_body"]
+            if body.get("fingerprint") != fingerprint:
+                raise APIError.conflict("Checkout retry differs from the original request")
+            return await checkout_order_response(current_user.id, body["order_id"])
+        normalized_method = "pix" if checkout_request.payment_method in ("pix", "__pix__") else "card"
+        method = {"type": normalized_method, **(checkout_request.payment_details or {})}
+        if "card_token" in method:
+            method["token"] = method.pop("card_token")
+        if checkout_request.payment_method.isdigit():
+            method["payment_method_id"] = int(checkout_request.payment_method)
         cart = await get_or_create_cart(current_user.id)
         cart_items = await get_cart_items(cart["id"])
         
@@ -301,8 +362,21 @@ async def checkout(
             raise APIError.bad_request("All items must be from the same bar")
         
         bar_id = bar_ids.pop()
-    
-        subtotal = sum(Decimal(str(item["quantity"] * item["unit_price"])) for item in cart_items)
+        await customer_for_payment(database, current_user.id)
+        if not checkout_request.defer_payment:
+            await resolve_payment_method(database, current_user.id, method)
+        checkin = await require_active_checkin(current_user.id, bar_id, checkout_request.location_identifier)
+        for item in cart_items:
+            menu_item = await database.fetch_one(MenuItem.__table__.select().select_from(
+                MenuItem.__table__.join(Menu.__table__, MenuItem.menu_id == Menu.id)
+            ).where(MenuItem.id == item["menu_item_id"], Menu.bar_id == bar_id,
+                    Menu.is_active.is_(True), MenuItem.available.is_(True)))
+            if not menu_item:
+                raise APIError.validation_error("An item is no longer available")
+            item["unit_price"] = menu_item["promotional_price"] if menu_item["promotional_price"] is not None else menu_item["price"]
+            item["menu_item_name"] = menu_item["name"]
+
+        subtotal = sum(Decimal(item["quantity"]) * Decimal(str(item["unit_price"])) for item in cart_items)
     
         from ..services.discounts import calculate_progressive_discount
         
@@ -359,6 +433,7 @@ async def checkout(
                     "bar_id": bar_id,
                     "status": "pending",
                     "order_type": checkout_request.order_type,
+                    "location_identifier": checkin["table_number"] or (checkout_request.location_identifier or "").strip(),
                     "is_priority": current_user.is_pro(),
                     "subtotal": float(subtotal),
                     "tax": float(tax),
@@ -410,6 +485,13 @@ async def checkout(
                     }
                     await database.execute(OrderItemModel.__table__.insert().values(**order_item_data))
                 
+                await database.execute(IdempotencyKey.__table__.insert().values(
+                    key=idempotency_key, user_id=current_user.id, request_path="/cart/checkout",
+                    response_status=201, response_body={"fingerprint": fingerprint, "order_id": order_id,
+                                                       "deferred": checkout_request.defer_payment},
+                    created_at=datetime.utcnow(), expires_at=datetime.utcnow() + timedelta(days=1)
+                ))
+
                 # Clear cart after order creation
                 await database.execute(
                     CartItemModel.__table__.delete().where(CartItemModel.cart_id == cart["id"])
@@ -427,112 +509,17 @@ async def checkout(
         payment_id = None
         payment_status = "pending"
         
-        try:
-            dpe = get_dpe_client()
-            dpe_idempotency_key = f"ord_{order_id}_{int(datetime.utcnow().timestamp())}"
-            
-            # Build customer info for DPE
-            customer_info = {
-                "name": current_user.display_name or "Customer",
-                "email": current_user.email or "",
-                "document": await _get_user_document(current_user.id),
-            }
-            
-            # Determine payment method type for DPE
-            is_pix = payment_method_normalized == "pix"
-            
-            dpe_payment_method = {
-                "type": "pix" if is_pix else "card",
-            }
-            
-            # For card payments, use the payment details token
-            if not is_pix and checkout_request.payment_details:
-                dpe_payment_method["token"] = checkout_request.payment_details.get("card_token")
-                dpe_payment_method["provider"] = checkout_request.payment_details.get("provider", "saved")
-            
-            # Call DPE charge endpoint
-            payment_result = await dpe.charge(
-                order_id=order_id,
-                user_id=current_user.id,
-                bar_id=bar_id,
-                amount=float(total),
-                currency="BRL",
-                country="BR",
-                payment_method=dpe_payment_method,
-                customer_info=customer_info,
-                idempotency_key=dpe_idempotency_key,
-                metadata={"order_id": str(order_id), "bar_id": str(bar_id)}
-            )
-            
-            payment_id = payment_result.get("payment_id")
-            
-            # Handle PIX payment response
-            if is_pix:
+        if not checkout_request.defer_payment:
+            try:
+                payment_result = await charge_order(database, get_dpe_client(), current_user.id, order_id, method)
+                payment_id = payment_result.get("payment_id")
+                payment_status = "paid" if payment_result.get("status") == "succeeded" else "pending"
                 pix_qr_code = payment_result.get("pix_qr_code")
                 pix_copia_e_cola = payment_result.get("pix_copia_e_cola")
                 pix_expires_at = payment_result.get("pix_expires_at")
-                
-                # Update order with payment_id but keep status pending for PIX
-                # (webhook will confirm when paid)
-                await database.execute(
-                    OrderModel.__table__
-                    .update()
-                    .where(OrderModel.id == order_id)
-                    .values(
-                        payment_id=payment_id,
-                        payment_status="pending",
-                        updated_at=datetime.utcnow()
-                    )
-                )
-            # Handle card payment response
-            elif payment_result.get("status") == "succeeded":
-                payment_status = "paid"
-                await database.execute(
-                    OrderModel.__table__
-                    .update()
-                    .where(OrderModel.id == order_id)
-                    .values(
-                        payment_id=payment_id,
-                        payment_status="paid",
-                        status="confirmed",
-                        updated_at=datetime.utcnow()
-                    )
-                )
-                
-                # Insert status history for "confirmed" after successful card payment
-                confirmed_history = {
-                    "order_id": order_id,
-                    "status": "confirmed",
-                    "updated_by_user_id": current_user.id,
-                    "notes": "Payment completed"
-                }
-                await database.execute(OrderStatusHistoryModel.__table__.insert().values(**confirmed_history))
-            else:
-                payment_status = "failed"
-                await database.execute(
-                    OrderModel.__table__
-                    .update()
-                    .where(OrderModel.id == order_id)
-                    .values(
-                        payment_id=payment_id,
-                        payment_status="failed",
-                        updated_at=datetime.utcnow()
-                    )
-                )
-                
-        except Exception as payment_error:
-            # Payment failed - keep order as pending but log error
-            print(f"Payment processing failed for order {order_id}: {payment_error}")
-            await database.execute(
-                OrderModel.__table__
-                .update()
-                .where(OrderModel.id == order_id)
-                .values(
-                    payment_status="failed",
-                    updated_at=datetime.utcnow()
-                )
-            )
-        
+            except APIError:
+                raise
+
         # Fetch final order record
         order_record = await database.fetch_one(
             OrderModel.__table__.select().where(OrderModel.id == order_id)
@@ -552,35 +539,14 @@ async def checkout(
             print(f"Failed to reserve pro coupons for order {order_id}: {reserve_err}")
 
         confirmed_cashback = Decimal("0.00")
-        if payment_status == "paid" and cashback_earned > 0:
-            try:
-                from app.bars_and_restaurants.services.wallet_service import WalletService
-                from app.bars_and_restaurants.schemas.wallet import EarnCashbackRequest
-                from app.bars_and_restaurants.models.wallet_models import FundingSource
-                from app.bars_and_restaurants.services.pro_coupon_service import redeem_reserved_coupons
-                from app.database import SessionLocal
-
-                db = SessionLocal()
-                try:
-                    cashback_req = EarnCashbackRequest(
-                        user_id=current_user.id,
-                        order_id=order_id,
-                        bar_id=bar_id,
-                        order_total=cashback_earned,
-                        cashback_percentage=Decimal("1"),
-                        funded_by=FundingSource.BAR,
-                        expires_days=90
-                    )
-                    ledger, _ = WalletService.earn_cashback(db, cashback_req, auto_available=False)
-                    await redeem_reserved_coupons(order_id, ledger.id)
-                    confirmed_cashback = cashback_earned
-                finally:
-                    db.close()
-            except Exception as cashback_error:
-                print(f"Failed to earn pro cashback for order {order_id}: {cashback_error}")
+        if payment_status == "paid":
+            await settle_order_rewards(database, order)
+            confirmed_cashback = cashback_earned
 
         return CheckoutResponse(
             order_id=order["id"],
+            bar_id=order["bar_id"],
+            items=[{"menu_item_id": item["menu_item_id"], "menu_item_name": item["menu_item_name"], "quantity": item["quantity"], "unit_price": item["unit_price"]} for item in cart_items],
             status=order["status"],
             payment_status=order["payment_status"],
             payment_id=order.get("payment_id"),

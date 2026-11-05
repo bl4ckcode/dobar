@@ -37,6 +37,7 @@ class PaymentRequest {
   final CustomerInfo? customerInfo;
   final String? description;
   final double? tip;
+  final String? idempotencyKey;
 
   PaymentRequest({
     required this.orderId,
@@ -52,11 +53,12 @@ class PaymentRequest {
     this.customerInfo,
     this.description,
     this.tip,
+    this.idempotencyKey,
   });
 
   Map<String, dynamic> toJson() {
     final method = {
-      'type': paymentType.name,
+      'type': paymentType == PaymentType.pix ? 'pix' : 'card',
       if (cardToken != null) 'token': cardToken,
       if (paymentMethodId != null) 'payment_method_id': paymentMethodId,
       if (provider != null) 'provider': provider,
@@ -96,7 +98,7 @@ class PixPaymentResponse {
 
   factory PixPaymentResponse.fromJson(Map<String, dynamic> json) {
     return PixPaymentResponse(
-      paymentId: json['payment_id'] ?? json['transaction_id']?.toString() ?? '',
+      paymentId: (json['payment_id'] ?? json['transaction_id'])?.toString() ?? '',
       qrCode: json['pix_qr_code'] ?? json['qr_code'] ?? '',
       copyPaste: json['pix_copia_e_cola'] ?? json['copy_paste'] ?? '',
       expiresAt: json['pix_expires_at'] != null

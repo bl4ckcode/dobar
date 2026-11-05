@@ -1,7 +1,8 @@
-from typing import Optional, Dict, Any, Literal
-from pydantic import BaseModel, Field
 from datetime import datetime
 from enum import Enum
+from typing import Any, Dict, Literal, Optional
+
+from pydantic import BaseModel, Field
 
 
 class PaymentMethodTypeAPI(str, Enum):
@@ -19,10 +20,20 @@ class TokenProvider(str, Enum):
 class PaymentMethodAPI(BaseModel):
     type: PaymentMethodTypeAPI
     token: Optional[str] = None
+    card_id: Optional[str] = Field(default=None, min_length=1)
     provider: Optional[TokenProvider] = None
     pix_key: Optional[str] = None
     expires_in: Optional[int] = Field(default=None, ge=60, le=86400)
     installments: int = Field(default=1, ge=1, le=24)
+
+
+class CustomerAddressAPI(BaseModel):
+    line_1: str = Field(..., min_length=1)
+    line_2: Optional[str] = None
+    zip_code: str = Field(..., min_length=1)
+    city: str = Field(..., min_length=1)
+    state: str = Field(..., min_length=2, max_length=2)
+    country: str = Field(default="BR", min_length=2, max_length=2)
 
 
 class CustomerInfoAPI(BaseModel):
@@ -31,6 +42,23 @@ class CustomerInfoAPI(BaseModel):
     document: str = Field(..., min_length=11, max_length=14)
     type: Optional[str] = Field(default="individual")  # "individual" (CPF) or "company" (CNPJ)
     phone: Optional[str] = None
+    address: Optional[CustomerAddressAPI] = None
+
+
+class SaveCardRequestAPI(BaseModel):
+    user_id: str = Field(..., min_length=1)
+    token: str = Field(..., pattern=r"^token_[A-Za-z0-9]+$")
+    customer_info: CustomerInfoAPI
+    idempotency_key: str = Field(..., min_length=1)
+
+
+class SaveCardResponseAPI(BaseModel):
+    card_id: str
+    customer_id: str
+    brand: str
+    last_four: str
+    exp_month: int
+    exp_year: int
 
 
 class ProrationInfo(BaseModel):

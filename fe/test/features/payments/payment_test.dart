@@ -69,7 +69,7 @@ void main() {
       expect(json['bar_id'], 12);
       expect(json['amount'], 150.00);
       expect(json['currency'], 'BRL');
-      expect(json['payment_method']['type'], 'credit');
+      expect(json['payment_method']['type'], 'card');
       expect(json['tip'], 15.00);
       expect(json['customer_info']['name'], 'João Silva');
     });

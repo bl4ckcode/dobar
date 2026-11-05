@@ -18,6 +18,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
   final CartUsecase cartUsecase;
   final AbstractBarRepository barRepository;
   CartSyncRequest? _lastSyncRequest;
+  CheckoutResult? pendingCheckout;
 
   CartBloc({required this.cartUsecase, required this.barRepository})
     : super(CartInitial()) {
@@ -92,11 +93,20 @@ class CartBloc extends Bloc<CartEvent, CartState> {
     );
 
     try {
-      final result = await cartUsecase.syncCart(request);
+      if (currentState.cart.items.isEmpty) {
+        final pending = await cartUsecase.getPendingCheckout();
+        pendingCheckout = pending.fold((_) => null, (value) => value);
+        if (pendingCheckout != null && (barId == null || barId == pendingCheckout!.barId)) {
+          emit(CheckoutSuccess(result: pendingCheckout!));
+          return;
+        }
+      }
+      final result = currentState.cart.items.isEmpty
+          ? await cartUsecase.getCart() : await cartUsecase.syncCart(request);
       result.fold(
         (failure) =>
             emit(currentState.copyWith(isLoading: false, barId: barId)),
-        (serverCart) => emit(CartLoaded(cart: serverCart, barId: barId)),
+        (serverCart) => emit(CartLoaded(cart: serverCart, barId: barId ?? serverCart.items.firstOrNull?.barId)),
       );
     } catch (e) {
       emit(currentState.copyWith(isLoading: false, barId: barId));
@@ -561,7 +571,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
       if (currentLoadedState != null) {
         emit(currentLoadedState);
       }
-    }, (checkoutResult) => emit(CheckoutSuccess(result: checkoutResult)));
+    }, (checkoutResult) { pendingCheckout = checkoutResult; emit(CheckoutSuccess(result: checkoutResult)); });
   }
 
   Future<void> _onCheckSpotAvailability(

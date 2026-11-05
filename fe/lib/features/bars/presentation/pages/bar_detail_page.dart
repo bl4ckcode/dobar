@@ -1,3 +1,4 @@
+import 'package:barz/features/checkin/presentation/checkin_gate.dart';
 import 'package:barz/core/design/components/bar_menu_card.dart';
 import 'package:barz/core/design/components/category_pill.dart';
 import 'package:barz/core/design/components/glow_button.dart';
@@ -402,7 +403,7 @@ class _HeaderCartBadge extends StatelessWidget {
       ),
       builder: (context, totalItems) {
         return GestureDetector(
-          onTap: () => AppRoute.cart.push(context, extra: barId),
+          onTap: () async { if (await CheckinGate.ensure(context, barId) && context.mounted) AppRoute.cart.push(context, extra: barId); },
           child: Container(
             width: 44,
             height: 44,
@@ -498,7 +499,8 @@ class _MenuItem extends StatelessWidget {
             description: item.description,
             price: item.price,
             quantity: quantity,
-            onAdd: () {
+            onAdd: () async {
+              if (!await CheckinGate.ensure(context, barId) || !context.mounted) return;
               context.read<CartBloc>().add(
                     AddToCart(
                       menuItemId: item.id ?? 0,
@@ -562,7 +564,7 @@ class _ViewTabButton extends StatelessWidget {
                       const Icon(Icons.chevron_right, color: barzDark, size: 20),
                     ],
                   ),
-                  onPressed: () => AppRoute.cart.push(context, extra: barId),
+                  onPressed: () async { if (await CheckinGate.ensure(context, barId) && context.mounted) AppRoute.cart.push(context, extra: barId); },
                 )
               : const SizedBox.shrink(),
         );

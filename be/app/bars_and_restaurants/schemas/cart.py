@@ -72,6 +72,7 @@ class CheckoutRequest(BaseModel):
     """Schema for checkout request."""
     order_type: str = Field(..., description="Order type: delivery, pickup, or dine_in")
     payment_method: str = Field(..., description="Payment method: credit_card, debit_card, pix, etc.")
+    defer_payment: bool = False
     
     # Optional fields
     tip: Optional[float] = Field(0.0, ge=0, description="Tip amount")
@@ -103,9 +104,12 @@ class CheckoutSummary(BaseModel):
 class CheckoutResponse(BaseModel):
     """Schema for checkout response."""
     order_id: int
+    bar_id: Optional[int] = None
+    items: List[dict] = Field(default_factory=list)
     status: str
     payment_status: str
     payment_id: Optional[str] = None
+    payment_attempt_key: Optional[str] = None
     total: float
     discount: float = 0.0
     cashback_earned: float = 0.0

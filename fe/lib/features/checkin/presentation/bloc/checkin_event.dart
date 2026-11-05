@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:equatable/equatable.dart';
 import 'package:barz/features/bars/domain/models/bar_model.dart';
 
@@ -73,4 +74,10 @@ class ClearCheckinError extends CheckinEvent {
 /// Reset to initial state
 class ResetCheckin extends CheckinEvent {
   const ResetCheckin();
+}
+
+class RefreshCheckin extends CheckinEvent {
+  final int? barId;
+  final Completer<bool> completion;
+  const RefreshCheckin(this.barId, this.completion);
 }

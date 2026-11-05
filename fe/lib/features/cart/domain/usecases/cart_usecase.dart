@@ -8,6 +8,8 @@ class CartUsecase {
 
   CartUsecase({required this.repository});
 
+  Future<Either<Failure, CheckoutResult?>> getPendingCheckout() => repository.getPendingCheckout();
+
   Future<Either<Failure, CartModel>> getCart() {
     return repository.getCart();
   }

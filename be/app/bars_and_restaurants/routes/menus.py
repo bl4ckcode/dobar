@@ -19,7 +19,8 @@ from ..schemas.menus import (
     BulkMenuItemCreate, BulkMenuItemResponse, TrendingDrink, TrendingDrinksResponse
 )
 from app.database import database
-from app.errors import APIError
+from app.errors import APIError, ErrorCode
+from ..services.menu_extraction import MenuExtractionUnavailable
 from app.auth.middleware import get_current_active_user
 from app.auth.auth_models import User
 
@@ -537,6 +538,8 @@ async def extract_menu_unified(
                 language_hint
             )
             return MenuExtractionResponse(**result)
+        except MenuExtractionUnavailable:
+            raise APIError(503, ErrorCode.SERVER_UNAVAILABLE, "A leitura do cardápio está indisponível. Tente novamente em instantes.")
         except httpx.HTTPStatusError as e:
             raise APIError.bad_request(f"Could not fetch URL: {e.response.status_code}")
         except ValueError as e:
@@ -580,6 +583,8 @@ async def extract_menu_unified(
     try:
         result = await menu_extraction_service.extract_menu(content, language_hint)
         return MenuExtractionResponse(**result)
+    except MenuExtractionUnavailable:
+        raise APIError(503, ErrorCode.SERVER_UNAVAILABLE, "A leitura do cardápio está indisponível. Tente novamente em instantes.")
     except ValueError as e:
         error_msg = str(e)
         if "quality" in error_msg.lower():
@@ -607,6 +612,8 @@ async def extract_menu_from_url(
             request.language_hint
         )
         return MenuExtractionResponse(**result)
+    except MenuExtractionUnavailable:
+        raise APIError(503, ErrorCode.SERVER_UNAVAILABLE, "A leitura do cardápio está indisponível. Tente novamente em instantes.")
     except httpx.HTTPStatusError as e:
         raise APIError.bad_request(f"Could not fetch URL: {e.response.status_code}")
     except ValueError as e:

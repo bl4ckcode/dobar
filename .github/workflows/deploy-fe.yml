@@ -31,7 +31,9 @@ jobs:
         run: dart run build_runner build --delete-conflicting-outputs
 
       - name: Build Web App
-        run: flutter build web --release --no-tree-shake-icons
+        run: flutter build web --release --no-tree-shake-icons --dart-define=PAGARME_PUBLIC_KEY="$PAGARME_PUBLIC_KEY"
+        env:
+          PAGARME_PUBLIC_KEY: ${{ vars.PAGARME_PUBLIC_KEY || secrets.PAGARME_PUBLIC_KEY }}
 
       - name: Setup Fly CLI
         uses: superfly/flyctl-actions/setup-flyctl@master

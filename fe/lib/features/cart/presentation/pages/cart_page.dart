@@ -1,3 +1,4 @@
+import 'package:barz/features/checkin/presentation/checkin_gate.dart';
 import 'package:barz/core/design/tokens/colors.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/cart/domain/models/cart_models.dart';
@@ -75,6 +76,8 @@ class _CartPageContentState extends State<_CartPageContent> {
   String? _selectedSpotId;
   int _tableNumber = 0;
   int? _lastLoadedBarId;
+  int? _gateAttemptedBarId;
+  String? _prefilledCheckinKey;
   bool _isCheckoutPending = false;
   CartModel? _lastLoadedCart;
 
@@ -138,9 +141,11 @@ class _CartPageContentState extends State<_CartPageContent> {
     }
   }
 
-  void _handleCheckout(BuildContext context) {
+  Future<void> _handleCheckout(BuildContext context) async {
     final state = context.read<CartBloc>().state;
     if (state is! CartLoaded) return;
+    final venue = state.barId ?? state.cart.items.firstOrNull?.barId;
+    if (venue == null || !await CheckinGate.ensure(context, venue) || !context.mounted) return;
 
     final locationConfig = state.locationConfig;
     final method = locationConfig?.method ?? LocationMethod.tableNumber;
@@ -223,24 +228,6 @@ class _CartPageContentState extends State<_CartPageContent> {
         listener: _listenToCartState,
         child: BlocBuilder<CheckinBloc, CheckinState>(
           builder: (context, checkinState) {
-            if (checkinState.isCheckedIn &&
-                checkinState.activeCheckin?.tableNumber != null &&
-                _tableController.text.isEmpty &&
-                _tableNumber == 0) {
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                if (mounted && _tableNumber == 0) {
-                  final tVal =
-                      int.tryParse(checkinState.activeCheckin!.tableNumber!) ??
-                          0;
-                  if (tVal > 0) {
-                    setState(() {
-                      _tableNumber = tVal;
-                      _tableController.text = tVal.toString();
-                    });
-                  }
-                }
-              });
-            }
 
             return BlocBuilder<CartBloc, CartState>(
               builder: (context, state) {
@@ -258,6 +245,27 @@ class _CartPageContentState extends State<_CartPageContent> {
                       version,
                       lastSyncTimestamp) {
                     _lastLoadedCart = cart;
+                    final active = checkinState.activeCheckin;
+                    final location = active?.tableNumber;
+                    final venueId = barId ?? cart.items.firstOrNull?.barId;
+                    final prefillKey = '${active?.id}:$venueId:${locationConfig?.method}:$location';
+                    if (checkinState.isCheckedIn && active?.barId == venueId && location != null && locationConfig != null && _prefilledCheckinKey != prefillKey) {
+                      _prefilledCheckinKey = prefillKey;
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (!mounted) return;
+                        setState(() {
+                          switch (locationConfig.method) {
+                            case LocationMethod.tableNumber:
+                              _tableNumber = int.tryParse(location) ?? 0;
+                              _tableController.text = location;
+                            case LocationMethod.spotList:
+                              _selectedSpotId = locationConfig.spots.any((spot) => spot.id == location) ? location : null;
+                            case LocationMethod.freeText:
+                              _locationNoteController.text = location;
+                          }
+                        });
+                      });
+                    }
                     if (cart.items.isEmpty) {
                       return _buildEmptyState(
                         context,
@@ -265,15 +273,33 @@ class _CartPageContentState extends State<_CartPageContent> {
                         widget.showBackButton,
                       );
                     }
+                    final venue = barId ?? cart.items.first.barId;
+                    if (!checkinState.isCheckedIn || checkinState.activeCheckin?.barId != venue) {
+                      if (widget.showBackButton && _gateAttemptedBarId != venue) {
+                        _gateAttemptedBarId = venue;
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (mounted) CheckinGate.ensure(context, venue);
+                        });
+                      }
+                      return _checkinRequired(context, venue, l10n);
+                    }
                     return _buildCartStack(context, state, isDark, l10n);
                   },
-                  checkoutSuccess: (_) {
+                  checkoutSuccess: (result) {
                     _lastLoadedCart = null;
-                    return _buildEmptyState(
-                      context,
-                      isDark,
-                      widget.showBackButton,
-                    );
+                    return Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [Text(l10n.checkout_pending_order), const SizedBox(height: 16),
+                        FilledButton(onPressed: () async {
+                          final venue = result.barId;
+                          if (venue == null || !await CheckinGate.ensure(context, venue) || !context.mounted) return;
+                          context.push(AppRoute.checkout.path, extra: CheckoutArguments(
+                            items: result.items.map((item) => CartItem(id: item.menuItemId.toString(), name: item.menuItemName, description: '', price: item.unitPrice, quantity: item.quantity)).toList(),
+                            subtotal: result.total + result.discount, total: result.total, bundleSavings: result.discount,
+                            locationIdentifier: result.locationIdentifier, pendingResult: result,
+                          ));
+                        }, child: Text(l10n.checkout_resume_payment))],
+                    )));
                   },
                   orElse: () => (_lastLoadedCart != null &&
                           _lastLoadedCart!.items.isNotEmpty)
@@ -291,6 +317,13 @@ class _CartPageContentState extends State<_CartPageContent> {
       ),
     );
   }
+
+  Widget _checkinRequired(BuildContext context, int barId, AppLocalizations l10n) => Center(
+    child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
+      Text(l10n.checkin_required_order), const SizedBox(height: 16),
+      FilledButton(onPressed: () => CheckinGate.ensure(context, barId), child: Text(l10n.checkin_confirm_cta)),
+    ])),
+  );
 
   Widget _buildCartStack(
     BuildContext context,

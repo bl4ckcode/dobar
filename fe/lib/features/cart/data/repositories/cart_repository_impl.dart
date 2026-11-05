@@ -11,6 +11,12 @@ class CartRepositoryImpl extends AbstractCartRepository {
   CartRepositoryImpl({required this.networkDataSource});
 
   @override
+  Future<Either<Failure, CheckoutResult?>> getPendingCheckout() async {
+    try { return Right(await networkDataSource.getPendingCheckout()); }
+    on ServerException catch (error) { return Left(ServerFailure(error.message, error.statusCode)); }
+  }
+
+  @override
   Future<Either<Failure, CartModel>> getCart() async {
     try {
       final result = await networkDataSource.getCart();

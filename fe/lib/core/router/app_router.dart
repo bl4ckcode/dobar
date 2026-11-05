@@ -1,3 +1,4 @@
+import 'package:barz/features/checkin/presentation/checkin_gate.dart';
 import 'dart:async';
 import 'package:barz/features/session/presentation/entry_coordinator.dart';
 import 'package:barz/features/session/presentation/bloc/session_state.dart';
@@ -369,8 +370,11 @@ final appRouter = GoRouter(
       path: AppRoute.checkin.path,
       name: AppRoute.checkin.name,
       builder: (context, state) {
-        final initialBar = state.extra as BarModel?;
-        return CheckinPage(initialBar: initialBar);
+        final args = state.extra;
+        return CheckinPage(
+          initialBar: args is CheckinArguments ? args.initialBar : args as BarModel?,
+          returnOnCheckin: args is CheckinArguments && args.returnOnCheckin,
+        );
       },
     ),
     GoRoute(

@@ -22,27 +22,29 @@ Deliver the location and table check-in journey for the Belo Horizonte MVP. Cust
 
 ## Current implementation evidence and gaps
 
-CheckinBloc searches nearby bars with a 5000m radius and stores a local check-in with userId 0; the page displays a hardcoded 200m distance and a demo scan control.
+Authenticated check-in is persisted by the backend and scoped to the logged-in user and selected venue. Confirmation validates a location fix no older than 120 seconds and distance strictly below 10m. Sessions expire after 12 hours by default (`CHECKIN_TTL_HOURS`); ending a session invalidates it. Stored local `userId: 0` records no longer authorize ordering.
 
-This differs materially from the <10m requirement. Separate broad discovery from eligibility; remove demo success from release flows and integrate authenticated venue/table validation before relying on check-in for orders.
+Home discovery retains its nearby-venue prompt within 500m. The active customer shell's check-in button pulses continuously; its animation is not proximity-dependent. Broad nearby discovery is separate from confirmation eligibility. Menu browsing remains available; ordering/cart paths request check-in and retain the venue and intended action. Backend checkout independently requires an active matching session and validates the selected table/location.
 
-Observed source references (inspection only; no runtime or E2E validation):
+The demo scan control and hardcoded distance have been removed. Real QR/link input can select a venue/table, followed by the same server checks. Camera scanning is not implemented; native GPS, camera and device E2E acceptance remains unverified.
 
-- [fe/lib/features/checkin/presentation/bloc/checkin_bloc.dart](../../fe/lib/features/checkin/presentation/bloc/checkin_bloc.dart)
-- [fe/lib/features/checkin/presentation/pages/checkin_page.dart](../../fe/lib/features/checkin/presentation/pages/checkin_page.dart)
-- [fe/lib/features/checkin/domain/models/checkin_model.dart](../../fe/lib/features/checkin/domain/models/checkin_model.dart)
-- [be/app/bars_and_restaurants/routes/bars.py](../../be/app/bars_and_restaurants/routes/bars.py)
+Source and regression references:
+
+- [Check-in state](../../fe/lib/features/checkin/presentation/bloc/checkin_bloc.dart), [page](../../fe/lib/features/checkin/presentation/pages/checkin_page.dart), [entry gate](../../fe/lib/features/checkin/presentation/checkin_gate.dart).
+- [Home prompt](../../fe/lib/ui/screens/home_connected.dart), [active customer shell](../../fe/lib/ui/shell/wireframe_shell.dart).
+- [Authenticated routes](../../be/app/bars_and_restaurants/routes/checkin.py), [eligibility/session service](../../be/app/bars_and_restaurants/services/checkin.py), [additive migration](../../be/migrations/versions/c05_customer_checkins.py).
+- [Backend regression tests](../../be/tests/test_customer_checkin.py). Local SQLite/PostgreSQL service, HTTP ownership, migration and concurrency checks do not establish native-device E2E acceptance.
 
 ## Contracts and compatibility
 
-Existing venue/location configuration and table/spot availability contracts; authenticated check-in capability must be documented in the canonical FE/BE contract when implemented. QR selection does not bypass distance eligibility.
+Authenticated `/checkins` routes extend existing venue/location and table/spot configuration. Deploy the additive migration and backend before the consuming frontend through existing CI/CD. Existing local check-ins require server revalidation. QR selection does not bypass distance eligibility.
 
 Use [FE/BE contract](../../docs/FE_BE_COMMUNICATION.md) for durable interfaces; update canonical contracts in the implementing change. Preserve deployed callers and existing data.
 
 ## Acceptance criteria
 
 - **C05-AC01** — Check-in entry eligibility and confirmation require current distance strictly less than 10m from a partner venue; 10m or greater cannot silently create a valid check-in.
-- **C05-AC02** — Customer can supply/confirm table or delivery-location details before ordering or during checkout, with selected venue retained.
+- **C05-AC02** — Customer can browse the menu without check-in. The first concrete ordering action and cart entry require an authenticated check-in for that venue, retain the intended action through confirmation, and resume it only on success. Table or delivery-location details can be supplied before ordering or during checkout and are retained on the order.
 - **C05-AC03** — Real QR input selects a valid partner/table and validates it; demo controls and hardcoded distance never determine release eligibility.
 - **C05-AC04** — Authenticated check-in survives supported resume/reopen behavior, and stale location, denied permission or incompatible venue/table returns a recoverable state.
 
@@ -54,7 +56,7 @@ Use [FE/BE contract](../../docs/FE_BE_COMMUNICATION.md) for durable interfaces; 
 
 ## Delivery and verification
 
-Delivery: ready for planning/implementation, subject to listed dependencies. Verification: unverified. Source inspection is the only evidence so far; no product E2E/provider/device checks have run. A passing foundation check validates artifact structure only. Independent verifier must assess every criterion before changing verification status.
+Delivery: implementation and focused local regression checks are present; deployment remains pending. Verification: unverified. Local checks cover service/HTTP behavior, migration and PostgreSQL concurrency; no product E2E or native-device checks have run. A passing foundation check validates artifact structure only. Independent verifier must assess every criterion before changing verification status.
 
 ## Source requirements
 

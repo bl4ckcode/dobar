@@ -1062,5 +1062,47 @@
   "entry_choose_invitation": "Escolha um convite",
   "entry_no_invitations": "Nenhum convite pendente.",
   "entry_refresh_retry": "Tentar carregar acesso novamente",
-  "login_provider_error": "Não foi possível entrar. Tente novamente."
+  "login_provider_error": "Não foi possível entrar. Tente novamente.",
+  "payment_card_unavailable": "Pagamentos com cartão estão temporariamente indisponíveis. Tente Pix ou tente novamente mais tarde.",
+  "payment_card_token_failed": "Não foi possível validar o cartão. Confira os dados e tente novamente.",
+  "payment_card_holder_label": "Nome do titular",
+  "payment_card_holder_hint": "Nome impresso no cartão",
+  "payment_card_ready": "Cartão pronto para salvar",
+  "payment_select_method": "Selecione Pix ou adicione um cartão válido para continuar.",
+  "payment_card_profile_required": "Complete seu perfil e adicione seu CPF antes de salvar um cartão.",
+  "checkout_pending_order": "Você tem um pedido aguardando pagamento.",
+  "checkout_resume_payment": "Continuar pagamento",
+  "checkin_required_order": "Faça check-in neste estabelecimento antes de fazer um pedido.",
+  "checkin_retry_message": "Não foi possível validar seu check-in. Tente novamente.",
+  "checkin_invalid_qr": "Insira um link QR válido do estabelecimento.",
+  "checkin_qr_input": "Cole o link QR do estabelecimento ou da mesa",
+  "checkin_too_far": "Você precisa estar a menos de 10 metros do estabelecimento para fazer check-in.",
+  "checkin_location_required": "Permita o acesso à localização e tente novamente perto do estabelecimento.",
+  "checkin_invalid_location": "Selecione uma mesa ou um local de entrega válido.",
+  "payment_card_step": "Etapa {step} de {total}",
+  "payment_card_summary": "{brand} final {last4} · Validade {expiry}",
+  "@payment_card_step": {
+    "placeholders": {
+      "step": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "@payment_card_summary": {
+    "placeholders": {
+      "brand": {
+        "type": "String"
+      },
+      "last4": {
+        "type": "String"
+      },
+      "expiry": {
+        "type": "String"
+      }
+    }
+  },
+  "checkin_qr_manual_hint": "Abra o QR code do estabelecimento com seu dispositivo e cole o link aqui. Sua localização será validada antes da confirmação."
 }

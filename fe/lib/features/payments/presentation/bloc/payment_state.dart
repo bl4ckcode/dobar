@@ -14,6 +14,7 @@ abstract class PaymentState with _$PaymentState {
     @Default(false) bool isLoading,
     @Default(false) bool isProcessing,
     String? error,
+    int? paymentFailureStatus,
     Transaction? currentTransaction,
     PixPaymentResponse? pixPayment,
   }) = _PaymentState;

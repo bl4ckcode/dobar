@@ -1,3 +1,6 @@
+import 'package:barz/l10n/app_localizations.dart';
+import 'package:barz/core/utils/injections.dart';
+import 'package:barz/features/payments/domain/services/card_tokenizer.dart';
 import 'package:flutter/material.dart';
 import 'package:barz/core/design/tokens/colors.dart';
 
@@ -26,6 +29,8 @@ class _AddNewCardWorkflowState extends State<AddNewCardWorkflow>
   String _expiry = "";
   String _cvv = "";
   String _name = "";
+  bool _tokenizing = false;
+  String? _tokenError;
 
   late AnimationController _progressController;
   late Animation<double> _progressAnimation;
@@ -144,17 +149,41 @@ class _AddNewCardWorkflowState extends State<AddNewCardWorkflow>
     }
   }
 
-  void _handleConfirm() {
-    final clean = _cardNumber.replaceAll(' ', '');
-    widget.onComplete({
-      'brand': _detectBrand(clean),
-      'last4': clean.length >= 4 ? clean.substring(clean.length - 4) : clean,
-      'expiry': _expiry,
-    });
+  Future<void> _handleConfirm() async {
+    if (_tokenizing) return;
+    setState(() { _tokenizing = true; _tokenError = null; });
+    final clean = _cardNumber.replaceAll(RegExp(r'\D'), '');
+    final expiry = _expiry.split('/');
+    final year = int.tryParse(expiry.last) ?? 0;
+    try {
+      final token = await getItInjector<CardTokenizer>().tokenize(
+        number: clean,
+        holderName: _name,
+        expMonth: int.tryParse(expiry.first) ?? 0,
+        expYear: year < 100 ? 2000 + year : year,
+        cvv: _cvv,
+      );
+      if (!mounted) return;
+      widget.onComplete({
+        'token': token,
+        'brand': _detectBrand(clean),
+        'last4': clean.substring(clean.length - 4),
+        'expiry': _expiry,
+      });
+      _cardNumber = ''; _cvv = ''; _name = '';
+    } on CardTokenizationException catch (error) {
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
+      setState(() => _tokenError = error.unavailable
+          ? l10n.payment_card_unavailable : l10n.payment_card_token_failed);
+    } finally {
+      if (mounted) setState(() => _tokenizing = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final textColor = widget.isDark ? textOnDark : textPrimary;
     final mutedTextColor = widget.isDark ? textSecondary : textSecondary;
     final inputBgColor = widget.isDark ? barzDarkLight : surfaceMuted;
@@ -174,7 +203,7 @@ class _AddNewCardWorkflowState extends State<AddNewCardWorkflow>
               style: IconButton.styleFrom(backgroundColor: inputBgColor),
             ),
             Text(
-              'Step ${AddCardStep.values.indexOf(_currentStep) + 1} of ${AddCardStep.values.length}',
+              l10n.payment_card_step(AddCardStep.values.indexOf(_currentStep) + 1, AddCardStep.values.length),
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
@@ -289,8 +318,8 @@ class _AddNewCardWorkflowState extends State<AddNewCardWorkflow>
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'CARDHOLDER',
+                      Text(
+                        l10n.payment_card_holder_label,
                         style: TextStyle(
                           color: Colors.white38,
                           fontSize: 10,
@@ -299,7 +328,7 @@ class _AddNewCardWorkflowState extends State<AddNewCardWorkflow>
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        _name.isEmpty ? 'YOUR NAME' : _name,
+                        _name.isEmpty ? l10n.payment_card_holder_hint : _name,
                         style: const TextStyle(
                           color: Colors.white,
                           fontSize: 13,
@@ -311,8 +340,8 @@ class _AddNewCardWorkflowState extends State<AddNewCardWorkflow>
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      const Text(
-                        'EXPIRES',
+                      Text(
+                        l10n.payment_expiry_label,
                         style: TextStyle(
                           color: Colors.white38,
                           fontSize: 10,
@@ -337,6 +366,8 @@ class _AddNewCardWorkflowState extends State<AddNewCardWorkflow>
         ),
         const SizedBox(height: 24),
 
+        if (_tokenError != null) Padding(padding: const EdgeInsets.all(12), child: Text(_tokenError!, style: const TextStyle(color: Colors.red))),
+        if (_tokenizing) const LinearProgressIndicator(),
         // Animated Form Content
         AnimatedSwitcher(
           duration: const Duration(milliseconds: 250),
@@ -359,7 +390,7 @@ class _AddNewCardWorkflowState extends State<AddNewCardWorkflow>
           width: double.infinity,
           height: 48,
           child: ElevatedButton(
-            onPressed: _isStepValid() ? _handleNext : null,
+            onPressed: !_tokenizing && _isStepValid() ? _handleNext : null,
             style: ElevatedButton.styleFrom(
               backgroundColor: _currentStep == AddCardStep.confirm
                   ? barzGold
@@ -374,7 +405,7 @@ class _AddNewCardWorkflowState extends State<AddNewCardWorkflow>
               elevation: _currentStep == AddCardStep.confirm ? 4 : 0,
             ),
             child: Text(
-              _currentStep == AddCardStep.confirm ? 'Save Card' : 'Continue',
+              _currentStep == AddCardStep.confirm ? l10n.payment_save_card_button : l10n.next,
               style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
             ),
           ),
@@ -384,13 +415,14 @@ class _AddNewCardWorkflowState extends State<AddNewCardWorkflow>
   }
 
   Widget _buildCurrentStep(Color textColor, Color inputBgColor) {
+    final l10n = AppLocalizations.of(context)!;
     if (_currentStep == AddCardStep.number) {
       return Column(
         key: const ValueKey('number'),
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Card Number',
+            l10n.payment_card_number_label,
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
@@ -451,7 +483,7 @@ class _AddNewCardWorkflowState extends State<AddNewCardWorkflow>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Expiry Date',
+                  l10n.payment_expiry_label,
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
@@ -510,7 +542,7 @@ class _AddNewCardWorkflowState extends State<AddNewCardWorkflow>
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'CVV',
+                  l10n.payment_cvv_label,
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
@@ -564,7 +596,7 @@ class _AddNewCardWorkflowState extends State<AddNewCardWorkflow>
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Cardholder Name',
+            l10n.payment_card_holder_label,
             style: TextStyle(
               fontSize: 14,
               fontWeight: FontWeight.w500,
@@ -577,7 +609,7 @@ class _AddNewCardWorkflowState extends State<AddNewCardWorkflow>
             textCapitalization: TextCapitalization.characters,
             style: TextStyle(color: textColor, fontSize: 16),
             decoration: InputDecoration(
-              hintText: 'Name on card',
+              hintText: l10n.payment_card_holder_hint,
               hintStyle: TextStyle(color: textColor.withValues(alpha: 0.3)),
               filled: true,
               fillColor: inputBgColor,
@@ -615,7 +647,7 @@ class _AddNewCardWorkflowState extends State<AddNewCardWorkflow>
           ),
           const SizedBox(height: 16),
           Text(
-            'Card ready to save',
+            l10n.payment_card_ready,
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
@@ -624,7 +656,7 @@ class _AddNewCardWorkflowState extends State<AddNewCardWorkflow>
           ),
           const SizedBox(height: 4),
           Text(
-            '${_detectBrand(_cardNumber)} ending in ${_cardNumber.replaceAll(' ', '').substring(_cardNumber.replaceAll(' ', '').length - 4)} • Expires $_expiry',
+            l10n.payment_card_summary(_detectBrand(_cardNumber), _cardNumber.replaceAll(' ', '').substring(_cardNumber.replaceAll(' ', '').length - 4), _expiry),
             style: TextStyle(
               fontSize: 14,
               color: textColor.withValues(alpha: 0.6),

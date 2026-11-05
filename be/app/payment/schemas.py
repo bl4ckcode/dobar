@@ -1,5 +1,5 @@
 from typing import Optional, Dict, Any, Literal
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
 from datetime import datetime
 from enum import Enum
 
@@ -54,6 +54,7 @@ class TokenProvider(str, Enum):
 class DPEPaymentMethod(BaseModel):
     type: PaymentMethodType
     token: Optional[str] = None
+    payment_method_id: Optional[int] = Field(default=None, gt=0)
     provider: Optional[TokenProvider] = None
     pix_key: Optional[str] = None
     installments: int = Field(default=1, ge=1, le=24)
@@ -156,6 +157,14 @@ class CardCreate(BaseModel):
     exp_year: int = Field(..., ge=2024)
     is_default: bool = False
 
+    @field_validator("card_token")
+    @classmethod
+    def validate_token(cls, value: str) -> str:
+        value = value.strip()
+        if not value.startswith("token_") or len(value) <= 6:
+            raise ValueError("A fresh provider card token is required")
+        return value
+
 
 class CardResponse(BaseModel):
     id: int
@@ -168,6 +177,7 @@ class CardResponse(BaseModel):
     is_default: bool
     created_at: datetime
     updated_at: datetime | None = None
+    is_usable: bool = False
     
     class Config:
         from_attributes = True

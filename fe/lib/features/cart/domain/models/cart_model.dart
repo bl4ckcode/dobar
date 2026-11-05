@@ -600,6 +600,10 @@ class SpotAvailability {
 
 class CheckoutResult {
   final int orderId;
+  final String? paymentAttemptKey;
+  final int? barId;
+  final List<CartItemModel> items;
+  final String? locationIdentifier;
   final String status;
   final String paymentStatus;
   final double total;
@@ -609,6 +613,10 @@ class CheckoutResult {
 
   CheckoutResult({
     required this.orderId,
+    this.paymentAttemptKey,
+    this.barId,
+    this.items = const [],
+    this.locationIdentifier,
     required this.status,
     required this.paymentStatus,
     required this.total,
@@ -620,6 +628,15 @@ class CheckoutResult {
   factory CheckoutResult.fromJson(Map<String, dynamic> json) {
     return CheckoutResult(
       orderId: json['order_id'] ?? 0,
+      paymentAttemptKey: json['payment_attempt_key'],
+      barId: json['bar_id'],
+      locationIdentifier: json['location_identifier'],
+      items: ((json['items'] as List?) ?? []).map((item) => CartItemModel(
+        id: item['id'] ?? 0, cartId: 0, menuItemId: item['menu_item_id'],
+        barId: json['bar_id'] ?? 0, menuItemName: item['menu_item_name'],
+        quantity: item['quantity'], unitPrice: (item['unit_price'] as num).toDouble(),
+        totalPrice: (item['unit_price'] as num).toDouble() * (item['quantity'] as num),
+      )).toList(),
       status: json['status'] ?? 'pending',
       paymentStatus: json['payment_status'] ?? 'pending',
       total: (json['total'] as num?)?.toDouble() ?? 0.0,

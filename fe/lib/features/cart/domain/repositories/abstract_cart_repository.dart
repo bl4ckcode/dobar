@@ -3,6 +3,7 @@ import 'package:barz/features/cart/domain/models/cart_model.dart';
 import 'package:dartz/dartz.dart';
 
 abstract class AbstractCartRepository {
+  Future<Either<Failure, CheckoutResult?>> getPendingCheckout() async => const Right(null);
   Future<Either<Failure, CartModel>> getCart();
 
   Future<Either<Failure, CartModel>> syncCart(CartSyncRequest request);

@@ -1,3 +1,4 @@
+import 'package:barz/features/cart/domain/models/cart_models.dart';
 import 'package:equatable/equatable.dart';
 import 'package:barz/features/checkin/domain/models/checkin_model.dart';
 import 'package:barz/features/bars/domain/models/bar_model.dart';
@@ -17,6 +18,7 @@ class CheckinState extends Equatable {
   // Bar being checked into
   final BarModel? selectedBar;
   final String? tableNumber;
+  final LocationConfig? locationConfig;
 
   // Nearby bars for geo-based check-in
   final List<BarModel> nearbyBars;
@@ -31,6 +33,7 @@ class CheckinState extends Equatable {
     this.activeCheckin,
     this.selectedBar,
     this.tableNumber,
+    this.locationConfig,
     this.nearbyBars = const [],
     this.scanResult,
   });
@@ -42,6 +45,7 @@ class CheckinState extends Equatable {
     CheckinModel? activeCheckin,
     BarModel? selectedBar,
     String? tableNumber,
+    LocationConfig? locationConfig,
     List<BarModel>? nearbyBars,
     QrScanResult? scanResult,
     bool clearError = false,
@@ -57,6 +61,7 @@ class CheckinState extends Equatable {
           : (activeCheckin ?? this.activeCheckin),
       selectedBar: selectedBar ?? this.selectedBar,
       tableNumber: tableNumber ?? this.tableNumber,
+      locationConfig: locationConfig ?? this.locationConfig,
       nearbyBars: nearbyBars ?? this.nearbyBars,
       scanResult: clearScanResult ? null : (scanResult ?? this.scanResult),
     );
@@ -76,6 +81,7 @@ class CheckinState extends Equatable {
     activeCheckin,
     selectedBar,
     tableNumber,
+    locationConfig,
     nearbyBars,
     scanResult,
   ];

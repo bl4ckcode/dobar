@@ -57,7 +57,7 @@ class PaymentUsecase {
     );
   }
 
-  Future<Either<Failure, Transaction>> checkPaymentStatus(int transactionId) {
+  Future<Either<Failure, Transaction>> checkPaymentStatus(String transactionId) {
     return _repository.checkPaymentStatus(transactionId);
   }
 

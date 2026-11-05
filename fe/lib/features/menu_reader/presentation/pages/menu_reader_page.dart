@@ -49,19 +49,20 @@ class _MenuReaderPageState extends State<MenuReaderPage>
       vsync: this,
       duration: const Duration(seconds: 8),
     )..repeat();
-    _rotation = Tween<double>(begin: 0, end: 2 * math.pi).animate(
-      CurvedAnimation(parent: _rotateController, curve: Curves.linear),
-    );
+    _rotation = Tween<double>(
+      begin: 0,
+      end: 2 * math.pi,
+    ).animate(CurvedAnimation(parent: _rotateController, curve: Curves.linear));
 
     _entryController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
     _fadeIn = CurvedAnimation(parent: _entryController, curve: Curves.easeOut);
-    _slideUp = Tween<Offset>(
-      begin: const Offset(0, 0.15),
-      end: Offset.zero,
-    ).animate(CurvedAnimation(parent: _entryController, curve: Curves.easeOutCubic));
+    _slideUp = Tween<Offset>(begin: const Offset(0, 0.15), end: Offset.zero)
+        .animate(
+          CurvedAnimation(parent: _entryController, curve: Curves.easeOutCubic),
+        );
     _entryController.forward();
   }
 
@@ -118,7 +119,9 @@ class _MenuReaderPageState extends State<MenuReaderPage>
                     ResponsiveCenterContainer(
                       maxWidthPercentage: 0.8,
                       maxWidth: 1200,
-                      padding: const EdgeInsets.symmetric(horizontal: BarzSpacing.md),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: BarzSpacing.md,
+                      ),
                       child: _buildToolbar(context, colors, isDark),
                     ),
                     Expanded(
@@ -159,67 +162,46 @@ class _MenuReaderPageState extends State<MenuReaderPage>
     );
   }
 
-  Widget _buildToolbar(
-    BuildContext context,
-    DobarColors colors,
-    bool isDark,
-  ) {
+  Widget _buildToolbar(BuildContext context, DobarColors colors, bool isDark) {
     final l10n = AppLocalizations.of(context)!;
     return Padding(
-      padding: const EdgeInsets.symmetric(
-        horizontal: BarzSpacing.lg,
-        vertical: BarzSpacing.sm,
-      ),
+      padding: const EdgeInsets.symmetric(vertical: BarzSpacing.sm),
       child: Row(
         children: [
-          // Back button (glass pill)
-          _GlassPillButton(
-            onTap: () => context.go(AppRoute.businessMenu.path),
-            isDark: isDark,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.arrow_back_ios_new_rounded,
-                  size: 16,
-                  color: colors.labelPrimary,
-                ),
-                const SizedBox(width: BarzSpacing.xs),
-                Text(
-                  l10n.menu_reader_title,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w500,
+          Expanded(
+            child: _GlassPillButton(
+              onTap: () => context.go(AppRoute.businessMenu.path),
+              isDark: isDark,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.arrow_back_ios_new_rounded,
+                    size: 16,
                     color: colors.labelPrimary,
                   ),
-                ),
-              ],
+                  const SizedBox(width: BarzSpacing.xs),
+                  Flexible(
+                    child: Text(
+                      l10n.menu_reader_title,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                        color: colors.labelPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          const Spacer(),
-          // AI Vision badge
-          _GlassPillButton(
-            onTap: () {},
-            isDark: isDark,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.auto_awesome_rounded,
-                  size: 14,
-                  color: barzGold,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  'AI VISION',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.8,
-                    color: barzGold,
-                  ),
-                ),
-              ],
+          const SizedBox(width: 12),
+          Tooltip(
+            message: l10n.menu_reader_title,
+            child: const Icon(
+              Icons.auto_awesome_rounded,
+              size: 20,
+              color: barzGold,
             ),
           ),
         ],
@@ -256,10 +238,7 @@ class _MenuReaderPageState extends State<MenuReaderPage>
               const SizedBox(height: BarzSpacing.sm),
               Text(
                 l10n.menu_reader_take_seconds,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: colors.labelSecondary,
-                ),
+                style: TextStyle(fontSize: 14, color: colors.labelSecondary),
               ),
             ],
           ),
@@ -313,54 +292,26 @@ class _MenuReaderPageState extends State<MenuReaderPage>
   }
 
   Widget _buildHeader(DobarColors colors, bool isDark) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       children: [
-        // Title with gold accent
-        Text.rich(
-          TextSpan(
-            children: [
-              TextSpan(
-                text: 'Scan your menu and digitalize it with ',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  color: colors.labelPrimary,
-                  height: 1.3,
-                ),
-              ),
-              TextSpan(
-                text: 'AI speed',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  color: barzGold,
-                  height: 1.3,
-                ),
-              ),
-              TextSpan(
-                text: ' {1 click}',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w700,
-                  color: colors.labelSecondary,
-                  height: 1.3,
-                ),
-              ),
-            ],
-          ),
+        Text(
+          l10n.menu_reader_scan_title,
           textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+            color: colors.labelPrimary,
+            height: 1.3,
+          ),
         ),
         const SizedBox(height: BarzSpacing.xl),
-        // Eye icon with rotating dashed circle
         _buildScanIcon(size: 80, iconSize: 36),
         const SizedBox(height: BarzSpacing.xl),
         Text(
-          'How would you like to digitize your menu?',
+          l10n.menu_reader_scan_subtitle,
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 15,
-            color: colors.labelSecondary,
-          ),
+          style: TextStyle(fontSize: 15, color: colors.labelSecondary),
         ),
       ],
     );
@@ -427,39 +378,52 @@ class _MenuReaderPageState extends State<MenuReaderPage>
       _OptionData(
         icon: Icons.camera_alt_rounded,
         title: l10n.menu_reader_opt_take_photo,
-        subtitle: 'Use your camera to capture\nthe menu in real time.',
+        subtitle: l10n.menu_reader_opt_take_photo_desc,
         onTap: () => _pickImage(ImageSource.camera),
       ),
       _OptionData(
         icon: Icons.photo_library_rounded,
         title: l10n.menu_reader_opt_gallery,
-        subtitle: 'Choose an existing photo\nfrom your device.',
+        subtitle: l10n.menu_reader_opt_gallery_desc,
         onTap: () => _pickImage(ImageSource.gallery),
       ),
       _OptionData(
         icon: Icons.link_rounded,
-        title: 'Import From URL',
-        subtitle: 'Paste a link to a PDF,\nInstagram or website menu.',
+        title: l10n.menu_reader_opt_url,
+        subtitle: l10n.menu_reader_opt_url_desc,
         onTap: () => setState(() => _showUrlInput = true),
       ),
     ];
 
-    return Row(
-      children: options.map((option) {
-        return Expanded(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: _buildOptionCard(
-              icon: option.icon,
-              title: option.title,
-              subtitle: option.subtitle,
-              onTap: option.onTap,
-              colors: colors,
-              isDark: isDark,
-            ),
-          ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final narrow = constraints.maxWidth < 600;
+        final cards = options
+            .map(
+              (option) => Padding(
+                padding: const EdgeInsets.all(4),
+                child: _buildOptionCard(
+                  icon: option.icon,
+                  title: option.title,
+                  subtitle: option.subtitle,
+                  onTap: option.onTap,
+                  colors: colors,
+                  isDark: isDark,
+                ),
+              ),
+            )
+            .toList();
+        if (narrow) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: cards,
+          );
+        }
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: cards.map((card) => Expanded(child: card)).toList(),
         );
-      }).toList(),
+      },
     );
   }
 
@@ -559,10 +523,7 @@ class _MenuReaderPageState extends State<MenuReaderPage>
             top: BarzSpacing.md,
             right: BarzSpacing.md,
             child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 10,
-                vertical: 5,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(
                 color: barzGold,
                 borderRadius: BorderRadius.circular(BarzRadii.full),
@@ -573,13 +534,13 @@ class _MenuReaderPageState extends State<MenuReaderPage>
                   ),
                 ],
               ),
-              child: const Row(
+              child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(Icons.auto_awesome, size: 14, color: barzDark),
                   SizedBox(width: 4),
                   Text(
-                    'AI READY',
+                    AppLocalizations.of(context)!.menu_reader_btn_analyze,
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
@@ -612,13 +573,15 @@ class _MenuReaderPageState extends State<MenuReaderPage>
                     color: Colors.white.withValues(alpha: 0.2),
                   ),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Icon(Icons.refresh, size: 16, color: Colors.white),
                     SizedBox(width: 6),
                     Text(
-                      'Change photo',
+                      AppLocalizations.of(
+                        context,
+                      )!.menu_reader_btn_choose_different,
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,
@@ -700,11 +663,7 @@ class _MenuReaderPageState extends State<MenuReaderPage>
     );
   }
 
-  Widget _buildUrlInput(
-    BuildContext context,
-    DobarColors colors,
-    bool isDark,
-  ) {
+  Widget _buildUrlInput(BuildContext context, DobarColors colors, bool isDark) {
     final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(BarzSpacing.lg),
@@ -735,12 +694,14 @@ class _MenuReaderPageState extends State<MenuReaderPage>
                 ),
               ),
               const SizedBox(width: BarzSpacing.md),
-              Text(
-                l10n.menu_reader_url_label,
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: colors.labelPrimary,
+              Expanded(
+                child: Text(
+                  l10n.menu_reader_url_label,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: colors.labelPrimary,
+                  ),
                 ),
               ),
             ],
@@ -875,42 +836,62 @@ class _MenuReaderPageState extends State<MenuReaderPage>
       decoration: BoxDecoration(
         color: colors.surface,
         borderRadius: BorderRadius.circular(BarzRadii.lg),
-        border: Border.all(
-          color: barzGold.withValues(alpha: 0.25),
-          width: 1,
-        ),
+        border: Border.all(color: barzGold.withValues(alpha: 0.25), width: 1),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              const Icon(
-                Icons.lightbulb_rounded,
-                color: barzGold,
-                size: 20,
-              ),
+              const Icon(Icons.lightbulb_rounded, color: barzGold, size: 20),
               const SizedBox(width: BarzSpacing.sm),
-              Text(
-                l10n.menu_reader_tips_title,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: barzGold,
+              Expanded(
+                child: Text(
+                  l10n.menu_reader_tips_title,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: barzGold,
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: BarzSpacing.md),
-          // Horizontal tips row
-          Row(
-            children: [
-              _buildTipItem(l10n.menu_reader_tip_lighting, colors),
-              const SizedBox(width: BarzSpacing.xl),
-              _buildTipItem(l10n.menu_reader_tip_flat, colors),
-              const SizedBox(width: BarzSpacing.xl),
-              _buildTipItem(l10n.menu_reader_tip_glare, colors),
-            ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final tips = [
+                _buildTipItem(l10n.menu_reader_tip_lighting, colors),
+                _buildTipItem(l10n.menu_reader_tip_flat, colors),
+                _buildTipItem(l10n.menu_reader_tip_glare, colors),
+              ];
+              if (constraints.maxWidth < 600) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: tips
+                      .map(
+                        (tip) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: tip,
+                        ),
+                      )
+                      .toList(),
+                );
+              }
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: tips
+                    .map(
+                      (tip) => Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 16),
+                          child: tip,
+                        ),
+                      ),
+                    )
+                    .toList(),
+              );
+            },
           ),
         ],
       ),
@@ -918,31 +899,29 @@ class _MenuReaderPageState extends State<MenuReaderPage>
   }
 
   Widget _buildTipItem(String text, DobarColors colors) {
-    return Expanded(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            width: 5,
-            height: 5,
-            margin: const EdgeInsets.only(top: 6, right: 8),
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              color: barzGold,
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 5,
+          height: 5,
+          margin: const EdgeInsets.only(top: 6, right: 8),
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            color: barzGold,
+          ),
+        ),
+        Expanded(
+          child: Text(
+            text,
+            style: TextStyle(
+              fontSize: 13,
+              color: colors.labelSecondary,
+              height: 1.4,
             ),
           ),
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(
-                fontSize: 13,
-                color: colors.labelSecondary,
-                height: 1.4,
-              ),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -999,10 +978,7 @@ class _GlassPillButton extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(BarzRadii.full),
         child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 8,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           decoration: BoxDecoration(
             color: isDark
                 ? Colors.white.withValues(alpha: 0.06)

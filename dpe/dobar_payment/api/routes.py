@@ -1,85 +1,158 @@
-from typing import Dict, Any
-from datetime import datetime, timezone, timedelta
-import uuid
-import logging
 import base64
+import hashlib
+import logging
+import uuid
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict
 
+from .dependencies import (
+    gateway_registry,
+    generate_pix_id,
+    generate_refund_id,
+    payment_store,
+)
+from .middleware import (
+    DPE_VERSION,
+    RequestContext,
+    error_code_to_http_status,
+)
 from .schemas import (
+    CaptureRequestAPI,
+    CaptureResponseAPI,
     ChargeRequestAPI,
     ChargeResponseAPI,
-    RefundRequestAPI,
-    RefundResponseAPI,
-    PaymentStatusResponse,
-    PixGenerateRequest,
-    PixGenerateResponse,
     ErrorResponse,
     HealthResponse,
     PaymentMethodTypeAPI,
+    PaymentStatusResponse,
+    PixGenerateRequest,
+    PixGenerateResponse,
+    RefundRequestAPI,
+    RefundResponseAPI,
+    SaveCardRequestAPI,
+    SaveCardResponseAPI,
     TrialSetupRequestAPI,
     TrialSetupResponseAPI,
-    CaptureRequestAPI,
-    CaptureResponseAPI,
-)
-from .middleware import (
-    RequestContext,
-    error_code_to_http_status,
-    DPE_VERSION,
-)
-from .dependencies import (
-    payment_store,
-    gateway_registry,
-    generate_payment_id,
-    generate_refund_id,
-    generate_pix_id,
 )
 
 logger = logging.getLogger("dobar.payment.api")
 
 
 class PaymentRoutes:
-    
+
     @staticmethod
-    async def create_charge(request: ChargeRequestAPI) -> tuple[ChargeResponseAPI | ErrorResponse, int]:
+    async def save_card(
+        request: SaveCardRequestAPI,
+    ) -> tuple[SaveCardResponseAPI | ErrorResponse, int]:
         ctx = RequestContext.get_current()
         request_id = ctx.request_id if ctx else str(uuid.uuid4())
-        
+        cache_key = f"card:{request.idempotency_key}"
+        fingerprint = hashlib.sha256(request.model_dump_json().encode()).hexdigest()
+        if payment_store.idempotency_conflicts(cache_key, fingerprint):
+            return (
+                ErrorResponse(
+                    error_code="IDEMPOTENCY_CONFLICT",
+                    message="Card registration key was already used for another request",
+                    request_id=request_id,
+                ),
+                409,
+            )
+        cached = payment_store.check_idempotency(cache_key)
+        if cached:
+            return SaveCardResponseAPI(**cached), 200
+        gateway = gateway_registry.get("stone")
+        if not gateway:
+            return (
+                ErrorResponse(
+                    error_code="GATEWAY_UNAVAILABLE",
+                    message="PagarMe is unavailable",
+                    request_id=request_id,
+                ),
+                503,
+            )
+        result = await gateway.save_card(
+            user_id=request.user_id,
+            token=request.token,
+            customer=request.customer_info.model_dump(exclude_none=True),
+            idempotency_key=request.idempotency_key,
+        )
+        if result.get("status") == "error":
+            code = result.get("error_code", "GATEWAY_ERROR")
+            return ErrorResponse(
+                error_code=code,
+                message=result.get("message", "Card registration failed"),
+                request_id=request_id,
+            ), error_code_to_http_status(code)
+        response = SaveCardResponseAPI(**result)
+        payment_store.store_idempotency(
+            cache_key, response.model_dump(mode="json"), request_fingerprint=fingerprint
+        )
+        return response, 200
+
+    @staticmethod
+    async def create_charge(
+        request: ChargeRequestAPI,
+    ) -> tuple[ChargeResponseAPI | ErrorResponse, int]:
+        ctx = RequestContext.get_current()
+        request_id = ctx.request_id if ctx else str(uuid.uuid4())
+
+        fingerprint = hashlib.sha256(request.model_dump_json().encode()).hexdigest()
+        if payment_store.idempotency_conflicts(request.idempotency_key, fingerprint):
+            return (
+                ErrorResponse(
+                    error_code="IDEMPOTENCY_CONFLICT",
+                    message="Payment key was already used for another request",
+                    request_id=request_id,
+                ),
+                409,
+            )
         cached = payment_store.check_idempotency(request.idempotency_key)
         if cached:
             logger.info(f"[{request_id}] Returning cached response for idempotency key")
             return ChargeResponseAPI(**cached), 200
-        
+
         gateway_result = gateway_registry.get_for_country(request.country)
         if not gateway_result:
-            return ErrorResponse(
-                error_code="GATEWAY_UNAVAILABLE",
-                message=f"No gateway available for country: {request.country}",
-                request_id=request_id,
-            ), 503
-        
+            return (
+                ErrorResponse(
+                    error_code="GATEWAY_UNAVAILABLE",
+                    message=f"No gateway available for country: {request.country}",
+                    request_id=request_id,
+                ),
+                503,
+            )
+
         gateway_name, gateway = gateway_result
-        payment_id = generate_payment_id()
+        payment_uuid = uuid.uuid5(uuid.NAMESPACE_URL, "dobar-charge:" + request.idempotency_key)
+        payment_id = f"pay_{payment_uuid.hex[:16]}"
         now = datetime.now(timezone.utc)
-        
+
         proration_credit_cents = None
         if request.proration_info:
             credit = request.proration_info.credit_amount_cents
             effective = request.amount_cents - credit
             proration_credit_cents = credit
-            
+
             if request.proration_info.upgrade_date < request.proration_info.cycle_start:
-                return ErrorResponse(
-                    error_code="VALIDATION_ERROR",
-                    message="upgrade_date cannot be before cycle_start",
-                    request_id=request_id,
-                ), 400
-            
+                return (
+                    ErrorResponse(
+                        error_code="VALIDATION_ERROR",
+                        message="upgrade_date cannot be before cycle_start",
+                        request_id=request_id,
+                    ),
+                    400,
+                )
+
             if request.proration_info.upgrade_date > request.proration_info.cycle_end:
-                return ErrorResponse(
-                    error_code="VALIDATION_ERROR",
-                    message="upgrade_date cannot be after cycle_end",
-                    request_id=request_id,
-                ), 400
-            
+                return (
+                    ErrorResponse(
+                        error_code="VALIDATION_ERROR",
+                        message="upgrade_date cannot be after cycle_end",
+                        request_id=request_id,
+                    ),
+                    400,
+                )
+
             if effective <= 0:
                 response = ChargeResponseAPI(
                     payment_id=payment_id,
@@ -91,71 +164,85 @@ class PaymentRoutes:
                     created_at=now,
                     proration_credit_cents=credit,
                 )
-                payment_store.store_payment(payment_id, {
-                    "payment_id": payment_id,
-                    "status": "credit_applied",
-                    "gateway": "internal",
-                    "gateway_id": "proration_credit",
-                    "amount_cents": 0,
-                    "original_amount_cents": request.amount_cents,
-                    "proration_credit_cents": credit,
-                    "currency": request.currency,
-                    "order_id": request.order_id,
-                    "user_id": request.user_id,
-                    "bar_id": request.bar_id,
-                    "proration": {
-                        "previous_plan": request.proration_info.previous_plan,
-                        "new_plan": request.proration_info.new_plan,
+                payment_store.store_payment(
+                    payment_id,
+                    {
+                        "payment_id": payment_id,
+                        "status": "credit_applied",
+                        "gateway": "internal",
+                        "gateway_id": "proration_credit",
+                        "amount_cents": 0,
+                        "original_amount_cents": request.amount_cents,
+                        "proration_credit_cents": credit,
+                        "currency": request.currency,
+                        "order_id": request.order_id,
+                        "user_id": request.user_id,
+                        "bar_id": request.bar_id,
+                        "proration": {
+                            "previous_plan": request.proration_info.previous_plan,
+                            "new_plan": request.proration_info.new_plan,
+                        },
+                        "refunded_amount_cents": 0,
+                        "created_at": now.isoformat(),
                     },
-                    "refunded_amount_cents": 0,
-                    "created_at": now.isoformat(),
-                })
+                )
                 payment_store.store_idempotency(
                     request.idempotency_key,
                     response.model_dump(mode="json"),
+                    request_fingerprint=fingerprint,
                 )
-                logger.info(f"[{request_id}] Proration credit fully covers upgrade for payment {payment_id}")
+                logger.info(
+                    f"[{request_id}] Proration credit fully covers upgrade for payment {payment_id}"
+                )
                 return response, 200
-        
+
         try:
             payment_method = request.payment_method
             effective_amount = request.amount_cents
             if proration_credit_cents:
                 effective_amount = request.amount_cents - proration_credit_cents
-            
+
             charge_kwargs: Dict[str, Any] = {
                 "amount": effective_amount / 100.0,
                 "currency": request.currency,
                 "idempotency_key": request.idempotency_key,
                 "metadata": {
+                    **request.metadata,
                     "order_id": request.order_id,
                     "user_id": request.user_id,
                     "bar_id": request.bar_id,
-                    **request.metadata,
+                    "dpe_payment_id": payment_id,
                 },
             }
-            
+            if gateway_name == "stone":
+                charge_kwargs["amount_cents"] = effective_amount
+
             if proration_credit_cents:
                 charge_kwargs["metadata"]["proration_credit_cents"] = proration_credit_cents
-            
+
             if request.customer_info:
                 charge_kwargs["customer"] = {
                     "name": request.customer_info.name,
                     "email": request.customer_info.email,
                     "document": request.customer_info.document,
                     # Use explicit type if provided; derive from document length as fallback
-                    "type": request.customer_info.type or (
-                        "individual" if len(request.customer_info.document) == 11 else "company"
-                    ),
+                    "type": request.customer_info.type
+                    or ("individual" if len(request.customer_info.document) == 11 else "company"),
                     "document_type": "CPF" if len(request.customer_info.document) == 11 else "CNPJ",
                 }
                 if request.customer_info.phone:
                     charge_kwargs["customer"]["phone"] = request.customer_info.phone
-            
+                if request.customer_info.address:
+                    charge_kwargs["customer"]["address"] = request.customer_info.address.model_dump(
+                        exclude_none=True
+                    )
+                charge_kwargs["customer"]["code"] = f"dobar_user_{request.user_id}"[:52]
+
             if payment_method.type == PaymentMethodTypeAPI.CARD:
                 charge_kwargs["payment_method"] = {
                     "type": "card",
                     "token": payment_method.token,
+                    "card_id": payment_method.card_id,
                     "installments": payment_method.installments,
                 }
             elif payment_method.type == PaymentMethodTypeAPI.PIX:
@@ -165,9 +252,9 @@ class PaymentRoutes:
                 if payment_method.expires_in:
                     pm["expires_in"] = payment_method.expires_in
                 charge_kwargs["payment_method"] = pm
-            
+
             result = await gateway.create_charge(**charge_kwargs)
-            
+
             if result.get("status") == "error":
                 error_code = result.get("error_code", "PAYMENT_DECLINED")
                 return ErrorResponse(
@@ -179,12 +266,15 @@ class PaymentRoutes:
                     },
                     request_id=request_id,
                 ), error_code_to_http_status(error_code)
-            
+
             response = ChargeResponseAPI(
                 payment_id=payment_id,
                 status=result.get("status", "succeeded"),
                 gateway=gateway_name,
-                gateway_id=result.get("transaction_id", result.get("id", "")),
+                gateway_id=result.get("charge_id")
+                or result.get("transaction_id")
+                or result.get("id")
+                or "",
                 amount_cents=request.amount_cents,
                 currency=request.currency,
                 created_at=now,
@@ -195,12 +285,14 @@ class PaymentRoutes:
                 card_brand=result.get("card_brand"),
                 proration_credit_cents=proration_credit_cents,
             )
-            
+
             stored = {
                 "payment_id": payment_id,
                 "status": response.status,
                 "gateway": gateway_name,
                 "gateway_id": response.gateway_id,
+                "gateway_order_id": result.get("order_id"),
+                "gateway_transaction_id": result.get("transaction_id"),
                 "amount_cents": request.amount_cents,
                 "currency": request.currency,
                 "order_id": request.order_id,
@@ -212,26 +304,30 @@ class PaymentRoutes:
             if proration_credit_cents:
                 stored["proration_credit_cents"] = proration_credit_cents
                 stored["effective_amount_cents"] = request.amount_cents - proration_credit_cents
-            
+
             payment_store.store_payment(payment_id, stored)
-            
+
             payment_store.store_idempotency(
                 request.idempotency_key,
                 response.model_dump(mode="json"),
+                request_fingerprint=fingerprint,
             )
-            
+
             logger.info(f"[{request_id}] Payment {payment_id} created via {gateway_name}")
             return response, 200
-            
+
         except Exception as e:
-            logger.exception(f"[{request_id}] Payment failed: {e}")
-            return ErrorResponse(
-                error_code="GATEWAY_ERROR",
-                message=str(e),
-                details={"gateway": gateway_name},
-                request_id=request_id,
-            ), 502
-    
+            logger.error("[%s] Payment failed (%s)", request_id, type(e).__name__)
+            return (
+                ErrorResponse(
+                    error_code="GATEWAY_ERROR",
+                    message="Payment provider request failed",
+                    details={"gateway": gateway_name},
+                    request_id=request_id,
+                ),
+                502,
+            )
+
     @staticmethod
     async def create_refund(request: RefundRequestAPI) -> tuple[RefundResponseAPI | ErrorResponse, int]:
         ctx = RequestContext.get_current()
@@ -316,29 +412,53 @@ class PaymentRoutes:
                 message=str(e),
                 request_id=request_id,
             ), 502
-    
+
     @staticmethod
     async def get_payment(payment_id: str) -> tuple[PaymentStatusResponse | ErrorResponse, int]:
         ctx = RequestContext.get_current()
         request_id = ctx.request_id if ctx else str(uuid.uuid4())
-        
+
         payment = payment_store.get_payment(payment_id)
         if not payment:
-            return ErrorResponse(
-                error_code="NOT_FOUND",
-                message=f"Payment not found: {payment_id}",
-                request_id=request_id,
-            ), 404
-        
-        return PaymentStatusResponse(
-            payment_id=payment_id,
-            status=payment["status"],
-            amount_cents=payment["amount_cents"],
-            currency=payment["currency"],
-            gateway=payment["gateway"],
-            refunded_amount_cents=payment.get("refunded_amount_cents", 0),
-            created_at=datetime.fromisoformat(payment["created_at"]),
-        ), 200
+            return (
+                ErrorResponse(
+                    error_code="NOT_FOUND",
+                    message=f"Payment not found: {payment_id}",
+                    request_id=request_id,
+                ),
+                404,
+            )
+
+        if payment.get("gateway") == "stone" and payment.get("status") in {
+            "pending",
+            "processing",
+            "authorized",
+        }:
+            gateway = gateway_registry.get("stone")
+            if gateway and payment.get("gateway_id"):
+                result = await gateway.get_charge(payment["gateway_id"])
+                if result.get("status") in {
+                    "succeeded",
+                    "failed",
+                    "refunded",
+                    "disputed",
+                    "authorized",
+                }:
+                    payment_store.update_payment(payment_id, {"status": result["status"]})
+                    payment["status"] = result["status"]
+
+        return (
+            PaymentStatusResponse(
+                payment_id=payment_id,
+                status=payment["status"],
+                amount_cents=payment["amount_cents"],
+                currency=payment["currency"],
+                gateway=payment["gateway"],
+                refunded_amount_cents=payment.get("refunded_amount_cents", 0),
+                created_at=datetime.fromisoformat(payment["created_at"]),
+            ),
+            200,
+        )
 
     @staticmethod
     async def capture_payment(request: CaptureRequestAPI) -> tuple[CaptureResponseAPI | ErrorResponse, int]:
@@ -525,7 +645,7 @@ class SubscriptionRoutes:
 
 
 class PixRoutes:
-    
+
     @staticmethod
     async def generate_brcode(request: PixGenerateRequest) -> tuple[PixGenerateResponse | ErrorResponse, int]:
         ctx = RequestContext.get_current()
@@ -580,7 +700,7 @@ class PixRoutes:
 
 
 class HealthRoutes:
-    
+
     @staticmethod
     async def health_check() -> tuple[HealthResponse, int]:
         gateways_health = gateway_registry.get_health_status()
@@ -600,64 +720,110 @@ class HealthRoutes:
 
 
 class WebhookRoutes:
-    
+
     @staticmethod
-    async def process_gateway_webhook(gateway_name: str, payload_bytes: bytes, headers: dict) -> tuple[Dict[str, Any] | ErrorResponse, int]:
+    async def process_gateway_webhook(
+        gateway_name: str, payload_bytes: bytes, headers: dict
+    ) -> tuple[Dict[str, Any] | ErrorResponse, int]:
         ctx = RequestContext.get_current()
         request_id = ctx.request_id if ctx else str(uuid.uuid4())
-        
-        import httpx
+
         import os
+
+        import httpx
+
         from ..core.webhooks import WebhookHandler, WebhookVerificationError
-        
+
         try:
             stripe_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
             pagarme_secret = os.getenv("PAGARME_WEBHOOK_SECRET") or os.getenv("PAGARME_USERNAME")
             paypal_secret = os.getenv("PAYPAL_WEBHOOK_SECRET")
-            
+
             handler = WebhookHandler(
                 stripe_secret=stripe_secret,
                 pagarme_secret=pagarme_secret,
                 paypal_secret=paypal_secret,
             )
-            
+
             # Verify and parse the payload using core webhooks implementation
             webhook_payload = handler.handle(payload_bytes, headers, gateway=gateway_name)
-            
-            logger.info(f"[{request_id}] Received valid webhook for {gateway_name}: {webhook_payload.event_type}")
-            
+
+            logger.info(
+                "[%s] Received valid webhook for %s: %s",
+                request_id,
+                gateway_name,
+                webhook_payload.event_type,
+            )
+
             # Determine normalized status based on the gateway's event
             normalized_status = "unknown"
             if webhook_payload.event_type in ["charge.paid", "order.paid"]:
                 normalized_status = "succeeded"
-            elif webhook_payload.event_type in ["charge.payment_failed", "order.payment_failed", "charge.failed"]:
+            elif webhook_payload.event_type in [
+                "charge.payment_failed",
+                "order.payment_failed",
+                "charge.failed",
+            ]:
                 normalized_status = "failed"
             elif webhook_payload.event_type in ["charge.refunded"]:
                 normalized_status = "refunded"
             elif webhook_payload.event_type in ["charge.dispute.created", "dispute.created"]:
                 normalized_status = "disputed"
             else:
-                return {"status": "ignored", "reason": f"unhandled_event: {webhook_payload.event_type}"}, 200
+                return {
+                    "status": "ignored",
+                    "reason": f"unhandled_event: {webhook_payload.event_type}",
+                }, 200
 
             # Map the parsed webhook fields
             data = webhook_payload.data
-            
+
             # Barz-Backend needs 'payment_id' and 'order_id'
             payment_id = webhook_payload.event_id
             order_id = ""
             amount_cents = data.get("amount", 0)
-            
+
             from ..api.schemas import DpeBackendWebhookPayload
-            
+
             # Forward to Barz-Backend
             backend_url = os.getenv("BARZ_BACKEND_URL", "http://localhost:8000")
             backend_secret = os.getenv("DPE_SERVICE_SECRET")
-            
+
             if gateway_name == "stone":
                 order_id = data.get("code") or data.get("order", {}).get("code") or ""
-                # PagarMe payload data contains the charge or order id, webhook_payload.event_id is just the webhook ID
+                # Match provider references to the stable DPE payment ID.
                 payment_id = data.get("id") or payment_id
-            
+                metadata = {**data.get("order", {}).get("metadata", {}), **data.get("metadata", {})}
+                references = {
+                    str(value)
+                    for value in (
+                        data.get("id"),
+                        data.get("order", {}).get("id"),
+                        data.get("last_transaction", {}).get("id"),
+                    )
+                    if value
+                }
+                stored = payment_store.find_gateway_payment(gateway_name, references)
+                if stored:
+                    payment_id = stored["payment_id"]
+                    order_id = stored["order_id"]
+                    if amount_cents and amount_cents != stored.get(
+                        "effective_amount_cents", stored["amount_cents"]
+                    ):
+                        return (
+                            ErrorResponse(
+                                error_code="VALIDATION_ERROR",
+                                message="Webhook amount does not match payment",
+                                request_id=request_id,
+                            ),
+                            422,
+                        )
+                    if stored["status"] == "succeeded" and normalized_status == "failed":
+                        return {"status": "ignored", "reason": "stale_payment_failure"}, 200
+                else:
+                    payment_id = metadata.get("dpe_payment_id") or payment_id
+                    order_id = metadata.get("order_id") or order_id
+
             out_payload = DpeBackendWebhookPayload(
                 event=webhook_payload.event_type,
                 payment_id=payment_id or "",
@@ -668,7 +834,7 @@ class WebhookRoutes:
                 gateway=gateway_name,
                 created_at=webhook_payload.timestamp,
             )
-            
+
             async with httpx.AsyncClient() as client:
                 resp = await client.post(
                     f"{backend_url}/payments/webhook",
@@ -680,22 +846,31 @@ class WebhookRoutes:
                     timeout=10.0,
                 )
                 resp.raise_for_status()
-                
-            logger.info(f"[{request_id}] Successfully forwarded {gateway_name} webhook to Barz-Backend")
+            payment_store.update_payment(payment_id, {"status": normalized_status})
+
+            logger.info(
+                f"[{request_id}] Successfully forwarded {gateway_name} webhook to Barz-Backend"
+            )
             return {"status": "processed"}, 200
-            
+
         except WebhookVerificationError as e:
             logger.warning(f"[{request_id}] Webhook signature verification failed: {e.code}")
-            return ErrorResponse(
-                error_code="UNAUTHORIZED",
-                message="Invalid webhook signature",
-                request_id=request_id,
-            ), 401
-            
+            return (
+                ErrorResponse(
+                    error_code="UNAUTHORIZED",
+                    message="Invalid webhook signature",
+                    request_id=request_id,
+                ),
+                401,
+            )
+
         except Exception as e:
             logger.exception(f"[{request_id}] Webhook processing failed: {e}")
-            return ErrorResponse(
-                error_code="INTERNAL_ERROR",
-                message=str(e),
-                request_id=request_id,
-            ), 500
+            return (
+                ErrorResponse(
+                    error_code="INTERNAL_ERROR",
+                    message=str(e),
+                    request_id=request_id,
+                ),
+                500,
+            )

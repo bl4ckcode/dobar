@@ -1,6 +1,7 @@
 import os
 import httpx
 import uuid
+from decimal import Decimal, ROUND_HALF_UP
 from typing import Optional, Dict, Any
 from datetime import datetime
 
@@ -14,7 +15,7 @@ def cents_to_float(cents: int) -> float:
 
 
 def float_to_cents(amount: float) -> int:
-    return int(round(amount * 100))
+    return int((Decimal(str(amount)) * 100).quantize(Decimal("1"), rounding=ROUND_HALF_UP))
 
 
 class DPEClient:
@@ -30,6 +31,24 @@ class DPEClient:
                 timeout=DPE_TIMEOUT,
             )
         return self._client
+
+    async def save_card(self, user_id: int, token: str, customer_info: dict, idempotency_key: str) -> dict:
+        client = await self._get_client()
+        response = await client.post(
+            "/cards",
+            json={"user_id": str(user_id), "token": token, "customer_info": customer_info,
+                  "idempotency_key": idempotency_key},
+            headers=self._headers(idempotency_key),
+        )
+        try:
+            result = response.json()
+        except ValueError:
+            result = {"message": "Payment service returned an invalid response"}
+        if response.status_code not in (200, 201):
+            return {"status": "error", "http_status": response.status_code,
+                    "error_code": result.get("error_code", "SERVER_UNAVAILABLE"),
+                    "message": result.get("message", "Unable to save card")}
+        return result
     
     def _headers(self, idempotency_key: str = None) -> Dict[str, str]:
         headers = {

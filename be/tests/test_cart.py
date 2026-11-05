@@ -149,20 +149,24 @@ class TestCheckout:
         """Test that PIX checkout returns pix_qr_code, pix_copia_e_cola, and pix_expires_at fields."""
         client, headers, user = auth_client
         
-        # Add item to cart
+        from app.auth.rbac_models import UserProfile
+        from app.bars_and_restaurants.models.relational_models import UserDocument, Menu, MenuItem
+        from conftest import test_database
+        from unittest.mock import AsyncMock
+        await test_database.execute(UserProfile.__table__.insert().values(user_id=user["id"], display_name="Cliente Teste"))
+        await test_database.execute(UserDocument.__table__.insert().values(user_id=user["id"], type="cpf", number="52998224725"))
+        menu_id = await test_database.execute(Menu.__table__.insert().values(bar_id=test_bar_in_db["id"], name="Menu", is_active=True))
+        item_id = await test_database.execute(MenuItem.__table__.insert().values(menu_id=menu_id, name="PIX Test Item", price=10, available=True))
         await client.post("/cart/items", json={
-            "menu_item_id": 200,
-            "bar_id": test_bar_in_db["id"],
-            "menu_item_name": "PIX Test Item",
-            "quantity": 1,
-            "unit_price": 10.00
+            "menu_item_id": item_id, "bar_id": test_bar_in_db["id"], "menu_item_name": "PIX Test Item",
+            "quantity": 1, "unit_price": 10.00,
         }, headers=headers)
-        
+
         # Mock DPE client to return PIX payment data
         class MockDPEClient:
             async def charge(self, **kwargs):
                 return {
-                    "status": "succeeded",
+                    "status": "pending",
                     "payment_id": "pay_pix_test_123",
                     "gateway": "pagarme",
                     "gateway_id": "ch_pix_123",
@@ -176,7 +180,7 @@ class TestCheckout:
                 }
         
         from unittest.mock import patch
-        with patch("app.bars_and_restaurants.routes.cart.get_dpe_client", return_value=MockDPEClient()):
+        with patch("app.bars_and_restaurants.routes.cart.get_dpe_client", return_value=MockDPEClient()), patch("app.bars_and_restaurants.routes.cart.require_active_checkin", AsyncMock(return_value={"table_number": "5"})):
             checkout_data = {
                 "order_type": "pickup",
                 "payment_method": "pix"

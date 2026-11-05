@@ -1,3 +1,5 @@
+import 'package:barz/features/payments/domain/services/card_tokenizer.dart';
+import 'package:barz/features/payments/data/services/pagarme_card_tokenizer.dart';
 import 'package:barz/core/network/dio_network.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/payments/data/data_sources/payment_network_datasource.dart';
@@ -7,6 +9,7 @@ import 'package:barz/features/payments/domain/usecases/payment_usecase.dart';
 import 'package:barz/features/payments/presentation/bloc/payment_bloc.dart';
 
 void initPaymentsInjection() {
+  getItInjector.registerLazySingleton<CardTokenizer>(() => PagarmeCardTokenizer());
   getItInjector.registerLazySingleton<PaymentDatasource>(
     () => PaymentNetworkDatasource(dio: DioNetwork.appAPI),
   );

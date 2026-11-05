@@ -1,10 +1,33 @@
-from typing import Dict, Any, Optional, Set
-from functools import partial
 import asyncio
 import logging
 import os
+import re
+from decimal import Decimal
+from functools import partial
+from typing import Any, Dict, Optional, Set
 
-from dobar_payment.interfaces import PaymentGateway, GatewayCapability
+from pagarmeapisdk.configuration import Environment
+from pagarmeapisdk.exceptions.api_exception import APIException
+from pagarmeapisdk.http.auth.basic_auth import BasicAuthCredentials
+from pagarmeapisdk.models.create_address_request import CreateAddressRequest
+from pagarmeapisdk.models.create_cancel_charge_request import CreateCancelChargeRequest
+from pagarmeapisdk.models.create_card_request import CreateCardRequest
+from pagarmeapisdk.models.create_credit_card_payment_request import CreateCreditCardPaymentRequest
+from pagarmeapisdk.models.create_customer_request import CreateCustomerRequest
+from pagarmeapisdk.models.create_debit_card_payment_request import CreateDebitCardPaymentRequest
+from pagarmeapisdk.models.create_order_item_request import CreateOrderItemRequest
+from pagarmeapisdk.models.create_order_request import CreateOrderRequest
+from pagarmeapisdk.models.create_payment_authentication_request import (
+    CreatePaymentAuthenticationRequest,
+)
+from pagarmeapisdk.models.create_payment_request import CreatePaymentRequest
+from pagarmeapisdk.models.create_phone_request import CreatePhoneRequest
+from pagarmeapisdk.models.create_phones_request import CreatePhonesRequest
+from pagarmeapisdk.models.create_pix_payment_request import CreatePixPaymentRequest
+from pagarmeapisdk.models.create_three_d_secure_request import CreateThreeDSecureRequest
+from pagarmeapisdk.models.pix_additional_information import PixAdditionalInformation
+from pagarmeapisdk.models.update_customer_request import UpdateCustomerRequest
+from pagarmeapisdk.pagarmeapisdk_client import PagarmeapisdkClient
 
 # Trigger pagarme_sdk __init__ which inserts the bundled SDK directory into
 # sys.path.  All subsequent imports use the short "pagarmeapisdk.*" path so
@@ -15,26 +38,7 @@ from dobar_payment.interfaces import PaymentGateway, GatewayCapability
 # KeyError(<Environment.PRODUCTION: 0>), which surfaced as
 # "Unexpected error: <Environment.PRODUCTION: 0>".
 import dobar_payment.pagarme_sdk  # noqa: F401  (side-effect: sys.path setup)
-
-from pagarmeapisdk.pagarmeapisdk_client import PagarmeapisdkClient
-from pagarmeapisdk.http.auth.basic_auth import BasicAuthCredentials
-from pagarmeapisdk.configuration import Environment
-from pagarmeapisdk.exceptions.error_exception import ErrorException
-from pagarmeapisdk.models.create_order_request import CreateOrderRequest
-from pagarmeapisdk.models.create_order_item_request import CreateOrderItemRequest
-from pagarmeapisdk.models.create_cancel_charge_request import CreateCancelChargeRequest
-from pagarmeapisdk.models.create_customer_request import CreateCustomerRequest
-from pagarmeapisdk.models.create_address_request import CreateAddressRequest
-from pagarmeapisdk.models.create_payment_request import CreatePaymentRequest
-from pagarmeapisdk.models.create_credit_card_payment_request import CreateCreditCardPaymentRequest
-from pagarmeapisdk.models.create_debit_card_payment_request import CreateDebitCardPaymentRequest
-from pagarmeapisdk.models.create_card_request import CreateCardRequest
-from pagarmeapisdk.models.create_pix_payment_request import CreatePixPaymentRequest
-from pagarmeapisdk.models.create_payment_authentication_request import CreatePaymentAuthenticationRequest
-from pagarmeapisdk.models.create_three_d_secure_request import CreateThreeDSecureRequest
-from pagarmeapisdk.models.pix_additional_information import PixAdditionalInformation
-from pagarmeapisdk.models.create_phones_request import CreatePhonesRequest
-from pagarmeapisdk.models.create_phone_request import CreatePhoneRequest
+from dobar_payment.interfaces import GatewayCapability, PaymentGateway
 
 _logger = logging.getLogger(__name__)
 
@@ -106,8 +110,46 @@ class StonePaymentGateway(PaymentGateway):
     async def _run_sync(self, func, *args, **kwargs):
         return await asyncio.to_thread(partial(func, *args, **kwargs))
 
+    async def _provider_customer(
+        self, customer: CreateCustomerRequest, idempotency_key: Optional[str]
+    ) -> Any:
+        if customer.code and customer.code.startswith("dobar_user_"):
+            result = await self._run_sync(self._client.customers.get_customers, code=customer.code)
+            if result.data:
+                existing = result.data[0]
+                update = UpdateCustomerRequest(
+                    name=customer.name, email=customer.email, document=customer.document,
+                    mtype=customer.mtype, code=customer.code, document_type=customer.document_type,
+                )
+                if customer.address:
+                    update.address = customer.address
+                if customer.phones:
+                    update.phones = customer.phones
+                return await self._run_sync(
+                    self._client.customers.update_customer, existing.id, update,
+                    idempotency_key=f"{idempotency_key}:customer" if idempotency_key else None,
+                )
+        return await self._run_sync(
+            self._client.customers.create_customer, customer,
+            idempotency_key=f"{idempotency_key}:customer" if idempotency_key else None,
+        )
+
     def _error(self, message: str, **extra) -> Dict[str, Any]:
         return {"status": "error", "provider": self.GATEWAY_NAME, "message": message, **extra}
+
+    def _provider_error(self, error: APIException) -> Dict[str, Any]:
+        status = error.response_code
+        if status in (400, 422):
+            return self._error("PagarMe rejected payment data", error_code="VALIDATION_ERROR")
+        if status in (402, 412):
+            return self._error("PagarMe declined the card", error_code="PAYMENT_DECLINED")
+        if status == 409:
+            return self._error(
+                "Payment request is already processing", error_code="IDEMPOTENCY_CONFLICT"
+            )
+        if status == 429:
+            return self._error("PagarMe rate limit reached", error_code="RATE_LIMITED")
+        return self._error("PagarMe is temporarily unavailable", error_code="GATEWAY_UNAVAILABLE")
 
     def _build_phone(self, data: Dict[str, Any]) -> CreatePhoneRequest:
         return CreatePhoneRequest(
@@ -148,14 +190,19 @@ class StonePaymentGateway(PaymentGateway):
 
     def _build_customer(self, customer: Dict[str, Any]) -> CreateCustomerRequest:
         address = self._build_address(customer.get("address"))
-        if not address:
-            # PagarMe SDK requires a non-None address object with non-empty
-            # city/state/zip_code, even for PIX where no address is needed.
-            address = CreateAddressRequest(
-                street="NA", number="0", zip_code="00000000", neighborhood="NA",
-                city="NA", state="NA", country="BR", complement="",
-                line_1="NA", line_2="", metadata={},
-            )
+        phones = customer.get("phones")
+        phone = re.sub(r"\D", "", customer.get("phone") or "")
+        if not phones and phone:
+            if len(phone) in (12, 13) and phone.startswith("55"):
+                phone = phone[2:]
+            if len(phone) in (10, 11):
+                phones = {
+                    "mobile_phone": {
+                        "country_code": "55",
+                        "area_code": phone[:2],
+                        "number": phone[2:],
+                    }
+                }
         return CreateCustomerRequest(
             name=customer["name"],
             email=customer["email"],
@@ -163,8 +210,11 @@ class StonePaymentGateway(PaymentGateway):
             mtype=customer.get("type", "individual"),
             address=address,
             metadata=customer.get("metadata", {}),
-            phones=self._build_phones(customer.get("phones")),
+            phones=self._build_phones(phones),
             code=customer.get("code", customer.get("email", "")),
+            document_type=customer.get(
+                "document_type", "CPF" if len(customer.get("document", "")) == 11 else "CNPJ"
+            ),
         )
 
     def _build_card(self, card: Dict[str, Any]) -> CreateCardRequest:
@@ -176,12 +226,20 @@ class StonePaymentGateway(PaymentGateway):
         )
 
     def _build_credit_card(self, pm: Dict[str, Any]) -> CreateCreditCardPaymentRequest:
-        card = self._build_card(pm["card"]) if "card" in pm and not pm.get("card_id") and not pm.get("card_token") else None
+        pm = {**pm, "card_token": pm.get("card_token") or pm.get("token")}
+        card = (
+            self._build_card(pm["card"])
+            if "card" in pm and not pm.get("card_id") and not pm.get("card_token")
+            else None
+        )
         desc = pm.get("statement_descriptor", "")[:MAX_STATEMENT_DESCRIPTOR] or None
         return CreateCreditCardPaymentRequest(
-            card=card, card_id=pm.get("card_id"), card_token=pm.get("card_token"),
-            installments=pm.get("installments", 1), capture=pm.get("capture", True),
-            statement_descriptor=desc
+            card=card,
+            card_id=pm.get("card_id"),
+            card_token=pm.get("card_token"),
+            installments=pm.get("installments", 1),
+            capture=pm.get("capture", True),
+            statement_descriptor=desc,
         )
 
     def _build_debit_card(self, pm: Dict[str, Any]) -> CreateDebitCardPaymentRequest:
@@ -226,14 +284,33 @@ class StonePaymentGateway(PaymentGateway):
             return CreatePaymentRequest(payment_method="debit_card", debit_card=self._build_debit_card(pm), amount=amount)
         return CreatePaymentRequest(payment_method="credit_card", credit_card=self._build_credit_card(pm), amount=amount)
 
+    @staticmethod
+    def _payment_status(status: Optional[str], transaction_status: Optional[str] = None) -> str:
+        if status == "paid" or transaction_status == "captured":
+            return "succeeded"
+        if status in {"failed", "canceled"} or transaction_status in {
+            "not_authorized",
+            "failed",
+            "with_error",
+            "voided",
+        }:
+            return "failed"
+        if status in {"refunded", "chargedback"}:
+            return "refunded" if status == "refunded" else "disputed"
+        if transaction_status == "authorized_pending_capture":
+            return "authorized"
+        return "pending"
+
     def _normalize_order(self, response: Any, method: str) -> Dict[str, Any]:
         result = {
-            "status": "success", "provider": self.GATEWAY_NAME,
+            "status": self._payment_status(getattr(response, "status", None)),
+            "provider": self.GATEWAY_NAME,
             "order_id": getattr(response, "id", None),
             "order_code": getattr(response, "code", None),
             "order_status": getattr(response, "status", None),
             "amount": getattr(response, "amount", None),
-            "currency": "BRL", "payment_method": method,
+            "currency": "BRL",
+            "payment_method": method,
             "created_at": getattr(response, "created_at", None),
         }
         charges = getattr(response, "charges", None)
@@ -245,6 +322,9 @@ class StonePaymentGateway(PaymentGateway):
             if tx:
                 result["transaction_id"] = getattr(tx, "id", None)
                 result["transaction_status"] = getattr(tx, "status", None)
+                result["status"] = self._payment_status(
+                    getattr(charge, "status", None), result["transaction_status"]
+                )
                 if method == "pix":
                     result["pix_qr_code"] = getattr(tx, "qr_code", None)
                     result["pix_qr_code_url"] = getattr(tx, "qr_code_url", None)
@@ -255,21 +335,30 @@ class StonePaymentGateway(PaymentGateway):
                     result["acquirer_return_code"] = getattr(tx, "acquirer_return_code", None)
                     result["card_last_four"] = getattr(tx, "last_four_digits", None)
                     result["card_brand"] = getattr(tx, "brand", None)
+                    card = getattr(tx, "card", None)
+                    if card and isinstance(getattr(card, "last_four_digits", None), str):
+                        result["card_last_four"] = getattr(card, "last_four_digits", None)
+                        result["card_brand"] = getattr(card, "brand", None)
         return result
 
     def _normalize_charge(self, response: Any, method: str) -> Dict[str, Any]:
         result = {
-            "status": "success", "provider": self.GATEWAY_NAME,
+            "status": self._payment_status(getattr(response, "status", None)),
+            "provider": self.GATEWAY_NAME,
             "charge_id": getattr(response, "id", None),
             "charge_status": getattr(response, "status", None),
             "amount": getattr(response, "amount", None),
-            "currency": "BRL", "payment_method": method,
+            "currency": "BRL",
+            "payment_method": method,
             "created_at": getattr(response, "created_at", None),
         }
         tx = getattr(response, "last_transaction", None)
         if tx:
             result["transaction_id"] = getattr(tx, "id", None)
             result["transaction_status"] = getattr(tx, "status", None)
+            result["status"] = self._payment_status(
+                getattr(response, "status", None), result["transaction_status"]
+            )
             if method == "pix":
                 result["pix_qr_code"] = getattr(tx, "qr_code", None)
                 result["pix_qr_code_url"] = getattr(tx, "qr_code_url", None)
@@ -284,39 +373,124 @@ class StonePaymentGateway(PaymentGateway):
         return result
 
     async def create_charge(
-        self, amount: float, currency: str,
+        self,
+        amount: float,
+        currency: str,
         customer: Optional[Dict[str, Any]] = None,
         payment_method: Optional[Dict[str, Any]] = None,
-        idempotency_key: Optional[str] = None, **kwargs
+        idempotency_key: Optional[str] = None,
+        **kwargs,
     ) -> Dict[str, Any]:
         if not self._configured or not self._client:
-            return self._error(ERR_NOT_CONFIGURED)
+            return self._error(ERR_NOT_CONFIGURED, error_code="GATEWAY_UNAVAILABLE")
         if not customer:
-            return self._error(ERR_CUSTOMER_REQUIRED)
+            return self._error(ERR_CUSTOMER_REQUIRED, error_code="VALIDATION_ERROR")
         if not payment_method:
-            return self._error(ERR_PAYMENT_METHOD_REQUIRED)
-        method = payment_method.get("payment_method", "credit_card")
+            return self._error(ERR_PAYMENT_METHOD_REQUIRED, error_code="VALIDATION_ERROR")
+        method = payment_method.get("type") or payment_method.get("payment_method", "credit_card")
+        if method == "card":
+            method = "credit_card"
         if method not in PAYMENT_METHODS:
-            return self._error(f"Unsupported payment method: {method}")
-        amount_cents = int(amount * 100)
+            return self._error("Unsupported payment method", error_code="INVALID_PAYMENT_METHOD")
+        amount_cents = kwargs.get("amount_cents")
+        if amount_cents is None:
+            amount_cents = Decimal(str(amount)) * 100
+            if amount_cents != amount_cents.to_integral_value():
+                return self._error("Amount must contain whole cents", error_code="INVALID_AMOUNT")
+            amount_cents = int(amount_cents)
+        if not isinstance(amount_cents, int) or isinstance(amount_cents, bool) or amount_cents <= 0:
+            return self._error(
+                "Amount must contain positive integer cents", error_code="INVALID_AMOUNT"
+            )
+        if currency != "BRL":
+            return self._error("PagarMe purchases require BRL", error_code="INVALID_CURRENCY")
+        if method != "pix" and not (
+            payment_method.get("card_id")
+            or payment_method.get("card_token")
+            or payment_method.get("token")
+        ):
+            return self._error("A provider card reference is required", error_code="INVALID_CARD")
+        if os.getenv("PAGARME_ACCOUNT_TYPE", "gateway").lower() == "psp":
+            if not customer.get("address") or not (customer.get("phone") or customer.get("phones")):
+                return self._error(
+                    "PagarMe PSP requires customer address and phone", error_code="VALIDATION_ERROR"
+                )
+            if method != "pix" and not payment_method.get("card_id"):
+                return self._error(
+                    "PagarMe PSP requires a saved provider card", error_code="INVALID_CARD"
+                )
         try:
             customer_model = self._build_customer(customer)
             payment_model = self._build_payment(payment_method, amount_cents)
-            order_code = kwargs.get("order_id", f"order_{os.urandom(8).hex()}")
+            metadata = kwargs.get("metadata", {})
+            order_code = str(
+                kwargs.get("order_id")
+                or metadata.get("order_id")
+                or idempotency_key
+                or f"order_{os.urandom(8).hex()}"
+            )[:52]
+            customer_id = None
+            if payment_method.get("card_id"):
+                provider_customer = await self._provider_customer(customer_model, idempotency_key)
+                customer_id = provider_customer.id
             order_item = CreateOrderItemRequest(
-                amount=amount_cents, description=kwargs.get("description", "Payment"),
-                quantity=1, category=kwargs.get("category", "payment")
+                amount=amount_cents,
+                description=kwargs.get("description", "Payment"),
+                quantity=1,
+                category=kwargs.get("category", "payment"),
             )
             order_request = CreateOrderRequest(
-                items=[order_item], customer=customer_model,
-                payments=[payment_model], code=order_code, closed=True
+                items=[order_item],
+                customer=customer_model if not customer_id else None,
+                customer_id=customer_id,
+                payments=[payment_model],
+                code=order_code,
+                closed=True,
+                metadata=metadata,
             )
-            response = await self._run_sync(self._client.orders.create_order, order_request)
+            response = await self._run_sync(
+                self._client.orders.create_order, order_request, idempotency_key=idempotency_key
+            )
             return self._normalize_order(response, method)
-        except ErrorException as e:
-            return self._error(str(e), errors=getattr(e, "errors", None))
+        except APIException as e:
+            return self._provider_error(e)
+        except TimeoutError:
+            return self._error("PagarMe request timed out", error_code="GATEWAY_TIMEOUT")
         except Exception as e:
-            return self._error(f"Unexpected error: {e}")
+            _logger.error("PagarMe charge failed (%s)", type(e).__name__)
+            return self._error("PagarMe request failed", error_code="GATEWAY_ERROR")
+
+    async def save_card(
+        self, user_id: str, token: str, customer: Dict[str, Any], idempotency_key: str
+    ) -> Dict[str, Any]:
+        if not self._configured or not self._client:
+            return self._error(ERR_NOT_CONFIGURED, error_code="GATEWAY_UNAVAILABLE")
+        try:
+            customer_model = self._build_customer(
+                {**customer, "code": f"dobar_user_{user_id}"[:52]}
+            )
+            provider_customer = await self._provider_customer(customer_model, idempotency_key)
+            card = await self._run_sync(
+                self._client.customers.create_card,
+                provider_customer.id,
+                CreateCardRequest(token=token),
+                idempotency_key=idempotency_key,
+            )
+            return {
+                "card_id": card.id,
+                "customer_id": provider_customer.id,
+                "brand": card.brand,
+                "last_four": card.last_four_digits,
+                "exp_month": card.exp_month,
+                "exp_year": card.exp_year,
+            }
+        except APIException as e:
+            return self._provider_error(e)
+        except TimeoutError:
+            return self._error("PagarMe request timed out", error_code="GATEWAY_TIMEOUT")
+        except Exception as e:
+            _logger.error("PagarMe card registration failed (%s)", type(e).__name__)
+            return self._error("PagarMe card registration failed", error_code="GATEWAY_ERROR")
 
     async def refund_charge(
         self, charge_id: Optional[str] = None,
@@ -325,7 +499,7 @@ class StonePaymentGateway(PaymentGateway):
         idempotency_key: Optional[str] = None, **kwargs
     ) -> Dict[str, Any]:
         if not self._configured or not self._client:
-            return self._error(ERR_NOT_CONFIGURED)
+            return self._error(ERR_NOT_CONFIGURED, error_code="GATEWAY_UNAVAILABLE")
         if not charge_id:
             return self._error(ERR_CHARGE_ID_REQUIRED)
         try:
@@ -337,10 +511,11 @@ class StonePaymentGateway(PaymentGateway):
                 "amount_refunded": getattr(response, "canceled_amount", getattr(response, "amount", None)),
                 "charge_status": getattr(response, "status", None),
             }
-        except ErrorException as e:
-            return self._error(str(e), errors=getattr(e, "errors", None))
+        except APIException as e:
+            return self._provider_error(e)
         except Exception as e:
-            return self._error(f"Unexpected error: {e}")
+            _logger.error("PagarMe request failed (%s)", type(e).__name__)
+            return self._error("PagarMe request failed", error_code="GATEWAY_ERROR")
 
     async def capture_charge(
         self, payment_intent_id: str,
@@ -348,7 +523,7 @@ class StonePaymentGateway(PaymentGateway):
         idempotency_key: Optional[str] = None, **kwargs
     ) -> Dict[str, Any]:
         if not self._configured or not self._client:
-            return self._error(ERR_NOT_CONFIGURED)
+            return self._error(ERR_NOT_CONFIGURED, error_code="GATEWAY_UNAVAILABLE")
         if not payment_intent_id:
             return self._error(ERR_CHARGE_ID_REQUIRED)
         try:
@@ -363,19 +538,21 @@ class StonePaymentGateway(PaymentGateway):
                 "charge_status": getattr(response, "status", None),
                 "amount_captured": getattr(response, "amount", None),
             }
-        except ErrorException as e:
-            return self._error(str(e))
+        except APIException as e:
+            return self._provider_error(e)
         except Exception as e:
-            return self._error(f"Unexpected error: {e}")
+            _logger.error("PagarMe request failed (%s)", type(e).__name__)
+            return self._error("PagarMe request failed", error_code="GATEWAY_ERROR")
 
     async def get_charge(self, charge_id: str, **kwargs) -> Dict[str, Any]:
         if not self._configured or not self._client:
-            return self._error(ERR_NOT_CONFIGURED)
+            return self._error(ERR_NOT_CONFIGURED, error_code="GATEWAY_UNAVAILABLE")
         try:
             response = await self._run_sync(self._client.charges.get_charge, charge_id)
             method = getattr(response, "payment_method", "unknown")
             return self._normalize_charge(response, method)
-        except ErrorException as e:
-            return self._error(str(e))
+        except APIException as e:
+            return self._provider_error(e)
         except Exception as e:
-            return self._error(f"Unexpected error: {e}")
+            _logger.error("PagarMe request failed (%s)", type(e).__name__)
+            return self._error("PagarMe request failed", error_code="GATEWAY_ERROR")

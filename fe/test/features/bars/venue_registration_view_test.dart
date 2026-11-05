@@ -10,6 +10,7 @@ import 'package:barz/core/theme/theme_cubit.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/shared/data/data_sources/app_shared_prefs.dart';
 import 'package:barz/features/bars/presentation/pages/create_bar/venue_registration_view.dart';
+import 'package:barz/features/bars/domain/models/venue_draft.dart';
 import 'package:barz/l10n/app_localizations.dart';
 import 'venue_draft_cubit_test.dart' show DraftFake;
 
@@ -134,6 +135,34 @@ void main() {
       await tester.pumpWidget(const SizedBox());
     },
   );
+  testWidgets('decorated onboarding cards retain Material for list tiles', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    final repo = DraftFake();
+    repo.value = const VenueDraft(
+      id: 'hours',
+      version: 1,
+      payload: {
+        'operating_hours': {
+          'monday': {'is_closed': true},
+        },
+      },
+      steps: {},
+      nextStep: 'hours',
+    );
+    await tester.pumpWidget(app(repo));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Retomar cadastro'));
+    await tester.pumpAndSettle();
+    expect(find.byType(SwitchListTile), findsWidgets);
+    expect(tester.takeException(), isNull);
+    await tester.pumpWidget(const SizedBox());
+  });
+
   testWidgets(
     'created venue automatically refreshes access and retry never finalizes again',
     (tester) async {

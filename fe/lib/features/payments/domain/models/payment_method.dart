@@ -13,6 +13,7 @@ class PaymentMethod {
   final int? expiryMonth;
   final int? expiryYear;
   final bool isDefault;
+  final bool isUsable;
   final DateTime? createdAt;
 
   PaymentMethod({
@@ -26,6 +27,7 @@ class PaymentMethod {
     this.expiryMonth,
     this.expiryYear,
     this.isDefault = false,
+    this.isUsable = true,
     this.createdAt,
   });
 
@@ -42,11 +44,12 @@ class PaymentMethod {
         orElse: () => PaymentType.credit,
       ),
       brand: json['brand'],
-      lastFourDigits: json['last_four'],
+      lastFourDigits: json['last_four'] ?? json['last_four_digits'],
       holderName: json['holder_name'],
       expiryMonth: json['exp_month'],
       expiryYear: json['exp_year'],
       isDefault: json['is_default'] ?? false,
+      isUsable: json['is_usable'] ?? true,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : null,
@@ -61,6 +64,7 @@ class PaymentMethod {
       'type': type.name,
       'brand': brand,
       'last_four': lastFourDigits,
+      'last_four_digits': lastFourDigits,
       'holder_name': holderName,
       'exp_month': expiryMonth,
       'exp_year': expiryYear,

@@ -1,10 +1,9 @@
-from typing import Callable, Optional, Any
-from datetime import datetime, timezone
-import uuid
-import os
 import logging
-from functools import wraps
-import json
+import os
+import uuid
+from datetime import datetime, timezone
+from typing import Any, Callable, Optional
+
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
@@ -17,7 +16,7 @@ DPE_VERSION = "2.0.0"
 
 class RequestContext:
     _current: Optional["RequestContext"] = None
-    
+
     def __init__(
         self,
         request_id: str,
@@ -30,15 +29,15 @@ class RequestContext:
         self.authenticated = authenticated
         self.service_name = service_name
         self.timestamp = datetime.now(timezone.utc)
-    
+
     @classmethod
     def get_current(cls) -> Optional["RequestContext"]:
         return cls._current
-    
+
     @classmethod
     def set_current(cls, ctx: "RequestContext") -> None:
         cls._current = ctx
-    
+
     @classmethod
     def clear(cls) -> None:
         cls._current = None
@@ -88,6 +87,8 @@ ERROR_CODE_TO_HTTP = {
     "GATEWAY_TIMEOUT": 504,
     "DUPLICATE_PAYMENT": 409,
     "IDEMPOTENCY_CONFLICT": 409,
+    "VALIDATION_ERROR": 422,
+    "GATEWAY_ERROR": 502,
     "WALLET_LOCKED": 409,
     "RATE_LIMITED": 429,
     "UNAUTHORIZED": 401,
@@ -117,21 +118,5 @@ class LogMaskingMiddleware(BaseHTTPMiddleware):
         return data
 
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        try:
-            body = await request.body()
-            if body:
-                try:
-                    json_body = json.loads(body)
-                    masked_body = self._mask_sensitive_data(json_body)
-                    logger.debug(f"Request body: {json.dumps(masked_body)}")
-                except json.JSONDecodeError:
-                    pass
-        except Exception:
-            pass
-
-        async def receive():
-            return {"type": "http.request", "body": body}
-        
-        request._receive = receive
+        logger.debug("Payment request: %s %s", request.method, request.url.path)
         return await call_next(request)
-

@@ -11,6 +11,8 @@ class CheckinModel extends Equatable {
   final CheckinStatus status;
   final DateTime checkedInAt;
   final DateTime? checkedOutAt;
+  final DateTime? expiresAt;
+  final double? distanceMeters;
 
   const CheckinModel({
     required this.id,
@@ -22,6 +24,8 @@ class CheckinModel extends Equatable {
     required this.status,
     required this.checkedInAt,
     this.checkedOutAt,
+    this.expiresAt,
+    this.distanceMeters,
   });
 
   factory CheckinModel.fromJson(Map<String, dynamic> json) {
@@ -34,6 +38,8 @@ class CheckinModel extends Equatable {
       tableNumber: json['table_number'],
       status: CheckinStatus.fromString(json['status']),
       checkedInAt: DateTime.parse(json['checked_in_at']),
+      expiresAt: DateTime.tryParse(json['expires_at'] ?? ''),
+      distanceMeters: (json['distance_meters'] as num?)?.toDouble(),
       checkedOutAt: json['checked_out_at'] != null
           ? DateTime.parse(json['checked_out_at'])
           : null,
@@ -51,6 +57,7 @@ class CheckinModel extends Equatable {
       'status': status.name,
       'checked_in_at': checkedInAt.toIso8601String(),
       'checked_out_at': checkedOutAt?.toIso8601String(),
+      'expires_at': expiresAt?.toIso8601String(),
     };
   }
 
@@ -69,6 +76,8 @@ class CheckinModel extends Equatable {
       status: status ?? this.status,
       checkedInAt: checkedInAt,
       checkedOutAt: checkedOutAt ?? this.checkedOutAt,
+      expiresAt: expiresAt,
+      distanceMeters: distanceMeters,
     );
   }
 
@@ -79,7 +88,8 @@ class CheckinModel extends Equatable {
   }
 
   /// Whether the check-in is currently active
-  bool get isActive => status == CheckinStatus.active;
+  bool get isActive => userId > 0 && status == CheckinStatus.active &&
+      expiresAt != null && DateTime.now().isBefore(expiresAt!);
 
   @override
   List<Object?> get props => [
@@ -92,6 +102,8 @@ class CheckinModel extends Equatable {
     status,
     checkedInAt,
     checkedOutAt,
+    expiresAt,
+    distanceMeters,
   ];
 }
 
@@ -110,7 +122,7 @@ enum CheckinStatus {
       case 'cancelled':
         return CheckinStatus.cancelled;
       default:
-        return CheckinStatus.active;
+        return CheckinStatus.cancelled;
     }
   }
 }
@@ -128,7 +140,7 @@ class QrScanResult {
   factory QrScanResult.fromQrCode(String qrCode) {
     final uri = Uri.tryParse(qrCode);
     if (uri == null) {
-      throw FormatException('Invalid QR code format: $qrCode');
+      throw const FormatException('Invalid QR code format');
     }
 
     // Handle barz:// scheme
@@ -145,7 +157,7 @@ class QrScanResult {
     }
 
     // Handle https scheme (web fallback)
-    if (uri.scheme == 'https' && uri.pathSegments.contains('bar')) {
+    if (uri.scheme == 'https' && const {'dobar.app', 'www.dobar.app'}.contains(uri.host) && uri.pathSegments.contains('bar')) {
       final barIndex = uri.pathSegments.indexOf('bar');
       if (barIndex + 1 < uri.pathSegments.length) {
         final barId = int.tryParse(uri.pathSegments[barIndex + 1]);

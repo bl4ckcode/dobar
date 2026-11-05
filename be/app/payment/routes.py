@@ -5,6 +5,11 @@ import json
 import uuid
 import sqlite3
 import sqlalchemy.exc
+from asyncpg.exceptions import UniqueViolationError
+import hashlib
+import httpx
+
+from .order_payments import charge_order, customer_for_payment, raise_payment_error, owned_order, publish_payment, settle_order_rewards, update_attempt_status
 
 from app.errors import APIError, map_gateway_error
 from app.auth.dependencies import get_current_user
@@ -189,63 +194,13 @@ async def create_charge_v2(
     current_user: User = Depends(get_current_user),
     x_idempotency_key: Optional[str] = Header(None, alias="X-Idempotency-Key"),
 ):
-    dpe = get_dpe_client()
-    idempotency_key = x_idempotency_key or str(uuid.uuid4())
-    
-    payment_method = {
-        "type": request.payment_method.type.value,
-        "installments": request.payment_method.installments,
-    }
-    if request.payment_method.token:
-        payment_method["token"] = request.payment_method.token
-    if request.payment_method.provider:
-        payment_method["provider"] = request.payment_method.provider.value
-    if request.payment_method.pix_key:
-        payment_method["pix_key"] = request.payment_method.pix_key
-    
-    customer_info = None
-    if request.customer_info:
-        customer_info = {
-            "name": request.customer_info.name,
-            "email": request.customer_info.email,
-            "document": request.customer_info.document,
-        }
-        if request.customer_info.phone:
-            customer_info["phone"] = request.customer_info.phone
-    
-    result = await dpe.charge(
-        order_id=request.order_id,
-        user_id=current_user.id,
-        bar_id=request.bar_id,
-        amount=request.amount,
-        currency=request.currency,
-        country=request.country,
-        payment_method=payment_method,
-        idempotency_key=idempotency_key,
-        metadata=request.metadata,
-        description=request.description,
-        customer_info=customer_info,
+    result = await charge_order(
+        database, get_dpe_client(), current_user.id, request.order_id,
+        request.payment_method.model_dump(mode="json", exclude_none=True),
+        key=x_idempotency_key, expected_bar_id=request.bar_id,
+        expected_amount=request.amount, currency=request.currency, country=request.country,
     )
-    
-    if result.get("status") == "error":
-        error_code = result.get("error_code", "PAYMENT_DECLINED")
-        http_status = result.get("http_status", 402)
-        
-        if http_status == 402:
-            raise APIError.payment_declined(
-                message=result.get("message", "Payment declined"),
-                gateway_code=error_code,
-            )
-        elif http_status == 503:
-            raise APIError.server_error(
-                message=result.get("message", "Payment service unavailable")
-            )
-        else:
-            raise APIError.payment_declined(
-                message=result.get("message", "Payment failed"),
-                gateway_code=error_code,
-            )
-    
+
     return DPEChargeResponse(
         payment_id=result["payment_id"],
         status=result["status"],
@@ -300,13 +255,36 @@ async def get_payment_status(
     payment_id: str,
     current_user: User = Depends(get_current_user),
 ):
+    order = await database.fetch_one(OrderModel.__table__.select().where(
+        OrderModel.payment_id == payment_id, OrderModel.user_id == current_user.id
+    ))
+    if not order:
+        raise APIError.not_found("Payment")
     dpe = get_dpe_client()
     
     result = await dpe.get_payment(payment_id)
     
     if result.get("status") == "error":
         raise APIError.not_found(f"Payment {payment_id} not found")
+
+    if order["payment_status"] == "paid":
+        result["payment_status"] = "succeeded"
     
+    if result["payment_status"] == "succeeded" and order["payment_status"] != "paid":
+        await database.execute(OrderModel.__table__.update().where(
+            OrderModel.id == order["id"], OrderModel.payment_id == payment_id,
+            OrderModel.payment_status != "paid"
+        ).values(payment_status="paid", updated_at=datetime.utcnow()))
+        await publish_payment(order, "paid")
+
+    if result["payment_status"] in ("failed", "declined") and order["payment_status"] != "paid":
+        await database.execute(OrderModel.__table__.update().where(
+            OrderModel.id == order["id"], OrderModel.payment_status != "paid"
+        ).values(payment_status="failed", updated_at=datetime.utcnow()))
+    await update_attempt_status(database, order["id"], payment_id, result["payment_status"])
+    if result["payment_status"] == "succeeded":
+        await settle_order_rewards(database, order)
+
     return DPEPaymentStatusResponse(
         payment_id=result["payment_id"],
         status=result["payment_status"],
@@ -636,23 +614,43 @@ async def dpe_webhook(
     
     # Start transaction
     transaction = await database.transaction()
+    transaction_committed = False
     
     try:
         # Fetch order
-        get_query = OrderModel.__table__.select().where(OrderModel.id == order_id)
+        get_query = OrderModel.__table__.select().where(OrderModel.id == order_id).with_for_update()
         db_order = await database.fetch_one(get_query)
         
         if not db_order:
             await transaction.rollback()
             return {"status": "ignored", "reason": "order_not_found"}
         
-        # Only process if payment_status isn't already paid/failed
-        if db_order["payment_status"] in ["paid", "failed"]:
+        if not payload.payment_id or (db_order["payment_id"] and db_order["payment_id"] != payload.payment_id):
             await transaction.rollback()
+            raise HTTPException(status_code=409, detail="Payment does not match order")
+        if payload.amount_cents is not None:
+            from .dpe_client import float_to_cents
+            if payload.amount_cents != float_to_cents(db_order["total_price"]):
+                await transaction.rollback()
+                raise HTTPException(status_code=409, detail="Payment amount does not match order")
+        if payload.currency and payload.currency != "BRL":
+            await transaction.rollback()
+            raise HTTPException(status_code=409, detail="Payment currency does not match order")
+        if db_order["payment_status"] == "paid":
+            await transaction.rollback()
+            transaction_committed = True
+            await settle_order_rewards(database, db_order)
             return {"status": "ignored", "reason": "already_processed"}
             
-        new_payment_status = "paid" if payload.status == "succeeded" else "failed"
-        new_order_status = "confirmed" if new_payment_status == "paid" else db_order["status"]
+        if payload.status not in ("succeeded", "failed", "declined", "pending", "processing", "authorized"):
+            await transaction.rollback()
+            return {"status": "ignored", "reason": "unsupported_payment_status"}
+        new_payment_status = "paid" if payload.status == "succeeded" else (
+            "failed" if payload.status in ("failed", "declined") else "pending")
+        if db_order["payment_status"] == "failed" and new_payment_status == "pending":
+            await transaction.rollback()
+            return {"status": "ignored", "reason": "stale_payment_status"}
+        new_order_status = "confirmed" if new_payment_status == "paid" and db_order["status"] == "pending" else db_order["status"]
         
         # Update order
         update_query = (
@@ -679,48 +677,12 @@ async def dpe_webhook(
                 OrderStatusHistoryModel.__table__.insert().values(**history_data)
             )
             
+        await update_attempt_status(database, order_id, payload.payment_id, payload.status)
         await transaction.commit()
+        transaction_committed = True
 
-        # Pro coupon lifecycle outside transaction (non-critical)
         if new_payment_status == "paid":
-            try:
-                from app.bars_and_restaurants.services.pro_coupon_service import (
-                    redeem_reserved_coupons, release_reserved_coupons
-                )
-                from app.bars_and_restaurants.models.wallet_models import ProCouponUsage, ProCouponStatus
-                reserved = await database.fetch_all(
-                    ProCouponUsage.__table__.select().where(
-                        (ProCouponUsage.order_id == order_id) &
-                        (ProCouponUsage.status == ProCouponStatus.RESERVED)
-                    )
-                )
-                if reserved:
-                    from decimal import Decimal
-                    from app.bars_and_restaurants.services.wallet_service import WalletService
-                    from app.bars_and_restaurants.schemas.wallet import EarnCashbackRequest
-                    from app.bars_and_restaurants.models.wallet_models import FundingSource
-                    from app.database import SessionLocal
-                    total_cb = sum(Decimal(str(r["cashback_amount"] or 0)) for r in reserved)
-                    if total_cb > 0:
-                        db = SessionLocal()
-                        try:
-                            cashback_req = EarnCashbackRequest(
-                                user_id=db_order["user_id"],
-                                order_id=order_id,
-                                bar_id=db_order["bar_id"],
-                                order_total=total_cb,
-                                cashback_percentage=Decimal("1"),
-                                funded_by=FundingSource.BAR,
-                                expires_days=90
-                            )
-                            ledger, _ = WalletService.earn_cashback(db, cashback_req, auto_available=False)
-                            await redeem_reserved_coupons(order_id, ledger.id)
-                        finally:
-                            db.close()
-                    else:
-                        await redeem_reserved_coupons(order_id)
-            except Exception as cb_err:
-                print(f"Webhook: failed pro coupon redemption for order {order_id}: {cb_err}")
+            await settle_order_rewards(database, db_order)
         elif new_payment_status == "failed":
             try:
                 from app.bars_and_restaurants.services.pro_coupon_service import release_reserved_coupons
@@ -737,11 +699,15 @@ async def dpe_webhook(
                 new_status=new_order_status
             )
 
+        await publish_payment(db_order, new_payment_status)
         return {"status": "processed", "payment_status": new_payment_status}
 
-    except Exception as e:
-        await transaction.rollback()
-        raise HTTPException(status_code=500, detail=str(e))
+    except HTTPException:
+        raise
+    except Exception:
+        if not transaction_committed:
+            await transaction.rollback()
+        raise HTTPException(status_code=500, detail="Payment confirmation could not be processed") from None
 
 
 
@@ -750,44 +716,40 @@ async def add_card(
     card_in: CardCreate,
     current_user: User = Depends(get_current_user)
 ):
-    """Add a new tokenized credit card for the current user."""
-    # Check if this card token is already added by the user
-    query = PaymentCard.__table__.select().where(
-        PaymentCard.user_id == current_user.id,
-        PaymentCard.card_token == card_in.card_token
-    )
-    existing = await database.fetch_one(query)
-    if existing:
-        raise APIError.conflict("Card already added")
-
-    # If is_default, unset other default cards
-    if card_in.is_default:
-        await database.execute(
-            PaymentCard.__table__.update().where(
-                PaymentCard.user_id == current_user.id
-            ).values(is_default=0)
-        )
-
-    insert_query = PaymentCard.__table__.insert().values(
-        user_id=current_user.id,
-        card_token=card_in.card_token,
-        last_four=card_in.last_four[-4:],
-        brand=card_in.brand,
-        exp_month=card_in.exp_month,
-        exp_year=card_in.exp_year,
-        is_default=1 if card_in.is_default else 0,
-        created_at=datetime.utcnow(),
-        updated_at=datetime.utcnow()
-    )
+    customer = await customer_for_payment(database, current_user.id)
+    key = hashlib.sha256(f"card:{current_user.id}:{card_in.card_token}".encode()).hexdigest()
     try:
-        card_id = await database.execute(insert_query)
-    except (sqlite3.IntegrityError, sqlalchemy.exc.IntegrityError):
-        raise APIError.conflict("Card token already added")
-    
-    # Fetch and return the created card
-    get_query = PaymentCard.__table__.select().where(PaymentCard.id == card_id)
-    new_card = await database.fetch_one(get_query)
-    return {**new_card, "is_default": bool(new_card["is_default"])}
+        result = await get_dpe_client().save_card(current_user.id, card_in.card_token, customer, key)
+    except httpx.HTTPError:
+        raise_payment_error({"status": "error", "http_status": 503, "message": "Payment service unavailable"})
+    raise_payment_error(result)
+    reference = result.get("card_id", "")
+    if not reference.startswith("card_"):
+        raise APIError.server_error("Payment provider did not return a saved card")
+    try:
+        async with database.transaction():
+            await database.fetch_one(User.__table__.select().where(User.id == current_user.id).with_for_update())
+            existing = await database.fetch_one(PaymentCard.__table__.select().where(
+                PaymentCard.card_token == reference
+            ))
+            if existing:
+                if existing["user_id"] != current_user.id:
+                    raise APIError.conflict("Card already added")
+                return {**existing, "is_default": bool(existing["is_default"]), "is_usable": True}
+            if card_in.is_default:
+                await database.execute(PaymentCard.__table__.update().where(
+                    PaymentCard.user_id == current_user.id
+                ).values(is_default=0))
+            card_id = await database.execute(PaymentCard.__table__.insert().values(
+                user_id=current_user.id, card_token=reference,
+                last_four=result["last_four"], brand=result["brand"],
+                exp_month=result["exp_month"], exp_year=result["exp_year"],
+                is_default=int(card_in.is_default), created_at=datetime.utcnow(), updated_at=datetime.utcnow()
+            ))
+    except (sqlite3.IntegrityError, sqlalchemy.exc.IntegrityError, UniqueViolationError):
+        raise APIError.conflict("Card already added") from None
+    new_card = await database.fetch_one(PaymentCard.__table__.select().where(PaymentCard.id == card_id))
+    return {**new_card, "is_default": bool(new_card["is_default"]), "is_usable": True}
 
 
 @cards_router.get("", response_model=list[CardResponse])
@@ -800,7 +762,7 @@ async def list_cards(
     ).order_by(PaymentCard.created_at.desc())
     
     cards = await database.fetch_all(query)
-    return [{**card, "is_default": bool(card["is_default"])} for card in cards]
+    return [{**card, "is_default": bool(card["is_default"]), "is_usable": bool((card["card_token"] or "").startswith("card_"))} for card in cards]
 
 
 @cards_router.delete("/{card_id}", status_code=204)

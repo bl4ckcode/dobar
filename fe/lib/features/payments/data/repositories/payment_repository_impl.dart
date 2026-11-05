@@ -151,7 +151,7 @@ class PaymentRepositoryImpl implements PaymentRepository {
 
   @override
   Future<Either<Failure, Transaction>> checkPaymentStatus(
-    int transactionId,
+    String transactionId,
   ) async {
     try {
       final result = await _datasource.checkPaymentStatus(transactionId);

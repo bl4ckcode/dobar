@@ -1,3 +1,4 @@
+import 'package:barz/features/checkin/presentation/checkin_gate.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -43,7 +44,14 @@ class _WireframeShellState extends State<WireframeShell> {
     ];
   }
 
-  void _onItemTapped(int index) {
+  Future<void> _onItemTapped(int index) async {
+    if (index == 2) {
+      final cart = getItInjector<CartBloc>().state;
+      final venue = cart is CartLoaded ? cart.barId ?? cart.cart.items.firstOrNull?.barId
+          : cart is CheckoutSuccess ? cart.result.barId : null;
+      if (venue != null && !await CheckinGate.ensure(context, venue)) return;
+      if (!mounted) return;
+    }
     setState(() {
       _selectedIndex = index;
     });

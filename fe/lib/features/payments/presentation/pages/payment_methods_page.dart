@@ -1,3 +1,6 @@
+import 'package:barz/features/payments/domain/services/card_tokenizer.dart';
+import 'package:barz/features/user/domain/usecases/user_usecase.dart';
+import 'package:barz/features/user/domain/models/user_document.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/features/payments/domain/models/payment_method.dart';
@@ -97,7 +100,13 @@ class PaymentMethodsPage extends StatelessWidget {
     );
   }
 
-  void _showAddCardSheet(BuildContext context) {
+  Future<void> _showAddCardSheet(BuildContext context) async {
+    final user = (await getItInjector<UserUsecase>().getCurrentUser()).fold((_) => null, (value) => value);
+    if (!context.mounted) return;
+    if (user == null || !user.hasCompletedRegistration || !user.documents.any((document) => document.type == DocumentType.cpf && document.number.trim().isNotEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.payment_card_profile_required)));
+      return;
+    }
     final bloc = context.read<PaymentBloc>();
     showModalBottomSheet(
       context: context,
@@ -346,6 +355,9 @@ class _AddCardSheet extends StatefulWidget {
 class _AddCardSheetState extends State<_AddCardSheet> {
   final _formKey = GlobalKey<FormState>();
   final _numberController = TextEditingController();
+  final _holderController = TextEditingController();
+  bool _tokenizing = false;
+  String? _tokenError;
   final _expiryController = TextEditingController();
   final _cvvController = TextEditingController();
   bool _isDefault = false;
@@ -376,32 +388,37 @@ class _AddCardSheetState extends State<_AddCardSheet> {
     return sum % 10 == 0;
   }
 
-  void _submit() {
+  Future<void> _submit() async {
+    if (_tokenizing || !_formKey.currentState!.validate()) return;
     final l10n = AppLocalizations.of(context)!;
-    if (!_formKey.currentState!.validate()) return;
     final expParts = _expiryController.text.split('/');
-    final expMonth = int.tryParse(expParts.first.trim()) ?? 1;
-    final expYear = int.tryParse(expParts.last.trim()) ?? DateTime.now().year;
-    final lastFour = _numberController.text.replaceAll(' ', '').substring(12);
-    final brand = _detectBrand(_numberController.text, l10n);
-
-    context.read<PaymentBloc>().add(
-      PaymentEvent.addSavedCard(
-        cardToken:
-            'tok_${DateTime.now().millisecondsSinceEpoch}', // Real impl: tokenize via gateway SDK
-        lastFour: lastFour,
-        brand: brand,
-        expMonth: expMonth,
-        expYear: expYear,
-        isDefault: _isDefault,
-      ),
-    );
-    Navigator.pop(context);
+    final expMonth = int.tryParse(expParts.first.trim()) ?? 0;
+    final enteredYear = int.tryParse(expParts.last.trim()) ?? 0;
+    final expYear = enteredYear < 100 ? enteredYear + 2000 : enteredYear;
+    final clean = _numberController.text.replaceAll(RegExp(r'\D'), '');
+    final lastFour = clean.substring(clean.length - 4);
+    final brand = _detectBrand(clean, l10n);
+    setState(() { _tokenizing = true; _tokenError = null; });
+    try {
+      final token = await getItInjector<CardTokenizer>().tokenize(
+        number: clean, holderName: _holderController.text,
+        expMonth: expMonth, expYear: expYear, cvv: _cvvController.text,
+      );
+      if (!mounted) return;
+      context.read<PaymentBloc>().add(PaymentEvent.addSavedCard(
+        cardToken: token, lastFour: lastFour, brand: brand, expMonth: expMonth,
+        expYear: expYear, isDefault: _isDefault,
+      ));
+      Navigator.pop(context);
+    } on CardTokenizationException catch (error) {
+      if (mounted) setState(() => _tokenError = error.unavailable ? l10n.payment_card_unavailable : l10n.payment_card_token_failed);
+    } finally { if (mounted) setState(() => _tokenizing = false); }
   }
 
   @override
   void dispose() {
     _numberController.dispose();
+    _holderController.dispose();
     _expiryController.dispose();
     _cvvController.dispose();
     super.dispose();
@@ -454,6 +471,13 @@ class _AddCardSheetState extends State<_AddCardSheet> {
               ],
             ),
             const SizedBox(height: 24),
+            _buildField(
+              controller: _holderController,
+              label: l10n.payment_card_holder_label,
+              hint: l10n.payment_card_holder_hint,
+              validator: (value) => (value?.trim().length ?? 0) < 3 ? l10n.field_required : null,
+            ),
+            const SizedBox(height: 16),
             _buildField(
               controller: _numberController,
               label: l10n.payment_card_number_label,
@@ -527,8 +551,10 @@ class _AddCardSheetState extends State<_AddCardSheet> {
               ],
             ),
             const SizedBox(height: 24),
+            if (_tokenError != null) Text(_tokenError!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            if (_tokenizing) const LinearProgressIndicator(),
             GestureDetector(
-              onTap: _submit,
+              onTap: _tokenizing ? null : _submit,
               child: Container(
                 width: double.infinity,
                 padding: const EdgeInsets.symmetric(vertical: 16),

@@ -27,7 +27,7 @@ sealed class PaymentEvent with _$PaymentEvent {
     String? payerDocument,
     int? expiresIn,
   }) = GenerateStandalonePix;
-  const factory PaymentEvent.checkPaymentStatus(int transactionId) =
+  const factory PaymentEvent.checkPaymentStatus(String transactionId) =
       CheckPaymentStatus;
   const factory PaymentEvent.loadTransactionHistory({int? limit, int? offset}) =
       LoadTransactionHistory;

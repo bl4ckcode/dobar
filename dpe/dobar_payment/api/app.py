@@ -1,36 +1,37 @@
-from typing import Callable, Any
-from datetime import datetime, timezone
 import logging
 import os
+from typing import Callable
 
-logger = logging.getLogger("dobar.payment.api")
-
+from .dependencies import gateway_registry
+from .middleware import (
+    DPE_VERSION,
+    LogMaskingMiddleware,
+    RequestContext,
+    create_response_headers,
+    get_api_version,
+    get_request_id,
+    verify_service_auth,
+)
+from .routes import HealthRoutes, PaymentRoutes, PixRoutes, SubscriptionRoutes
 from .schemas import (
+    CaptureRequestAPI,
+    CaptureResponseAPI,
     ChargeRequestAPI,
     ChargeResponseAPI,
-    RefundRequestAPI,
-    RefundResponseAPI,
+    ErrorResponse,
+    HealthResponse,
     PaymentStatusResponse,
     PixGenerateRequest,
     PixGenerateResponse,
-    ErrorResponse,
-    HealthResponse,
+    RefundRequestAPI,
+    RefundResponseAPI,
+    SaveCardRequestAPI,
+    SaveCardResponseAPI,
     TrialSetupRequestAPI,
     TrialSetupResponseAPI,
-    CaptureRequestAPI,
-    CaptureResponseAPI,
 )
-from .middleware import (
-    RequestContext,
-    get_request_id,
-    get_api_version,
-    verify_service_auth,
-    create_response_headers,
-    DPE_VERSION,
-    LogMaskingMiddleware,
-)
-from .routes import PaymentRoutes, PixRoutes, HealthRoutes, SubscriptionRoutes
-from .dependencies import gateway_registry
+
+logger = logging.getLogger("dobar.payment.api")
 
 
 def _load_gateways_from_env() -> dict:
@@ -88,16 +89,15 @@ def create_app(
     gateways: dict | None = None,
 ):
     try:
-        from fastapi import FastAPI, Request, Response, HTTPException, Depends
-        from fastapi.responses import JSONResponse
-        from fastapi.middleware.cors import CORSMiddleware
+        from fastapi import FastAPI, HTTPException, Request, Response
         from fastapi.exceptions import RequestValidationError
+        from fastapi.middleware.cors import CORSMiddleware
+        from fastapi.responses import JSONResponse
     except ImportError:
         raise ImportError(
-            "FastAPI is required for the API layer. "
-            "Install it with: pip install fastapi uvicorn"
+            "FastAPI is required for the API layer. " "Install it with: pip install fastapi uvicorn"
         )
-    
+
     app = FastAPI(
         title="Dobar Payment Engine",
         description="Enterprise-grade payment processing API",
@@ -106,7 +106,7 @@ def create_app(
         redoc_url=None,
         openapi_url=None,
     )
-    
+
     app.add_middleware(
         CORSMiddleware,
         allow_origins=["*"],
@@ -115,15 +115,15 @@ def create_app(
         allow_headers=["*"],
     )
     app.add_middleware(LogMaskingMiddleware)
-    
+
     if gateways is None:
         gateways = _load_gateways_from_env()
-    
+
     if gateways:
         for name, gateway in gateways.items():
             gateway_registry.register(name, gateway)
             logger.info(f"Registered gateway: {name}")
-    
+
     @app.middleware("http")
     async def request_middleware(request: Request, call_next: Callable) -> Response:
         headers = {k.lower(): v for k, v in request.headers.items()}
@@ -166,7 +166,14 @@ def create_app(
             return response
         finally:
             RequestContext.clear()
-    
+
+    @app.post("/cards", response_model=SaveCardResponseAPI)
+    async def save_card(request: SaveCardRequestAPI):
+        response, status_code = await PaymentRoutes.save_card(request)
+        if status_code != 200:
+            raise HTTPException(status_code=status_code, detail=response.model_dump())
+        return response
+
     @app.post(
         "/payments/charge",
         response_model=ChargeResponseAPI,
@@ -177,7 +184,7 @@ def create_app(
         if status_code != 200:
             raise HTTPException(status_code=status_code, detail=response.model_dump())
         return response
-    
+
     @app.post(
         "/payments/refund",
         response_model=RefundResponseAPI,
@@ -188,7 +195,7 @@ def create_app(
         if status_code != 200:
             raise HTTPException(status_code=status_code, detail=response.model_dump())
         return response
-    
+
     @app.get(
         "/payments/{payment_id}",
         response_model=PaymentStatusResponse,
@@ -199,7 +206,7 @@ def create_app(
         if status_code != 200:
             raise HTTPException(status_code=status_code, detail=response.model_dump())
         return response
-    
+
     @app.post(
         "/pix/generate",
         response_model=PixGenerateResponse,
@@ -210,7 +217,7 @@ def create_app(
         if status_code != 200:
             raise HTTPException(status_code=status_code, detail=response.model_dump())
         return response
-    
+
     @app.post(
         "/webhooks/{gateway}",
         responses={401: {"model": ErrorResponse}, 500: {"model": ErrorResponse}},
@@ -227,7 +234,7 @@ def create_app(
             else:
                 raise HTTPException(status_code=status_code, detail=response)
         return response
-    
+
     @app.post(
         "/subscriptions/trial/setup",
         response_model=TrialSetupResponseAPI,
@@ -254,7 +261,7 @@ def create_app(
     async def health():
         response, _ = await HealthRoutes.health_check()
         return response
-    
+
     @app.exception_handler(HTTPException)
     async def http_exception_handler(request: Request, exc: HTTPException):
         ctx = RequestContext.get_current()
@@ -275,25 +282,20 @@ def create_app(
             },
             headers=headers,
         )
-    
+
     @app.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError):
         ctx = RequestContext.get_current()
         headers = {"X-Request-ID": ctx.request_id} if ctx else {}
-        body = await request.body()
-        
-        logger.error(
-            f"Validation error for {request.method} {request.url.path}\n"
-            f"Errors: {exc.errors()}\n"
-            f"Body: {body.decode('utf-8') if body else ''}"
-        )
-        
+        errors = [{"loc": list(error["loc"]), "type": error["type"]} for error in exc.errors()]
+        logger.error("Validation error for %s %s: %s", request.method, request.url.path, errors)
+
         return JSONResponse(
             status_code=422,
             content={
                 "error_code": "VALIDATION_ERROR",
                 "message": "Request validation failed",
-                "details": exc.errors(),
+                "details": errors,
             },
             headers=headers,
         )
@@ -303,7 +305,7 @@ def create_app(
         ctx = RequestContext.get_current()
         request_id = ctx.request_id if ctx else "unknown"
         
-        logger.exception(f"[{request_id}] Unhandled exception: {exc}")
+        logger.error("[%s] Unhandled payment exception (%s)", request_id, type(exc).__name__)
         
         return JSONResponse(
             status_code=500,
@@ -313,7 +315,7 @@ def create_app(
             },
             headers={"X-Request-ID": request_id},
         )
-    
+
     return app
 
 

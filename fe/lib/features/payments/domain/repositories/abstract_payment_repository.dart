@@ -34,7 +34,7 @@ abstract class PaymentRepository {
     String? payerDocument,
     int expiresIn,
   });
-  Future<Either<Failure, Transaction>> checkPaymentStatus(int transactionId);
+  Future<Either<Failure, Transaction>> checkPaymentStatus(String transactionId);
   Future<Either<Failure, List<Transaction>>> getTransactionHistory({
     int? limit,
     int? offset,

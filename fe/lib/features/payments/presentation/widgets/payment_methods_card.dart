@@ -18,6 +18,7 @@ class PaymentMethodsCard extends StatefulWidget {
   final VoidCallback onGooglePay;
   final bool isDark;
   final bool isLoadingCards;
+  final Future<bool> Function()? beforeAddCard;
 
   const PaymentMethodsCard({
     super.key,
@@ -30,6 +31,7 @@ class PaymentMethodsCard extends StatefulWidget {
     required this.onGooglePay,
     required this.isDark,
     this.isLoadingCards = false,
+    this.beforeAddCard,
   });
 
   @override
@@ -52,6 +54,11 @@ class _PaymentMethodsCardState extends State<PaymentMethodsCard> {
     if (oldWidget.savedCards.isEmpty && widget.savedCards.isNotEmpty) {
       _isExpanded = true;
     }
+  }
+
+  Future<void> _startAddCard() async {
+    if (widget.beforeAddCard != null && !await widget.beforeAddCard!()) return;
+    if (mounted) setState(() => _showAddCard = true);
   }
 
   void _handleAddCardComplete(Map<String, String> cardData) {
@@ -193,8 +200,7 @@ class _PaymentMethodsCardState extends State<PaymentMethodsCard> {
                                   cards: widget.savedCards,
                                   selectedCardId: widget.selectedCardId,
                                   onSelectCard: widget.onSelectCard,
-                                  onAddCard: () =>
-                                      setState(() => _showAddCard = true),
+                                  onAddCard: _startAddCard,
                                   isDark: widget.isDark,
                                 )
                               else
@@ -203,8 +209,7 @@ class _PaymentMethodsCardState extends State<PaymentMethodsCard> {
                                     horizontal: 16.0,
                                   ),
                                   child: InkWell(
-                                    onTap: () =>
-                                        setState(() => _showAddCard = true),
+                                    onTap: _startAddCard,
                                     borderRadius: BorderRadius.circular(12),
                                     child: Container(
                                       width: double.infinity,

@@ -29,6 +29,7 @@ if config.config_file_name is not None:
 from app.database import Base
 # Import all models here so Alembic can see them
 from app.bars_and_restaurants.models.onboarding import OnboardingDraft, OnboardingAsset, OnboardingProjection
+from app.bars_and_restaurants.models.checkin import Checkin
 from app.auth.auth_models import User, Token, RefreshToken
 from app.auth.rbac_models import UserProfile, BarStaff, StaffInvitation
 from app.auth.mfa_models import MFASecret

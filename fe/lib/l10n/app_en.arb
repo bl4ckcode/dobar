@@ -1246,5 +1246,47 @@
   "entry_choose_invitation": "Choose an invitation",
   "entry_no_invitations": "No pending invitations.",
   "entry_refresh_retry": "Retry loading access",
-  "login_provider_error": "Could not sign in. Try again."
+  "login_provider_error": "Could not sign in. Try again.",
+  "payment_card_unavailable": "Card payments are temporarily unavailable. Try Pix or try again later.",
+  "payment_card_token_failed": "Could not validate this card. Check its details and try again.",
+  "payment_card_holder_label": "Cardholder name",
+  "payment_card_holder_hint": "Name on card",
+  "payment_card_ready": "Card ready to save",
+  "payment_select_method": "Select Pix or add a valid card to continue.",
+  "payment_card_profile_required": "Complete your profile and add your CPF before saving a card.",
+  "checkout_pending_order": "You have an order awaiting payment.",
+  "checkout_resume_payment": "Resume payment",
+  "checkin_required_order": "Check in at this venue before placing an order.",
+  "checkin_retry_message": "Could not validate your check-in. Try again.",
+  "checkin_invalid_qr": "Enter a valid venue QR link.",
+  "checkin_qr_input": "Paste the venue or table QR link",
+  "checkin_too_far": "You must be less than 10 metres from the venue to check in.",
+  "checkin_location_required": "Allow location access and try again near the venue.",
+  "checkin_invalid_location": "Select a valid table or delivery location.",
+  "payment_card_step": "Step {step} of {total}",
+  "payment_card_summary": "{brand} ending in {last4} · Expires {expiry}",
+  "@payment_card_step": {
+    "placeholders": {
+      "step": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "@payment_card_summary": {
+    "placeholders": {
+      "brand": {
+        "type": "String"
+      },
+      "last4": {
+        "type": "String"
+      },
+      "expiry": {
+        "type": "String"
+      }
+    }
+  },
+  "checkin_qr_manual_hint": "Open the venue QR code with your device and paste its link here. Your location will be checked before confirming."
 }

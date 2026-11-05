@@ -39,7 +39,13 @@ class UserNetworkDatasource implements UserDatasource {
       final response = await dio.get(
         '${ApiEndpoints.baseUrl}${ApiEndpoints.userProfile}',
       );
-      return UserModel.fromJson(response.data);
+      final documents = await dio.get(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.userDocuments}',
+      );
+      return UserModel.fromJson({
+        ...Map<String, dynamic>.from(response.data as Map),
+        'documents': documents.data,
+      });
     } on DioException catch (e) {
       throw ServerException(
         e.response?.data?['detail'] ?? 'Failed to get user',
@@ -66,11 +72,11 @@ class UserNetworkDatasource implements UserDatasource {
   @override
   Future<UserModel> updateProfile(Map<String, dynamic> data) async {
     try {
-      final response = await dio.put(
+      await dio.put(
         '${ApiEndpoints.baseUrl}${ApiEndpoints.userProfile}',
         data: data,
       );
-      return UserModel.fromJson(response.data);
+      return await getCurrentUser();
     } on DioException catch (e) {
       throw ServerException(
         e.response?.data?['detail'] ?? 'Failed to update profile',
@@ -149,11 +155,11 @@ class UserNetworkDatasource implements UserDatasource {
   @override
   Future<UserModel> addDocument(UserDocument document) async {
     try {
-      final response = await dio.post(
+      await dio.post(
         '${ApiEndpoints.baseUrl}${ApiEndpoints.userDocuments}',
         data: document.toJson(),
       );
-      return UserModel.fromJson(response.data);
+      return await getCurrentUser();
     } on DioException catch (e) {
       throw ServerException(
         e.response?.data?['detail'] ?? 'Failed to add document',
@@ -165,10 +171,10 @@ class UserNetworkDatasource implements UserDatasource {
   @override
   Future<UserModel> removeDocument(int documentId) async {
     try {
-      final response = await dio.delete(
+      await dio.delete(
         '${ApiEndpoints.baseUrl}${ApiEndpoints.userDocuments}/$documentId',
       );
-      return UserModel.fromJson(response.data);
+      return await getCurrentUser();
     } on DioException catch (e) {
       throw ServerException(
         e.response?.data?['detail'] ?? 'Failed to remove document',

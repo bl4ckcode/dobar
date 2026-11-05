@@ -68,10 +68,13 @@ class ResponsiveCenterContainer extends StatelessWidget {
         }
 
         // Apply constraints
-        effectiveWidth = effectiveWidth.clamp(
-          minWidth,
-          maxWidth ?? double.infinity,
+        final availableWidth = constraints.maxWidth;
+        final minimum = minWidth.clamp(0.0, availableWidth);
+        final maximum = (maxWidth ?? availableWidth).clamp(
+          minimum,
+          availableWidth,
         );
+        effectiveWidth = effectiveWidth.clamp(minimum, maximum);
 
         return Center(
           child: Container(

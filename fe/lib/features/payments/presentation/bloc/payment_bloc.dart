@@ -1,3 +1,4 @@
+import 'package:barz/core/network/error/failures.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:barz/features/payments/domain/models/payment_method.dart';
 import 'package:barz/features/payments/domain/usecases/payment_usecase.dart';
@@ -118,11 +119,11 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     ProcessPayment event,
     Emitter<PaymentState> emit,
   ) async {
-    emit(state.copyWith(isProcessing: true, error: null));
+    emit(state.copyWith(isProcessing: true, error: null, currentTransaction: null, pixPayment: null, paymentFailureStatus: null));
     final result = await _usecase.processPayment(event.request);
     result.fold(
       (failure) => emit(
-        state.copyWith(isProcessing: false, error: failure.errorMessage),
+        state.copyWith(isProcessing: false, error: failure.errorMessage, paymentFailureStatus: failure is ServerFailure ? failure.statusCode : null),
       ),
       (transaction) => emit(
         state.copyWith(isProcessing: false, currentTransaction: transaction),
@@ -134,11 +135,11 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     InitiatePixPayment event,
     Emitter<PaymentState> emit,
   ) async {
-    emit(state.copyWith(isProcessing: true, error: null));
+    emit(state.copyWith(isProcessing: true, error: null, currentTransaction: null, pixPayment: null, paymentFailureStatus: null));
     final result = await _usecase.initiatePixPayment(event.request);
     result.fold(
       (failure) => emit(
-        state.copyWith(isProcessing: false, error: failure.errorMessage),
+        state.copyWith(isProcessing: false, error: failure.errorMessage, paymentFailureStatus: failure is ServerFailure ? failure.statusCode : null),
       ),
       (pix) => emit(state.copyWith(isProcessing: false, pixPayment: pix)),
     );

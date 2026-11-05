@@ -197,7 +197,7 @@ class _VenueRegistrationViewState extends State<VenueRegistrationView> {
       borderRadius: BorderRadius.circular(16),
       border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
     ),
-    child: child,
+    child: Material(type: MaterialType.transparency, child: child),
   );
   Widget _button(
     String label,

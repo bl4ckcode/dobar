@@ -52,9 +52,9 @@ class Transaction {
 
   factory Transaction.fromJson(Map<String, dynamic> json) {
     return Transaction(
-      id: json['id'],
-      externalId: json['external_id'],
-      userId: json['user_id'],
+      id: int.tryParse('${json['id'] ?? ''}') ?? 0,
+      externalId: (json['payment_id'] ?? json['external_id'])?.toString(),
+      userId: json['user_id'] ?? 0,
       orderId: json['order_id'],
       gateway: PaymentGateway.values.firstWhere(
         (e) => e.name == json['gateway'],
@@ -69,20 +69,24 @@ class Transaction {
         orElse: () => TransactionType.payment,
       ),
       status: TransactionStatus.values.firstWhere(
-        (e) => e.name == json['status'],
+        (e) => e.name == switch (json['status']) {
+          'paid' || 'succeeded' => 'approved',
+          'failed' => 'declined',
+          _ => json['status'],
+        },
         orElse: () => TransactionStatus.pending,
       ),
       amount: (json['amount'] as num).toDouble(),
       currency: json['currency'] ?? 'BRL',
       fee: (json['fee'] as num?)?.toDouble(),
       pixQrCode: json['pix_qr_code'],
-      pixCopyPaste: json['pix_copy_paste'],
+      pixCopyPaste: json['pix_copia_e_cola'] ?? json['pix_copy_paste'],
       pixExpiresAt: json['pix_expires_at'] != null
           ? DateTime.parse(json['pix_expires_at'])
           : null,
       failureReason: json['failure_reason'],
       createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
+      updatedAt: DateTime.parse(json['updated_at'] ?? json['created_at']),
     );
   }
 
