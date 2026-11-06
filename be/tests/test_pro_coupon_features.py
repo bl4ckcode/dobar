@@ -158,13 +158,20 @@ class TestEndpoints:
         assert r.status_code == 200
         assert r.json()["monthly_limit"] == 0
 
-    async def test_checkout_no_cashback_without_promo(self, auth_client, test_bar_in_db):
+    async def test_checkout_no_cashback_without_promo(self, auth_client, test_bar_in_db, checkout_menu_item_in_db):
+        from unittest.mock import patch, AsyncMock
         client, headers, user = auth_client
-        await client.post("/cart/items", json={
-            "menu_item_id": 1, "bar_id": test_bar_in_db["id"],
-            "menu_item_name": "Item", "quantity": 1, "unit_price": 100.00
-        }, headers=headers)
-        r = await client.post("/cart/checkout", json={"order_type": "pickup", "payment_method": "credit_card"}, headers=headers)
+
+        with patch("app.bars_and_restaurants.routes.cart.customer_for_payment", new=AsyncMock(return_value=None)), \
+             patch("app.bars_and_restaurants.routes.cart.require_active_checkin", new=AsyncMock(return_value={"table_number": None})):
+            await client.post("/cart/items", json={
+                "menu_item_id": checkout_menu_item_in_db["id"], "bar_id": test_bar_in_db["id"],
+                "menu_item_name": "Item", "quantity": 1, "unit_price": 100.00
+            }, headers=headers)
+            r = await client.post("/cart/checkout", json={
+                "order_type": "pickup", "payment_method": "credit_card", "defer_payment": True
+            }, headers={**headers, "X-Idempotency-Key": "test-no-cashback-001"})
+
         assert r.status_code == 201
         assert r.json().get("cashback_earned", 0.0) == 0.0
 

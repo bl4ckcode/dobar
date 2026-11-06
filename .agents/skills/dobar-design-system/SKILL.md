@@ -1,3 +1,10 @@
+---
+name: dobar-design-system
+description: Enforce consistent use of Dobar/Barz design system tokens, components, and themes across every Flutter page and widget.
+metadata:
+  owner: frontend
+---
+
 # dobar-design-system
 
 ## Purpose

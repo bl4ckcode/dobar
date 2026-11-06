@@ -48,49 +48,55 @@ async def pro_auth_client(client: AsyncClient, pro_user_in_db):
 
 @pytest.mark.asyncio
 class TestProFeatures:
-    async def test_pro_user_checkout_priority(self, pro_auth_client, test_bar_in_db):
+    async def test_pro_user_checkout_priority(self, pro_auth_client, test_bar_in_db, checkout_menu_item_in_db):
+        from unittest.mock import patch, AsyncMock
         client, headers, user = pro_auth_client
-        
-        # Add item to cart
-        await client.post("/cart/items", json={
-            "menu_item_id": 1,
-            "bar_id": test_bar_in_db["id"],
-            "menu_item_name": "Pro Item",
-            "quantity": 1,
-            "unit_price": 100.00
-        }, headers=headers)
-        
-        # Checkout
-        response = await client.post("/cart/checkout", json={
-            "order_type": "pickup",
-            "payment_method": "credit_card"
-        }, headers=headers)
-        
+
+        with patch("app.bars_and_restaurants.routes.cart.customer_for_payment", new=AsyncMock(return_value=None)), \
+             patch("app.bars_and_restaurants.routes.cart.require_active_checkin", new=AsyncMock(return_value={"table_number": None})):
+            await client.post("/cart/items", json={
+                "menu_item_id": checkout_menu_item_in_db["id"],
+                "bar_id": test_bar_in_db["id"],
+                "menu_item_name": "Pro Item",
+                "quantity": 1,
+                "unit_price": 100.00
+            }, headers=headers)
+
+            response = await client.post("/cart/checkout", json={
+                "order_type": "pickup",
+                "payment_method": "credit_card",
+                "defer_payment": True
+            }, headers={**headers, "X-Idempotency-Key": "test-pro-checkout-001"})
+
         assert response.status_code == 201
         order_id = response.json()["order_id"]
-        
-        # Verify order is priority in DB
+
         order = await database.fetch_one(
             Order.__table__.select().where(Order.id == order_id)
         )
         assert order["is_priority"] is True
 
-    async def test_regular_user_checkout_not_priority(self, auth_client, test_bar_in_db):
+    async def test_regular_user_checkout_not_priority(self, auth_client, test_bar_in_db, checkout_menu_item_in_db):
+        from unittest.mock import patch, AsyncMock
         client, headers, user = auth_client
-        
-        await client.post("/cart/items", json={
-            "menu_item_id": 2,
-            "bar_id": test_bar_in_db["id"],
-            "menu_item_name": "Regular Item",
-            "quantity": 1,
-            "unit_price": 50.00
-        }, headers=headers)
-        
-        response = await client.post("/cart/checkout", json={
-            "order_type": "pickup",
-            "payment_method": "credit_card"
-        }, headers=headers)
-        
+
+        with patch("app.bars_and_restaurants.routes.cart.customer_for_payment", new=AsyncMock(return_value=None)), \
+             patch("app.bars_and_restaurants.routes.cart.require_active_checkin", new=AsyncMock(return_value={"table_number": None})):
+            await client.post("/cart/items", json={
+                "menu_item_id": checkout_menu_item_in_db["id"],
+                "bar_id": test_bar_in_db["id"],
+                "menu_item_name": "Regular Item",
+                "quantity": 1,
+                "unit_price": 50.00
+            }, headers=headers)
+
+            response = await client.post("/cart/checkout", json={
+                "order_type": "pickup",
+                "payment_method": "credit_card",
+                "defer_payment": True
+            }, headers={**headers, "X-Idempotency-Key": "test-regular-checkout-001"})
+
+        assert response.status_code == 201
         order_id = response.json()["order_id"]
         order = await database.fetch_one(
             Order.__table__.select().where(Order.id == order_id)

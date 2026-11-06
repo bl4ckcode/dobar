@@ -30,7 +30,7 @@ mock_mongo_collection = MagicMock()
 mock_mongo_collection.insert_one = AsyncMock()
 mock_mongo_collection.update_one = AsyncMock()
 mock_mongo_collection.delete_one = AsyncMock()
-mock_mongo_collection.find_one = AsyncMock()
+mock_mongo_collection.find_one = AsyncMock(return_value=None)
 mock_mongo_collection.aggregate = MagicMock(return_value=AsyncMock()) # aggregate returns cursor
 # aggregate needs a to_list too if used? Check usage.
 
@@ -473,6 +473,21 @@ async def test_menu_in_db(test_bar_in_db):
     }
     menu_id = await test_database.execute(Menu.__table__.insert().values(**menu_data))
     return {"id": menu_id, **menu_data}
+
+
+@pytest.fixture
+async def checkout_menu_item_in_db(test_bar_in_db):
+    from app.bars_and_restaurants.models.relational_models import Menu, MenuItem
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    menu_id = await test_database.execute(Menu.__table__.insert().values(
+        name="Checkout Test Menu", bar_id=test_bar_in_db["id"], is_active=True,
+        created_at=now, updated_at=now
+    ))
+    item_id = await test_database.execute(MenuItem.__table__.insert().values(
+        menu_id=menu_id, name="Checkout Test Item", price=50.00, available=True
+    ))
+    return {"id": item_id, "menu_id": menu_id, "bar_id": test_bar_in_db["id"]}
 
 
 @pytest.fixture
