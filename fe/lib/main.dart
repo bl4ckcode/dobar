@@ -16,6 +16,7 @@ import 'core/theme/theme_cubit.dart';
 import 'l10n/app_localizations.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:barz/core/locale/locale_cubit.dart';
+import 'package:barz/core/locale/locale_notifier.dart';
 import 'package:barz/features/location/presentation/bloc/location_cubit.dart';
 
 void main() async {
@@ -53,12 +54,19 @@ class DobarApp extends StatefulWidget {
 
 class DobarAppState extends State<DobarApp> with WidgetsBindingObserver {
   InvitationLinkHandler? _invitationLinks;
+  late final LocaleNotifier _localeNotifier;
+
+  void _updateDeviceLocale() {
+    getItInjector<LocaleCubit>().updateDeviceLocale(_localeNotifier.value);
+  }
   final GlobalKey<ScaffoldMessengerState> snackBarKey =
       GlobalKey<ScaffoldMessengerState>();
 
   @override
   void initState() {
     super.initState();
+    _localeNotifier = LocaleNotifier()..addListener(_updateDeviceLocale);
+    _updateDeviceLocale();
     WidgetsBinding.instance.addObserver(this);
     if (!kIsWeb) {
       _invitationLinks = InvitationLinkHandler(
@@ -76,6 +84,7 @@ class DobarAppState extends State<DobarApp> with WidgetsBindingObserver {
   @override
   void dispose() {
     _invitationLinks?.dispose();
+    _localeNotifier.dispose();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -85,7 +94,7 @@ class DobarAppState extends State<DobarApp> with WidgetsBindingObserver {
     return MultiBlocProvider(
       providers: [
         BlocProvider(create: (_) => getItInjector<ThemeCubit>()),
-        BlocProvider(create: (_) => getItInjector<LocaleCubit>()),
+        BlocProvider.value(value: getItInjector<LocaleCubit>()),
         BlocProvider(create: (_) => getItInjector<LocationCubit>()),
       ],
       child: BlocBuilder<LocaleCubit, Locale>(

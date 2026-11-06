@@ -1,3 +1,4 @@
+import 'package:barz/core/presentation/widgets/barz_loading_widget.dart';
 import 'package:go_router/go_router.dart';
 import 'package:barz/features/cart/domain/models/cart_models.dart';
 import 'package:barz/core/utils/injections.dart';
@@ -68,14 +69,25 @@ class _CheckinPageContent extends StatelessWidget {
         elevation: 0,
       ),
       body: BlocConsumer<CheckinBloc, CheckinState>(
+        listenWhen: (previous, current) =>
+            previous.error != current.error ||
+            previous.activeCheckin != current.activeCheckin,
         listener: (context, state) {
+          if (!context.mounted) return;
           if (returnOnCheckin && state.isCheckedIn && state.activeCheckin?.barId == barId) {
             context.pop(true);
             return;
           }
           if (state.error != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
+            final bloc = context.read<CheckinBloc>();
+            bloc.add(const ClearCheckinError());
+            final messenger = ScaffoldMessenger.of(context);
+            messenger.hideCurrentSnackBar();
+            messenger.showSnackBar(
               SnackBar(
+                duration: const Duration(seconds: 4),
+                showCloseIcon: true,
+                closeIconColor: Theme.of(context).colorScheme.onError,
                 content: Text(
                   switch (state.error) {
                     'CHECKIN_INVALID_QR' => l10n.checkin_invalid_qr,
@@ -84,25 +96,16 @@ class _CheckinPageContent extends StatelessWidget {
                     'CHECKIN_INVALID_LOCATION' || 'VALIDATION_ERROR' => l10n.checkin_invalid_location,
                     _ => l10n.checkin_retry_message,
                   },
-                  style: GoogleFonts.spaceGrotesk(color: Colors.white),
+                  style: GoogleFonts.spaceGrotesk(color: Theme.of(context).colorScheme.onError),
                 ),
-                backgroundColor: Colors.redAccent,
-                action: SnackBarAction(
-                  label: l10n.close,
-                  textColor: Colors.white,
-                  onPressed: () {
-                    context.read<CheckinBloc>().add(const ClearCheckinError());
-                  },
-                ),
+                backgroundColor: Theme.of(context).colorScheme.error,
               ),
             );
           }
         },
         builder: (context, state) {
           if (state.isLoading) {
-            return Center(
-              child: CircularProgressIndicator(color: colors.buttonPrimary),
-            );
+            return const BarzLoadingWidget();
           }
 
           if (state.isCheckedIn) {
@@ -344,7 +347,7 @@ class _InitialViewState extends State<_InitialView> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(AppLocalizations.of(context)!.checkin_location_required),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -650,7 +653,7 @@ class _BarCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            BarImageAvatar(barId: bar.id, imageUrl: bar.imageUrl, radius: 30),
+            BarImageAvatar(barId: bar.id, imageUrl: bar.imageUrl, imageUrlExpiration: bar.imageUrlExpiration, radius: 30),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -747,8 +750,9 @@ class _ConfirmCheckinViewState extends State<_ConfirmCheckinView> {
             children: [
               BarImage(
                 imageUrl: bar.imageUrl,
+                imageUrlExpiration: bar.imageUrlExpiration,
                 barId: bar.id,
-                width: 200,
+                width: double.infinity,
                 height: 300,
               ),
               Positioned.fill(
@@ -893,7 +897,7 @@ class _ActiveCheckinView extends StatelessWidget {
                   vertical: 8,
                 ),
                 decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.1),
+                  color: colors.buttonPrimary.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(100),
                 ),
                 child: Row(
@@ -902,9 +906,9 @@ class _ActiveCheckinView extends StatelessWidget {
                     Container(
                           width: 8,
                           height: 8,
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: Colors.green,
+                            color: colors.buttonPrimary,
                           ),
                         )
                         .animate(
@@ -916,12 +920,12 @@ class _ActiveCheckinView extends StatelessWidget {
                           end: const Offset(1.5, 1.5),
                         )
                         .boxShadow(
-                          begin: const BoxShadow(
-                            color: Colors.green,
+                          begin: BoxShadow(
+                            color: colors.buttonPrimary,
                             blurRadius: 0,
                           ),
-                          end: const BoxShadow(
-                            color: Colors.green,
+                          end: BoxShadow(
+                            color: colors.buttonPrimary,
                             blurRadius: 10,
                           ),
                         ),
@@ -931,7 +935,7 @@ class _ActiveCheckinView extends StatelessWidget {
                       style: GoogleFonts.spaceGrotesk(
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
-                        color: Colors.green,
+                        color: colors.buttonPrimary,
                       ),
                     ),
                   ],
@@ -1127,8 +1131,8 @@ class _PrimaryDestructiveButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 18),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(100),
-          color: Colors.redAccent.withValues(alpha: 0.1),
-          border: Border.all(color: Colors.redAccent.withValues(alpha: 0.2)),
+          color: Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
+          border: Border.all(color: Theme.of(context).colorScheme.error.withValues(alpha: 0.2)),
         ),
         child: Center(
           child: Text(
@@ -1136,7 +1140,7 @@ class _PrimaryDestructiveButton extends StatelessWidget {
             style: GoogleFonts.spaceGrotesk(
               fontSize: 16,
               fontWeight: FontWeight.bold,
-              color: Colors.redAccent,
+              color: Theme.of(context).colorScheme.error,
             ),
           ),
         ),

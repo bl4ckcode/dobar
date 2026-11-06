@@ -166,6 +166,7 @@ class ApiEndpoints {
   static String barDeleteData(int barId) => '/bars/$barId/data';
   static String barDeactivate(int barId) => '/bars/$barId/deactivate';
   static String barReactivate(int barId) => '/bars/$barId/reactivate';
+  static String barSetupStatus(int barId) => '/bars/$barId/setup-status';
 
   // Legal Documents
   static String legalDocument(String type, String language) =>

@@ -1,5 +1,6 @@
 import 'package:barz/core/design/components/glow_button.dart';
 import 'package:barz/core/design/design_system.dart';
+import 'package:barz/core/presentation/widgets/barz_loading_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -114,9 +115,10 @@ class _LoginValidatePhoneNumberPageState
         elevation: 0,
         iconTheme: IconThemeData(color: colors.labelPrimary),
       ),
-      body: BlocListener<LoginBloc, LoginState>(
+      body: BlocConsumer<LoginBloc, LoginState>(
         bloc: widget.loginBloc,
         listener: (context, state) {
+          if (!context.mounted) return;
           if (state is Success) {
             navigateAfterLogin(
               context,
@@ -137,7 +139,11 @@ class _LoginValidatePhoneNumberPageState
             ).showSnackBar(SnackBar(content: Text(state.error)));
           }
         },
-        child: Padding(
+        builder: (context, state) {
+          if (state is Loading) {
+            return const BarzLoadingWidget();
+          }
+          return Padding(
           padding: const EdgeInsets.all(BarzSpacing.xl),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -195,7 +201,8 @@ class _LoginValidatePhoneNumberPageState
               ),
             ],
           ),
-        ),
+        );
+        },
       ),
     );
   }

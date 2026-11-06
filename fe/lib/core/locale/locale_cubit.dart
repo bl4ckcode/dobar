@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'locale_notifier.dart';
 
 /// Manages app locale/language selection.
 ///
@@ -15,17 +16,23 @@ class LocaleCubit extends Cubit<Locale> {
 
   static Locale _loadSavedLocale(SharedPreferences prefs) {
     final saved = prefs.getString(_localeKey);
-    if (saved != null) {
-      return Locale(saved);
+    if (const {'pt', 'es', 'en'}.contains(saved)) {
+      return Locale(saved!);
     }
-    // Fall back to device locale (will be overridden by device default)
-    return const Locale('en');
+    return LocaleNotifier.resolve(WidgetsBinding.instance.platformDispatcher.locale);
+  }
+
+  void updateDeviceLocale(Locale locale) {
+    if (!const {'pt', 'es', 'en'}.contains(_prefs.getString(_localeKey))) {
+      emit(LocaleNotifier.resolve(locale));
+    }
   }
 
   /// Sets the app locale and persists the choice.
   void setLocale(Locale locale) {
-    _prefs.setString(_localeKey, locale.languageCode);
-    emit(locale);
+    final supported = LocaleNotifier.resolve(locale);
+    _prefs.setString(_localeKey, supported.languageCode);
+    emit(supported);
   }
 
   /// Convenience method to set locale by language code string.

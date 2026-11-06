@@ -8,7 +8,7 @@ from app.auth.middleware import get_current_active_user, get_optional_user, Auth
 from app.auth.auth_models import User
 from app.bars_and_restaurants.services.cart_service import CartService
 from app.bars_and_restaurants.services.places_service import find_bars_near_location, reverse_geocode
-from app.bars_and_restaurants.routes.bars import get_bars_by_ids
+from app.bars_and_restaurants.routes.bars import get_bars_by_ids, get_bars_setup_status
 from app.bars_and_restaurants.models.relational_models import Promotion as PromotionModel
 from app.bars_and_restaurants.services.image_upload import generate_presigned_url, extract_s3_key
 
@@ -192,6 +192,12 @@ async def get_home_dashboard(
             else:
                 print(f"DEBUG: get_home_dashboard: Found {len(bar_ids)} bars in Mongo, reverse geocode failed, returning all {len(bars_data)} bars")
             
+            # Only surface bars that completed basic setup (menu + bank account)
+            if bars_data:
+                ready_bar_ids = [b["id"] for b in bars_data if b.get("id")]
+                setup_map = await get_bars_setup_status(ready_bar_ids)
+                bars_data = [b for b in bars_data if setup_map.get(b["id"], {}).get("is_ready", False)]
+
             # Map to response model
             for b in bars_data[:10]: # Limit to 10
                  # Simple logic for is_open (can be improved to check operating hours)

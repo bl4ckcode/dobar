@@ -130,6 +130,12 @@ final appRouter = GoRouter(
     }
 
     final sessionBloc = getItInjector<SessionBloc>();
+    // Ensure session is initialized for any authenticated route, not just home.
+    // Without this, deep links to /bars/:id or /checkin bypass initializeForEntry()
+    // and CheckinBloc always sees a null userId → UNAUTHORIZED on confirm.
+    if (sessionBloc.state is SessionInitial) {
+      await sessionBloc.initializeForEntry();
+    }
     final businessEntry =
         currentPath.startsWith('/business') &&
         (sessionBloc.state is! SessionReady ||

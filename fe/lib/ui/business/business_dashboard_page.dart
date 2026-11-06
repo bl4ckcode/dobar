@@ -12,6 +12,7 @@ import 'package:barz/features/session/domain/models/bar_access.dart';
 import 'package:barz/features/bars/presentation/bloc/dashboard_bloc.dart';
 import 'package:barz/features/bars/domain/models/dashboard_models.dart';
 import 'package:barz/ui/business/widgets/business_toolbars.dart';
+import 'package:barz/shared/presentation/widget/bar_setup_checklist.dart';
 
 class BusinessDashboardPage extends StatelessWidget {
   const BusinessDashboardPage({super.key});
@@ -61,7 +62,9 @@ class _DashboardContent extends StatelessWidget {
       builder: (context, dashboardState) {
         return Material(
           color: dobar.background,
-          child: RefreshIndicator(
+          child: Stack(
+            children: [
+              RefreshIndicator(
             onRefresh: () async {
               context.read<DashboardBloc>().add(
                 RefreshDashboard(barId: activeBar.barId),
@@ -128,7 +131,11 @@ class _DashboardContent extends StatelessWidget {
                 ),
               ],
             ),
-          ),
+          ),   // closes RefreshIndicator
+          if (isOwnerOrAdmin)
+            BarSetupChecklist(barId: activeBar.barId),
+        ],   // closes Stack.children
+      ),     // closes Stack
         );
       },
     );

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/core/services/image_refresh_service.dart';
-import 'package:barz/core/utils/constant/colors.dart';
+import 'package:barz/core/design/tokens/dobar_colors.dart';
+import 'package:barz/core/presentation/widgets/barz_loading_widget.dart';
 
 /// A specialized image widget for bar images that handles presigned URL expiration
 ///
@@ -74,6 +75,7 @@ class _BarImageState extends State<BarImage> {
       _isLoading = true;
       _hasError = false;
       _refreshAttempted = false; // Reset on new load
+      _fallbackIndex = -1;
     });
 
     try {
@@ -114,17 +116,14 @@ class _BarImageState extends State<BarImage> {
       width: widget.width,
       height: widget.height,
       decoration: BoxDecoration(
-        color: barzYellowSoft,
+        color: context.dobarColors.surfaceElevated,
         borderRadius: widget.borderRadius,
       ),
       child: Center(
         child: SizedBox(
           width: 24,
           height: 24,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: barzYellowDark,
-          ),
+          child: BarzLoadingWidget(size: 24, color: context.dobarColors.buttonPrimary),
         ),
       ),
     );
@@ -133,25 +132,20 @@ class _BarImageState extends State<BarImage> {
       width: widget.width,
       height: widget.height,
       decoration: BoxDecoration(
-        color: barzYellowSoft,
+        color: context.dobarColors.surfaceElevated,
         borderRadius: widget.borderRadius,
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(
             Icons.store,
-            size: (widget.width ?? 50) * 0.4,
-            color: barzYellowDark,
+            size: widget.width?.isFinite == true
+                ? (widget.width! * 0.4).clamp(16.0, 64.0)
+                : 48,
+            color: context.dobarColors.labelSecondary,
           ),
-          if (widget.height != null && widget.height! > 60)
-            Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                'Bar',
-                style: TextStyle(color: barzYellowDark, fontSize: 12),
-              ),
-            ),
         ],
       ),
     );
@@ -322,10 +316,10 @@ class _BarImageAvatarState extends State<BarImageAvatar> {
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = widget.backgroundColor ?? barzYellowSoft;
+    final bgColor = widget.backgroundColor ?? context.dobarColors.surfaceElevated;
     final fallback =
         widget.fallbackIcon ??
-        Icon(Icons.store, size: widget.radius, color: barzYellowDark);
+        Icon(Icons.store, size: widget.radius, color: context.dobarColors.labelSecondary);
 
     if (_isLoading) {
       return CircleAvatar(
@@ -334,10 +328,7 @@ class _BarImageAvatarState extends State<BarImageAvatar> {
         child: SizedBox(
           width: widget.radius,
           height: widget.radius,
-          child: CircularProgressIndicator(
-            strokeWidth: 2,
-            color: barzYellowDark,
-          ),
+          child: BarzLoadingWidget(size: 24, color: context.dobarColors.buttonPrimary),
         ),
       );
     }

@@ -237,6 +237,32 @@ async def get_bars_by_ids(bars_info: list[dict]):
 from app.bars_and_restaurants.services.places_service import find_bars_near_location, reverse_geocode
 
 
+async def get_bars_setup_status(bar_ids: list[int]) -> dict[int, dict]:
+    """Return {bar_id: {has_menu, has_bank_account}} for a list of bar IDs."""
+    if not bar_ids:
+        return {}
+    from ..models.relational_models import Menu
+    from ..models.bank_account import BarBankAccount
+    menus = await database.fetch_all(
+        Menu.__table__.select().where(
+            Menu.bar_id.in_(bar_ids) & (Menu.is_active == True)
+        )
+    )
+    bank_accounts = await database.fetch_all(
+        BarBankAccount.__table__.select().where(BarBankAccount.bar_id.in_(bar_ids))
+    )
+    bars_with_menu = {row["bar_id"] for row in menus}
+    bars_with_bank = {row["bar_id"] for row in bank_accounts}
+    return {
+        bar_id: {
+            "has_menu": bar_id in bars_with_menu,
+            "has_bank_account": bar_id in bars_with_bank,
+            "is_ready": bar_id in bars_with_menu and bar_id in bars_with_bank,
+        }
+        for bar_id in bar_ids
+    }
+
+
 @bars_router.post("/", response_model=Bar)
 async def create_bar(name: str = Form(...),
     address: str = Form(...),
@@ -357,11 +383,51 @@ async def read_bar(bar_id: int):
     # Fetch the bar by ID
     query = BarModel.__table__.select().where(BarModel.id == bar_id)
     db_bar = await database.fetch_one(query)
-    
+
     if db_bar is None:
         raise APIError.partner_not_found("Bar not found")
-    
-    return db_bar
+
+    bar_dict = dict(db_bar)
+
+    # Enrich with MongoDB image URL (presigned S3 URL with expiration)
+    mongo_bar = await bars_collection.find_one({"bar_id": bar_id})
+    if mongo_bar and mongo_bar.get("image_url"):
+        bar_dict["image_url"] = generate_presigned_url(extract_s3_key(mongo_bar["image_url"]))
+        bar_dict["image_url_expiration"] = int(time.time()) + 3600
+
+    return bar_dict
+
+
+@bars_router.get("/{bar_id}/setup-status")
+async def get_bar_setup_status(bar_id: int, current_user: AuthUser = Depends(get_current_user)):
+    """Return setup completion status for a bar (requires menu + bank account to go live)."""
+    from ..models.relational_models import Menu
+    from ..models.bank_account import BarBankAccount
+
+    db_bar = await database.fetch_one(BarModel.__table__.select().where(BarModel.id == bar_id))
+    if db_bar is None:
+        raise APIError.partner_not_found("Bar not found")
+
+    menu = await database.fetch_one(
+        Menu.__table__.select().where(Menu.bar_id == bar_id, Menu.is_active == True)
+    )
+    bank_account = await database.fetch_one(
+        BarBankAccount.__table__.select().where(BarBankAccount.bar_id == bar_id)
+    )
+
+    has_menu = menu is not None
+    has_bank_account = bank_account is not None
+    return {
+        "bar_id": bar_id,
+        "has_menu": has_menu,
+        "has_bank_account": has_bank_account,
+        "is_ready": has_menu and has_bank_account,
+        "pending_steps": [
+            *([{"step": "menu", "label": "Scan or create a menu"}] if not has_menu else []),
+            *([{"step": "bank_account", "label": "Add payment / bank account details"}] if not has_bank_account else []),
+        ],
+    }
+
 
 @bars_router.get("/", response_model=list[Bar])
 async def get_bars(
@@ -392,6 +458,12 @@ async def get_bars(
 
     if category:
         bars = [b for b in bars if b.get("category") == category]
+
+    # Only surface bars that have completed basic setup (menu + bank account)
+    if bars:
+        bar_ids = [b["id"] for b in bars if b.get("id")]
+        setup_map = await get_bars_setup_status(bar_ids)
+        bars = [b for b in bars if setup_map.get(b["id"], {}).get("is_ready", False)]
 
     return bars
 
