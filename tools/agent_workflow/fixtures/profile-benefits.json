@@ -1,0 +1,48 @@
+{
+  "_comment": "Synthetic contract fixture for GET /me/benefits and /me/benefits/{id}/venues (C04-AC07). Not production data.",
+  "benefits_response": {
+    "benefits": [
+      {
+        "id": "pro_coupon:2026-11",
+        "kind": "pro_coupon",
+        "status": "active",
+        "unavailable_reason": null,
+        "quantity": {"unit": "coupon", "remaining": 4, "limit": 5, "used": 1, "reserved": 0, "pending": null},
+        "expires_at": "2026-12-01T03:00:00+00:00",
+        "conditions": ["pro_required", "monthly_limit_no_rollover", "cashback_promotions_only", "venue_funded_only"],
+        "eligibility": {"venue_filter_supported": true, "venue_count": 1}
+      },
+      {
+        "id": "cashback_wallet",
+        "kind": "cashback",
+        "status": "unavailable",
+        "unavailable_reason": "zero_balance",
+        "quantity": {"unit": "brl_cents", "remaining": 0, "limit": null, "used": null, "reserved": null, "pending": 0},
+        "expires_at": null,
+        "conditions": ["wallet_balance"],
+        "eligibility": {"venue_filter_supported": false, "venue_count": null}
+      }
+    ],
+    "active_count": 1,
+    "currency": "BRL"
+  },
+  "venues_response": {
+    "benefit_id": "pro_coupon:2026-11",
+    "conditions": ["pro_required", "monthly_limit_no_rollover", "cashback_promotions_only", "venue_funded_only"],
+    "venues": [
+      {
+        "bar_id": 12,
+        "name": "Bar Sintético",
+        "address": "Rua Exemplo, 1",
+        "category": "bar",
+        "logo_url": null,
+        "promotions": [
+          {"id": 3, "title": "10% cashback", "benefit_text": "10% de cashback", "terms": "Somente bebidas", "discount_type": "percentage", "discount_value": 10.0, "start_time": null, "end_time": null, "recurring_days": null, "ends_at": null}
+        ]
+      }
+    ],
+    "total": 1,
+    "limit": 20,
+    "offset": 0
+  }
+}

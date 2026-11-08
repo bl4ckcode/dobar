@@ -237,6 +237,18 @@ async def update_profile(
     profile = await get_or_create_profile(current_user.id)
     from .auth_models import User
     
+    # Email/phone are login contacts. Changing them requires proof of ownership
+    # (see contact_change.py); this endpoint only accepts unchanged values so
+    # existing clients that echo the full profile keep working.
+    if data.email is not None or data.phone_number is not None:
+        user = await database.fetch_one(User.__table__.select().where(User.id == current_user.id))
+        current_email = ((user["email"] if user else None) or "").lower()
+        current_phone = (user["phone_number"] if user else None) or ""
+        if (data.email is not None and str(data.email).lower() != current_email) or (
+            data.phone_number is not None and data.phone_number != current_phone
+        ):
+            raise APIError.conflict("Email and phone changes require verification via /me/contact-change")
+
     profile_updates = {}
     
     if data.display_name is not None:
@@ -251,30 +263,6 @@ async def update_profile(
             UserProfile.__table__.update()
             .where(UserProfile.user_id == current_user.id)
             .values(**profile_updates)
-        )
-    
-    if data.email is not None:
-        email_check = User.__table__.select().where(
-            (User.email == data.email) & (User.id != current_user.id)
-        )
-        if await database.fetch_one(email_check):
-            raise APIError.conflict("Email already in use")
-        await database.execute(
-            User.__table__.update()
-            .where(User.id == current_user.id)
-            .values(email=data.email, email_verified=False)
-        )
-    
-    if data.phone_number is not None:
-        phone_check = User.__table__.select().where(
-            (User.phone_number == data.phone_number) & (User.id != current_user.id)
-        )
-        if await database.fetch_one(phone_check):
-            raise APIError.conflict("Phone number already in use")
-        await database.execute(
-            User.__table__.update()
-            .where(User.id == current_user.id)
-            .values(phone_number=data.phone_number, phone_verified=False)
         )
     
     return await get_profile(current_user)
@@ -509,12 +497,18 @@ async def delete_user_data(current_user: AuthUser = Depends(get_current_user)):
     from .auth_models import User, Token, RefreshToken
     from .mfa_models import MFASecret
     from .recovery_models import RecoveryToken
+    from .contact_change_models import ContactChangeRequest
     from app.bars_and_restaurants.models.wallet_models import UserWallet, CashbackLedger, ProCouponUsage
     from app.bars_and_restaurants.models.cart_models import Cart, CartItem, OrderItem
     from app.bars_and_restaurants.models.relational_models import Order
+    from app.payment.models import PaymentCard, IdempotencyKey
     import hashlib
 
     uid = current_user.id
+
+    # No FK on these tables, so the cascade on users does not reach them.
+    await database.execute(PaymentCard.__table__.delete().where(PaymentCard.user_id == uid))
+    await database.execute(IdempotencyKey.__table__.delete().where(IdempotencyKey.user_id == uid))
 
     await database.execute(ProCouponUsage.__table__.delete().where(ProCouponUsage.user_id == uid))
 
@@ -537,6 +531,7 @@ async def delete_user_data(current_user: AuthUser = Depends(get_current_user)):
     await database.execute(UserWallet.__table__.delete().where(UserWallet.user_id == uid))
     await database.execute(MFASecret.__table__.delete().where(MFASecret.user_id == uid))
     await database.execute(RecoveryToken.__table__.delete().where(RecoveryToken.user_id == uid))
+    await database.execute(ContactChangeRequest.__table__.delete().where(ContactChangeRequest.user_id == uid))
     await database.execute(RefreshToken.__table__.delete().where(RefreshToken.user_id == uid))
     await database.execute(Token.__table__.delete().where(Token.user_id == uid))
     await database.execute(UserProfile.__table__.delete().where(UserProfile.user_id == uid))

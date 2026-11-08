@@ -781,7 +781,6 @@
   "details_location_method": "Método de Ubicación",
   "campaign_type_banner": "BANNER",
   "campaign_type_push": "PUSH",
-
   "invitation_header_back": "Volver",
   "invitation_loading": "Cargando invitación…",
   "invitation_eyebrow": "Invitación al equipo",
@@ -793,7 +792,9 @@
   "invitation_valid_until": "Válido hasta {date}",
   "@invitation_valid_until": {
     "placeholders": {
-      "date": { "type": "String" }
+      "date": {
+        "type": "String"
+      }
     }
   },
   "invitation_sign_in_title": "Inicia sesión para continuar",
@@ -813,16 +814,24 @@
   "invitation_success_body": "Ahora formas parte de {venue} como {role}.",
   "@invitation_success_body": {
     "placeholders": {
-      "venue": { "type": "String" },
-      "role": { "type": "String" }
+      "venue": {
+        "type": "String"
+      },
+      "role": {
+        "type": "String"
+      }
     }
   },
   "invitation_already_member_title": "Ya eres parte del equipo.",
   "invitation_already_member_body": "Tu acceso a {venue} como {role} está activo.",
   "@invitation_already_member_body": {
     "placeholders": {
-      "venue": { "type": "String" },
-      "role": { "type": "String" }
+      "venue": {
+        "type": "String"
+      },
+      "role": {
+        "type": "String"
+      }
     }
   },
   "invitation_enter_workspace": "Entrar al establecimiento",
@@ -889,11 +898,19 @@
   "home_badge_promotion": "Promoción",
   "home_notifications": "Notificaciones, {count} sin leer",
   "@home_notifications": {
-    "placeholders": { "count": { "type": "String" } }
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
   },
   "home_nearby_checkin_prompt": "¿Estás en {barName}? ¡Haz check-in!",
   "@home_nearby_checkin_prompt": {
-    "placeholders": { "barName": { "type": "String" } }
+    "placeholders": {
+      "barName": {
+        "type": "String"
+      }
+    }
   },
   "login_tagline": "Tu noche. Tu bar.",
   "login_phone_label": "Número de teléfono",
@@ -930,7 +947,13 @@
   "invitation_permission_view_reports": "Ver informes de ventas",
   "invitation_permission_manage_tables": "Organizar mesas y cuentas",
   "registration_error": "No se pudo completar el registro: {message}",
-  "@registration_error": { "placeholders": { "message": { "type": "String" } } },
+  "@registration_error": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
   "b02_title": "Registrar establecimiento",
   "b02_drafts": "Tus registros",
   "b02_intro": "Retoma un borrador o inicia un nuevo registro.",
@@ -1080,5 +1103,78 @@
       }
     }
   },
-  "checkin_qr_manual_hint": "Abre el QR del establecimiento con tu dispositivo y pega el enlace aquí. Se verificará tu ubicación antes de confirmar."
+  "checkin_qr_manual_hint": "Abre el QR del establecimiento con tu dispositivo y pega el enlace aquí. Se verificará tu ubicación antes de confirmar.",
+  "profile_account": "Cuenta",
+  "profile_account_subtitle": "Tus datos y privacidad.",
+  "profile_activity": "Actividad",
+  "profile_orders": "Historial de pedidos",
+  "profile_benefits": "Cupones, cashback y recompensas",
+  "profile_preferences": "Preferencias",
+  "profile_payments": "Pagos",
+  "profile_settings": "Configuración",
+  "profile_terms": "Términos de uso",
+  "profile_privacy": "Política de privacidad",
+  "profile_logout": "Cerrar sesión",
+  "profile_logout_body": "¿Quieres cerrar sesión?",
+  "profile_action_failed": "No se pudo completar. Inténtalo de nuevo.",
+  "profile_load_failed": "No se pudieron cargar tus datos. Inténtalo de nuevo.",
+  "profile_discard": "Descartar cambios",
+  "profile_discard_body": "Se perderán los cambios sin guardar.",
+  "profile_saved": "Cambios guardados.",
+  "profile_name": "Nombre",
+  "profile_email": "Email",
+  "profile_phone": "Teléfono",
+  "profile_contact_note": "El email y el teléfono son contactos de acceso. Los cambios con verificación aún no están disponibles aquí.",
+  "profile_delete": "Eliminar cuenta",
+  "profile_delete_body": "Confirma la eliminación de tu cuenta y los datos asociados. Esta acción no se puede deshacer.",
+  "profile_not_provided": "No informado",
+  "profile_required": "Este campo es obligatorio.",
+  "profile_invalid_email": "Introduce un email válido.",
+  "profile_invalid_phone": "Introduce el código de área y un teléfono brasileño válido.",
+  "profile_notifications": "Notificaciones",
+  "profile_push": "Notificaciones push",
+  "profile_order_updates": "Actualizaciones de pedidos",
+  "profile_promotions": "Promociones y novedades",
+  "profile_portuguese": "Português (Brasil)",
+  "profile_os_permission": "Las notificaciones están desactivadas en los ajustes del dispositivo. Las preferencias de la app no cambian el permiso del sistema.",
+  "profile_open_settings": "Abrir ajustes del dispositivo",
+  "profile_replace_card": "Reemplazar tarjeta",
+  "profile_replace_partial": "La nueva tarjeta se guardó, pero no se pudo eliminar la anterior. Ambas siguen guardadas. Intenta eliminar la anterior abajo.",
+  "profile_device_wallet": "Cartera del dispositivo",
+  "profile_wallet_unavailable": "Las carteras del dispositivo aún no están disponibles aquí. Gestiona tus tarjetas de crédito guardadas arriba.",
+  "profile_benefits_unavailable": "Tus beneficios aún no están disponibles aquí. Los establecimientos participantes y las condiciones aparecerán cuando la función esté disponible.",
+  "profile_load_more": "Cargar más",
+  "profile_status_pending": "Pendiente",
+  "profile_status_preparing": "En preparación",
+  "profile_status_ready": "Listo",
+  "profile_status_completed": "Completado",
+  "profile_status_unknown": "Estado no disponible",
+  "profile_benefits_empty": "No tienes beneficios activos por ahora.",
+  "profile_benefits_load_failed": "No pudimos cargar tus beneficios. Inténtalo de nuevo.",
+  "profile_benefits_unauthorized": "Tu sesión expiró. Inicia sesión de nuevo para ver tus beneficios.",
+  "profile_benefit_pro_coupon": "Cupones Dobar Pro",
+  "profile_benefit_cashback": "Saldo de cashback",
+  "profile_benefit_coupons_remaining": "{count} de {limit} cupones restantes este mes",
+  "profile_benefit_cashback_available": "Disponible: {amount}",
+  "profile_benefit_cashback_pending": "Pendiente: {amount}",
+  "profile_benefit_expires": "Válido hasta {date}",
+  "profile_benefit_unavailable_pro_required": "Disponible para suscriptores Dobar Pro.",
+  "profile_benefit_unavailable_allowance_exhausted": "Usaste todos tus cupones de este mes.",
+  "profile_benefit_unavailable_no_eligible_venues": "No hay establecimientos participantes por ahora.",
+  "profile_benefit_unavailable_zero_balance": "Saldo en cero.",
+  "profile_benefit_unavailable_pending_clearance": "Tu saldo aún se está liberando.",
+  "profile_benefit_venues_undefined": "Aún no se definió dónde se puede usar el cashback.",
+  "profile_benefit_condition_pro_required": "Solo para suscriptores Dobar Pro",
+  "profile_benefit_condition_monthly_limit_no_rollover": "Límite mensual; los cupones no se acumulan",
+  "profile_benefit_condition_cashback_promotions_only": "Válido en promociones de cashback",
+  "profile_benefit_condition_venue_funded_only": "Sujeto al saldo promocional del establecimiento",
+  "profile_benefit_condition_wallet_balance": "Saldo de la billetera Dobar",
+  "profile_benefit_venues_title": "Establecimientos participantes",
+  "profile_benefit_venues_empty": "No hay establecimientos participantes por ahora.",
+  "profile_benefit_open_note": "Abrir un establecimiento no usa ni aplica el beneficio.",
+  "profile_benefits_count": "{count, plural, one{# beneficio activo} other{# beneficios activos}}",
+  "profile_sign_in_again": "Iniciar sesión de nuevo",
+  "profile_privacy_preferences": "Privacidad",
+  "profile_privacy_location": "Compartir ubicación",
+  "profile_privacy_data": "Compartir datos de uso"
 }

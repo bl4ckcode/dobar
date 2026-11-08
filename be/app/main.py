@@ -35,6 +35,8 @@ from .bars_and_restaurants.routes.places import places_router
 from .bars_and_restaurants.routes.bank_accounts import bank_accounts_router
 from .bars_and_restaurants.routes.dashboard import dashboard_router
 from .auth.profile import profile_router
+from .auth.contact_change import contact_change_router
+from .auth.benefits import benefits_router
 from fastapi.openapi.utils import get_openapi
 from contextlib import asynccontextmanager
 from firebase_admin import initialize_app, credentials
@@ -243,6 +245,8 @@ app.include_router(staff_router)
 app.include_router(my_bars_router)
 app.include_router(invite_router)
 app.include_router(profile_router)
+app.include_router(contact_change_router)
+app.include_router(benefits_router)
 app.include_router(places_router)
 app.include_router(bank_accounts_router)
 app.include_router(dashboard_router)

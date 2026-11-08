@@ -85,6 +85,7 @@ class ApiEndpoints {
   static const String userDocuments = '/users/me/documents';
   static const String userAcceptTerms = '/me/accept-terms';
   static const String userAcceptPrivacy = '/me/accept-privacy';
+  static const String userBenefits = '/me/benefits';
   static const String userWallet = '/users/me/wallet';
   static const String userCashback = '/users/me/cashback';
 

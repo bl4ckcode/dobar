@@ -119,11 +119,25 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     ProcessPayment event,
     Emitter<PaymentState> emit,
   ) async {
-    emit(state.copyWith(isProcessing: true, error: null, currentTransaction: null, pixPayment: null, paymentFailureStatus: null));
+    emit(
+      state.copyWith(
+        isProcessing: true,
+        error: null,
+        currentTransaction: null,
+        pixPayment: null,
+        paymentFailureStatus: null,
+      ),
+    );
     final result = await _usecase.processPayment(event.request);
     result.fold(
       (failure) => emit(
-        state.copyWith(isProcessing: false, error: failure.errorMessage, paymentFailureStatus: failure is ServerFailure ? failure.statusCode : null),
+        state.copyWith(
+          isProcessing: false,
+          error: failure.errorMessage,
+          paymentFailureStatus: failure is ServerFailure
+              ? failure.statusCode
+              : null,
+        ),
       ),
       (transaction) => emit(
         state.copyWith(isProcessing: false, currentTransaction: transaction),
@@ -135,11 +149,25 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     InitiatePixPayment event,
     Emitter<PaymentState> emit,
   ) async {
-    emit(state.copyWith(isProcessing: true, error: null, currentTransaction: null, pixPayment: null, paymentFailureStatus: null));
+    emit(
+      state.copyWith(
+        isProcessing: true,
+        error: null,
+        currentTransaction: null,
+        pixPayment: null,
+        paymentFailureStatus: null,
+      ),
+    );
     final result = await _usecase.initiatePixPayment(event.request);
     result.fold(
       (failure) => emit(
-        state.copyWith(isProcessing: false, error: failure.errorMessage, paymentFailureStatus: failure is ServerFailure ? failure.statusCode : null),
+        state.copyWith(
+          isProcessing: false,
+          error: failure.errorMessage,
+          paymentFailureStatus: failure is ServerFailure
+              ? failure.statusCode
+              : null,
+        ),
       ),
       (pix) => emit(state.copyWith(isProcessing: false, pixPayment: pix)),
     );
@@ -254,10 +282,12 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     );
   }
 
+  /// Add first, then remove the replaced card. Never lose the old card on add failure.
   Future<void> _onAddSavedCard(
     AddSavedCard event,
     Emitter<PaymentState> emit,
   ) async {
+    if (state.isProcessing) return;
     emit(state.copyWith(isProcessing: true, error: null));
     final result = await _usecase.addSavedCard(
       cardToken: event.cardToken,
@@ -267,16 +297,28 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
       expYear: event.expYear,
       isDefault: event.isDefault,
     );
-    result.fold(
-      (failure) => emit(
-        state.copyWith(isProcessing: false, error: failure.errorMessage),
-      ),
-      (card) => emit(
-        state.copyWith(
-          isProcessing: false,
-          savedCards: [...state.savedCards, card],
-        ),
-      ),
+    await result.fold(
+      (failure) async {
+        emit(state.copyWith(isProcessing: false, error: failure.errorMessage));
+      },
+      (card) async {
+        // A backend deduplication response must not delete the card it just returned.
+        final oldId = event.replacementCardId;
+        var cards = [...state.savedCards.where((c) => c.id != card.id), card];
+        String? error;
+        if (oldId != null && oldId != card.id) {
+          final removed = await _usecase.deleteSavedCard(oldId);
+          removed.fold(
+            (_) => error = 'saved_card_replacement_remove_failed',
+            (_) => cards = cards.where((c) => c.id != oldId).toList(),
+          );
+        }
+        final refreshed = await _usecase.getSavedCards();
+        refreshed.fold((_) {}, (loaded) => cards = loaded);
+        emit(
+          state.copyWith(isProcessing: false, savedCards: cards, error: error),
+        );
+      },
     );
   }
 
@@ -284,6 +326,7 @@ class PaymentBloc extends Bloc<PaymentEvent, PaymentState> {
     DeleteSavedCard event,
     Emitter<PaymentState> emit,
   ) async {
+    if (state.isProcessing) return;
     emit(state.copyWith(isProcessing: true, error: null));
     final result = await _usecase.deleteSavedCard(event.cardId);
     result.fold(

@@ -1,27 +1,29 @@
-import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
+import 'package:barz/features/payments/domain/native_wallet_capability.dart';
 import 'package:barz/core/design/tokens/colors.dart';
 
 class DigitalWalletsSection extends StatelessWidget {
   final VoidCallback onApplePay;
   final VoidCallback onGooglePay;
 
+  /// Result of NativeWalletCapability.evaluate (OS + merchant config + backend
+  /// advertisement + OS wallet probe). Defaults to hidden: never OS-only.
+  final NativeWalletAvailability availability;
+
   const DigitalWalletsSection({
     super.key,
     required this.onApplePay,
     required this.onGooglePay,
+    this.availability = NativeWalletAvailability.none,
   });
-
-  bool get _isAppleDevice => Platform.isIOS;
-  bool get _isAndroidDevice => Platform.isAndroid;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final hasApplePay = _isAppleDevice;
-    final hasGooglePay = _isAndroidDevice;
+    final hasApplePay = availability.applePay;
+    final hasGooglePay = availability.googlePay;
 
     if (!hasApplePay && !hasGooglePay) {
       return const SizedBox.shrink();

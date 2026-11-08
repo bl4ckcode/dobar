@@ -15,7 +15,7 @@ The [manifest](manifest.json) is the machine entry point. [requirements.json](re
 | [C01](C01-customer-authentication.md) | Customer authentication and onboarding | fe, be | P0 | — | MVP-C01-01, MVP-C01-02, MVP-C01-03, LAUNCH-C01-01, MVP-PRINCIPLE-05 → C01-AC01…AC04 |
 | [C02](C02-home-discovery.md) | Home discovery and promotions | fe, be | P1 | C01 | MVP-C02-01 → C02-AC01…AC03 |
 | [C03](C03-map-navigation.md) | Partner map and navigation | fe, be | P1 | C01, C02 | MVP-C03-01, MVP-C03-02 → C03-AC01…AC03 |
-| [C04](C04-profile-privacy.md) | Customer profile, privacy and deletion | fe, be | P1 | C01 | MVP-C04-01 → C04-AC01…AC04 |
+| [C04](C04-profile-privacy.md) | Customer profile, privacy and deletion | fe, be | P1 | C01 | MVP-C04-01 → C04-AC01…AC09 |
 | [C05](C05-check-in.md) | Location and table check-in | fe, be | P0 | C01, C03 | MVP-C05-01, MVP-C05-02, MVP-C05-03, MVP-C05-04 → C05-AC01…AC04 |
 | [C06](C06-live-menu.md) | Live venue menu | fe, be | P0 | C02 | MVP-C06-01, MVP-C06-02, MVP-C06-03, MVP-C06-04, MVP-C06-05, MVP-C06-06 → C06-AC01…AC04 |
 | [C07](C07-cart-revalidation.md) | Cart, promotions and checkout revalidation | fe, be | P0 | C05, C06 | MVP-C07-01, MVP-C07-02, MVP-C07-03 → C07-AC01…AC04 |

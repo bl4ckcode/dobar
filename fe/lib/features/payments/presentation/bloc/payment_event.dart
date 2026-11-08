@@ -50,6 +50,7 @@ sealed class PaymentEvent with _$PaymentEvent {
     required int expMonth,
     required int expYear,
     @Default(false) bool isDefault,
+    int? replacementCardId,
   }) = AddSavedCard;
   const factory PaymentEvent.deleteSavedCard(int cardId) = DeleteSavedCard;
 }

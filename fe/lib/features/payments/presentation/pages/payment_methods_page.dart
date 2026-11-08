@@ -2,7 +2,9 @@ import 'package:barz/features/payments/domain/services/card_tokenizer.dart';
 import 'package:barz/features/user/domain/usecases/user_usecase.dart';
 import 'package:barz/features/user/domain/models/user_document.dart';
 import 'package:barz/core/design/design_system.dart';
+import 'package:barz/core/presentation/widgets/barz_loading_widget.dart';
 import 'package:barz/core/utils/injections.dart';
+import 'package:barz/features/home/presentation/widgets/profile_components.dart';
 import 'package:barz/features/payments/domain/models/payment_method.dart';
 import 'package:barz/features/payments/presentation/bloc/payment_bloc.dart';
 import 'package:barz/features/payments/presentation/bloc/payment_event.dart';
@@ -16,337 +18,155 @@ import 'package:barz/l10n/app_localizations.dart';
 class PaymentMethodsPage extends StatelessWidget {
   const PaymentMethodsPage({super.key});
 
-  static Widget withBloc() {
-    return BlocProvider(
-      create: (_) =>
-          getItInjector<PaymentBloc>()
-            ..add(const PaymentEvent.loadSavedCards()),
-      child: const PaymentMethodsPage(),
-    );
-  }
+  static Widget withBloc() => BlocProvider(
+    create: (_) => getItInjector<PaymentBloc>()..add(const LoadSavedCards()),
+    child: const PaymentMethodsPage(),
+  );
 
   @override
   Widget build(BuildContext context) {
-    final dobar = context.dobarColors;
     final l10n = AppLocalizations.of(context)!;
-    return Scaffold(
-      backgroundColor: dobar.background,
-      appBar: AppBar(
-        backgroundColor: dobar.background,
-        foregroundColor: dobar.labelPrimary,
-        title: Text(
-          l10n.payment_methods_title,
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: dobar.labelPrimary,
-          ),
-        ),
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(LucideIcons.plus, color: barzGold),
-            onPressed: () => _showAddCardSheet(context),
-          ),
-        ],
-      ),
-      body: BlocConsumer<PaymentBloc, PaymentState>(
-        listener: (context, state) {
-          if (state.error != null) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(state.error!),
-                backgroundColor: Colors.red.shade800,
+    return BlocBuilder<PaymentBloc, PaymentState>(
+      builder: (context, state) {
+        final bloc = context.read<PaymentBloc>();
+        return ProfileFrame(
+          title: l10n.profile_payments,
+          children: [
+            if (state.isLoading)
+              const BarzLoadingWidget()
+            else ...[
+              if (state.error != null)
+                Semantics(
+                  liveRegion: true,
+                  child: Column(
+                    children: [
+                      Text(
+                        state.error == 'saved_card_replacement_remove_failed'
+                            ? l10n.profile_replace_partial
+                            : l10n.profile_action_failed,
+                      ),
+                      TextButton(
+                        onPressed: () => bloc.add(const LoadSavedCards()),
+                        child: Text(l10n.retry),
+                      ),
+                    ],
+                  ),
+                ),
+              if (state.savedCards.isEmpty) Text(l10n.payment_no_cards),
+              for (final card in state.savedCards)
+                ProfileGroup(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(BarzSpacing.lg),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '${card.brand ?? l10n.payment_card_generic} •••• ${card.lastFourDigits ?? '••••'}',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          if (card.isDefault) Text(l10n.payment_default_badge),
+                          Text(
+                            l10n.payment_expires_label(
+                              '${card.expiryMonth?.toString().padLeft(2, '0') ?? '--'}/${card.expiryYear ?? '----'}',
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ProfileRow(
+                      icon: LucideIcons.credit_card,
+                      title: l10n.profile_replace_card,
+                      onTap: state.isProcessing
+                          ? null
+                          : () => _showAddCardSheet(context, replacement: card),
+                    ),
+                    ProfileRow(
+                      icon: LucideIcons.trash,
+                      title: l10n.remove,
+                      destructive: true,
+                      onTap: state.isProcessing || card.id == null
+                          ? null
+                          : () async {
+                              if (await confirmProfileAction(
+                                    context,
+                                    l10n.payment_remove_card_title,
+                                    l10n.payment_remove_card_confirm(
+                                      '${card.brand ?? l10n.payment_card_generic} •••• ${card.lastFourDigits}',
+                                    ),
+                                  ) &&
+                                  context.mounted) {
+                                bloc.add(DeleteSavedCard(card.id!));
+                              }
+                            },
+                    ),
+                  ],
+                ),
+              if (state.isProcessing) const BarzLoadingWidget(),
+              ProfilePrimaryButton(
+                label: l10n.payment_add_card,
+                busy: state.isProcessing,
+                onPressed: () => _showAddCardSheet(context),
               ),
-            );
-          }
-        },
-        builder: (context, state) {
-          if (state.isLoading) {
-            return const Center(
-              child: CircularProgressIndicator(color: barzGold),
-            );
-          }
-
-          if (state.savedCards.isEmpty) {
-            return _EmptyCardsView(onAdd: () => _showAddCardSheet(context));
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(20),
-            itemCount: state.savedCards.length,
-            itemBuilder: (context, i) {
-              return _CreditCardTile(
-                card: state.savedCards[i],
-                onDelete: () => _confirmDelete(context, state.savedCards[i]),
-              );
-            },
-          );
-        },
-      ),
-      floatingActionButton: BlocBuilder<PaymentBloc, PaymentState>(
-        builder: (context, state) {
-          return FloatingActionButton.extended(
-            onPressed: () => _showAddCardSheet(context),
-            backgroundColor: barzGold,
-            foregroundColor: Colors.black,
-            icon: const Icon(LucideIcons.credit_card),
-            label: Text(
-              l10n.payment_add_card,
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          );
-        },
-      ),
+              // OS alone cannot prove merchant/provider configuration. C10 owns capability
+              // verification; never advertise a working wallet from a platform check.
+              ProfileGroup(
+                title: l10n.profile_device_wallet,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(BarzSpacing.lg),
+                    child: Text(l10n.profile_wallet_unavailable),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        );
+      },
     );
   }
 
-  Future<void> _showAddCardSheet(BuildContext context) async {
-    final user = (await getItInjector<UserUsecase>().getCurrentUser()).fold((_) => null, (value) => value);
+  Future<void> _showAddCardSheet(
+    BuildContext context, {
+    PaymentMethod? replacement,
+  }) async {
+    final user = (await getItInjector<UserUsecase>().getCurrentUser()).fold(
+      (_) => null,
+      (value) => value,
+    );
     if (!context.mounted) return;
-    if (user == null || !user.hasCompletedRegistration || !user.documents.any((document) => document.type == DocumentType.cpf && document.number.trim().isNotEmpty)) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.payment_card_profile_required)));
+    if (user == null ||
+        !user.hasCompletedRegistration ||
+        !user.documents.any(
+          (document) =>
+              document.type == DocumentType.cpf &&
+              document.number.trim().isNotEmpty,
+        )) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.payment_card_profile_required,
+          ),
+        ),
+      );
       return;
     }
     final bloc = context.read<PaymentBloc>();
-    showModalBottomSheet(
+    if (bloc.state.isProcessing) return;
+    await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) =>
-          BlocProvider.value(value: bloc, child: const _AddCardSheet()),
-    );
-  }
-
-  void _confirmDelete(BuildContext context, PaymentMethod card) {
-    final bloc = context.read<PaymentBloc>();
-    final l10n = AppLocalizations.of(context)!;
-    showDialog(
-      context: context,
-      builder: (_) => AlertDialog(
-        backgroundColor: barzDarkCard,
-        title: Text(l10n.payment_remove_card_title, style: const TextStyle(color: Colors.white)),
-        content: Text(
-          l10n.payment_remove_card_confirm(
-            '${card.brand ?? l10n.payment_card_generic} •••• ${card.lastFourDigits}',
-          ),
-          style: const TextStyle(color: Colors.white70),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              l10n.cancel,
-              style: const TextStyle(color: Colors.white54),
-            ),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              if (card.id != null) {
-                bloc.add(PaymentEvent.deleteSavedCard(card.id!));
-              }
-            },
-            child: Text(
-              l10n.remove,
-              style: const TextStyle(color: Colors.redAccent),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _EmptyCardsView extends StatelessWidget {
-  final VoidCallback onAdd;
-
-  const _EmptyCardsView({required this.onAdd});
-
-  @override
-  Widget build(BuildContext context) {
-    final dobar = context.dobarColors;
-    final l10n = AppLocalizations.of(context)!;
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: barzGold.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              LucideIcons.credit_card,
-              size: 48,
-              color: barzGold,
-            ),
-          ),
-          const SizedBox(height: 24),
-          Text(
-            l10n.payment_no_cards,
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: dobar.labelPrimary,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.payment_no_cards_subtitle,
-            textAlign: TextAlign.center,
-            style: TextStyle(fontSize: 14, color: dobar.labelSecondary),
-          ),
-          const SizedBox(height: 32),
-          ElevatedButton.icon(
-            onPressed: onAdd,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: barzGold,
-              foregroundColor: Colors.black,
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
-            icon: const Icon(LucideIcons.plus),
-            label: Text(
-              l10n.payment_add_credit_card,
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CreditCardTile extends StatelessWidget {
-  final PaymentMethod card;
-  final VoidCallback onDelete;
-
-  const _CreditCardTile({required this.card, required this.onDelete});
-
-  IconData _brandIcon(String? brand) {
-    switch (brand?.toLowerCase()) {
-      case 'visa':
-        return LucideIcons.credit_card;
-      case 'mastercard':
-        return LucideIcons.credit_card;
-      default:
-        return LucideIcons.credit_card;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final dobar = context.dobarColors;
-    final l10n = AppLocalizations.of(context)!;
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [barzDarkCard, barzDarkLight],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: card.isDefault
-              ? barzGold.withValues(alpha: 0.6)
-              : dobar.surfaceElevated,
-          width: card.isDefault ? 1.5 : 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.4),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Row(
-                  children: [
-                    Icon(_brandIcon(card.brand), color: barzGold, size: 24),
-                    const SizedBox(width: 12),
-                    Text(
-                      card.brand ?? l10n.payment_card_generic,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: dobar.labelPrimary,
-                      ),
-                    ),
-                    if (card.isDefault) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 3,
-                        ),
-                        decoration: BoxDecoration(
-                          color: barzGold.withValues(alpha: 0.15),
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(
-                            color: barzGold.withValues(alpha: 0.4),
-                          ),
-                        ),
-                        child: Text(
-                          l10n.payment_default_badge,
-                          style: const TextStyle(
-                            color: barzGold,
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-                IconButton(
-                  icon: Icon(
-                    LucideIcons.trash_off,
-                    color: dobar.labelSecondary,
-                    size: 20,
-                  ),
-                  onPressed: onDelete,
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Text(
-              '•••• •••• •••• ${card.lastFourDigits ?? '****'}',
-              style: const TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: Colors.white,
-                letterSpacing: 2,
-                fontFamily: 'monospace',
-              ),
-            ),
-            const SizedBox(height: 12),
-            Text(
-              l10n.payment_expires_label(
-                '${card.expiryMonth?.toString().padLeft(2, '0') ?? '--'}/${card.expiryYear ?? '----'}',
-              ),
-              style: TextStyle(fontSize: 13, color: dobar.labelSecondary),
-            ),
-          ],
-        ),
+      builder: (_) => BlocProvider.value(
+        value: bloc,
+        child: _AddCardSheet(replacement: replacement),
       ),
     );
   }
 }
 
 class _AddCardSheet extends StatefulWidget {
-  const _AddCardSheet();
+  const _AddCardSheet({this.replacement});
+  final PaymentMethod? replacement;
 
   @override
   State<_AddCardSheet> createState() => _AddCardSheetState();
@@ -361,6 +181,12 @@ class _AddCardSheetState extends State<_AddCardSheet> {
   final _expiryController = TextEditingController();
   final _cvvController = TextEditingController();
   bool _isDefault = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _isDefault = widget.replacement?.isDefault ?? false;
+  }
 
   String _detectBrand(String number, AppLocalizations l10n) {
     final stripped = number.replaceAll(' ', '');
@@ -398,21 +224,44 @@ class _AddCardSheetState extends State<_AddCardSheet> {
     final clean = _numberController.text.replaceAll(RegExp(r'\D'), '');
     final lastFour = clean.substring(clean.length - 4);
     final brand = _detectBrand(clean, l10n);
-    setState(() { _tokenizing = true; _tokenError = null; });
+    setState(() {
+      _tokenizing = true;
+      _tokenError = null;
+    });
     try {
       final token = await getItInjector<CardTokenizer>().tokenize(
-        number: clean, holderName: _holderController.text,
-        expMonth: expMonth, expYear: expYear, cvv: _cvvController.text,
+        number: clean,
+        holderName: _holderController.text,
+        expMonth: expMonth,
+        expYear: expYear,
+        cvv: _cvvController.text,
       );
       if (!mounted) return;
-      context.read<PaymentBloc>().add(PaymentEvent.addSavedCard(
-        cardToken: token, lastFour: lastFour, brand: brand, expMonth: expMonth,
-        expYear: expYear, isDefault: _isDefault,
-      ));
+      context.read<PaymentBloc>().add(
+        PaymentEvent.addSavedCard(
+          cardToken: token,
+          lastFour: lastFour,
+          brand: brand,
+          expMonth: expMonth,
+          expYear: expYear,
+          isDefault: _isDefault,
+          replacementCardId: widget.replacement?.id,
+        ),
+      );
+      _numberController.clear();
+      _cvvController.clear();
       Navigator.pop(context);
     } on CardTokenizationException catch (error) {
-      if (mounted) setState(() => _tokenError = error.unavailable ? l10n.payment_card_unavailable : l10n.payment_card_token_failed);
-    } finally { if (mounted) setState(() => _tokenizing = false); }
+      if (mounted) {
+        setState(
+          () => _tokenError = error.unavailable
+              ? l10n.payment_card_unavailable
+              : l10n.payment_card_token_failed,
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _tokenizing = false);
+    }
   }
 
   @override
@@ -428,164 +277,158 @@ class _AddCardSheetState extends State<_AddCardSheet> {
   Widget build(BuildContext context) {
     final dobar = context.dobarColors;
     final l10n = AppLocalizations.of(context)!;
-    return Container(
-      decoration: const BoxDecoration(
-        color: barzDarkLight,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      padding: EdgeInsets.fromLTRB(
-        24,
-        16,
-        24,
-        MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
-      child: Form(
-        key: _formKey,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: dobar.surfaceElevated,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 20),
-            Row(
-              children: [
-                const Icon(LucideIcons.credit_card, color: barzGold),
-                const SizedBox(width: 12),
-                Text(
-                  l10n.payment_add_credit_card,
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: dobar.labelPrimary,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            _buildField(
-              controller: _holderController,
-              label: l10n.payment_card_holder_label,
-              hint: l10n.payment_card_holder_hint,
-              validator: (value) => (value?.trim().length ?? 0) < 3 ? l10n.field_required : null,
-            ),
-            const SizedBox(height: 16),
-            _buildField(
-              controller: _numberController,
-              label: l10n.payment_card_number_label,
-              hint: l10n.payment_card_number_hint,
-              keyboardType: TextInputType.number,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                _CardNumberFormatter(),
-              ],
-              validator: (val) {
-                if (val == null || val.isEmpty) return l10n.field_required;
-                if (val.replaceAll(' ', '').length < 16) {
-                  return l10n.payment_error_invalid_number;
-                }
-                if (!_luhnCheck(val)) return l10n.payment_error_luhn_failed;
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildField(
-                    controller: _expiryController,
-                    label: l10n.payment_expiry_label,
-                    hint: l10n.payment_expiry_hint,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      _ExpiryFormatter(),
-                    ],
-                    validator: (val) {
-                      if (val == null || val.length < 5) return l10n.field_required;
-                      return null;
-                    },
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: _buildField(
-                    controller: _cvvController,
-                    label: l10n.payment_cvv_label,
-                    hint: l10n.payment_cvv_hint,
-                    keyboardType: TextInputType.number,
-                    obscureText: true,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                      LengthLimitingTextInputFormatter(4),
-                    ],
-                    validator: (val) {
-                      if (val == null || val.length < 3) return l10n.field_required;
-                      return null;
-                    },
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Switch(
-                  value: _isDefault,
-                  onChanged: (v) => setState(() => _isDefault = v),
-                  activeThumbColor: barzGold,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  l10n.payment_set_default_label,
-                  style: TextStyle(color: dobar.labelPrimary),
-                ),
-              ],
-            ),
-            const SizedBox(height: 24),
-            if (_tokenError != null) Text(_tokenError!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
-            if (_tokenizing) const LinearProgressIndicator(),
-            GestureDetector(
-              onTap: _tokenizing ? null : _submit,
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [barzGoldGradientStart, barzGoldGradientEnd],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: barzGold.withValues(alpha: 0.3),
-                      blurRadius: 16,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Center(
-                  child: Text(
-                    l10n.payment_save_card_button,
-                    style: const TextStyle(
-                      color: Colors.black,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+    return SingleChildScrollView(
+      child: Container(
+        decoration: BoxDecoration(
+          color: dobar.surface,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: EdgeInsets.fromLTRB(
+          24,
+          16,
+          24,
+          MediaQuery.of(context).viewInsets.bottom + 24,
+        ),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: dobar.surfaceElevated,
+                    borderRadius: BorderRadius.circular(2),
                   ),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Icon(LucideIcons.credit_card, color: dobar.labelSelected),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      widget.replacement == null
+                          ? l10n.payment_add_credit_card
+                          : l10n.profile_replace_card,
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: dobar.labelPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              _buildField(
+                controller: _holderController,
+                label: l10n.payment_card_holder_label,
+                hint: l10n.payment_card_holder_hint,
+                validator: (value) => (value?.trim().length ?? 0) < 3
+                    ? l10n.field_required
+                    : null,
+              ),
+              const SizedBox(height: 16),
+              _buildField(
+                controller: _numberController,
+                label: l10n.payment_card_number_label,
+                hint: l10n.payment_card_number_hint,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  FilteringTextInputFormatter.digitsOnly,
+                  _CardNumberFormatter(),
+                ],
+                validator: (val) {
+                  if (val == null || val.isEmpty) return l10n.field_required;
+                  if (val.replaceAll(' ', '').length < 16) {
+                    return l10n.payment_error_invalid_number;
+                  }
+                  if (!_luhnCheck(val)) return l10n.payment_error_luhn_failed;
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildField(
+                      controller: _expiryController,
+                      label: l10n.payment_expiry_label,
+                      hint: l10n.payment_expiry_hint,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        _ExpiryFormatter(),
+                      ],
+                      validator: (val) {
+                        if (val == null || val.length < 5) {
+                          return l10n.field_required;
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildField(
+                      controller: _cvvController,
+                      label: l10n.payment_cvv_label,
+                      hint: l10n.payment_cvv_hint,
+                      keyboardType: TextInputType.number,
+                      obscureText: true,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(4),
+                      ],
+                      validator: (val) {
+                        if (val == null || val.length < 3) {
+                          return l10n.field_required;
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Switch(
+                    value: _isDefault,
+                    onChanged: _tokenizing
+                        ? null
+                        : (v) => setState(() => _isDefault = v),
+                    activeThumbColor: dobar.buttonPrimary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      l10n.payment_set_default_label,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: dobar.labelPrimary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
+              if (_tokenError != null)
+                Text(
+                  _tokenError!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ProfilePrimaryButton(
+                label: l10n.payment_save_card_button,
+                busy: _tokenizing,
+                onPressed: _submit,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -615,6 +458,7 @@ class _AddCardSheetState extends State<_AddCardSheet> {
         const SizedBox(height: 6),
         TextFormField(
           controller: controller,
+          enabled: !_tokenizing,
           keyboardType: keyboardType,
           obscureText: obscureText,
           inputFormatters: inputFormatters,
@@ -626,22 +470,28 @@ class _AddCardSheetState extends State<_AddCardSheet> {
               color: dobar.labelSecondary.withValues(alpha: 0.5),
             ),
             filled: true,
-            fillColor: barzDark,
+            fillColor: dobar.background,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide.none,
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: barzGold, width: 1),
+              borderSide: BorderSide(color: dobar.labelSelected, width: 1),
             ),
             errorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.redAccent, width: 1),
+              borderSide: BorderSide(
+                color: Theme.of(context).colorScheme.error,
+                width: 1,
+              ),
             ),
             focusedErrorBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(color: Colors.redAccent, width: 1),
+              borderSide: BorderSide(
+                color: Theme.of(context).colorScheme.error,
+                width: 1,
+              ),
             ),
             contentPadding: const EdgeInsets.symmetric(
               horizontal: 16,

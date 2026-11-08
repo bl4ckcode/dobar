@@ -8,6 +8,7 @@ import 'package:barz/features/user/domain/repositories/abstract_user_repository.
 import 'package:barz/features/user/domain/models/notification_preferences.dart';
 import 'package:barz/features/user/domain/models/privacy_settings.dart';
 import 'package:barz/features/user/domain/models/cashback_transaction.dart';
+import 'package:barz/features/user/domain/models/profile_benefit.dart';
 
 class UserRepositoryImpl implements UserRepository {
   final UserDatasource _datasource;
@@ -157,6 +158,26 @@ class UserRepositoryImpl implements UserRepository {
     try {
       final result = await _datasource.deleteAccount();
       return Right(result);
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message, e.statusCode));
+    }
+  }
+
+  @override
+  Future<Either<Failure, ProfileBenefits>> getBenefits() async {
+    try {
+      return Right(await _datasource.getBenefits());
+    } on ServerException catch (e) {
+      return Left(ServerFailure(e.message, e.statusCode));
+    }
+  }
+
+  @override
+  Future<Either<Failure, BenefitVenues>> getBenefitVenues(
+    String benefitId,
+  ) async {
+    try {
+      return Right(await _datasource.getBenefitVenues(benefitId));
     } on ServerException catch (e) {
       return Left(ServerFailure(e.message, e.statusCode));
     }

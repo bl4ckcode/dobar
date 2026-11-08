@@ -5,6 +5,7 @@ import 'package:barz/features/user/domain/models/user_document.dart';
 import 'package:barz/features/user/domain/models/notification_preferences.dart';
 import 'package:barz/features/user/domain/models/privacy_settings.dart';
 import 'package:barz/features/user/domain/models/cashback_transaction.dart';
+import 'package:barz/features/user/domain/models/profile_benefit.dart';
 
 abstract class UserRepository {
   Future<Either<Failure, UserModel>> getCurrentUser();
@@ -34,6 +35,8 @@ abstract class UserRepository {
   Future<Either<Failure, bool>> deleteAccount();
   Future<Either<Failure, double>> getWalletBalance();
   Future<Either<Failure, List<CashbackTransaction>>> getCashbackHistory();
+  Future<Either<Failure, ProfileBenefits>> getBenefits();
+  Future<Either<Failure, BenefitVenues>> getBenefitVenues(String benefitId);
   Future<Either<Failure, Map<String, dynamic>>> updateCountry(
     double latitude,
     double longitude,

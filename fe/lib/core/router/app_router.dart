@@ -1,3 +1,11 @@
+import 'package:barz/features/user/domain/usecases/user_usecase.dart';
+import 'package:barz/features/payments/presentation/pages/payment_methods_page.dart';
+import 'package:barz/features/home/presentation/cubit/profile_benefits_cubit.dart';
+import 'package:barz/features/home/presentation/pages/profile/profile_benefit_venues_page.dart';
+import 'package:barz/features/home/presentation/pages/profile/profile_benefits_page.dart';
+import 'package:barz/features/home/presentation/pages/profile/profile_settings_page.dart';
+import 'package:barz/features/home/presentation/cubit/profile_settings_cubit.dart';
+import 'package:barz/features/home/presentation/cubit/profile_account_cubit.dart';
 import 'package:barz/features/checkin/presentation/checkin_gate.dart';
 import 'dart:async';
 import 'package:barz/features/session/presentation/entry_coordinator.dart';
@@ -378,7 +386,9 @@ final appRouter = GoRouter(
       builder: (context, state) {
         final args = state.extra;
         return CheckinPage(
-          initialBar: args is CheckinArguments ? args.initialBar : args as BarModel?,
+          initialBar: args is CheckinArguments
+              ? args.initialBar
+              : args as BarModel?,
           returnOnCheckin: args is CheckinArguments && args.returnOnCheckin,
         );
       },
@@ -442,9 +452,43 @@ final appRouter = GoRouter(
     GoRoute(
       path: AppRoute.profileEdit.path,
       name: AppRoute.profileEdit.name,
-      builder: (context, state) => BlocProvider.value(
-        value: getItInjector<UserBloc>(),
+      builder: (context, state) => BlocProvider(
+        create: (_) =>
+            ProfileAccountCubit(getItInjector<UserUsecase>())..load(),
         child: const ProfileEditPage(),
+      ),
+    ),
+    GoRoute(
+      path: AppRoute.profileSettings.path,
+      name: AppRoute.profileSettings.name,
+      builder: (context, state) => BlocProvider(
+        create: (_) =>
+            ProfileSettingsCubit(getItInjector<UserUsecase>())..load(),
+        child: const ProfileSettingsPage(),
+      ),
+    ),
+    GoRoute(
+      path: AppRoute.profilePayments.path,
+      name: AppRoute.profilePayments.name,
+      builder: (context, state) => PaymentMethodsPage.withBloc(),
+    ),
+    GoRoute(
+      path: AppRoute.profileBenefits.path,
+      name: AppRoute.profileBenefits.name,
+      builder: (context, state) => BlocProvider(
+        create: (_) => ProfileBenefitsCubit(getItInjector<UserUsecase>())..load(),
+        child: const ProfileBenefitsPage(),
+      ),
+    ),
+    GoRoute(
+      path: AppRoute.profileBenefitVenues.path,
+      name: AppRoute.profileBenefitVenues.name,
+      builder: (context, state) => BlocProvider(
+        create: (_) => BenefitVenuesCubit(
+          getItInjector<UserUsecase>(),
+          state.pathParameters['benefitId']!,
+        )..load(),
+        child: const ProfileBenefitVenuesPage(),
       ),
     ),
     // B08-FE: Staff invitation acceptance — /staff/invitations/accept?code=<code>

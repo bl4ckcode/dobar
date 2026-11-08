@@ -972,7 +972,6 @@
   "details_location_method": "Location Method",
   "campaign_type_banner": "BANNER",
   "campaign_type_push": "PUSH",
-
   "invitation_header_back": "Back",
   "invitation_loading": "Loading invitation…",
   "invitation_eyebrow": "Team invitation",
@@ -984,7 +983,9 @@
   "invitation_valid_until": "Valid until {date}",
   "@invitation_valid_until": {
     "placeholders": {
-      "date": { "type": "String" }
+      "date": {
+        "type": "String"
+      }
     }
   },
   "invitation_sign_in_title": "Sign in to continue",
@@ -1004,16 +1005,24 @@
   "invitation_success_body": "You are now part of {venue} as {role}.",
   "@invitation_success_body": {
     "placeholders": {
-      "venue": { "type": "String" },
-      "role": { "type": "String" }
+      "venue": {
+        "type": "String"
+      },
+      "role": {
+        "type": "String"
+      }
     }
   },
   "invitation_already_member_title": "You are already part of the team.",
   "invitation_already_member_body": "Your access to {venue} as {role} is active.",
   "@invitation_already_member_body": {
     "placeholders": {
-      "venue": { "type": "String" },
-      "role": { "type": "String" }
+      "venue": {
+        "type": "String"
+      },
+      "role": {
+        "type": "String"
+      }
     }
   },
   "invitation_enter_workspace": "Enter workspace",
@@ -1080,11 +1089,19 @@
   "home_badge_promotion": "Promotion",
   "home_notifications": "Notifications, {count} unread",
   "@home_notifications": {
-    "placeholders": { "count": { "type": "String" } }
+    "placeholders": {
+      "count": {
+        "type": "String"
+      }
+    }
   },
   "home_nearby_checkin_prompt": "Are you here: {barName}? Make a check-in!",
   "@home_nearby_checkin_prompt": {
-    "placeholders": { "barName": { "type": "String" } }
+    "placeholders": {
+      "barName": {
+        "type": "String"
+      }
+    }
   },
   "login_tagline": "Your night. Your bar.",
   "login_phone_label": "Phone number",
@@ -1121,7 +1138,13 @@
   "invitation_permission_view_reports": "View sales reports",
   "invitation_permission_manage_tables": "Manage tables and tabs",
   "registration_error": "Could not complete registration: {message}",
-  "@registration_error": { "placeholders": { "message": { "type": "String" } } },
+  "@registration_error": {
+    "placeholders": {
+      "message": {
+        "type": "String"
+      }
+    }
+  },
   "b02_title": "Register venue",
   "b02_drafts": "Your registrations",
   "b02_intro": "Resume a draft or start a new registration.",
@@ -1288,5 +1311,83 @@
       }
     }
   },
-  "checkin_qr_manual_hint": "Open the venue QR code with your device and paste its link here. Your location will be checked before confirming."
+  "checkin_qr_manual_hint": "Open the venue QR code with your device and paste its link here. Your location will be checked before confirming.",
+  "profile_account": "Account",
+  "profile_account_subtitle": "Your details and privacy.",
+  "profile_activity": "Activity",
+  "profile_orders": "Order history",
+  "profile_benefits": "Coupons, cashback and rewards",
+  "profile_preferences": "Preferences",
+  "profile_payments": "Payments",
+  "profile_settings": "Settings",
+  "profile_terms": "Terms of use",
+  "profile_privacy": "Privacy policy",
+  "profile_logout": "Sign out",
+  "profile_logout_body": "Do you want to sign out of your account?",
+  "profile_action_failed": "Unable to complete this action. Please try again.",
+  "profile_load_failed": "Unable to load your data. Please try again.",
+  "profile_discard": "Discard changes",
+  "profile_discard_body": "Your unsaved changes will be lost.",
+  "profile_saved": "Changes saved.",
+  "profile_name": "Name",
+  "profile_email": "Email",
+  "profile_phone": "Phone",
+  "profile_contact_note": "Email and phone are login contacts. Verified contact changes are not available here yet.",
+  "profile_delete": "Delete account",
+  "profile_delete_body": "Confirm deletion of your account and associated data. This action cannot be undone.",
+  "profile_not_provided": "Not provided",
+  "profile_required": "This field is required.",
+  "profile_invalid_email": "Enter a valid email.",
+  "profile_invalid_phone": "Enter an area code and a valid Brazilian phone number.",
+  "profile_notifications": "Notifications",
+  "profile_push": "Push notifications",
+  "profile_order_updates": "Order updates",
+  "profile_promotions": "Promotions and news",
+  "profile_portuguese": "Português (Brasil)",
+  "profile_os_permission": "Notifications are disabled in your device settings. App preferences do not change device permission.",
+  "profile_open_settings": "Open device settings",
+  "profile_replace_card": "Replace card",
+  "profile_replace_partial": "The new card was saved, but the old card could not be removed. Both remain saved. You can retry removing the old card below.",
+  "profile_device_wallet": "Device wallet",
+  "profile_wallet_unavailable": "Device wallets are not available here yet. You can manage your saved credit cards above.",
+  "profile_benefits_unavailable": "Your benefits are not available here yet. Eligible venues and conditions will appear when this feature is available.",
+  "profile_load_more": "Load more",
+  "profile_status_pending": "Pending",
+  "profile_status_preparing": "Preparing",
+  "profile_status_ready": "Ready",
+  "profile_status_completed": "Completed",
+  "profile_status_unknown": "Status unavailable",
+  "profile_benefits_empty": "You have no active benefits right now.",
+  "profile_benefits_load_failed": "We couldn't load your benefits. Try again.",
+  "profile_benefits_unauthorized": "Your session expired. Sign in again to see your benefits.",
+  "profile_benefit_pro_coupon": "Dobar Pro coupons",
+  "profile_benefit_cashback": "Cashback balance",
+  "profile_benefit_coupons_remaining": "{count} of {limit} coupons left this month",
+  "@profile_benefit_coupons_remaining": {"placeholders": {"count": {"type": "int"}, "limit": {"type": "int"}}},
+  "profile_benefit_cashback_available": "Available: {amount}",
+  "@profile_benefit_cashback_available": {"placeholders": {"amount": {"type": "String"}}},
+  "profile_benefit_cashback_pending": "Pending: {amount}",
+  "@profile_benefit_cashback_pending": {"placeholders": {"amount": {"type": "String"}}},
+  "profile_benefit_expires": "Valid until {date}",
+  "@profile_benefit_expires": {"placeholders": {"date": {"type": "String"}}},
+  "profile_benefit_unavailable_pro_required": "Available to Dobar Pro subscribers.",
+  "profile_benefit_unavailable_allowance_exhausted": "You've used all your coupons this month.",
+  "profile_benefit_unavailable_no_eligible_venues": "No participating venues right now.",
+  "profile_benefit_unavailable_zero_balance": "Zero balance.",
+  "profile_benefit_unavailable_pending_clearance": "Your balance is still being released.",
+  "profile_benefit_venues_undefined": "Where cashback can be used hasn't been defined yet.",
+  "profile_benefit_condition_pro_required": "Dobar Pro subscribers only",
+  "profile_benefit_condition_monthly_limit_no_rollover": "Monthly limit; coupons don't roll over",
+  "profile_benefit_condition_cashback_promotions_only": "Valid on cashback promotions",
+  "profile_benefit_condition_venue_funded_only": "Subject to the venue's promotional balance",
+  "profile_benefit_condition_wallet_balance": "Dobar wallet balance",
+  "profile_benefit_venues_title": "Participating venues",
+  "profile_benefit_venues_empty": "No participating venues right now.",
+  "profile_benefit_open_note": "Opening a venue does not use or apply the benefit.",
+  "profile_benefits_count": "{count, plural, one{# active benefit} other{# active benefits}}",
+  "@profile_benefits_count": {"placeholders": {"count": {"type": "int"}}},
+  "profile_sign_in_again": "Sign in again",
+  "profile_privacy_preferences": "Privacy",
+  "profile_privacy_location": "Share location",
+  "profile_privacy_data": "Share usage data"
 }

@@ -8,6 +8,7 @@ class GlowButton extends StatelessWidget {
   final Widget? trailing;
   final int? badgeCount;
   final bool enabled;
+  final bool wrapLabel;
 
   const GlowButton({
     super.key,
@@ -17,10 +18,55 @@ class GlowButton extends StatelessWidget {
     this.trailing,
     this.badgeCount,
     this.enabled = true,
+    this.wrapLabel = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final content = Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (leading != null) ...[leading!, const SizedBox(width: 8)],
+        if (wrapLabel)
+          Flexible(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: enabled ? barzDark : textSecondary,
+              ),
+            ),
+          )
+        else
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: enabled ? barzDark : textSecondary,
+            ),
+          ),
+        if (badgeCount != null && badgeCount! > 0) ...[
+          const SizedBox(width: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+            decoration: BoxDecoration(
+              color: barzDark.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Text(
+              '$badgeCount',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                color: enabled ? barzDark : textSecondary,
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
     return GestureDetector(
       onTap: enabled ? onPressed : null,
       child: AnimatedContainer(
@@ -30,8 +76,8 @@ class GlowButton extends StatelessWidget {
           color: enabled
               ? barzGold
               : (Theme.of(context).brightness == Brightness.dark
-                  ? barzDarkMuted
-                  : surfaceMuted),
+                    ? barzDarkMuted
+                    : surfaceMuted),
           borderRadius: BorderRadius.circular(8),
           boxShadow: enabled
               ? [
@@ -51,41 +97,7 @@ class GlowButton extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (leading != null) ...[leading!, const SizedBox(width: 8)],
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: enabled ? barzDark : textSecondary,
-                  ),
-                ),
-                if (badgeCount != null && badgeCount! > 0) ...[
-                  const SizedBox(width: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: barzDark.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      '$badgeCount',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: enabled ? barzDark : textSecondary,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
+            if (wrapLabel) Expanded(child: content) else content,
             ?trailing,
           ],
         ),

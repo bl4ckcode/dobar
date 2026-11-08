@@ -3,6 +3,7 @@ import 'package:barz/core/network/error/failures.dart';
 import 'package:barz/features/user/domain/models/user_model.dart';
 import 'package:barz/features/user/domain/models/user_document.dart';
 import 'package:barz/features/user/domain/models/cashback_transaction.dart';
+import 'package:barz/features/user/domain/models/profile_benefit.dart';
 import 'package:barz/features/user/domain/repositories/abstract_user_repository.dart';
 import 'package:barz/features/user/domain/models/notification_preferences.dart';
 import 'package:barz/features/user/domain/models/privacy_settings.dart';
@@ -11,6 +12,12 @@ class UserUsecase {
   final UserRepository _repository;
 
   UserUsecase(this._repository);
+
+  Future<Either<Failure, ProfileBenefits>> getBenefits() =>
+      _repository.getBenefits();
+
+  Future<Either<Failure, BenefitVenues>> getBenefitVenues(String benefitId) =>
+      _repository.getBenefitVenues(benefitId);
 
   Future<Either<Failure, UserModel>> getCurrentUser() {
     return _repository.getCurrentUser();

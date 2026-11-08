@@ -955,3 +955,8 @@ Text Primary:    #FFFFFF
 Text Secondary:  #B0B0B0
 Font:            Space Grotesk (headings), system (body)
 Icons:           Lucide icon library
+
+
+### Customer Profile — Account, Activity, Payments and Settings
+
+The [C04 profile prompt](../../.specs/mvp-v0.1/profile-redesign/lovable-prompt.md) and [source handoff](../../.specs/mvp-v0.1/profile-redesign/react-source-handoff.md) cover the avatar-free Conta entry, grouped profile menu and destination flows. User-supplied export: `bl4ckcode/pixel-perfect-replica` at `2a32eb05a8702bba1e9c8dd1ada8fb817b613f52`. Only profile-related surfaces are authorized for this translation; home, badges and toolbar refinements are deferred. Backend eligibility and native-wallet gaps remain explicit in the handoff.

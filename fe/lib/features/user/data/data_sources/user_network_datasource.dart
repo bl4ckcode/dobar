@@ -5,6 +5,7 @@ import 'package:barz/features/user/domain/models/notification_preferences.dart';
 import 'package:barz/features/user/domain/models/privacy_settings.dart';
 import 'package:barz/features/user/domain/models/user_document.dart';
 import 'package:barz/features/user/domain/models/cashback_transaction.dart';
+import 'package:barz/features/user/domain/models/profile_benefit.dart';
 import 'package:dio/dio.dart';
 
 abstract class UserDatasource {
@@ -24,6 +25,8 @@ abstract class UserDatasource {
   Future<bool> deleteAccount();
   Future<bool> registerFcmToken(String token);
   Future<double> getWalletBalance();
+  Future<ProfileBenefits> getBenefits();
+  Future<BenefitVenues> getBenefitVenues(String benefitId);
   Future<List<CashbackTransaction>> getCashbackHistory();
   Future<Map<String, dynamic>> updateCountry(double latitude, double longitude);
 }
@@ -241,6 +244,44 @@ class UserNetworkDatasource implements UserDatasource {
         e.response?.data?['detail'] ?? 'Failed to register FCM token',
         e.response?.statusCode,
       );
+    }
+  }
+
+  @override
+  Future<ProfileBenefits> getBenefits() async {
+    try {
+      final response = await dio.get(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.userBenefits}',
+      );
+      return ProfileBenefits.fromJson(
+        Map<String, dynamic>.from(response.data as Map),
+      );
+    } on DioException catch (e) {
+      throw ServerException(
+        e.response?.data?['detail'] ?? 'Failed to get benefits',
+        e.response?.statusCode,
+      );
+    } on TypeError {
+      throw ServerException('Invalid benefits response', null);
+    }
+  }
+
+  @override
+  Future<BenefitVenues> getBenefitVenues(String benefitId) async {
+    try {
+      final response = await dio.get(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.userBenefits}/${Uri.encodeComponent(benefitId)}/venues',
+      );
+      return BenefitVenues.fromJson(
+        Map<String, dynamic>.from(response.data as Map),
+      );
+    } on DioException catch (e) {
+      throw ServerException(
+        e.response?.data?['detail'] ?? 'Failed to get benefit venues',
+        e.response?.statusCode,
+      );
+    } on TypeError {
+      throw ServerException('Invalid benefit venues response', null);
     }
   }
 

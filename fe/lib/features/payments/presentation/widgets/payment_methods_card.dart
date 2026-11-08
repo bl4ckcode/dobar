@@ -7,6 +7,7 @@ import 'add_new_card_workflow.dart';
 import 'saved_cards_list.dart';
 import 'payment_options_grid.dart';
 import 'digital_wallets_section.dart';
+import '../../domain/native_wallet_capability.dart';
 
 class PaymentMethodsCard extends StatefulWidget {
   final List<SavedCard> savedCards;
@@ -16,6 +17,7 @@ class PaymentMethodsCard extends StatefulWidget {
   final List<PaymentOptionItem> paymentOptions;
   final VoidCallback onApplePay;
   final VoidCallback onGooglePay;
+  final NativeWalletAvailability wallets;
   final bool isDark;
   final bool isLoadingCards;
   final Future<bool> Function()? beforeAddCard;
@@ -29,6 +31,7 @@ class PaymentMethodsCard extends StatefulWidget {
     required this.paymentOptions,
     required this.onApplePay,
     required this.onGooglePay,
+    this.wallets = NativeWalletAvailability.none,
     required this.isDark,
     this.isLoadingCards = false,
     this.beforeAddCard,
@@ -319,6 +322,7 @@ class _PaymentMethodsCardState extends State<PaymentMethodsCard> {
                               DigitalWalletsSection(
                                 onApplePay: widget.onApplePay,
                                 onGooglePay: widget.onGooglePay,
+                                availability: widget.wallets,
                               ),
                             ],
                           ),

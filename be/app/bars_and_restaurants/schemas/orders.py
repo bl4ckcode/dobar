@@ -56,6 +56,7 @@ class Order(BaseModel):
     id: int
     user_id: int
     bar_id: int
+    bar_name: Optional[str] = None  # additive; populated by history reads
     status: str
     total_price: Optional[float] = None
     subtotal: Optional[float] = None

@@ -616,7 +616,7 @@ class TestProfileEndpoints:
 class TestProfileSettingsEndpoints:
 
     @pytest.mark.asyncio
-    async def test_update_profile_phone_and_avatar(self, client: AsyncClient, mock_firebase_token):
+    async def test_update_profile_rejects_unverified_phone_change_without_partial_write(self, client: AsyncClient, mock_firebase_token):
         with patch("app.auth.routes.firebase_auth.verify_id_token") as mock_verify:
             mock_verify.return_value = mock_firebase_token
             login_response = await client.post(
@@ -636,10 +636,17 @@ class TestProfileSettingsEndpoints:
             }
         )
 
+        # Contact changes now require /me/contact-change; nothing else is written.
+        assert response.status_code == 409
+        profile = await client.get("/me/profile", headers=headers)
+        assert profile.json()["phone_number"] != "+5531999990000"
+        assert profile.json()["avatar_url"] is None
+
+        response = await client.put(
+            "/me/profile", headers=headers, json={"avatar_url": "https://example.com/avatar.jpg"}
+        )
         assert response.status_code == 200
-        data = response.json()
-        assert data["phone_number"] == "+5531999990000"
-        assert data["avatar_url"] == "https://example.com/avatar.jpg"
+        assert response.json()["avatar_url"] == "https://example.com/avatar.jpg"
 
     @pytest.mark.asyncio
     async def test_update_profile_phone_conflict(self, client: AsyncClient, mock_firebase_token):

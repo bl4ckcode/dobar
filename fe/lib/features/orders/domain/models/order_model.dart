@@ -46,6 +46,7 @@ class OrderModel {
   final int id;
   final int userId;
   final int barId;
+  final String? barName;
   final String status;
   final String orderType;
   final String paymentMethod;
@@ -65,6 +66,7 @@ class OrderModel {
     required this.id,
     required this.userId,
     required this.barId,
+    this.barName,
     required this.status,
     required this.orderType,
     required this.paymentMethod,
@@ -86,6 +88,7 @@ class OrderModel {
       id: json['id'],
       userId: json['user_id'],
       barId: json['bar_id'],
+      barName: json['bar_name'] as String?,
       status: json['status'],
       orderType: json['order_type'],
       paymentMethod: json['payment_method'],
@@ -116,6 +119,7 @@ class OrderModel {
       'id': id,
       'user_id': userId,
       'bar_id': barId,
+      'bar_name': barName,
       'status': status,
       'order_type': orderType,
       'payment_method': paymentMethod,

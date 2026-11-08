@@ -24,6 +24,10 @@ enum AppRoute {
   find('/find'),
   profile('/profile'),
   profileEdit('/profile/edit'),
+  profileSettings('/profile/settings'),
+  profilePayments('/profile/payments'),
+  profileBenefits('/profile/benefits'),
+  profileBenefitVenues('/profile/benefits/:benefitId/venues'),
   businessDashboard('/business'),
   businessCashier('/business/cashier'),
   businessMenu('/business/menu'),
@@ -43,8 +47,8 @@ enum AppRoute {
 
   String get name => toString().split('.').last;
 
-  void push(BuildContext context, {Object? extra}) {
-    context.push(path, extra: extra);
+  Future<T?> push<T extends Object?>(BuildContext context, {Object? extra}) {
+    return context.push<T>(path, extra: extra);
   }
 
   void go(BuildContext context, {Object? extra}) {
@@ -53,6 +57,12 @@ enum AppRoute {
 
   static void pushBar(BuildContext context, int barId) {
     context.push('/bar/$barId');
+  }
+
+  static void pushBenefitVenues(BuildContext context, String benefitId) {
+    context.push(
+      '/profile/benefits/${Uri.encodeComponent(benefitId)}/venues',
+    );
   }
 
   static void pushPromotion(BuildContext context, int promotionId) {

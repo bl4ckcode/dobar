@@ -72,6 +72,7 @@ with patch("firebase_admin.initialize_app", return_value=mock_firebase_app), \
     from app.auth.rbac_models import UserProfile, BarStaff, StaffInvitation
     from app.auth.mfa_models import MFASecret
     from app.auth.recovery_models import RecoveryToken
+    from app.auth.contact_change_models import ContactChangeRequest
     from app.payment.models import PaymentCard
     from app.bars_and_restaurants.models.relational_models import UserDocument
     from app.advertising.models import (
@@ -201,10 +202,20 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
     import app.bars_and_restaurants.routes.notifications as notifications_routes
     notifications_routes.database = test_database
     
+    import app.auth.contact_change as contact_change_routes
+    import app.auth.benefits as benefits_routes
+    import app.bars_and_restaurants.services.pro_coupon_service as pro_coupon_service
+    contact_change_routes.database = test_database
+    benefits_routes.database = test_database
+    pro_coupon_service.database = test_database
+    
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
     
+    contact_change_routes.database = original_db
+    benefits_routes.database = original_db
+    pro_coupon_service.database = original_db
     db_module.database = original_db
     auth_routes.database = original_db
     auth_middleware.database = original_db

@@ -135,8 +135,17 @@ async def get_my_orders(
         raw = f"{last['created_at'].isoformat()}|{last['id']}"
         next_cursor = base64.b64encode(raw.encode()).decode()
 
+    bar_ids = list({o["bar_id"] for o in orders})
+    bar_names = {}
+    if bar_ids:
+        from app.bars_and_restaurants.models.relational_models import Bar
+        bar_rows = await database.fetch_all(
+            Bar.__table__.select().with_only_columns(Bar.id, Bar.name).where(Bar.id.in_(bar_ids))
+        )
+        bar_names = {b["id"]: b["name"] for b in bar_rows}
+
     return OrderHistoryResponse(
-        orders=[OrderSchema(**dict(o)) for o in orders],
+        orders=[OrderSchema(**{**dict(o), "bar_name": bar_names.get(o["bar_id"])}) for o in orders],
         next_cursor=next_cursor,
         has_more=has_more
     )

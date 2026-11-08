@@ -34,6 +34,7 @@ from app.auth.auth_models import User, Token, RefreshToken
 from app.auth.rbac_models import UserProfile, BarStaff, StaffInvitation
 from app.auth.mfa_models import MFASecret
 from app.auth.recovery_models import RecoveryToken
+from app.auth.contact_change_models import ContactChangeRequest
 from app.payment.models import PaymentCard
 from app.bars_and_restaurants.models.relational_models import (
     BarOwner, Bar, Menu, MenuItem, Order,
