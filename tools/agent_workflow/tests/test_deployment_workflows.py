@@ -1,4 +1,10 @@
 import fnmatch
+import itertools
+import os
+import re
+import subprocess
+import tempfile
+import textwrap
 import unittest
 from pathlib import Path
 
@@ -30,32 +36,114 @@ class DeploymentWorkflowTests(unittest.TestCase):
         self.assertEqual(workflow["concurrency"]["group"], "production-deployment")
         self.assertIs(workflow["concurrency"]["cancel-in-progress"], False)
         jobs = workflow["jobs"]
-        self.assertEqual(self.needs(jobs["dpe"]), [])
-        self.assertEqual(self.needs(jobs["be"]), ["dpe"])
-        self.assertEqual(self.needs(jobs["fe"]), ["be"])
+        self.assertEqual(self.needs(jobs["dpe"]), ["changes"])
+        self.assertEqual(self.needs(jobs["be"]), ["changes", "dpe"])
+        self.assertEqual(self.needs(jobs["fe"]), ["changes", "dpe", "be"])
         for area in ("dpe", "be", "fe"):
             job = jobs[area]
             self.assertEqual(job["uses"], f"./.github/workflows/deploy-{area}.yml")
             self.assertEqual(job["secrets"], "inherit")
-            self.assert_success_gated(job)
+            self.assertFalse(job.get("continue-on-error", False))
             self.assertEqual(
                 set(self.triggers(self.workflow(f"deploy-{area}.yml"))),
                 {"workflow_call"},
             )
 
-    def test_entry_covers_service_and_workflow_changes(self):
+    def test_entry_only_triggers_for_service_changes(self):
         paths = self.triggers(self.workflow("deploy.yml"))["push"]["paths"]
-        affected = [
-            "dpe/dobar_payment/api/routes.py", "be/app/auth/profile.py",
-            "fe/pubspec.yaml", "tools/agent_workflow/fixtures/pix-checkout.json",
+        for area in ("dpe", "be", "fe"):
+            self.assertTrue(any(fnmatch.fnmatchcase(f"{area}/source", pattern) for pattern in paths))
+        for path in (
+            "docs/AGENT_WORKFLOW.md", "tools/agent_workflow/fixtures/pix-checkout.json",
+            ".github/workflows/deploy.yml", ".github/workflows/deploy-be.yml",
+            ".github/workflows/fe-unit-tests.yml", ".github/workflows/run-migrations.yml",
             ".github/workflows/payment-contract-validation.yml",
-            ".github/workflows/run-migrations.yml",
-        ]
-        affected += [f".github/workflows/deploy{suffix}.yml" for suffix in ("", "-dpe", "-be", "-fe")]
-        affected += [f".github/workflows/{area}-unit-tests.yml" for area in ("dpe", "be", "fe")]
-        for path in affected:
+        ):
             with self.subTest(path=path):
-                self.assertTrue(any(fnmatch.fnmatchcase(path, pattern) for pattern in paths))
+                self.assertFalse(any(fnmatch.fnmatchcase(path, pattern) for pattern in paths))
+
+    def detection_script(self):
+        job = self.workflow("deploy.yml")["jobs"]["changes"]
+        checkout, detect = job["steps"]
+        self.assertEqual(checkout["with"]["fetch-depth"], 0)
+        self.assertEqual(detect["env"]["BEFORE_SHA"], "${{ github.event.before }}")
+        for area in ("dpe", "be", "fe"):
+            self.assertEqual(job["outputs"][area], "${{ steps.detect.outputs." + area + " }}")
+        return textwrap.dedent(detect["run"].split("<<'PY'\n", 1)[1].rsplit("\nPY", 1)[0])
+
+    def test_detection_compares_all_pushed_commits_and_handles_moves_deletions(self):
+        script = self.detection_script()
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+
+            def git(*args):
+                return subprocess.check_output(["git", *args], cwd=root, stderr=subprocess.PIPE).decode().strip()
+
+            def commit():
+                git("add", "-A")
+                git("commit", "-qm", "fixture")
+                return git("rev-parse", "HEAD")
+
+            def detect(before, head):
+                output = root / "outputs"
+                output.unlink(missing_ok=True)
+                subprocess.run(
+                    ["python3", "-c", script], cwd=root, check=True,
+                    env={**os.environ, "BEFORE_SHA": before, "GITHUB_SHA": head, "GITHUB_OUTPUT": str(output)},
+                    capture_output=True,
+                )
+                return dict(line.split("=", 1) for line in output.read_text().splitlines())
+
+            git("init", "-q")
+            git("config", "user.email", "workflow@example.com")
+            git("config", "user.name", "Workflow test")
+            for area in ("fe", "be", "dpe", "docs"):
+                (root / area).mkdir()
+                (root / area / "source").write_text("original")
+            base = commit()
+            self.assertEqual(detect("0" * 40, base), {"dpe": "true", "be": "true", "fe": "true"})
+            (root / "fe/source").write_text("frontend update")
+            frontend = commit()
+            self.assertEqual(detect(base, frontend), {"dpe": "false", "be": "false", "fe": "true"})
+            (root / "be/source").write_text("backend update")
+            backend = commit()
+            self.assertEqual(detect(base, backend), {"dpe": "false", "be": "true", "fe": "true"})
+            (root / "dpe/source").rename(root / "docs/moved")
+            moved = commit()
+            self.assertEqual(detect(backend, moved), {"dpe": "true", "be": "false", "fe": "false"})
+            (root / "docs/source").write_text("documentation")
+            docs = commit()
+            self.assertEqual(detect(moved, docs), {"dpe": "false", "be": "false", "fe": "false"})
+            (root / "fe/source").unlink()
+            deleted = commit()
+            self.assertEqual(detect(docs, deleted), {"dpe": "false", "be": "false", "fe": "true"})
+
+    def condition_allows(self, area, changes, results, cancelled=False):
+        expression = self.workflow("deploy.yml")["jobs"][area]["if"]
+        expression = expression.replace("always()", "True").replace("!cancelled()", str(not cancelled))
+        expression = expression.replace("&&", " and ").replace("||", " or ")
+        expression = re.sub(r"needs\.changes\.outputs\.(\w+)", lambda match: repr(str(changes[match[1]]).lower()), expression)
+        expression = re.sub(r"needs\.(\w+)\.result", lambda match: repr(results[match[1]]), expression)
+        return eval(expression, {"__builtins__": {}})
+
+    def test_only_changed_targets_run_for_every_folder_combination(self):
+        for flags in itertools.product((False, True), repeat=3):
+            changes = dict(zip(("dpe", "be", "fe"), flags))
+            results = {"changes": "success"}
+            for area in ("dpe", "be", "fe"):
+                with self.subTest(changes=changes, area=area):
+                    allowed = self.condition_allows(area, changes, results)
+                    self.assertEqual(allowed, changes[area])
+                    results[area] = "success" if allowed else "skipped"
+
+    def test_failed_or_cancelled_upstream_blocks_changed_downstream(self):
+        changes = {area: True for area in ("dpe", "be", "fe")}
+        for outcome in ("failure", "cancelled"):
+            self.assertFalse(self.condition_allows("be", changes, {"changes": "success", "dpe": outcome}))
+            self.assertFalse(self.condition_allows("fe", changes, {"changes": "success", "dpe": outcome, "be": "skipped"}))
+            self.assertFalse(self.condition_allows("fe", changes, {"changes": "success", "dpe": "skipped", "be": outcome}))
+            self.assertFalse(self.condition_allows("fe", changes, {"changes": outcome, "dpe": "skipped", "be": "skipped"}))
+        self.assertFalse(self.condition_allows("fe", changes, {"changes": "success", "dpe": "skipped", "be": "skipped"}, cancelled=True))
 
     def test_backend_completes_contracts_deploy_and_migrations_before_returning(self):
         jobs = self.workflow("deploy-be.yml")["jobs"]

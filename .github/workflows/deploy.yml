@@ -7,11 +7,6 @@ on:
       - 'dpe/**'
       - 'be/**'
       - 'fe/**'
-      - 'tools/agent_workflow/fixtures/**'
-      - '.github/workflows/deploy*.yml'
-      - '.github/workflows/*-unit-tests.yml'
-      - '.github/workflows/payment-contract-validation.yml'
-      - '.github/workflows/run-migrations.yml'
 
 permissions:
   contents: read
@@ -21,19 +16,67 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  changes:
+    name: Detect changed deployment targets
+    runs-on: ubuntu-latest
+    outputs:
+      dpe: ${{ steps.detect.outputs.dpe }}
+      be: ${{ steps.detect.outputs.be }}
+      fe: ${{ steps.detect.outputs.fe }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Compare the full pushed revision range
+        id: detect
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import subprocess
+
+          before = os.environ["BEFORE_SHA"]
+          if before == "0" * 40:
+              before = subprocess.check_output(
+                  ["git", "hash-object", "-t", "tree", "--stdin"], input=b""
+              ).decode().strip()
+          paths = subprocess.check_output([
+              "git", "diff", "--no-renames", "--name-only", "-z",
+              before, os.environ["GITHUB_SHA"], "--",
+          ]).split(b"\0")
+          with open(os.environ["GITHUB_OUTPUT"], "a") as output:
+              for area in ("dpe", "be", "fe"):
+                  changed = any(path.startswith(area.encode() + b"/") for path in paths)
+                  output.write(f"{area}={str(changed).lower()}\n")
+          PY
+
   dpe:
     name: DPE
+    needs: changes
+    if: needs.changes.outputs.dpe == 'true'
     uses: ./.github/workflows/deploy-dpe.yml
     secrets: inherit
 
   be:
     name: Backend and migrations
-    needs: dpe
+    needs: [changes, dpe]
+    if: >-
+      always() && !cancelled() &&
+      needs.changes.result == 'success' &&
+      needs.changes.outputs.be == 'true' &&
+      (needs.dpe.result == 'success' || needs.dpe.result == 'skipped')
     uses: ./.github/workflows/deploy-be.yml
     secrets: inherit
 
   fe:
     name: Frontend
-    needs: be
+    needs: [changes, dpe, be]
+    if: >-
+      always() && !cancelled() &&
+      needs.changes.result == 'success' &&
+      needs.changes.outputs.fe == 'true' &&
+      (needs.dpe.result == 'success' || needs.dpe.result == 'skipped') &&
+      (needs.be.result == 'success' || needs.be.result == 'skipped')
     uses: ./.github/workflows/deploy-fe.yml
     secrets: inherit
