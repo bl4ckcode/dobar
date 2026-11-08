@@ -1,7 +1,7 @@
 """Add contact_change_requests for verified email/phone changes
 
 Revision ID: dob_95_contact_change_requests
-Revises: dob_94_unique_bar_staff
+Revises: c05_customer_checkins
 Create Date: 2026-11-08 00:00:00.000000
 
 Additive only: new table, no data backfill, safe to deploy before callers.
@@ -12,7 +12,7 @@ from alembic import op
 import sqlalchemy as sa
 
 revision: str = "dob_95_contact_change_requests"
-down_revision: Union[str, None] = "dob_94_unique_bar_staff"
+down_revision: Union[str, None] = "c05_customer_checkins"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
