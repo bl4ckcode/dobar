@@ -1,15 +1,7 @@
 name: Deploy BE to Fly.io
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'be/**'
-      - '.github/workflows/deploy-be.yml'
-      - '.github/workflows/be-unit-tests.yml'
-      - '.github/workflows/payment-contract-validation.yml'
-      - '.github/workflows/run-migrations.yml'
+  workflow_call:
 
 jobs:
   # 1. Run Unit Tests

@@ -1,0 +1,39 @@
+name: Deploy Production
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'dpe/**'
+      - 'be/**'
+      - 'fe/**'
+      - 'tools/agent_workflow/fixtures/**'
+      - '.github/workflows/deploy*.yml'
+      - '.github/workflows/*-unit-tests.yml'
+      - '.github/workflows/payment-contract-validation.yml'
+      - '.github/workflows/run-migrations.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: production-deployment
+  cancel-in-progress: false
+
+jobs:
+  dpe:
+    name: DPE
+    uses: ./.github/workflows/deploy-dpe.yml
+    secrets: inherit
+
+  be:
+    name: Backend and migrations
+    needs: dpe
+    uses: ./.github/workflows/deploy-be.yml
+    secrets: inherit
+
+  fe:
+    name: Frontend
+    needs: be
+    uses: ./.github/workflows/deploy-fe.yml
+    secrets: inherit

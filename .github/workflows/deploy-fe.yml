@@ -1,17 +1,17 @@
 name: Deploy FE to Fly.io
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'fe/**'
-      - '.github/workflows/deploy-fe.yml'
+  workflow_call:
 
 jobs:
+  test:
+    uses: ./.github/workflows/fe-unit-tests.yml
+    secrets: inherit
+
   deploy:
     name: Deploy Application
     runs-on: ubuntu-latest
+    needs: test
     defaults:
       run:
         working-directory: fe

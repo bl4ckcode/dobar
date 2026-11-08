@@ -105,7 +105,8 @@ dependencies:
   rxdart: ^0.28.0
   local_auth: ^3.0.1
   url_launcher: ^6.3.2
-  flutter_lucide: ^1.52.0
+  # Newer releases renamed alert icons used by the app; upgrade with UI validation.
+  flutter_lucide: 1.62.0
   qr_flutter: ^4.1.0
   bloc_concurrency: ^0.3.0
 
