@@ -126,6 +126,7 @@ def is_country_enabled(country_code: str) -> bool:
 
 
 class ProfileResponse(BaseModel):
+    id: int
     display_name: Optional[str] = None
     email: Optional[str] = None
     phone_number: Optional[str] = None
@@ -214,6 +215,7 @@ async def get_profile(current_user: AuthUser = Depends(get_current_user)):
     has_onboarded = profile.get("terms_accepted", False) or profile.get("privacy_accepted", False)
     
     return ProfileResponse(
+        id=current_user.id,
         display_name=profile.get("display_name"),
         email=user["email"] if user else None,
         phone_number=user["phone_number"] if user else None,

@@ -1,6 +1,6 @@
 # Frontend ↔ backend communication
 
-Last updated: 2026-11-03
+Last updated: 2026-11-07
 
 Rolling handoff: one latest update per sender. Git and Linear own history. Implementation and local checks do not establish deployment, provider or native-device E2E acceptance.
 
@@ -20,7 +20,8 @@ Rolling handoff: one latest update per sender. Git and Linear own history. Imple
 
 ## Latest backend update
 
-- Date: 2026-11-03. Scope: approved FE/BE checkout, menu and check-in defects.
+- Date: 2026-11-07. Scope: [C05-AC04](../.specs/mvp-v0.1/C05-check-in.md) profile identity correction; existing checkout/menu/check-in rollout obligations remain below.
+- [Profile response](../be/app/auth/profile.py) now includes required integer `id` from the authenticated account, including profile-update/onboarding responses. This additive field supplies the identity already expected by FE `UserModel` and the singleton `SessionBloc`; no storage migration or FE persistence change is needed. Release BE through GitHub Actions and reinitialize/relaunch existing app sessions after rollout. [HTTP regression](../be/tests/test_profile_identity.py) covers account IDs distinct from profile-row IDs and unauthenticated access; [FE regression](../fe/test/features/checkin/checkin_profile_identity_test.dart) covers profile → session → confirmation with scripted HTTP, without login. Local checks do not establish deployment/device acceptance.
 - `defer_payment` defaults false for legacy callers. New deferred checkout requires stable idempotency and creates/resumes one unpaid order. Customer prerequisites and server menu prices are validated before cart mutation. Shared charging authorizes the order, derives BRL totals, resolves owned saved cards and retains payment outcomes/attempt correlation. Paid state and rewards cannot regress or duplicate on replay.
 - `/me/cards` requires a fresh PagarMe `token_`, exchanges it via DPE, and persists a durable `card_`; invalid legacy references are marked unusable. Blank references return validation errors; uniqueness races preserve the existing default card transactionally. Error categories distinguish validation, decline and unavailable/unknown outcomes.
 - `POST /checkins` accepts `bar_id`, coordinates, `measured_at`, optional `accuracy_meters` and `table_number`. Server confirmation requires a fix ≤120s old and distance <10m, validates configured locations, and persists user/venue ownership. Active sessions expire after 12h by default (`CHECKIN_TTL_HOURS`); checkout requires the matching session and retains the validated location. Apply [C05 migration](../be/migrations/versions/c05_customer_checkins.py) before enabling this code.

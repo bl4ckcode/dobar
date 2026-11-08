@@ -34,6 +34,7 @@ Source and regression references:
 - [Home prompt](../../fe/lib/ui/screens/home_connected.dart), [active customer shell](../../fe/lib/ui/shell/wireframe_shell.dart).
 - [Authenticated routes](../../be/app/bars_and_restaurants/routes/checkin.py), [eligibility/session service](../../be/app/bars_and_restaurants/services/checkin.py), [additive migration](../../be/migrations/versions/c05_customer_checkins.py).
 - [Backend regression tests](../../be/tests/test_customer_checkin.py). Local SQLite/PostgreSQL service, HTTP ownership, migration and concurrency checks do not establish native-device E2E acceptance.
+- [Profile identity HTTP regression](../../be/tests/test_profile_identity.py) and [profile-to-check-in regression](../../fe/test/features/checkin/checkin_profile_identity_test.dart) cover the authenticated account ID required by the shared session. The backend profile response now supplies `id`; local scripted HTTP checks do not prove deployed cached-token or native-device behavior.
 
 ## Contracts and compatibility
 
@@ -46,7 +47,7 @@ Use [FE/BE contract](../../docs/FE_BE_COMMUNICATION.md) for durable interfaces; 
 - **C05-AC01** — Check-in entry eligibility and confirmation require current distance strictly less than 10m from a partner venue; 10m or greater cannot silently create a valid check-in.
 - **C05-AC02** — Customer can browse the menu without check-in. The first concrete ordering action and cart entry require an authenticated check-in for that venue, retain the intended action through confirmation, and resume it only on success. Table or delivery-location details can be supplied before ordering or during checkout and are retained on the order.
 - **C05-AC03** — Real QR input selects a valid partner/table and validates it; demo controls and hardcoded distance never determine release eligibility.
-- **C05-AC04** — Authenticated check-in survives supported resume/reopen behavior, and stale location, denied permission or incompatible venue/table returns a recoverable state.
+- **C05-AC04** — Authenticated check-in survives supported resume/reopen behavior, and stale location, denied permission or incompatible venue/table returns a recoverable state. Opening with a cached valid token hydrates the authenticated account ID into the shared session and permits check-in confirmation without requiring another login.
 
 ## Validation scenarios and evidence
 
