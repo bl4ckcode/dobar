@@ -354,7 +354,7 @@ class _VenueRegistrationViewState extends State<VenueRegistrationView> {
       'address': details.address,
       'latitude': details.latitude,
       'longitude': details.longitude,
-      'location_confirmed': false,
+      'location_confirmed': true,
     });
     setState(() {
       _results = [];
@@ -401,60 +401,12 @@ class _VenueRegistrationViewState extends State<VenueRegistrationView> {
         'address',
         t.b02_address,
         validator: _required,
-        onChanged: (v) =>
-            cubit.edit({'address': v, 'location_confirmed': false}),
-      ),
-      _field(
-        'latitude',
-        t.b02_latitude,
-        keyboard: const TextInputType.numberWithOptions(
-          decimal: true,
-          signed: true,
-        ),
         onChanged: (v) => cubit.edit({
-          'latitude': double.tryParse(v.replaceAll(',', '.')),
+          'address': v,
+          'latitude': null,
+          'longitude': null,
           'location_confirmed': false,
         }),
-        validator: (_) {
-          final n = p['latitude'] as num?;
-          return n == null || n < -90 || n > 90 ? t.b02_invalid : null;
-        },
-      ),
-      _field(
-        'longitude',
-        t.b02_longitude,
-        keyboard: const TextInputType.numberWithOptions(
-          decimal: true,
-          signed: true,
-        ),
-        onChanged: (v) => cubit.edit({
-          'longitude': double.tryParse(v.replaceAll(',', '.')),
-          'location_confirmed': false,
-        }),
-        validator: (_) {
-          final n = p['longitude'] as num?;
-          return n == null || n < -180 || n > 180 ? t.b02_invalid : null;
-        },
-      ),
-      FormField<bool>(
-        validator: (_) =>
-            p['location_confirmed'] == true ? null : t.b02_invalid,
-        builder: (f) => Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CheckboxListTile(
-              contentPadding: EdgeInsets.zero,
-              value: p['location_confirmed'] == true,
-              title: Text(t.b02_confirmLocation),
-              onChanged: (v) {
-                _unfocus();
-                cubit.edit({'location_confirmed': v});
-                f.didChange(v);
-              },
-            ),
-            if (f.hasError) _notice(f.errorText!, error: true),
-          ],
-        ),
       ),
     ],
   );

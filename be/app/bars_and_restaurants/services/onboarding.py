@@ -12,6 +12,7 @@ from ..models.relational_models import Bar, BarOwner
 from ..models.bank_account import BarBankAccount
 from ..models.onboarding import OnboardingDraft, OnboardingAsset, OnboardingProjection
 from . import bank_account_service as bank
+from .venue_location import geocode_address, valid_coordinates
 
 STEPS = ("find", "details", "receiving", "photos", "hours", "review")
 DAYS = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
@@ -77,7 +78,7 @@ def identity_errors(payload):
         if not (payload.get(key) or "").strip():
             errors[key] = ["Required"]
     lat, lng = payload.get("latitude"), payload.get("longitude")
-    if not payload.get("location_confirmed") or lat is None or lng is None or not (-90 <= lat <= 90 and -180 <= lng <= 180) or (lat == 0 and lng == 0):
+    if not valid_coordinates(lat, lng) or (lat == 0 and lng == 0):
         errors["location_confirmed"] = ["Confirm a valid venue location"]
     if payload.get("email"):
         try:
@@ -198,7 +199,17 @@ def patch(db, user, draft_id, request):
     validate_partial(request.payload)
     if set(request.steps) - set(STEPS) or any(s in ("find", "details", "review") and v == "skipped" for s, v in request.steps.items()):
         raise APIError.validation_error("Invalid step")
-    draft.payload = {**draft.payload, **request.payload}
+    payload = {**draft.payload, **request.payload}
+    if "address" in request.payload:
+        address_changed = payload.get("address") != draft.payload.get("address")
+        supplied_coordinates = valid_coordinates(request.payload.get("latitude"), request.payload.get("longitude"))
+        if address_changed and not supplied_coordinates:
+            payload.update(latitude=None, longitude=None, location_confirmed=False)
+        if not valid_coordinates(payload.get("latitude"), payload.get("longitude")):
+            coordinates = geocode_address(payload.get("address"))
+            if coordinates:
+                payload.update(latitude=coordinates[0], longitude=coordinates[1], location_confirmed=True)
+    draft.payload = payload
     draft.steps = {**draft.steps, **request.steps}
     if "bank_account" in request.model_fields_set:
         data = request.bank_account
@@ -226,7 +237,12 @@ def finalize(db, user, draft_id, request):
             raise APIError.conflict("Finalization operation differs from the created venue")
         return draft
     editable(draft, request.version)
-    p = draft.payload
+    p = dict(draft.payload)
+    if not valid_coordinates(p.get("latitude"), p.get("longitude")):
+        coordinates = geocode_address(p.get("address"))
+        if coordinates:
+            p.update(latitude=coordinates[0], longitude=coordinates[1], location_confirmed=True)
+            draft.payload = p
     errors = identity_errors(p)
     account = bank_plain(draft)
     if account and validate_bank(account):

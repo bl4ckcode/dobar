@@ -6,6 +6,7 @@ from sqlalchemy import and_
 from app.database import database
 from app.auth.auth_models import User
 from app.errors import APIError
+from .venue_location import geocode_address, valid_coordinates
 from ..models.checkin import Checkin
 from ..models.relational_models import Bar, Order
 
@@ -77,8 +78,11 @@ def create(db, user_id, data, now=None):
     bar = db.query(Bar).filter(Bar.id == data.bar_id).with_for_update().first()
     if bar is None:
         raise APIError.partner_not_found("Bar não encontrado")
-    if bar.latitude is None or bar.longitude is None or not all(math.isfinite(v) for v in (bar.latitude, bar.longitude)):
-        raise APIError.validation_error("O bar ainda não possui localização válida", details={"bar_id": ["location_unavailable"]})
+    if not valid_coordinates(bar.latitude, bar.longitude):
+        coordinates = geocode_address(bar.address, bar.country_code)
+        if coordinates is None:
+            raise APIError.validation_error("Não foi possível localizar o endereço do bar. Tente novamente mais tarde", details={"bar_id": ["location_unavailable"]})
+        bar.latitude, bar.longitude = coordinates
     distance = distance_meters(data.latitude, data.longitude, bar.latitude, bar.longitude)
     if distance >= 10:
         raise APIError.validation_error("Aproxime-se do bar para fazer check-in", details={"location": ["outside_checkin_radius"]})

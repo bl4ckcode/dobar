@@ -42,10 +42,18 @@ Use [FE/BE contract](../../docs/FE_BE_COMMUNICATION.md) for durable interfaces; 
 
 ## Acceptance criteria
 
-- **B10-AC01** — Users with relevant bar permissions edit venue information, working hours and contact settings and see persisted values.
+- **B10-AC01** — Users with relevant bar permissions edit venue information, working hours and contact settings and see persisted values. Address editing does not expose numeric coordinates; a changed address resolves internally before saving, with a recoverable error on failure.
 - **B10-AC02** — Bank account details are shown/edited only to authorized admin/owner billing users and never exposed through broader marketing access.
 - **B10-AC03** — All authenticated users can change language, access supported credential/password management and request their own account deletion with confirmation.
 - **B10-AC04** — Light/dark preference, loading/save errors and destructive confirmation remain accessible, localized and correctly scoped to personal account versus business data.
+
+## Optional map positioning follow-up
+
+Source: explicit user request on 2026-11-07, address-only venue/check-in correction (Baxo Bar, `bar_id: 16`). Tracked in [DOB-92](https://linear.app/dobarecosystem/issue/DOB-92/febe-permitir-marcar-opcionalmente-o-endereco-do-estabelecimento-no). Delivery: planned; verification: unverified. The action currently opens a localized coming-soon dialog beside Address; this is not an interactive map implementation.
+
+- **B10-AC05** — An authorized BAR_EDIT user can optionally open a map from Address, move a marker and confirm the venue position. Cancel preserves the saved address/position; reopen shows the persisted position. Numeric latitude/longitude stay hidden, and address-only setup remains supported. Address changes invalidate a previous position. Map/save failures preserve edits and offer localized retry. Unauthorized updates fail server-side. Check-in retains C05’s strict distance rule.
+
+Next owner: cross-repo-planner, then frontend/backend. Define the compatible map/persistence integration and verify narrow/wide browsers, Portuguese copy, both themes, cancel/save/reopen, failures and authorization. No sprint is assigned automatically to this feature.
 
 ## Validation scenarios and evidence
 

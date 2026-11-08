@@ -278,3 +278,28 @@ async def test_extraction_preserves_role_permissions_and_custom_grants(monkeypat
     else:
         with pytest.raises(APIError):
             await menus.authorize_menu_extraction(42, OWNER)
+
+
+
+def test_address_only_draft_can_finalize_without_manual_coordinates(db, monkeypatch):
+    monkeypatch.setattr(service, "geocode_address", lambda *args: (-19.92, -43.94))
+    draft = service.create(db, OWNER, "address_only_001")
+    draft = service.patch(db, OWNER, draft.id, DraftPatch(version=draft.version, payload={"name": "Baxo Bar", "address": "Rua Teste, 241"}))
+    assert draft.payload["location_confirmed"] is True
+    created = service.finalize(db, OWNER, draft.id, DraftFinalize(version=draft.version, operation_key="address_only_final_001"))
+    bar = db.get(Bar, created.bar_id)
+    assert (bar.latitude, bar.longitude) == (-19.92, -43.94)
+
+
+def test_changed_address_drops_previous_location_and_can_retry(db, monkeypatch):
+    draft = ready(db)
+    monkeypatch.setattr(service, "geocode_address", lambda *args: None)
+    draft = service.patch(db, OWNER, draft.id, DraftPatch(version=draft.version, payload={"address": "Rua Nova, 200"}))
+    assert draft.payload["latitude"] is None
+    assert draft.payload["longitude"] is None
+    with pytest.raises(APIError):
+        service.finalize(db, OWNER, draft.id, DraftFinalize(version=draft.version, operation_key="address_retry_final_001"))
+    assert db.query(Bar).count() == 0
+    monkeypatch.setattr(service, "geocode_address", lambda *args: (-19.93, -43.95))
+    created = service.finalize(db, OWNER, draft.id, DraftFinalize(version=draft.version, operation_key="address_retry_final_001"))
+    assert db.get(Bar, created.bar_id).latitude == -19.93

@@ -106,7 +106,65 @@ class DraftFake implements VenueDraftRepository {
   }
 }
 
+class _ResolvedDraftFake extends DraftFake {
+  final sent = <Map<String, dynamic>>[];
+  @override
+  Future<VenueDraft> save(
+    String id,
+    int version,
+    Map<String, dynamic> payload,
+    Map<String, String> steps, {
+    bool bankChanged = false,
+    Map<String, dynamic>? bank,
+  }) async {
+    sent.add(Map.of(payload));
+    final saved = await super.save(
+      id,
+      version,
+      payload,
+      steps,
+      bankChanged: bankChanged,
+      bank: bank,
+    );
+    value = VenueDraft(
+      id: saved.id,
+      version: saved.version,
+      payload: {
+        ...saved.payload,
+        'latitude': -19.92,
+        'longitude': -43.94,
+        'location_confirmed': true,
+      },
+      steps: saved.steps,
+      nextStep: saved.nextStep,
+    );
+    return value;
+  }
+}
+
 void main() {
+  test(
+    'acknowledged address coordinates survive the next draft edit',
+    () async {
+      final repo = _ResolvedDraftFake();
+      final cubit = VenueDraftCubit(repo);
+      addTearDown(cubit.close);
+      await cubit.start();
+      cubit.edit({
+        'address': 'Rua Teste, 241',
+        'latitude': null,
+        'longitude': null,
+      });
+      await cubit.save();
+      expect(cubit.payload['latitude'], -19.92);
+      expect(cubit.payload['longitude'], -43.94);
+      cubit.edit({'name': 'Baxo Bar'});
+      await cubit.save();
+      expect(repo.sent.last['latitude'], -19.92);
+      expect(repo.sent.last['longitude'], -43.94);
+      expect(repo.sent.last['name'], 'Baxo Bar');
+    },
+  );
   test('late save acknowledgement does not erase newer edits', () async {
     final repo = DraftFake();
     final c = VenueDraftCubit(repo);

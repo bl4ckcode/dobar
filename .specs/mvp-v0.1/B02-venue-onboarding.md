@@ -54,7 +54,7 @@ Use [FE/BE contract](../../docs/FE_BE_COMMUNICATION.md) for durable interfaces; 
 
 - **B02-AC01** — An authenticated owner can optionally onboard venue images, contact information and bank details and enter AI menu import from the same flow.
 - **B02-AC02** — Saving progress records a draft for that owner; reopening the browser/session restores saved values and the next incomplete step.
-- **B02-AC03** — Failed save/upload is visible and retry does not create a second venue; finalization validates required venue fields.
+- **B02-AC03** — Failed save/upload is visible and retry does not create a second venue; finalization validates required venue fields. Owners supply an address without typing latitude/longitude; coordinates from place selection or server-side address resolution remain internal. Changing the address invalidates the previous position, and failed resolution preserves the draft for correction/retry.
 - **B02-AC04** — Only authorized users access drafts and sensitive bank fields, and successful creation refreshes business venue access.
 
 - **B02-AC05** — A restored legacy business account with no venue or matching invitation resumes role/country selection with saved choices, both editable. Choosing customer returns to customer home; continuing business enters the existing draft/Create Bar flow. Back signs out without deleting saved choices or drafts. Theme transitions in both directions must not throw TextStyle interpolation errors.

@@ -194,6 +194,7 @@ class VenueDraftCubit extends Cubit<VenueDraftState> {
         bank: sentBank,
       );
       if (revision == _revision) {
+        payload = Map.of(saved.payload);
         _bankChanged = false;
       }
       _emit(

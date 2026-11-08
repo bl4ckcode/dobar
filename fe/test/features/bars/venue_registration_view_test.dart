@@ -54,6 +54,58 @@ void main() {
           home: VenueRegistrationView(repository: repo),
         ),
       );
+  for (final size in [const Size(390, 844), const Size(1280, 900)]) {
+    testWidgets('address alone advances registration at $size in both themes', (
+      tester,
+    ) async {
+      tester.view.physicalSize = size;
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final repo = DraftFake();
+      repo.value = const VenueDraft(
+        id: 'address-only',
+        version: 1,
+        payload: {},
+        steps: {},
+        nextStep: 'find',
+      );
+      await tester.pumpWidget(app(repo));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Retomar cadastro'));
+      await tester.pumpAndSettle();
+      for (final dark in [false, true]) {
+        if (dark) {
+          await tester.tap(find.byTooltip('Ativar tema escuro'));
+          await tester.pumpAndSettle();
+        }
+        final l10n = AppLocalizations.of(
+          tester.element(find.byType(VenueRegistrationView)),
+        )!;
+        expect(find.text(l10n.b02_latitude), findsNothing);
+        expect(find.text(l10n.b02_longitude), findsNothing);
+        expect(find.byType(CheckboxListTile), findsNothing);
+      }
+      final l10n = AppLocalizations.of(
+        tester.element(find.byType(VenueRegistrationView)),
+      )!;
+      final address = find.widgetWithText(TextFormField, l10n.b02_address);
+      await tester.ensureVisible(address);
+      await tester.enterText(
+        address,
+        'Rua Fernandes Tourinho, 241, Belo Horizonte',
+      );
+      await tester.pumpAndSettle();
+      final next = find.text(l10n.b02_next);
+      await tester.ensureVisible(next);
+      await tester.tap(next);
+      await tester.pumpAndSettle();
+      expect(repo.value.payload['address'], contains('241'));
+      expect(find.widgetWithText(TextFormField, l10n.b02_name), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+    });
+  }
   testWidgets(
     'theme remains available and input contrast and values follow both themes',
     (tester) async {

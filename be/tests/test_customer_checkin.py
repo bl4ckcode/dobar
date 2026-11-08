@@ -193,3 +193,48 @@ async def test_authenticated_http_confirmation_resume_and_end(checkin_storage):
             ended = await client.delete("/checkins/active")
             assert ended.status_code == 204
             assert (await client.get("/checkins/active")).json() is None
+
+
+@pytest.mark.parametrize("distance,allowed", [(9, True), (11, False)])
+def test_address_only_venue_resolves_before_distance_check(checkin_storage, monkeypatch, distance, allowed):
+    from unittest.mock import Mock
+    resolve = Mock(return_value=(0.0, 0.0))
+    monkeypatch.setattr(service, "geocode_address", resolve)
+    address = "R. Fernandes Tourinho, 241 - Funcionários, Belo Horizonte - MG, Brasil"
+    with Session(checkin_storage) as db:
+        bar = db.get(Bar, 601)
+        bar.address, bar.country_code = address, "BR"
+        bar.latitude = bar.longitude = None
+        db.commit()
+        if allowed:
+            record = service.create(db, 501, sample(distance), now=NOW)
+            assert record.distance_meters == pytest.approx(distance)
+            db.expire_all()
+            assert (db.get(Bar, 601).latitude, db.get(Bar, 601).longitude) == (0, 0)
+        else:
+            with pytest.raises(APIError) as caught:
+                service.create(db, 501, sample(distance), now=NOW)
+            assert caught.value.details == {"location": ["outside_checkin_radius"]}
+            assert db.query(Checkin).count() == 0
+        resolve.assert_called_once_with(address, "BR")
+
+
+def test_unresolvable_address_cannot_use_customer_coordinates(checkin_storage, monkeypatch):
+    monkeypatch.setattr(service, "geocode_address", lambda *args: None)
+    with Session(checkin_storage) as db:
+        bar = db.get(Bar, 601)
+        bar.latitude = bar.longitude = None
+        db.commit()
+        with pytest.raises(APIError) as caught:
+            service.create(db, 501, sample(), now=NOW)
+        assert caught.value.details == {"bar_id": ["location_unavailable"]}
+        assert db.query(Checkin).count() == 0
+
+
+def test_configured_coordinates_do_not_call_geocoding(checkin_storage, monkeypatch):
+    from unittest.mock import Mock
+    resolve = Mock(side_effect=AssertionError("Unexpected provider call"))
+    monkeypatch.setattr(service, "geocode_address", resolve)
+    with Session(checkin_storage) as db:
+        service.create(db, 501, sample(), now=NOW)
+    resolve.assert_not_called()

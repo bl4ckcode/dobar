@@ -44,7 +44,7 @@ Use [FE/BE contract](../../docs/FE_BE_COMMUNICATION.md) for durable interfaces; 
 
 ## Acceptance criteria
 
-- **C05-AC01** — Check-in entry eligibility and confirmation require current distance strictly less than 10m from a partner venue; 10m or greater cannot silently create a valid check-in.
+- **C05-AC01** — Check-in entry eligibility and confirmation require current distance strictly less than 10m from a partner venue; 10m or greater cannot silently create a valid check-in. For venues with an address but missing internal coordinates, resolve the address server-side before measuring distance; unavailable or uncertain resolution remains recoverable and never substitutes the customer’s position for the venue.
 - **C05-AC02** — Customer can browse the menu without check-in. The first concrete ordering action and cart entry require an authenticated check-in for that venue, retain the intended action through confirmation, and resume it only on success. Table or delivery-location details can be supplied before ordering or during checkout and are retained on the order.
 - **C05-AC03** — Real QR input selects a valid partner/table and validates it; demo controls and hardcoded distance never determine release eligibility.
 - **C05-AC04** — Authenticated check-in survives supported resume/reopen behavior, and stale location, denied permission or incompatible venue/table returns a recoverable state. Opening with a cached valid token hydrates the authenticated account ID into the shared session and permits check-in confirmation without requiring another login.

@@ -344,8 +344,6 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
           'city': _form.city,
           'state': _form.state,
           'country': _form.countryCode,
-          'latitude': _form.latitude,
-          'longitude': _form.longitude,
         };
         if (_form.businessId.isNotEmpty) {
           data['business_id'] = _form.businessId.replaceAll(RegExp(r'[^0-9]'), '');
@@ -727,7 +725,7 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
                                             children: [
                                               Icon(LucideIcons.camera, size: 36, color: mutedColor),
                                               const SizedBox(height: 4),
-                                              Text('COVER PHOTO', style: TextStyle(color: mutedColor, fontFamily: 'Courier', fontSize: 10, letterSpacing: 1)),
+                                              Text(l10n.cover_photo.toUpperCase(), style: TextStyle(color: mutedColor, fontFamily: 'Courier', fontSize: 10, letterSpacing: 1)),
                                             ],
                                           ),
                                         ),
@@ -860,6 +858,15 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
                               onChanged: (v) => _form.address = v,
                               fieldKey: 'address',
                             ),
+                            Align(
+                              alignment: Alignment.centerRight,
+                              child: TextButton.icon(
+                                onPressed: () => _showMapDialog(context),
+                                icon: Icon(LucideIcons.map, size: 16, color: dobar.buttonPrimary),
+                                label: Text(l10n.details_pin_on_map),
+                                style: TextButton.styleFrom(foregroundColor: dobar.buttonPrimary),
+                              ),
+                            ),
                             const SizedBox(height: 16),
                             Row(
                               children: [
@@ -915,55 +922,6 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
                                       color: mutedColor,
                                       fontFamily: 'Courier',
                                       fontSize: 13,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: dobar.background,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: borderColor),
-                              ),
-                              child: Row(
-                                children: [
-                                  Text(
-                                    'LAT ${_form.latitude.toStringAsFixed(4)}   LNG ${_form.longitude.toStringAsFixed(4)}',
-                                    style: TextStyle(
-                                      color: mutedColor,
-                                      fontFamily: 'Courier',
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                  const Spacer(),
-                                  GestureDetector(
-                                    onTap: () => _showMapDialog(context),
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 6),
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(8),
-                                        color: barzGold.withValues(alpha: 0.1),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Icon(LucideIcons.map,
-                                              size: 14, color: barzGold),
-                                          const SizedBox(width: 4),
-                                          Text(
-                                            l10n.details_pin_on_map,
-                                            style: TextStyle(
-                                              color: barzGold,
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
-                                              letterSpacing: 1,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
                                     ),
                                   ),
                                 ],
@@ -1260,7 +1218,7 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
               ),
               const SizedBox(height: 8),
               Text(
-                'You have unsaved changes that will be lost.',
+                l10n.details_discard_msg,
                 style: TextStyle(
                   fontSize: 14,
                   color: dobar.labelSecondary,
@@ -1283,8 +1241,8 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text(
-                    'Leave & Save',
+                  child: Text(
+                    l10n.b02_saveExit,
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -1305,8 +1263,8 @@ class _BusinessDetailsFormState extends State<_BusinessDetailsFormContent> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: const Text(
-                    'Leave & Discard',
+                  child: Text(
+                    l10n.b02_exitUnsaved,
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),

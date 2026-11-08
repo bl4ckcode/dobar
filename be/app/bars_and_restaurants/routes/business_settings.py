@@ -1,6 +1,8 @@
 """
 Business Settings Routes - Bar profile, contact, deactivation management
 """
+from starlette.concurrency import run_in_threadpool
+from ..services.venue_location import geocode_address, valid_coordinates
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional
@@ -236,6 +238,16 @@ async def update_business_details(
         if val is not None:
             values[db_field] = val
     
+    address_changed = "address" in values and values["address"] != bar.get("address")
+    coordinates_supplied = valid_coordinates(values.get("latitude"), values.get("longitude"))
+    if (address_changed and not coordinates_supplied) or (not coordinates_supplied and not valid_coordinates(bar.get("latitude"), bar.get("longitude"))):
+        coordinates = await run_in_threadpool(geocode_address, values.get("address", bar.get("address")), bar.get("country_code"))
+        if coordinates is None:
+            if address_changed:
+                raise APIError.validation_error("Não foi possível localizar o endereço. Revise o endereço e tente novamente", details={"address": ["location_unavailable"]})
+        else:
+            values["latitude"], values["longitude"] = coordinates
+
     if not values:
         bar = await _enrich_with_mongo(bar)
         bar = _extract_city_state(bar)
