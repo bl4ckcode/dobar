@@ -10,6 +10,19 @@ def valid_coordinates(latitude, longitude):
     ) and -90 <= latitude <= 90 and -180 <= longitude <= 180
 
 
+def coordinates_from_geojson(document):
+    if not isinstance(document, dict):
+        return None
+    location = document.get("location")
+    if not isinstance(location, dict) or location.get("type") != "Point":
+        return None
+    coordinates = location.get("coordinates")
+    if not isinstance(coordinates, (list, tuple)) or len(coordinates) != 2:
+        return None
+    longitude, latitude = coordinates
+    return (latitude, longitude) if valid_coordinates(latitude, longitude) else None
+
+
 def geocode_address(address, country="BR"):
     key = os.getenv("GOOGLE_PLACES_API_KEY")
     if not key or not (address or "").strip():

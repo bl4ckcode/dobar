@@ -50,3 +50,21 @@ def test_provider_timeout_and_missing_configuration_are_recoverable(geocoder, mo
     geocoder.reset_mock()
     assert service.geocode_address("Rua Teste, 241") is None
     geocoder.get.assert_not_called()
+
+
+def test_geojson_uses_longitude_latitude_order():
+    document = {"location": {"type": "Point", "coordinates": [-43.94, -19.92]}}
+    assert service.coordinates_from_geojson(document) == (-19.92, -43.94)
+
+
+@pytest.mark.parametrize("document", [
+    None, {}, {"location": None}, {"location": []},
+    {"location": {"type": "LineString", "coordinates": [-43.94, -19.92]}},
+    *({"location": {"type": "Point", "coordinates": value}} for value in (
+        None, "-43.94,-19.92", [], [-43.94], [-43.94, -19.92, 0],
+        [None, None], [-43.94, 91], [-181, -19.92], [True, -19.92],
+        [float("nan"), -19.92], [-43.94, float("inf")],
+    )),
+])
+def test_invalid_mongodb_locations_do_not_define_venue_position(document):
+    assert service.coordinates_from_geojson(document) is None

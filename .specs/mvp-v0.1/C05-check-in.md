@@ -34,6 +34,7 @@ Source and regression references:
 - [Home prompt](../../fe/lib/ui/screens/home_connected.dart), [active customer shell](../../fe/lib/ui/shell/wireframe_shell.dart).
 - [Authenticated routes](../../be/app/bars_and_restaurants/routes/checkin.py), [eligibility/session service](../../be/app/bars_and_restaurants/services/checkin.py), [additive migration](../../be/migrations/versions/c05_customer_checkins.py).
 - [Backend regression tests](../../be/tests/test_customer_checkin.py). Local SQLite/PostgreSQL service, HTTP ownership, migration and concurrency checks do not establish native-device E2E acceptance.
+- The `create_new_bar` registration path stores its GeoJSON position in MongoDB while leaving PostgreSQL coordinates null. Check-in reads that server-held position before address geocoding, validates it and persists it in PostgreSQL on successful confirmation. Existing configured PostgreSQL coordinates take precedence; invalid or unavailable MongoDB location data falls back to address resolution. Local HTTP regressions use mocked MongoDB/geocoding; actual bar 16 data/provider behavior remains unverified.
 - [Profile identity HTTP regression](../../be/tests/test_profile_identity.py) and [profile-to-check-in regression](../../fe/test/features/checkin/checkin_profile_identity_test.dart) cover the authenticated account ID required by the shared session. The backend profile response now supplies `id`; local scripted HTTP checks do not prove deployed cached-token or native-device behavior.
 
 ## Contracts and compatibility

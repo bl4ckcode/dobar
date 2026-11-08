@@ -68,7 +68,7 @@ def serialize(db, checkin):
     }
 
 
-def create(db, user_id, data, now=None):
+def create(db, user_id, data, now=None, mongodb_coordinates=None):
     now = now or datetime.utcnow()
     measured_at = utc_naive(data.measured_at)
     age = (now - measured_at).total_seconds()
@@ -79,7 +79,7 @@ def create(db, user_id, data, now=None):
     if bar is None:
         raise APIError.partner_not_found("Bar não encontrado")
     if not valid_coordinates(bar.latitude, bar.longitude):
-        coordinates = geocode_address(bar.address, bar.country_code)
+        coordinates = mongodb_coordinates or geocode_address(bar.address, bar.country_code)
         if coordinates is None:
             raise APIError.validation_error("Não foi possível localizar o endereço do bar. Tente novamente mais tarde", details={"bar_id": ["location_unavailable"]})
         bar.latitude, bar.longitude = coordinates

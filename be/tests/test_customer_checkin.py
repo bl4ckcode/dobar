@@ -238,3 +238,71 @@ def test_configured_coordinates_do_not_call_geocoding(checkin_storage, monkeypat
     with Session(checkin_storage) as db:
         service.create(db, 501, sample(), now=NOW)
     resolve.assert_not_called()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("distance,allowed,source", [
+    (9, True, "mongodb"), (11, False, "mongodb"),
+    (9, True, "missing"), (9, True, "malformed"), (9, True, "unavailable"),
+    (9, True, "timeout"), (9, False, "unresolved"), (9, True, "configured"),
+])
+async def test_mongodb_location_and_address_fallback(checkin_storage, monkeypatch, distance, allowed, source):
+    from fastapi import FastAPI
+    from httpx import AsyncClient, ASGITransport
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+    from app.auth.rbac_middleware import get_current_user
+    from app.database import get_db
+    from app.bars_and_restaurants.routes import checkin as routes
+    from app.main import api_error_handler
+    from pymongo.errors import ConnectionFailure
+
+    collection = AsyncMock()
+    collection.find_one.return_value = {"location": {"type": "Point", "coordinates": [-43.94, -19.92]}}
+    if source in ("missing", "unresolved"):
+        collection.find_one.return_value = None
+    elif source == "malformed":
+        collection.find_one.return_value = {"location": {"type": "Point", "coordinates": [None, None]}}
+    elif source == "unavailable":
+        collection.find_one.side_effect = ConnectionFailure("unavailable")
+    elif source == "timeout":
+        collection.find_one.side_effect = TimeoutError()
+    monkeypatch.setattr(routes, "bars_collection", collection)
+    geocode = Mock(return_value=(-19.92, -43.94) if source in ("missing", "malformed", "unavailable", "timeout") else None)
+    monkeypatch.setattr(service, "geocode_address", geocode)
+    application = FastAPI()
+    application.add_exception_handler(APIError, api_error_handler)
+    application.include_router(routes.checkin_router)
+    application.dependency_overrides[get_current_user] = lambda: SimpleNamespace(id=501)
+    with Session(checkin_storage) as db:
+        bar = db.get(Bar, 601)
+        bar.address = "R. Fernandes Tourinho, 241 - Funcionários, Belo Horizonte - MG, 30112-000, Brasil"
+        bar.latitude = bar.longitude = None
+        if source == "configured":
+            bar.latitude, bar.longitude = -19.92, -43.94
+        db.commit()
+        application.dependency_overrides[get_db] = lambda: db
+        payload = sample(
+            distance, latitude=-19.92 + math.degrees(distance / 6371000), longitude=-43.94,
+            measured_at=datetime.now(timezone.utc),
+        ).model_dump(mode="json")
+        async with AsyncClient(transport=ASGITransport(app=application), base_url="http://test") as client:
+            response = await client.post("/checkins", json=payload)
+        if allowed:
+            assert response.status_code == 200, response.text
+            assert response.json()["distance_meters"] == pytest.approx(distance)
+            db.expire_all()
+            assert (db.get(Bar, 601).latitude, db.get(Bar, 601).longitude) == (-19.92, -43.94)
+        else:
+            assert response.status_code == 422
+            expected = {"bar_id": ["location_unavailable"]} if source == "unresolved" else {"location": ["outside_checkin_radius"]}
+            assert response.json()["details"] == expected
+            assert db.query(Checkin).count() == 0
+        if source == "configured":
+            collection.find_one.assert_not_called()
+        else:
+            collection.find_one.assert_awaited_once_with({"bar_id": 601}, {"location": 1, "_id": 0})
+        if source in ("mongodb", "configured"):
+            geocode.assert_not_called()
+        else:
+            geocode.assert_called_once_with(bar.address, bar.country_code)
