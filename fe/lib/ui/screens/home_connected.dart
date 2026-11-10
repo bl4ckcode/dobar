@@ -3,22 +3,31 @@ import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:barz/core/router/app_routes.dart';
+import 'package:barz/core/session/shell_session.dart';
+import 'package:barz/core/theme/theme_cubit.dart';
 import 'package:barz/core/utils/injections.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/core/design/components/category_pill.dart';
 import 'package:barz/core/design/components/home_connected_header.dart';
+import 'package:barz/features/home/domain/home_toolbar.dart';
+import 'package:barz/features/home/domain/models/home_model.dart';
 import 'package:barz/features/home/presentation/bloc/home_bloc.dart';
 import 'package:barz/features/home/presentation/bloc/home_event.dart';
 import 'package:barz/features/home/presentation/bloc/home_state.dart';
 import 'package:barz/features/location/presentation/bloc/location_cubit.dart';
 import 'package:barz/features/location/presentation/bloc/location_state.dart';
+import 'package:barz/features/location/presentation/location_permission_explainer.dart';
+import 'package:barz/features/venues/domain/venue_category.dart';
+import 'package:barz/features/venues/presentation/venue_presentation.dart';
 import 'package:barz/l10n/app_localizations.dart';
 import 'package:barz/core/design/components/location_permission_alert.dart';
-import 'package:barz/features/promotions/domain/models/promotion_model.dart';
 import 'package:barz/features/home/presentation/widgets/location_mismatch_dialog.dart';
 import 'package:barz/features/user/presentation/bloc/user_bloc.dart';
 import 'package:barz/features/user/presentation/bloc/user_event.dart';
 import 'package:barz/features/user/presentation/bloc/user_state.dart';
+
+/// Maximum content width on larger screens (matches the Profile surface).
+const double kHomeMaxContentWidth = 600;
 
 class HomeConnected extends StatelessWidget {
   const HomeConnected({super.key});
@@ -44,65 +53,66 @@ class HomeConnectedView extends StatefulWidget {
 
 class _HomeConnectedViewState extends State<HomeConnectedView>
     with WidgetsBindingObserver {
-  final ScrollController _scrollController = ScrollController();
-
   @override
   void initState() {
     super.initState();
-    // Trigger initial load if location is already available
-    final locationState = context.read<LocationCubit>().state;
-    if (locationState.currentLocation != null) {
-      debugPrint(
-        '[HomeView] Location already available: ${locationState.currentLocation!.latitude}, ${locationState.currentLocation!.longitude}',
-      );
-      context.read<HomeBloc>().add(
-        LoadHomeData(
-          latitude: locationState.currentLocation!.latitude,
-          longitude: locationState.currentLocation!.longitude,
-        ),
-      );
-    } else {
-      debugPrint('[HomeView] Location not available in initState');
-    }
     WidgetsBinding.instance.addObserver(this);
+    // Browsing needs no location: load immediately (country-level discovery
+    // without coordinates). The bloc reuses cached data when still fresh and
+    // coalesces duplicates.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final session = getItInjector<ShellSession>();
+      _load(force: session.homeStale);
+      // Pick up a position silently only when permission was already granted.
+      context.read<LocationCubit>().restoreIfGranted();
+    });
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _scrollController.dispose();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      debugPrint('[HomeView] App resumed, checking location state...');
-      final locationState = context.read<LocationCubit>().state;
-      if (locationState.currentLocation == null) {
-        debugPrint(
-          '[HomeView] Location still null on resume, re-triggering getCurrentLocation',
-        );
-        context.read<LocationCubit>().getCurrentLocation();
-      }
+      // The user may have granted permission in Settings.
+      context.read<LocationCubit>().restoreIfGranted();
     }
   }
 
-  void _refreshData(BuildContext context) {
-    final locationState = context.read<LocationCubit>().state;
-    if (locationState.currentLocation != null) {
-      debugPrint(
-        '[HomeView] Refreshing data with location: ${locationState.currentLocation!.latitude}',
-      );
-      context.read<HomeBloc>().add(
-        LoadHomeData(
-          latitude: locationState.currentLocation!.latitude,
-          longitude: locationState.currentLocation!.longitude,
-        ),
-      );
-    } else {
-      debugPrint('[HomeView] Refreshing location first...');
-      context.read<LocationCubit>().getCurrentLocation();
+  void _load({bool force = false}) {
+    final location = context.read<LocationCubit>().state.currentLocation;
+    context.read<HomeBloc>().add(
+      LoadHomeData(
+        latitude: location?.latitude,
+        longitude: location?.longitude,
+        force: force,
+      ),
+    );
+  }
+
+  Future<void> _refresh() async {
+    await context.read<LocationCubit>().restoreIfGranted();
+    if (!mounted) return;
+    _load(force: true);
+  }
+
+  Future<void> _openCheckin(NearestVenue venue) async {
+    // Existing check-in flow; it explains and requests location itself.
+    await AppRoute.checkin.push(context, extra: venue.toBarModel());
+  }
+
+  Future<void> _openNotifications() async {
+    await AppRoute.notifications.push(context);
+    if (mounted) _load(force: true);
+  }
+
+  Future<void> _enableLocation() async {
+    if (await LocationPermissionExplainer.ensure(context)) {
+      // BlocListener below reloads with coordinates.
     }
   }
 
@@ -112,37 +122,15 @@ class _HomeConnectedViewState extends State<HomeConnectedView>
     final colors = context.dobarColors;
     final homeState = context.watch<HomeBloc>().state;
     final locationState = context.watch<LocationCubit>().state;
-    String? nearbyBarName;
-    dynamic closestBar; // Will hold the BarModel
-
-    if (homeState is HomeLoaded) {
-      for (final bar in homeState.data.nearbyBars) {
-        if (bar.distanceMeters <= 500) {
-          nearbyBarName = bar.name;
-          closestBar = bar;
-          break;
-        }
-      }
-    }
+    final data = homeState is HomeLoaded ? homeState.data : null;
+    final toolbar = resolveHomeToolbar(data);
+    final isDark = theme.brightness == Brightness.dark;
 
     return BlocListener<LocationCubit, LocationState>(
-      listener: (context, state) {
-        if (!state.isLoading && state.currentLocation != null) {
-          // Trigger load if not already loaded OR if it's the first time we get location
-          // We removed the restrictive 'homeState is HomeInitial' check to allow updates when location improves
-          debugPrint(
-            '[HomeView] Location obtained or improved, triggering LoadHomeData',
-          );
-          context.read<HomeBloc>().add(
-            LoadHomeData(
-              latitude: state.currentLocation!.latitude,
-              longitude: state.currentLocation!.longitude,
-            ),
-          );
-        } else if (state.error != null) {
-          debugPrint('[HomeView] Location state has error: ${state.error}');
-        }
-      },
+      listenWhen: (prev, curr) =>
+          prev.currentLocation != curr.currentLocation &&
+          curr.currentLocation != null,
+      listener: (context, state) => _load(),
       child: MultiBlocListener(
         listeners: [
           BlocListener<HomeBloc, HomeState>(
@@ -156,214 +144,174 @@ class _HomeConnectedViewState extends State<HomeConnectedView>
             listenWhen: (prev, curr) =>
                 prev.isCountryUpdated != curr.isCountryUpdated,
             listener: (context, state) {
-              if (state.isCountryUpdated) {
-                debugPrint('[HomeView] Country updated successfully, refreshing data...');
-                _refreshData(context);
-              }
+              if (state.isCountryUpdated) _load(force: true);
             },
           ),
         ],
         child: Scaffold(
-        backgroundColor: theme.brightness == Brightness.light
-            ? Colors.white
-            : colors.background,
-        body: SafeArea(
-          child: Stack(
-            children: [
-              Positioned.fill(
-                child: Opacity(
-                  opacity: 0.6,
-                  child: Center(
-                    child: Image.asset(
-                      'assets/icons/dobar-logo-animated-transparent.gif',
-                      height: 300,
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-                ),
-              ),
-              RefreshIndicator(
-                onRefresh: () async => _refreshData(context),
-                color: colors.buttonPrimary,
-                backgroundColor: colors.surface,
-                child: ListView(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.only(
-                    top: 8,
-                    bottom: BarzSpacing.lg,
-                  ),
-                  children: [
-                    SizedBox(
-                      height: (nearbyBarName != null ||
-                              (homeState is HomeLoaded &&
-                                  (homeState.data.userStatus
-                                          ?.unreadNotifications ??
-                                      0) >
-                                  0))
-                          ? 70
-                          : 0,
-                    ),
-                    _buildCategoriesSection(context),
-                    const SizedBox(height: BarzSpacing.md),
-
-                    // Nearby Bars Section
-                    _buildSectionTitleWithSubtitle(
-                      AppLocalizations.of(context)!.meet_our_partners,
-                      AppLocalizations.of(
-                        context,
-                      )!.here_are_the_closest_partners,
-                      colors,
-                    ),
-                    const SizedBox(height: BarzSpacing.md),
-                    BlocBuilder<HomeBloc, HomeState>(
-                      builder: (context, state) {
-                        if (state is HomeLoading) return _buildLoadingCard();
-                        if (state is HomeError) {
-                          return _buildErrorCard(
-                            state.message,
-                            () => _refreshData(context),
-                          );
-                        }
-                        if (state is HomeLoaded) {
-                          if (state.data.nearbyBars.isEmpty) {
-                            return _buildEmptyCard(
-                              AppLocalizations.of(
-                                context,
-                              )!.empty_no_bars_nearby,
-                              Icons.store,
-                            );
-                          }
-                          return _buildBarsCarousel(
-                            context,
-                            state.data.nearbyBars,
-                            promotions: state.data.activePromotions,
-                          );
-                        }
-                        // Initial state or other
-                        return _buildEmptyCard(
-                          AppLocalizations.of(context)!.empty_pull_to_refresh,
-                          Icons.refresh,
-                        );
-                      },
-                    ),
-                    const SizedBox(height: BarzSpacing.xl),
-
-                    // Most Wanted Drinks
-                    _buildSectionTitleWithSubtitle(
-                      AppLocalizations.of(context)!.most_wanted,
-                      AppLocalizations.of(context)!.want_a_specific_drink,
-                      colors,
-                    ),
-                    const SizedBox(height: BarzSpacing.md),
-                    BlocBuilder<HomeBloc, HomeState>(
-                      builder: (context, state) {
-                        if (state is HomeLoading) return _buildLoadingCard();
-                        if (state is HomeLoaded) {
-                          if (state.data.trendingDrinks.mostWanted.isEmpty) {
-                            return _buildEmptyCard(
-                              AppLocalizations.of(context)!.empty_no_drinks,
-                              Icons.local_bar,
-                            );
-                          }
-                          return _buildDrinksList(
-                            context,
-                            state.data.trendingDrinks.mostWanted,
-                            false,
-                          );
-                        }
-                        return _buildEmptyCard(
-                          AppLocalizations.of(context)!.empty_no_drinks,
-                          Icons.local_bar,
-                        );
-                      },
-                    ),
-                    const SizedBox(height: BarzSpacing.xl),
-
-                    // Hottest Drinks
-                    _buildSectionTitleWithSubtitle(
-                      AppLocalizations.of(context)!.home_hottest_drinks_title,
-                      AppLocalizations.of(
-                        context,
-                      )!.home_hottest_drinks_subtitle,
-                      colors,
-                    ),
-                    const SizedBox(height: BarzSpacing.md),
-                    BlocBuilder<HomeBloc, HomeState>(
-                      builder: (context, state) {
-                        if (state is HomeLoading) return _buildLoadingCard();
-                        if (state is HomeLoaded) {
-                          if (state.data.trendingDrinks.hottest.isEmpty) {
-                            return _buildEmptyCard(
-                              AppLocalizations.of(context)!.empty_no_hot_deals,
-                              Icons.whatshot,
-                            );
-                          }
-                          return _buildDrinksList(
-                            context,
-                            state.data.trendingDrinks.hottest,
-                            true,
-                          );
-                        }
-                        return _buildEmptyCard(
-                          AppLocalizations.of(context)!.empty_no_hot_deals,
-                          Icons.whatshot,
-                        );
-                      },
-                    ),
-                    const SizedBox(height: BarzSpacing.xl),
-                  ],
-                ),
-              ),
-              Positioned(
-                top: 0,
-                left: 0,
-                right: 0,
-                child: Column(
-                  children: [
-                    HomeConnectedHeader(
-                      nearbyBarName: nearbyBarName,
-                      unreadNotifications: homeState is HomeLoaded
-                          ? homeState.data.userStatus?.unreadNotifications ?? 0
-                          : 0,
-                      onBarTap: () {
-                        // Navigate to check-in page and pass the bar object via extra
-                        if (closestBar != null) {
-                          try {
-                            final barModel = closestBar.toBarModel();
-                            debugPrint(
-                              '[Home] Navigating to check-in with bar: ${barModel.id}',
-                            );
-                            AppRoute.checkin.push(context, extra: barModel);
-                          } catch (e) {
-                            debugPrint(
-                              '[Home] Error converting bar to BarModel: $e',
-                            );
-                            // Fallback: just go to check-in page without specific bar
-                            AppRoute.checkin.push(context);
-                          }
-                        } else {
-                          AppRoute.checkin.push(context);
-                        }
-                      },
-                      onNotificationTap: () =>
-                          AppRoute.notifications.push(context),
-                    ),
-                    if (locationState.currentLocation == null)
-                      LocationPermissionAlert(
-                        error: locationState.error,
-                        isLoading: locationState.isLoading,
-                        onGrant: () =>
-                            context.read<LocationCubit>().getCurrentLocation(),
+          backgroundColor: isDark ? colors.background : Colors.white,
+          body: SafeArea(
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: ExcludeSemantics(
+                    child: Opacity(
+                      opacity: 0.6,
+                      child: Center(
+                        child: Image.asset(
+                          'assets/icons/dobar-logo-animated-transparent.gif',
+                          height: 300,
+                          fit: BoxFit.contain,
+                          gaplessPlayback: true,
+                          errorBuilder: (_, _, _) => const SizedBox.shrink(),
+                        ),
                       ),
-                  ],
+                    ),
+                  ),
                 ),
-              ),
-            ],
+                Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxWidth: kHomeMaxContentWidth,
+                    ),
+                    child: Column(
+                      children: [
+                        HomeConnectedHeader(
+                          content: toolbar,
+                          unreadNotifications:
+                              data?.userStatus?.unreadNotifications ?? 0,
+                          isDark: isDark,
+                          onToggleTheme: () =>
+                              getItInjector<ThemeCubit>().toggleTheme(),
+                          onNotificationTap: _openNotifications,
+                          onNearbyTap: toolbar is NearbyVenueToolbar
+                              ? () => _openCheckin(toolbar.venue)
+                              : null,
+                        ),
+                        if (locationState.currentLocation == null)
+                          LocationPermissionAlert(
+                            error: locationState.error,
+                            isLoading: locationState.isLoading,
+                            onGrant: _enableLocation,
+                          ),
+                        _buildCategoriesSection(context),
+                        const SizedBox(height: BarzSpacing.sm),
+                        Expanded(child: _buildScrollBody(context, colors)),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
+
+  Widget _buildScrollBody(BuildContext context, DobarColors colors) {
+    final l10n = AppLocalizations.of(context)!;
+    return RefreshIndicator(
+      onRefresh: _refresh,
+      color: colors.buttonPrimary,
+      backgroundColor: colors.surface,
+      child: ListView(
+        // Scroll position is owned by the shell (PrimaryScrollController).
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(bottom: BarzSpacing.lg),
+        children: [
+          const SizedBox(height: BarzSpacing.sm),
+          _buildSectionTitleWithSubtitle(
+            l10n.meet_our_partners,
+            l10n.here_are_the_closest_partners,
+            colors,
+          ),
+          const SizedBox(height: BarzSpacing.md),
+          BlocBuilder<HomeBloc, HomeState>(
+            builder: (context, state) {
+              if (state is HomeLoading) return _buildLoadingCard();
+              if (state is HomeError) {
+                return _buildErrorCard(state.message, () => _load(force: true));
+              }
+              if (state is HomeLoaded) {
+                if (state.data.nearbyBars.isEmpty) {
+                  return _buildEmptyCard(
+                    l10n.empty_no_bars_nearby,
+                    Icons.store,
+                  );
+                }
+                return _buildBarsCarousel(context, state.data.nearbyBars);
+              }
+              return _buildEmptyCard(l10n.empty_pull_to_refresh, Icons.refresh);
+            },
+          ),
+          const SizedBox(height: BarzSpacing.xl),
+          _buildSectionTitleWithSubtitle(
+            l10n.most_wanted,
+            l10n.want_a_specific_drink,
+            colors,
+          ),
+          const SizedBox(height: BarzSpacing.md),
+          BlocBuilder<HomeBloc, HomeState>(
+            builder: (context, state) {
+              if (state is HomeLoading) return _buildLoadingCard();
+              if (state is HomeLoaded) {
+                if (state.data.trendingDrinks.mostWanted.isEmpty) {
+                  return _buildEmptyCard(l10n.empty_no_drinks, Icons.local_bar);
+                }
+                return _buildDrinksList(
+                  context,
+                  state.data.trendingDrinks.mostWanted,
+                  false,
+                );
+              }
+              return _buildEmptyCard(l10n.empty_no_drinks, Icons.local_bar);
+            },
+          ),
+          const SizedBox(height: BarzSpacing.xl),
+          _buildSectionTitleWithSubtitle(
+            l10n.home_hottest_drinks_title,
+            l10n.home_hottest_drinks_subtitle,
+            colors,
+          ),
+          const SizedBox(height: BarzSpacing.md),
+          BlocBuilder<HomeBloc, HomeState>(
+            builder: (context, state) {
+              if (state is HomeLoading) return _buildLoadingCard();
+              if (state is HomeLoaded) {
+                if (state.data.trendingDrinks.hottest.isEmpty) {
+                  return _buildEmptyCard(
+                    l10n.empty_no_hot_deals,
+                    Icons.whatshot,
+                  );
+                }
+                return _buildDrinksList(
+                  context,
+                  state.data.trendingDrinks.hottest,
+                  true,
+                );
+              }
+              return _buildEmptyCard(l10n.empty_no_hot_deals, Icons.whatshot);
+            },
+          ),
+          const SizedBox(height: BarzSpacing.xl),
+        ],
+      ),
+    );
+  }
+
+  /// Entrance animation unless the platform asks for reduced motion.
+  Widget _motion(
+    BuildContext context,
+    Widget child,
+    int index, {
+    Offset slide = const Offset(0.1, 0),
+  }) {
+    if (MediaQuery.of(context).disableAnimations) return child;
+    return child
+        .animate()
+        .fadeIn(delay: (50 * index).ms, duration: 400.ms)
+        .slide(begin: slide, end: Offset.zero, duration: 400.ms);
   }
 
   Widget _buildSectionTitleWithSubtitle(
@@ -465,47 +413,58 @@ class _HomeConnectedViewState extends State<HomeConnectedView>
   Widget _buildCategoriesSection(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final categories = [
-      (icon: LucideIcons.wine, label: l10n.category_bars, id: 'bar'),
+      (
+        icon: LucideIcons.wine,
+        label: l10n.category_bars,
+        id: VenueCategory.bars,
+      ),
       (
         icon: LucideIcons.utensils_crossed,
         label: l10n.category_restaurants,
-        id: 'restaurant',
+        id: VenueCategory.restaurants,
       ),
       (
         icon: LucideIcons.party_popper,
         label: l10n.category_clubs,
-        id: 'club',
+        id: VenueCategory.clubs,
       ),
     ];
 
-    return SizedBox(
-      height: 44,
-      child: ListView.separated(
-        padding: const EdgeInsets.symmetric(horizontal: BarzSpacing.lg),
-        scrollDirection: Axis.horizontal,
-        itemCount: categories.length,
-        separatorBuilder: (_, _) => const SizedBox(width: 10),
-        itemBuilder: (context, index) {
-          final category = categories[index];
-          return CategoryPill(
-            icon: category.icon,
-            label: category.label,
-            isSelected: false,
-            onTap: () => AppRoute.pushFind(context, category: category.id),
-          ).animate().fadeIn(delay: (50 * index).ms).slideX(begin: 0.1, end: 0);
-        },
+    return Semantics(
+      container: true,
+      label: l10n.home_categories_label,
+      child: SizedBox(
+        height: 52,
+        child: ListView.separated(
+          padding: const EdgeInsets.symmetric(horizontal: BarzSpacing.lg),
+          scrollDirection: Axis.horizontal,
+          itemCount: categories.length,
+          separatorBuilder: (_, _) => const SizedBox(width: 10),
+          itemBuilder: (context, index) {
+            final category = categories[index];
+            return Center(
+              child: _motion(
+                context,
+                CategoryPill(
+                  icon: category.icon,
+                  label: category.label,
+                  isSelected: false,
+                  onTap: () => AppRoute.pushCategory(context, category.id),
+                ),
+                index,
+              ),
+            );
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildBarsCarousel(
-    BuildContext context,
-    List<dynamic> bars, {
-    List<dynamic> promotions = const [],
-  }) {
+  Widget _buildBarsCarousel(BuildContext context, List<NearbyBar> bars) {
     final displayBars = bars.length > 10 ? bars.sublist(0, 10) : bars;
+    final l10n = AppLocalizations.of(context)!;
     return SizedBox(
-      height: 200,
+      height: 208,
       child: ListView.separated(
         padding: const EdgeInsets.symmetric(horizontal: BarzSpacing.lg),
         scrollDirection: Axis.horizontal,
@@ -513,91 +472,33 @@ class _HomeConnectedViewState extends State<HomeConnectedView>
         separatorBuilder: (_, _) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
           final bar = displayBars[index];
-          final barBadges = _computeBadges(bar.id, promotions);
           return SizedBox(
             width: 160,
-            child:
-                Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(BarzRadii.lg),
-                        border: Theme.of(context).brightness == Brightness.light
-                            ? Border.all(color: barzDarkMuted, width: 1)
-                            : null,
-                      ),
-                      child: BarCard(
-                        name: bar.name,
-                        type: AppLocalizations.of(context)!.category_bars,
-                        distance: _formatDistance(bar.distanceMeters),
-                        rating: bar.rating,
-                        imageUrl: bar.imageUrl,
-                        badges: barBadges,
-                        onTap: () => AppRoute.pushBar(context, bar.id),
-                      ),
-                    )
-                    .animate()
-                    .fadeIn(delay: (50 * index).ms, duration: 400.ms)
-                    .slideX(
-                      begin: 0.1,
-                      end: 0,
-                      duration: 400.ms,
-                      delay: (50 * index).ms,
-                      curve: Curves.easeOut,
-                    ),
+            child: _motion(
+              context,
+              Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(BarzRadii.lg),
+                  border: Theme.of(context).brightness == Brightness.light
+                      ? Border.all(color: barzDarkMuted, width: 1)
+                      : null,
+                ),
+                child: BarCard(
+                  name: bar.name,
+                  type: l10n.category_bars,
+                  distance: formatVenueDistance(bar.distanceMeters),
+                  rating: bar.rating,
+                  imageUrl: bar.imageUrl,
+                  badges: badgesFor(bar.primaryPromotion),
+                  onTap: () => AppRoute.pushBar(context, bar.id),
+                ),
+              ),
+              index,
+            ),
           );
         },
       ),
     );
-  }
-
-  List<BarBadge> _computeBadges(int barId, List<dynamic> promotions) {
-    if (promotions.isEmpty) return [];
-
-    final badges = <BarBadge>{};
-    // Cast to List<PromotionModel> for safe property access
-    final typedPromos = promotions.whereType<PromotionModel>().toList();
-
-    for (final promo in typedPromos) {
-      // Robust ID comparison
-      final promoBarId = promo.barId;
-      if (promoBarId == null || promoBarId.toString() != barId.toString()) {
-        continue;
-      }
-
-      final title = promo.title.toLowerCase();
-      final description = (promo.description ?? '').toLowerCase();
-      final isBogo = promo.discountType == PromoDiscountType.bogo;
-
-      // Categorize and add to set for uniqueness
-      if (title.contains('happy hour') ||
-          title.contains('happy h') ||
-          description.contains('happy hour') ||
-          description.contains('happy h') ||
-          title.contains('dobro') ||
-          description.contains('dobro') ||
-          title.contains('2 por 1') ||
-          description.contains('2 por 1') ||
-          isBogo) {
-        badges.add(BarBadge.happyHour);
-      } else if (title.contains('cashback') ||
-          description.contains('cashback')) {
-        badges.add(BarBadge.cashback);
-      } else {
-        badges.add(BarBadge.promo);
-      }
-    }
-
-    // Priority-based unique badge selection: Happy Hour > Cashback > Promo
-    if (badges.contains(BarBadge.happyHour)) return [BarBadge.happyHour];
-    if (badges.contains(BarBadge.cashback)) return [BarBadge.cashback];
-    if (badges.contains(BarBadge.promo)) return [BarBadge.promo];
-
-    return [];
-  }
-
-  String _formatDistance(double? distanceMeters) {
-    if (distanceMeters == null) return '';
-    if (distanceMeters < 1000) return '${distanceMeters.toInt()}m';
-    return '${(distanceMeters / 1000).toStringAsFixed(1)}km';
   }
 
   Widget _buildDrinksList(

@@ -21,7 +21,9 @@ class _RecordingAdapter implements HttpClientAdapter {
     return ResponseBody.fromString(
       '{}',
       200,
-      headers: {Headers.contentTypeHeader: ['application/json']},
+      headers: {
+        Headers.contentTypeHeader: ['application/json'],
+      },
     );
   }
 
@@ -62,9 +64,7 @@ void main() {
   test('preserves the Firebase bearer token on phone login', () async {
     await dio.post(
       '/auth/phone-login',
-      options: Options(
-        headers: {'Authorization': 'Bearer firebase-id-token'},
-      ),
+      options: Options(headers: {'Authorization': 'Bearer firebase-id-token'}),
     );
 
     expect(adapter.authorizationHeader, 'Bearer firebase-id-token');

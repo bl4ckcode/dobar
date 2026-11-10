@@ -94,6 +94,12 @@ class Bar(BarBase):
     
     category: Optional[str] = None
     
+    # Discovery metadata (additive; populated by GET /bars)
+    rating: Optional[float] = None
+    primary_promotion: Optional[str] = None  # happy_hour | cashback | promotion
+    promotion_text: Optional[str] = None
+    has_promotions: Optional[bool] = None
+    
     # Timestamps
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None

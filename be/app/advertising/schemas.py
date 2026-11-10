@@ -247,6 +247,7 @@ class CampaignCreative(BaseModel):
     banner_url: Optional[str] = None
     animation_url: Optional[str] = None
     promoted_item_id: Optional[int] = None  # Menu item or promotion to highlight
+    promote_happy_hour: bool = False
 
     @root_validator(pre=True, allow_reuse=True)
     def normalize_cta_alias(cls, values):

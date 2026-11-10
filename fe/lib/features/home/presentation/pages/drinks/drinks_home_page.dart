@@ -428,7 +428,9 @@ class _DrinksHomePageState extends State<DrinksHomePage> {
               const SizedBox(height: 16),
               Text(
                 drink.description!,
-                style: theme.textTheme.bodyMedium?.copyWith(color: textSecondary),
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: textSecondary,
+                ),
               ),
             ],
             const SizedBox(height: 24),

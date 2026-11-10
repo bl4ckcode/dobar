@@ -60,20 +60,12 @@ class _VipUpsellBannerState extends State<VipUpsellBanner>
             ? LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  dobar.surface,
-                  barzDarkCardLight,
-                  dobar.surface,
-                ],
+                colors: [dobar.surface, barzDarkCardLight, dobar.surface],
               )
             : LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  surfaceWhite,
-                  const Color(0xFFFFFAF0),
-                  surfaceWhite,
-                ],
+                colors: [surfaceWhite, const Color(0xFFFFFAF0), surfaceWhite],
               ),
       ),
       child: Stack(
@@ -86,7 +78,9 @@ class _VipUpsellBannerState extends State<VipUpsellBanner>
             height: 2,
             child: Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.vertical(top: Radius.circular(BarzRadii.md)),
+                borderRadius: BorderRadius.vertical(
+                  top: Radius.circular(BarzRadii.md),
+                ),
                 gradient: const LinearGradient(
                   colors: [Colors.transparent, barzGold, Colors.transparent],
                   begin: Alignment.centerLeft,
@@ -218,10 +212,7 @@ class _VipUpsellBannerState extends State<VipUpsellBanner>
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(BarzRadii.md),
                           gradient: const LinearGradient(
-                            colors: [
-                              Color(0xFFFFE070),
-                              Color(0xFFFFC000),
-                            ],
+                            colors: [Color(0xFFFFE070), Color(0xFFFFC000)],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),

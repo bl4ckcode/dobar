@@ -1,3 +1,5 @@
+import 'package:barz/features/venues/domain/venue_category.dart';
+import 'package:barz/features/venues/presentation/pages/category_venues_page.dart';
 import 'package:barz/features/user/domain/usecases/user_usecase.dart';
 import 'package:barz/features/payments/presentation/pages/payment_methods_page.dart';
 import 'package:barz/features/home/presentation/cubit/profile_benefits_cubit.dart';
@@ -322,6 +324,19 @@ final appRouter = GoRouter(
       ],
     ),
     GoRoute(
+      path: AppRoute.category.path,
+      name: AppRoute.category.name,
+      redirect: (context, state) =>
+          VenueCategory.fromRouteId(state.pathParameters['categoryId']) == null
+          ? AppRoute.home.path
+          : null,
+      builder: (context, state) => CategoryVenuesPage(
+        category: VenueCategory.fromRouteId(
+          state.pathParameters['categoryId'],
+        )!,
+      ),
+    ),
+    GoRoute(
       path: AppRoute.bar.path,
       name: AppRoute.bar.name,
       builder: (context, state) {
@@ -476,7 +491,8 @@ final appRouter = GoRouter(
       path: AppRoute.profileBenefits.path,
       name: AppRoute.profileBenefits.name,
       builder: (context, state) => BlocProvider(
-        create: (_) => ProfileBenefitsCubit(getItInjector<UserUsecase>())..load(),
+        create: (_) =>
+            ProfileBenefitsCubit(getItInjector<UserUsecase>())..load(),
         child: const ProfileBenefitsPage(),
       ),
     ),

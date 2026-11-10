@@ -9,11 +9,7 @@ import 'package:barz/l10n/app_localizations.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 /// Result of the Pix payment flow
-enum PixPaymentResult {
-  approved,
-  cancelled,
-  timeout,
-}
+enum PixPaymentResult { approved, cancelled, timeout }
 
 class PixPaymentModal extends StatefulWidget {
   final PixPaymentResponse pixPayment;
@@ -84,7 +80,9 @@ class _PixPaymentModalState extends State<PixPaymentModal> {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
         setState(() {
-          _remainingTime = widget.pixPayment.expiresAt.difference(DateTime.now());
+          _remainingTime = widget.pixPayment.expiresAt.difference(
+            DateTime.now(),
+          );
           if (_remainingTime.isNegative) {
             _timer?.cancel();
             _timer = null;
@@ -188,7 +186,8 @@ class _PixPaymentModalState extends State<PixPaymentModal> {
                 const Spacer(),
                 IconButton(
                   icon: Icon(LucideIcons.x, color: dobar.labelSecondary),
-                  onPressed: () => Navigator.of(context).pop(PixPaymentResult.cancelled),
+                  onPressed: () =>
+                      Navigator.of(context).pop(PixPaymentResult.cancelled),
                 ),
               ],
             ),

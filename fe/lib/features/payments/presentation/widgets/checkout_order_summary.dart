@@ -90,7 +90,10 @@ class _CheckoutOrderSummaryState extends State<CheckoutOrderSummary>
                             if (widget.isPro) ...[
                               const SizedBox(width: 6),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 6,
+                                  vertical: 2,
+                                ),
                                 decoration: BoxDecoration(
                                   color: barzGold.withValues(alpha: 0.15),
                                   borderRadius: BorderRadius.circular(4),
@@ -233,7 +236,9 @@ class _CheckoutOrderSummaryState extends State<CheckoutOrderSummary>
                   const Icon(Icons.paid_outlined, color: barzGold, size: 14),
                   const SizedBox(width: 4),
                   Text(
-                    widget.isPro ? 'Cashback (PRO 10%)' : 'Cashback you\'ll earn',
+                    widget.isPro
+                        ? 'Cashback (PRO 10%)'
+                        : 'Cashback you\'ll earn',
                     style: const TextStyle(color: barzGold, fontSize: 14),
                   ),
                 ],

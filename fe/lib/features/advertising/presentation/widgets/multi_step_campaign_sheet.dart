@@ -94,10 +94,9 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
     _slideController.value = 1.0;
     _initBarName();
     _applySmartDistribution();
-    _advertisingSubscription = context
-        .read<AdvertisingBloc>()
-        .stream
-        .listen(_onAdvertisingStateChanged);
+    _advertisingSubscription = context.read<AdvertisingBloc>().stream.listen(
+      _onAdvertisingStateChanged,
+    );
     // Rate card is the wizard's pricing source (rates, min daily budgets,
     // allowed budget types, credit balances). Fetch once per open.
     WidgetsBinding.instance.addPostFrameCallback((_) => _loadRateCard());
@@ -206,10 +205,8 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
         final rateCard = context.read<AdvertisingBloc>().state.rateCard;
         final days = _campaignDays.clamp(1, 90);
         for (final d in _distribution) {
-          final minTotal = rateCard?.minTotalBudget(
-                d.placement.canonicalKey,
-                days,
-              ) ??
+          final minTotal =
+              rateCard?.minTotalBudget(d.placement.canonicalKey, days) ??
               (d.placement.minDailyBudget * days);
           if (minTotal > 0 && d.budget < minTotal) return false;
         }
@@ -249,10 +246,8 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
     final rateCard = context.read<AdvertisingBloc>().state.rateCard;
     final days = _campaignDays.clamp(1, 90);
     for (final d in _distribution) {
-      final minTotal = rateCard?.minTotalBudget(
-            d.placement.canonicalKey,
-            days,
-          ) ??
+      final minTotal =
+          rateCard?.minTotalBudget(d.placement.canonicalKey, days) ??
           (d.placement.minDailyBudget * days);
       if (minTotal > 0 && d.budget < minTotal) {
         return '${d.placement.label} exige mínimo de R\$ ${minTotal.toStringAsFixed(2)} '
@@ -440,17 +435,21 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
       } else if (!_distribution.any((d) => d.placement == placement)) {
         final evenShare = 100.0 / (_distribution.length + 1);
         _distribution = _distribution
-            .map((d) => PlacementDistribution(
-                  placement: d.placement,
-                  percentage: evenShare,
-                  budget: _totalBudget * evenShare / 100,
-                ))
+            .map(
+              (d) => PlacementDistribution(
+                placement: d.placement,
+                percentage: evenShare,
+                budget: _totalBudget * evenShare / 100,
+              ),
+            )
             .toList();
-        _distribution.add(PlacementDistribution(
-          placement: placement,
-          percentage: evenShare,
-          budget: _totalBudget * evenShare / 100,
-        ));
+        _distribution.add(
+          PlacementDistribution(
+            placement: placement,
+            percentage: evenShare,
+            budget: _totalBudget * evenShare / 100,
+          ),
+        );
       }
     });
   }
@@ -580,9 +579,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
     PlacementDistribution? dist,
   ) {
     final rateCard = context.watch<AdvertisingBloc>().state.rateCard;
-    final daily = dist == null
-        ? 0.0
-        : dist.budget / _campaignDays.clamp(1, 90);
+    final daily = dist == null ? 0.0 : dist.budget / _campaignDays.clamp(1, 90);
     final card = rateCard?.placements[placement.canonicalKey];
     if (card == null || card.rate <= 0) {
       return 'R\$ ${daily.toStringAsFixed(2)}/dia · ${placement.pricingModel}';
@@ -593,8 +590,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
     if ((card.rateMax ?? 0) > card.rate) {
       rateLabel += ' (até $symbol${card.rateMax!.toStringAsFixed(2)})';
     }
-    final minLabel =
-        'mín $symbol${card.minDailyBudget.toStringAsFixed(2)}/dia';
+    final minLabel = 'mín $symbol${card.minDailyBudget.toStringAsFixed(2)}/dia';
     return 'R\$ ${daily.toStringAsFixed(2)}/dia · $rateLabel · $minLabel';
   }
 
@@ -845,9 +841,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                           : Colors.transparent,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: isSelected
-                            ? barzGold
-                            : const Color(0xFF2C2C2C),
+                        color: isSelected ? barzGold : const Color(0xFF2C2C2C),
                         width: isSelected ? 1.5 : 1,
                       ),
                     ),
@@ -876,8 +870,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                                 style: TextStyle(
                                   fontSize: 14,
                                   fontWeight: FontWeight.bold,
-                                  color:
-                                      isSelected ? barzGold : Colors.white,
+                                  color: isSelected ? barzGold : Colors.white,
                                 ),
                               ),
                               const SizedBox(height: 4),
@@ -919,7 +912,9 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                 fontWeight: FontWeight.w500,
               ),
               decoration: InputDecoration(
-                hintText: _barNameLoaded ? 'Ex: $_barName — Promoção 1/1' : 'Ex: Meu Bar — Promoção 1/1',
+                hintText: _barNameLoaded
+                    ? 'Ex: $_barName — Promoção 1/1'
+                    : 'Ex: Meu Bar — Promoção 1/1',
                 hintStyle: TextStyle(
                   color: dobarColors.labelSecondary.withValues(alpha: 0.5),
                 ),
@@ -950,15 +945,19 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
 
   // STEP 2: BUDGET & DISTRIBUTION - "Passo 2 de 5 - Orçamento"
   Widget _buildStep2Budget() {
-    final totalPct =
-        _distribution.fold<double>(0.0, (sum, d) => sum + d.percentage);
+    final totalPct = _distribution.fold<double>(
+      0.0,
+      (sum, d) => sum + d.percentage,
+    );
     final isValid = (totalPct - 100).abs() < 0.01;
     final budgetOptions = _availableBudgetTypes();
     final minViolation = _minBudgetViolation();
     final isCredits = _budgetType == BudgetType.credits;
     final rateCard = context.watch<AdvertisingBloc>().state.rateCard;
-    final isLoadingRates =
-        context.watch<AdvertisingBloc>().state.isLoadingRateCard;
+    final isLoadingRates = context
+        .watch<AdvertisingBloc>()
+        .state
+        .isLoadingRateCard;
 
     return ResponsiveCenterContainer(
       maxWidthPercentage: 0.5,
@@ -993,10 +992,12 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                   TextFormField(
                     controller: _budgetController,
                     keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true),
+                      decimal: true,
+                    ),
                     inputFormatters: [
                       FilteringTextInputFormatter.allow(
-                          RegExp(r'^\d+\.?\d{0,2}')),
+                        RegExp(r'^\d+\.?\d{0,2}'),
+                      ),
                     ],
                     style: const TextStyle(
                       color: Colors.white,
@@ -1014,8 +1015,9 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                       ),
                       hintText: '500',
                       hintStyle: TextStyle(
-                        color:
-                            dobarColors.labelSecondary.withValues(alpha: 0.5),
+                        color: dobarColors.labelSecondary.withValues(
+                          alpha: 0.5,
+                        ),
                       ),
                       filled: true,
                       fillColor: const Color(0xFF0A0A0A),
@@ -1025,8 +1027,10 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide:
-                            const BorderSide(color: barzGold, width: 1.5),
+                        borderSide: const BorderSide(
+                          color: barzGold,
+                          width: 1.5,
+                        ),
                       ),
                       contentPadding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -1050,8 +1054,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                     'orçamento total da campanha',
                     style: TextStyle(
                       fontSize: 11,
-                      color:
-                          dobarColors.labelSecondary.withValues(alpha: 0.7),
+                      color: dobarColors.labelSecondary.withValues(alpha: 0.7),
                     ),
                   ),
                 ],
@@ -1105,13 +1108,13 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                     onTap: () => setState(() => _budgetType = t),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: selected
-                              ? barzGold
-                              : const Color(0xFF2C2C2C),
+                          color: selected ? barzGold : const Color(0xFF2C2C2C),
                           width: selected ? 1.5 : 1,
                         ),
                         color: selected
@@ -1145,14 +1148,16 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                 ),
                 child: Row(
                   children: [
-                    const Icon(LucideIcons.triangle_alert,
-                        size: 16, color: errorRed),
+                    const Icon(
+                      LucideIcons.triangle_alert,
+                      size: 16,
+                      color: errorRed,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         minViolation,
-                        style:
-                            const TextStyle(fontSize: 11, color: errorRed),
+                        style: const TextStyle(fontSize: 11, color: errorRed),
                       ),
                     ),
                   ],
@@ -1266,15 +1271,16 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                     });
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content:
-                            Text('Distribuição inteligente aplicada!'),
+                        content: Text('Distribuição inteligente aplicada!'),
                         backgroundColor: barzGold,
                         duration: Duration(seconds: 1),
                       ),
                     );
                   },
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 14),
+                    horizontal: 20,
+                    vertical: 14,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -1324,8 +1330,9 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
             // Placement channels with colored icons
             ...CampaignPlacement.values.asMap().entries.map((entry) {
               final placement = entry.value;
-              final index =
-                  _distribution.indexWhere((d) => d.placement == placement);
+              final index = _distribution.indexWhere(
+                (d) => d.placement == placement,
+              );
               final isEnabled = index >= 0;
               final dist = isEnabled ? _distribution[index] : null;
               final pct = dist?.percentage ?? 0.0;
@@ -1392,8 +1399,9 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                             height: 24,
                             decoration: BoxDecoration(
                               borderRadius: BorderRadius.circular(12),
-                              color:
-                                  isEnabled ? color : const Color(0xFF2C2C2C),
+                              color: isEnabled
+                                  ? color
+                                  : const Color(0xFF2C2C2C),
                             ),
                             child: AnimatedAlign(
                               duration: const Duration(milliseconds: 200),
@@ -1419,8 +1427,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                       Row(
                         children: [
                           GestureDetector(
-                            onTap: () =>
-                                _onDistributionChanged(index, pct - 5),
+                            onTap: () => _onDistributionChanged(index, pct - 5),
                             child: Container(
                               width: 32,
                               height: 32,
@@ -1439,11 +1446,9 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                             child: SliderTheme(
                               data: SliderTheme.of(context).copyWith(
                                 activeTrackColor: color,
-                                inactiveTrackColor:
-                                    const Color(0xFF2C2C2C),
+                                inactiveTrackColor: const Color(0xFF2C2C2C),
                                 thumbColor: color,
-                                overlayColor:
-                                    color.withValues(alpha: 0.2),
+                                overlayColor: color.withValues(alpha: 0.2),
                                 trackHeight: 4,
                               ),
                               child: Slider(
@@ -1457,8 +1462,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                             ),
                           ),
                           GestureDetector(
-                            onTap: () =>
-                                _onDistributionChanged(index, pct + 5),
+                            onTap: () => _onDistributionChanged(index, pct + 5),
                             child: Container(
                               width: 32,
                               height: 32,
@@ -1563,19 +1567,20 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                 decoration: BoxDecoration(
                   color: errorRed.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
-                  border:
-                      Border.all(color: errorRed.withValues(alpha: 0.3)),
+                  border: Border.all(color: errorRed.withValues(alpha: 0.3)),
                 ),
                 child: Row(
                   children: [
-                    const Icon(LucideIcons.triangle_alert,
-                        size: 16, color: errorRed),
+                    const Icon(
+                      LucideIcons.triangle_alert,
+                      size: 16,
+                      color: errorRed,
+                    ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
                         'Distribuição inválida: ${(100 - totalPct).toStringAsFixed(0)}% restante. Ajuste os valores para totalizar 100%.',
-                        style:
-                            const TextStyle(fontSize: 11, color: errorRed),
+                        style: const TextStyle(fontSize: 11, color: errorRed),
                       ),
                     ),
                     TextButton(
@@ -1593,8 +1598,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                       },
                       child: const Text(
                         'Ajustar',
-                        style:
-                            TextStyle(color: barzGold, fontSize: 11),
+                        style: TextStyle(color: barzGold, fontSize: 11),
                       ),
                     ),
                   ],
@@ -1611,8 +1615,9 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
 
   // STEP 3: CREATIVE & DETAILS - "Passo 3 de 5 - Criativo"
   Widget _buildStep3Creative() {
-    final hasBanner =
-        _distribution.any((d) => d.placement == CampaignPlacement.banner);
+    final hasBanner = _distribution.any(
+      (d) => d.placement == CampaignPlacement.banner,
+    );
 
     return ResponsiveCenterContainer(
       maxWidthPercentage: 0.5,
@@ -1685,8 +1690,9 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                         'Recomendado: 1200x628px',
                         style: TextStyle(
                           fontSize: 11,
-                          color: dobarColors.labelSecondary
-                              .withValues(alpha: 0.6),
+                          color: dobarColors.labelSecondary.withValues(
+                            alpha: 0.6,
+                          ),
                         ),
                       ),
                     ],
@@ -1714,8 +1720,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
               decoration: InputDecoration(
                 hintText: 'Crie uma chamada irresistível',
                 hintStyle: TextStyle(
-                  color:
-                      dobarColors.labelSecondary.withValues(alpha: 0.5),
+                  color: dobarColors.labelSecondary.withValues(alpha: 0.5),
                 ),
                 filled: true,
                 fillColor: const Color(0xFF121212),
@@ -1725,11 +1730,12 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide:
-                      const BorderSide(color: barzGold, width: 1.5),
+                  borderSide: const BorderSide(color: barzGold, width: 1.5),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 16, vertical: 14),
+                  horizontal: 16,
+                  vertical: 14,
+                ),
                 counterStyle: TextStyle(
                   color: _taglineController.text.length > 55
                       ? errorRed
@@ -1762,11 +1768,12 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                   final cta = CtaOption.options[index];
                   final isSelected = _selectedCta == cta.value;
                   return GestureDetector(
-                    onTap: () =>
-                        setState(() => _selectedCta = cta.value),
+                    onTap: () => setState(() => _selectedCta = cta.value),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 16, vertical: 10),
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
@@ -1814,8 +1821,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                 children: [
                   Row(
                     children: [
-                      const Icon(LucideIcons.eye,
-                          size: 14, color: barzGold),
+                      const Icon(LucideIcons.eye, size: 14, color: barzGold),
                       const SizedBox(width: 6),
                       Text(
                         'Pré-visualização',
@@ -1859,8 +1865,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                             ),
                             const SizedBox(width: 10),
                             Column(
-                              crossAxisAlignment:
-                                  CrossAxisAlignment.start,
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
                                   _barName.isEmpty ? 'Meu Bar' : _barName,
@@ -1905,17 +1910,13 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                             ),
                             decoration: BoxDecoration(
                               gradient: const LinearGradient(
-                                colors: [
-                                  Color(0xFFFFDF73),
-                                  Color(0xFFFFC000),
-                                ],
+                                colors: [Color(0xFFFFDF73), Color(0xFFFFC000)],
                               ),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
                               CtaOption.options
-                                  .firstWhere(
-                                      (o) => o.value == _selectedCta)
+                                  .firstWhere((o) => o.value == _selectedCta)
                                   .label,
                               style: const TextStyle(
                                 fontSize: 12,
@@ -1936,8 +1937,8 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
 
             // Happy hour toggle
             GestureDetector(
-              onTap: () => setState(
-                  () => _promoteHappyHour = !_promoteHappyHour),
+              onTap: () =>
+                  setState(() => _promoteHappyHour = !_promoteHappyHour),
               child: Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
@@ -2015,8 +2016,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
           children: [
             Row(
               children: [
-                const Icon(LucideIcons.map_pin,
-                    size: 16, color: barzGold),
+                const Icon(LucideIcons.map_pin, size: 16, color: barzGold),
                 const SizedBox(width: 8),
                 Text(
                   'Alcance geográfico',
@@ -2043,12 +2043,13 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                     children: [
                       const Text(
                         'Raio de alcance',
-                        style:
-                            TextStyle(fontSize: 13, color: Colors.white),
+                        style: TextStyle(fontSize: 13, color: Colors.white),
                       ),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
+                          horizontal: 10,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: barzGold.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(8),
@@ -2070,8 +2071,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                       activeTrackColor: barzGold,
                       inactiveTrackColor: const Color(0xFF2C2C2C),
                       thumbColor: barzGold,
-                      overlayColor:
-                          barzGold.withValues(alpha: 0.2),
+                      overlayColor: barzGold.withValues(alpha: 0.2),
                       trackHeight: 4,
                     ),
                     child: Slider(
@@ -2080,19 +2080,20 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                       max: 50,
                       divisions: 49,
                       label: '${_radiusKm.round()} km',
-                      onChanged: (v) =>
-                          setState(() => _radiusKm = v),
+                      onChanged: (v) => setState(() => _radiusKm = v),
                     ),
                   ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('1 km',
-                          style: TextStyle(
-                              fontSize: 10, color: Colors.white38)),
-                      const Text('50 km',
-                          style: TextStyle(
-                              fontSize: 10, color: Colors.white38)),
+                      const Text(
+                        '1 km',
+                        style: TextStyle(fontSize: 10, color: Colors.white38),
+                      ),
+                      const Text(
+                        '50 km',
+                        style: TextStyle(fontSize: 10, color: Colors.white38),
+                      ),
                     ],
                   ),
                 ],
@@ -2103,8 +2104,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
 
             Row(
               children: [
-                const Icon(LucideIcons.users,
-                    size: 16, color: barzGold),
+                const Icon(LucideIcons.users, size: 16, color: barzGold),
                 const SizedBox(width: 8),
                 Text(
                   'Faixa etária',
@@ -2159,12 +2159,14 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text('18',
-                          style: TextStyle(
-                              fontSize: 10, color: Colors.white38)),
-                      const Text('65+',
-                          style: TextStyle(
-                              fontSize: 10, color: Colors.white38)),
+                      const Text(
+                        '18',
+                        style: TextStyle(fontSize: 10, color: Colors.white38),
+                      ),
+                      const Text(
+                        '65+',
+                        style: TextStyle(fontSize: 10, color: Colors.white38),
+                      ),
                     ],
                   ),
                 ],
@@ -2179,8 +2181,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
               subtitle:
                   'Exibir campanha apenas em horários de maior movimento (sextas e sábados à noite, happy hour)',
               value: _peakHoursOnly,
-              onChanged: (v) =>
-                  setState(() => _peakHoursOnly = v),
+              onChanged: (v) => setState(() => _peakHoursOnly = v),
             ),
             if (_peakHoursOnly) ...[
               const SizedBox(height: 8),
@@ -2226,14 +2227,16 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                           color: barzGold.withValues(alpha: 0.15),
                           shape: BoxShape.circle,
                         ),
-                        child: const Icon(LucideIcons.zap,
-                            size: 16, color: barzGold),
+                        child: const Icon(
+                          LucideIcons.zap,
+                          size: 16,
+                          color: barzGold,
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const Text(
                               'Otimizador de Orçamento',
@@ -2254,24 +2257,22 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                         ),
                       ),
                       GestureDetector(
-                        onTap: () => setState(() =>
-                            _budgetOptimizerEnabled =
-                                !_budgetOptimizerEnabled),
+                        onTap: () => setState(
+                          () => _budgetOptimizerEnabled =
+                              !_budgetOptimizerEnabled,
+                        ),
                         child: AnimatedContainer(
-                          duration:
-                              const Duration(milliseconds: 200),
+                          duration: const Duration(milliseconds: 200),
                           width: 44,
                           height: 24,
                           decoration: BoxDecoration(
-                            borderRadius:
-                                BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(12),
                             color: _budgetOptimizerEnabled
                                 ? pixGreen
                                 : const Color(0xFF2C2C2C),
                           ),
                           child: AnimatedAlign(
-                            duration:
-                                const Duration(milliseconds: 200),
+                            duration: const Duration(milliseconds: 200),
                             alignment: _budgetOptimizerEnabled
                                 ? Alignment.centerRight
                                 : Alignment.centerLeft,
@@ -2293,8 +2294,11 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        const Icon(LucideIcons.circle_check,
-                            size: 12, color: Color(0xFF00B37E)),
+                        const Icon(
+                          LucideIcons.circle_check,
+                          size: 12,
+                          color: Color(0xFF00B37E),
+                        ),
                         const SizedBox(width: 6),
                         const Text(
                           'Recomendado para melhores resultados',
@@ -2339,11 +2343,11 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
         ),
         child: Row(
           children: [
-            Icon(icon,
-                size: 18,
-                color: value
-                    ? barzGold
-                    : dobarColors.labelSecondary),
+            Icon(
+              icon,
+              size: 18,
+              color: value ? barzGold : dobarColors.labelSecondary,
+            ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
@@ -2360,8 +2364,9 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                   Text(
                     subtitle,
                     style: const TextStyle(
-                        fontSize: 10,
-                        color: Color(0xFFB0B0B0)),
+                      fontSize: 10,
+                      color: Color(0xFFB0B0B0),
+                    ),
                   ),
                 ],
               ),
@@ -2376,9 +2381,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
               ),
               child: AnimatedAlign(
                 duration: const Duration(milliseconds: 200),
-                alignment: value
-                    ? Alignment.centerRight
-                    : Alignment.centerLeft,
+                alignment: value ? Alignment.centerRight : Alignment.centerLeft,
                 child: Container(
                   margin: const EdgeInsets.all(2),
                   width: 20,
@@ -2423,8 +2426,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                     children: [
                       Expanded(
                         child: Column(
-                          crossAxisAlignment:
-                              CrossAxisAlignment.start,
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
                               _nameController.text,
@@ -2442,10 +2444,10 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF7C3AED)
-                                    .withValues(alpha: 0.2),
-                                borderRadius:
-                                    BorderRadius.circular(4),
+                                color: const Color(
+                                  0xFF7C3AED,
+                                ).withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(4),
                               ),
                               child: const Text(
                                 'Rascunho',
@@ -2459,8 +2461,11 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                           ],
                         ),
                       ),
-                      const Icon(LucideIcons.receipt,
-                          size: 20, color: barzGold),
+                      const Icon(
+                        LucideIcons.receipt,
+                        size: 20,
+                        color: barzGold,
+                      ),
                     ],
                   ),
 
@@ -2548,11 +2553,9 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
 
                   const Divider(color: Color(0xFF2C2C2C)),
                   Padding(
-                    padding:
-                        const EdgeInsets.symmetric(vertical: 8),
+                    padding: const EdgeInsets.symmetric(vertical: 8),
                     child: Row(
-                      mainAxisAlignment:
-                          MainAxisAlignment.spaceBetween,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         const Text(
                           'Investimento Total',
@@ -2611,8 +2614,11 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                 children: [
                   Row(
                     children: [
-                      const Icon(LucideIcons.trending_up,
-                          size: 16, color: barzGold),
+                      const Icon(
+                        LucideIcons.trending_up,
+                        size: 16,
+                        color: barzGold,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'Performance Estimada',
@@ -2638,16 +2644,14 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                       Expanded(
                         child: _buildMetricBox(
                           label: 'Cliques',
-                          value:
-                              '~${_formatCompact(ep.estimatedClicks)}',
+                          value: '~${_formatCompact(ep.estimatedClicks)}',
                         ),
                       ),
                       const SizedBox(width: 8),
                       Expanded(
                         child: _buildMetricBox(
                           label: 'Impressões',
-                          value:
-                              '~${_formatCompact(ep.estimatedImpressions)}',
+                          value: '~${_formatCompact(ep.estimatedImpressions)}',
                         ),
                       ),
                     ],
@@ -2657,8 +2661,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                     'Estimativas baseadas em performance histórica. Resultados reais podem variar.',
                     style: TextStyle(
                       fontSize: 10,
-                      color: dobarColors.labelSecondary
-                          .withValues(alpha: 0.6),
+                      color: dobarColors.labelSecondary.withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -2686,19 +2689,13 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
           width: 60,
           child: Text(
             label,
-            style: TextStyle(
-              fontSize: 12,
-              color: dobarColors.labelSecondary,
-            ),
+            style: TextStyle(fontSize: 12, color: dobarColors.labelSecondary),
           ),
         ),
         Expanded(
           child: Text(
             value,
-            style: const TextStyle(
-              fontSize: 12,
-              color: Colors.white70,
-            ),
+            style: const TextStyle(fontSize: 12, color: Colors.white70),
           ),
         ),
       ],
@@ -2721,10 +2718,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
         children: [
           Text(
             label,
-            style: TextStyle(
-              fontSize: 9,
-              color: dobarColors.labelSecondary,
-            ),
+            style: TextStyle(fontSize: 9, color: dobarColors.labelSecondary),
           ),
           const SizedBox(height: 4),
           Text(
@@ -2760,20 +2754,20 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                 child: TextButton(
                   onPressed: _isLaunching ? null : _saveDraft,
                   style: TextButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 16),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(12),
-                      side: const BorderSide(
-                          color: Color(0xFF2C2C2C)),
+                      borderRadius: BorderRadius.circular(12),
+                      side: const BorderSide(color: Color(0xFF2C2C2C)),
                     ),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(LucideIcons.save,
-                          size: 16, color: Colors.white70),
+                      const Icon(
+                        LucideIcons.save,
+                        size: 16,
+                        color: Colors.white70,
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         'Salvar Rascunho',
@@ -2800,8 +2794,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                       fontWeight: FontWeight.w500,
                       color: _currentStep > 0
                           ? dobar.labelSecondary
-                          : dobar.labelSecondary
-                              .withValues(alpha: 0.3),
+                          : dobar.labelSecondary.withValues(alpha: 0.3),
                     ),
                   ),
                 ),
@@ -2825,31 +2818,23 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                   duration: const Duration(milliseconds: 200),
                   height: 56,
                   decoration: BoxDecoration(
-                    borderRadius:
-                        BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(12),
                     gradient: _isLaunching
                         ? null
                         : const LinearGradient(
-                            colors: [
-                              Color(0xFFFFDF73),
-                              Color(0xFFFFC000),
-                            ],
+                            colors: [Color(0xFFFFDF73), Color(0xFFFFC000)],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
-                    color: _isLaunching
-                        ? dobar.surfaceElevated
-                        : null,
+                    color: _isLaunching ? dobar.surfaceElevated : null,
                     boxShadow: _isLaunching
                         ? null
                         : [
                             BoxShadow(
-                              color: barzGold
-                                  .withValues(alpha: 0.35),
+                              color: barzGold.withValues(alpha: 0.35),
                               blurRadius: 24,
                               spreadRadius: -4,
-                              offset:
-                                  const Offset(0, 4),
+                              offset: const Offset(0, 4),
                             ),
                           ],
                   ),
@@ -2858,8 +2843,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                         ? const SizedBox(
                             width: 20,
                             height: 20,
-                            child:
-                                CircularProgressIndicator(
+                            child: CircularProgressIndicator(
                               strokeWidth: 2,
                               color: Colors.black,
                             ),
@@ -2879,17 +2863,14 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                                   size: 18,
                                   color: Colors.black,
                                 ),
-                              const SizedBox(
-                                  width: 8),
+                              const SizedBox(width: 8),
                               Text(
                                 _continueLabel,
                                 style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 16,
-                                  fontWeight:
-                                      FontWeight.bold,
-                                  fontFamily:
-                                      'Space Grotesk',
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Space Grotesk',
                                 ),
                               ),
                             ],
@@ -2927,27 +2908,23 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
         GestureDetector(
           onTap: onTap,
           child: Container(
-            padding: const EdgeInsets.symmetric(
-                horizontal: 14, vertical: 14),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
             decoration: BoxDecoration(
               color: const Color(0xFF121212),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
-              mainAxisAlignment:
-                  MainAxisAlignment.spaceBetween,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Flexible(
                   child: Text(
                     date != null
-                        ? DateFormat('MMM d, yyyy')
-                            .format(date)
+                        ? DateFormat('MMM d, yyyy').format(date)
                         : placeholder,
                     style: TextStyle(
                       color: date != null
                           ? Colors.white
-                          : dobarColors.labelSecondary
-                              .withValues(alpha: 0.6),
+                          : dobarColors.labelSecondary.withValues(alpha: 0.6),
                       fontSize: 13,
                       fontWeight: date != null
                           ? FontWeight.w500
@@ -2956,8 +2933,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                const Icon(LucideIcons.calendar,
-                    size: 16, color: barzGold),
+                const Icon(LucideIcons.calendar, size: 16, color: barzGold),
               ],
             ),
           ),
@@ -2990,8 +2966,7 @@ class _MultiStepCampaignSheetState extends State<MultiStepCampaignSheet>
     return switch (g) {
       CampaignGoal.discovery => 'Ser Descoberto',
       CampaignGoal.footTraffic => 'Atrair Mais Clientes',
-      CampaignGoal.promotion =>
-        'Promover Oferta Especial',
+      CampaignGoal.promotion => 'Promover Oferta Especial',
       CampaignGoal.fullPresence => 'Presença Total',
     };
   }
@@ -3033,15 +3008,15 @@ class _DaySchedule extends StatelessWidget {
         Text(
           day,
           style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: Colors.white),
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
         ),
         const SizedBox(height: 2),
         Text(
           hours,
-          style:
-              const TextStyle(fontSize: 10, color: Color(0xFFB0B0B0)),
+          style: const TextStyle(fontSize: 10, color: Color(0xFFB0B0B0)),
         ),
       ],
     );
@@ -3071,8 +3046,7 @@ class _LaunchSuccessDialog extends StatefulWidget {
   });
 
   @override
-  State<_LaunchSuccessDialog> createState() =>
-      _LaunchSuccessDialogState();
+  State<_LaunchSuccessDialog> createState() => _LaunchSuccessDialogState();
 }
 
 class _LaunchSuccessDialogState extends State<_LaunchSuccessDialog>
@@ -3112,9 +3086,7 @@ class _LaunchSuccessDialogState extends State<_LaunchSuccessDialog>
             decoration: BoxDecoration(
               color: barzDarkCard,
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: barzGold.withValues(alpha: 0.3),
-              ),
+              border: Border.all(color: barzGold.withValues(alpha: 0.3)),
               boxShadow: [
                 BoxShadow(
                   color: barzGold.withValues(alpha: 0.3),
@@ -3132,10 +3104,7 @@ class _LaunchSuccessDialogState extends State<_LaunchSuccessDialog>
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: const LinearGradient(
-                      colors: [
-                        Color(0xFFFFDF73),
-                        Color(0xFFFFC000),
-                      ],
+                      colors: [Color(0xFFFFDF73), Color(0xFFFFC000)],
                     ),
                   ),
                   child: const Icon(
@@ -3179,17 +3148,12 @@ class _LaunchSuccessDialogState extends State<_LaunchSuccessDialog>
                       child: GestureDetector(
                         onTap: widget.onViewCampaign,
                         child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              vertical: 14),
+                          padding: const EdgeInsets.symmetric(vertical: 14),
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [
-                                Color(0xFFFFDF73),
-                                Color(0xFFFFC000),
-                              ],
+                              colors: [Color(0xFFFFDF73), Color(0xFFFFC000)],
                             ),
-                            borderRadius:
-                                BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                           child: const Center(
                             child: Text(

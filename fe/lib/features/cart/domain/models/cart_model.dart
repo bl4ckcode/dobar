@@ -274,9 +274,11 @@ class CashbackPreview {
       allowance: json['pro_coupon_allowance'] != null
           ? ProCouponAllowance.fromJson(json['pro_coupon_allowance'])
           : null,
-      acceptedPromotionIds: (json['accepted_promotion_ids'] as List<dynamic>?)
-          ?.map((e) => (e as num).toInt())
-          .toList() ?? [],
+      acceptedPromotionIds:
+          (json['accepted_promotion_ids'] as List<dynamic>?)
+              ?.map((e) => (e as num).toInt())
+              .toList() ??
+          [],
     );
   }
 }
@@ -522,9 +524,11 @@ class _CartModelImpl implements CartModel {
       proCouponAllowance: json['pro_coupon_allowance'] != null
           ? ProCouponAllowance.fromJson(json['pro_coupon_allowance'])
           : null,
-      acceptedPromotionIds: (json['accepted_promotion_ids'] as List<dynamic>?)
-          ?.map((e) => (e as num).toInt())
-          .toList() ?? [],
+      acceptedPromotionIds:
+          (json['accepted_promotion_ids'] as List<dynamic>?)
+              ?.map((e) => (e as num).toInt())
+              .toList() ??
+          [],
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'])
           : DateTime.now(),
@@ -631,12 +635,22 @@ class CheckoutResult {
       paymentAttemptKey: json['payment_attempt_key'],
       barId: json['bar_id'],
       locationIdentifier: json['location_identifier'],
-      items: ((json['items'] as List?) ?? []).map((item) => CartItemModel(
-        id: item['id'] ?? 0, cartId: 0, menuItemId: item['menu_item_id'],
-        barId: json['bar_id'] ?? 0, menuItemName: item['menu_item_name'],
-        quantity: item['quantity'], unitPrice: (item['unit_price'] as num).toDouble(),
-        totalPrice: (item['unit_price'] as num).toDouble() * (item['quantity'] as num),
-      )).toList(),
+      items: ((json['items'] as List?) ?? [])
+          .map(
+            (item) => CartItemModel(
+              id: item['id'] ?? 0,
+              cartId: 0,
+              menuItemId: item['menu_item_id'],
+              barId: json['bar_id'] ?? 0,
+              menuItemName: item['menu_item_name'],
+              quantity: item['quantity'],
+              unitPrice: (item['unit_price'] as num).toDouble(),
+              totalPrice:
+                  (item['unit_price'] as num).toDouble() *
+                  (item['quantity'] as num),
+            ),
+          )
+          .toList(),
       status: json['status'] ?? 'pending',
       paymentStatus: json['payment_status'] ?? 'pending',
       total: (json['total'] as num?)?.toDouble() ?? 0.0,

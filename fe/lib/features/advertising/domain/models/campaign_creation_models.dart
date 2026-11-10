@@ -50,14 +50,10 @@ extension CampaignPlacementMeta on CampaignPlacement {
     return switch (this) {
       CampaignPlacement.featured =>
         'Apareça no carrossel em destaque da tela inicial',
-      CampaignPlacement.search =>
-        'Apareça primeiro nos resultados de busca',
-      CampaignPlacement.mapPin =>
-        'Seu pin no mapa com destaque dourado',
-      CampaignPlacement.promo =>
-        'Impulsione promoções ou drinks específicos',
-      CampaignPlacement.banner =>
-        'Banner em rotação premium pelo app',
+      CampaignPlacement.search => 'Apareça primeiro nos resultados de busca',
+      CampaignPlacement.mapPin => 'Seu pin no mapa com destaque dourado',
+      CampaignPlacement.promo => 'Impulsione promoções ou drinks específicos',
+      CampaignPlacement.banner => 'Banner em rotação premium pelo app',
       CampaignPlacement.pushNotification =>
         'Notificação push geolocalizada (Master/VIP)',
     };

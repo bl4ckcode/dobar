@@ -37,7 +37,9 @@ abstract class PlanCredits with _$PlanCredits {
     @JsonKey(name: 'search_clicks', fromJson: _intFromJson)
     @Default(0)
     int searchClicks,
-    @JsonKey(name: 'map_hours', fromJson: _intFromJson) @Default(0) int mapHours,
+    @JsonKey(name: 'map_hours', fromJson: _intFromJson)
+    @Default(0)
+    int mapHours,
     @JsonKey(name: 'boost_impressions', fromJson: _intFromJson)
     @Default(0)
     int boostImpressions,

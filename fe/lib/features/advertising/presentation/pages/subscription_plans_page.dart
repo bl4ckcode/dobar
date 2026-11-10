@@ -92,13 +92,14 @@ class _SubscriptionPlansContentState extends State<_SubscriptionPlansContent> {
               listener: (context, state) {
                 final l10n = AppLocalizations.of(context)!;
                 if (state.error != null && state.error!.isNotEmpty) {
-                  if (state.error == l10n.subscription_payment_required_message ||
+                  if (state.error ==
+                          l10n.subscription_payment_required_message ||
                       state.error!.contains('PAYMENT_REQUIRED')) {
                     _showPaymentRequiredDialog(context, l10n);
                   } else {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(state.error!)),
-                    );
+                    ScaffoldMessenger.of(
+                      context,
+                    ).showSnackBar(SnackBar(content: Text(state.error!)));
                   }
                 } else if (state.successMessage != null &&
                     state.successMessage!.isNotEmpty) {
@@ -236,7 +237,13 @@ class _SubscriptionPlansContentState extends State<_SubscriptionPlansContent> {
               plan: plan,
               currency: plans.currency,
               isCurrentPlan: currentSubscription?.tier == plan.tier,
-              onSelect: () => _selectPlan(context, plan, l10n, currentSubscription, plans.plans),
+              onSelect: () => _selectPlan(
+                context,
+                plan,
+                l10n,
+                currentSubscription,
+                plans.plans,
+              ),
             ),
           ),
         ],
@@ -352,7 +359,8 @@ class _SubscriptionPlansContentState extends State<_SubscriptionPlansContent> {
     }
 
     final barId = sessionState.session.activeBar!.barId;
-    final isUpgrade = currentSubscription != null &&
+    final isUpgrade =
+        currentSubscription != null &&
         plan.tier.index > currentSubscription.tier.index;
 
     if (!isUpgrade) {
@@ -370,12 +378,12 @@ class _SubscriptionPlansContentState extends State<_SubscriptionPlansContent> {
               onPressed: () {
                 Navigator.pop(context);
                 context.read<AdvertisingBloc>().add(
-                      CreateSubscription(
-                        barId: barId,
-                        tier: plan.tier,
-                        regionCode: 'BR',
-                      ),
-                    );
+                  CreateSubscription(
+                    barId: barId,
+                    tier: plan.tier,
+                    regionCode: 'BR',
+                  ),
+                );
               },
               child: Text(l10n.confirm),
             ),
@@ -386,8 +394,9 @@ class _SubscriptionPlansContentState extends State<_SubscriptionPlansContent> {
     }
 
     // Upgrade with proration
-    final currentPlan =
-        allPlans.firstWhere((p) => p.tier == currentSubscription.tier);
+    final currentPlan = allPlans.firstWhere(
+      (p) => p.tier == currentSubscription.tier,
+    );
     final prorationCredit = calculateProrationCredit(
       planPriceCents: (currentPlan.price * 100).round(),
       cycleStart: currentSubscription.currentPeriodStart,
@@ -442,23 +451,22 @@ class _SubscriptionPlansContentState extends State<_SubscriptionPlansContent> {
             onPressed: () {
               Navigator.pop(context);
               context.read<AdvertisingBloc>().add(
-                    UpgradeSubscription(
-                      barId: barId,
-                      amountCents: finalAmountCents,
-                      currency: 'brl',
-                      country: 'BR',
-                      cardToken: 'saved', // Use existing card for upgrade
-                      proration: ProrationInfo(
-                        previousPlan:
-                            currentSubscription.tier.name.toUpperCase(),
-                        newPlan: plan.tier.name.toUpperCase(),
-                        creditAmountCents: prorationCredit,
-                        cycleStart: currentSubscription.currentPeriodStart,
-                        cycleEnd: currentSubscription.currentPeriodEnd,
-                        upgradeDate: DateTime.now(),
-                      ),
-                    ),
-                  );
+                UpgradeSubscription(
+                  barId: barId,
+                  amountCents: finalAmountCents,
+                  currency: 'brl',
+                  country: 'BR',
+                  cardToken: 'saved', // Use existing card for upgrade
+                  proration: ProrationInfo(
+                    previousPlan: currentSubscription.tier.name.toUpperCase(),
+                    newPlan: plan.tier.name.toUpperCase(),
+                    creditAmountCents: prorationCredit,
+                    cycleStart: currentSubscription.currentPeriodStart,
+                    cycleEnd: currentSubscription.currentPeriodEnd,
+                    upgradeDate: DateTime.now(),
+                  ),
+                ),
+              );
             },
             child: Text(l10n.confirm),
           ),
@@ -526,11 +534,11 @@ class _TrialStatusCard extends StatelessWidget {
               child: OutlinedButton.icon(
                 onPressed: () {
                   context.read<AdvertisingBloc>().add(
-                        CaptureSubscriptionPayment(
-                          paymentId: trialSetup.setupIntentId,
-                          amountCents: 2990, // Dobar PRO monthly price
-                        ),
-                      );
+                    CaptureSubscriptionPayment(
+                      paymentId: trialSetup.setupIntentId,
+                      amountCents: 2990, // Dobar PRO monthly price
+                    ),
+                  );
                 },
                 icon: const Icon(Icons.payment, color: barzGold),
                 label: Text(

@@ -148,7 +148,10 @@ class _MenuManagementContentState extends State<_MenuManagementContent> {
 
         return BusinessActionToolbar(
           title: l10n.business_menu_management,
-          subtitle: l10n.business_menu_items_summary(state.totalItems, state.menus.length),
+          subtitle: l10n.business_menu_items_summary(
+            state.totalItems,
+            state.menus.length,
+          ),
           icon: LucideIcons.wine,
           isNarrow: isNarrow,
           actions: [
@@ -162,7 +165,9 @@ class _MenuManagementContentState extends State<_MenuManagementContent> {
                   color: textColor,
                 ),
               ),
-              tooltip: allExpanded ? l10n.business_colapse_all : l10n.business_expand_all,
+              tooltip: allExpanded
+                  ? l10n.business_colapse_all
+                  : l10n.business_expand_all,
             ),
             OutlinedButton.icon(
               onPressed: () =>
@@ -181,7 +186,9 @@ class _MenuManagementContentState extends State<_MenuManagementContent> {
             FilledButton.icon(
               onPressed: () => _navigateToMenuReader(context),
               icon: const Icon(Icons.auto_awesome, size: 18),
-              label: Text(isNarrow ? l10n.business_scan : l10n.business_scan_with_ai),
+              label: Text(
+                isNarrow ? l10n.business_scan : l10n.business_scan_with_ai,
+              ),
               style: FilledButton.styleFrom(
                 backgroundColor: barzGold,
                 foregroundColor: barzDark,

@@ -64,13 +64,7 @@ extension CampaignTypeWire on CampaignType {
 }
 
 /// Budget type enum
-enum BudgetType { 
-  hourly,
-  cpc,
-  cpm,
-  fixed,
-  credits 
-}
+enum BudgetType { hourly, cpc, cpm, fixed, credits }
 
 /// Campaign targeting options
 @freezed
@@ -151,9 +145,11 @@ abstract class CreateCampaignRequest with _$CreateCampaignRequest {
     @JsonKey(name: 'end_time') DateTime? endDate,
     CampaignTargeting? targeting,
     CampaignCreative? creative,
+
     /// Share of the budget assigned to each `CampaignPlacement`, keyed by the
     /// backend placement name (e.g. `{"featured": 40.0, "search": 60.0}`).
-    @JsonKey(name: 'placement_distribution') Map<String, double>? placementDistribution,
+    @JsonKey(name: 'placement_distribution')
+    Map<String, double>? placementDistribution,
   }) = _CreateCampaignRequest;
 
   factory CreateCampaignRequest.fromJson(Map<String, dynamic> json) =>

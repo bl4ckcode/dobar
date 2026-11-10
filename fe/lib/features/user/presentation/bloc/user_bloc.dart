@@ -38,7 +38,9 @@ class UserBloc extends Bloc<UserEvent, UserState> {
     UpdateProfile event,
     Emitter<UserState> emit,
   ) async {
-    emit(state.copyWith(isUpdating: true, error: null, isCountryUpdated: false));
+    emit(
+      state.copyWith(isUpdating: true, error: null, isCountryUpdated: false),
+    );
     final result = await _usecase.updateProfile(
       displayName: event.displayName,
       email: event.email,

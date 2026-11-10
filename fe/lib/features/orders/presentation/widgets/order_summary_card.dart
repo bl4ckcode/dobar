@@ -59,7 +59,11 @@ class OrderSummaryCard extends StatelessWidget {
                           shape: BoxShape.circle,
                         ),
                         child: Center(
-                          child: Icon(LucideIcons.clipboard_list, color: barzGold, size: 18),
+                          child: Icon(
+                            LucideIcons.clipboard_list,
+                            color: barzGold,
+                            size: 18,
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -68,12 +72,17 @@ class OrderSummaryCard extends StatelessWidget {
                         children: [
                           const Text(
                             'Your order',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
                           Text(
                             '${order.items.length} items',
                             style: TextStyle(
-                              color: dobarColors.labelPrimary.withValues(alpha: 0.5),
+                              color: dobarColors.labelPrimary.withValues(
+                                alpha: 0.5,
+                              ),
                               fontSize: 12,
                             ),
                           ),
@@ -93,67 +102,95 @@ class OrderSummaryCard extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 20),
-              
+
               // Items list
-              ...order.items.map((item) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: dobarColors.labelPrimary.withValues(alpha: 0.05),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Center(
-                        child: Text(
-                          '${item.quantity}×',
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            item.menuItemName,
-                            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14),
-                          ),
-                          // Optional: add note if available in model (not in current model)
-                        ],
-                      ),
-                    ),
-                    Text(
-                      'R\$ ${item.totalPrice.toStringAsFixed(2)}',
-                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
-                    ),
-                  ],
-                ).animate().fadeIn(duration: const Duration(milliseconds: 400), delay: const Duration(milliseconds: 100)).slideX(begin: -0.05),
-              )),
+              ...order.items.map(
+                (item) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child:
+                      Row(
+                            children: [
+                              Container(
+                                width: 32,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: dobarColors.labelPrimary.withValues(
+                                    alpha: 0.05,
+                                  ),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '${item.quantity}×',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      item.menuItemName,
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w500,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    // Optional: add note if available in model (not in current model)
+                                  ],
+                                ),
+                              ),
+                              Text(
+                                'R\$ ${item.totalPrice.toStringAsFixed(2)}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          )
+                          .animate()
+                          .fadeIn(
+                            duration: const Duration(milliseconds: 400),
+                            delay: const Duration(milliseconds: 100),
+                          )
+                          .slideX(begin: -0.05),
+                ),
+              ),
 
               const SizedBox(height: 12),
-              
+
               // Divider
-              _DashedDivider(color: dobarColors.labelPrimary.withValues(alpha: 0.1)),
-              
+              _DashedDivider(
+                color: dobarColors.labelPrimary.withValues(alpha: 0.1),
+              ),
+
               const SizedBox(height: 16),
-              
+
               // Footer
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Row(
                     children: [
-                      Icon(LucideIcons.receipt, size: 14, color: dobarColors.labelPrimary.withValues(alpha: 0.4)),
+                      Icon(
+                        LucideIcons.receipt,
+                        size: 14,
+                        color: dobarColors.labelPrimary.withValues(alpha: 0.4),
+                      ),
                       const SizedBox(width: 8),
                       Text(
                         _getPaymentMethodDisplay(order.paymentMethod),
                         style: TextStyle(
                           fontSize: 12,
-                          color: dobarColors.labelPrimary.withValues(alpha: 0.4),
+                          color: dobarColors.labelPrimary.withValues(
+                            alpha: 0.4,
+                          ),
                         ),
                       ),
                     ],
@@ -167,7 +204,9 @@ class OrderSummaryCard extends StatelessWidget {
                           fontSize: 10,
                           letterSpacing: 2,
                           fontWeight: FontWeight.bold,
-                          color: dobarColors.labelPrimary.withValues(alpha: 0.4),
+                          color: dobarColors.labelPrimary.withValues(
+                            alpha: 0.4,
+                          ),
                         ),
                       ),
                       Text(
@@ -210,9 +249,7 @@ class _DashedDivider extends StatelessWidget {
             return SizedBox(
               width: dashWidth,
               height: 1,
-              child: DecoratedBox(
-                decoration: BoxDecoration(color: color),
-              ),
+              child: DecoratedBox(decoration: BoxDecoration(color: color)),
             );
           }),
         );

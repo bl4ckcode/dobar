@@ -8,8 +8,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
   final OnboardingRepository _repository;
 
-  OnboardingBloc({required this._repository})
-    : super(const OnboardingState()) {
+  OnboardingBloc({required this._repository}) : super(const OnboardingState()) {
     on<SelectUserType>(_onSelectUserType);
     on<SelectCountry>(_onSelectCountry);
     on<DetectCountryFromPhone>(_onDetectCountryFromPhone);

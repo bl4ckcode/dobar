@@ -132,7 +132,9 @@ class _OrderSummarySectionState extends State<OrderSummarySection> {
                       if (cashbackAmount > 0) ...[
                         const SizedBox(height: 10),
                         _SummaryRow(
-                          label: widget.isPro ? 'Cashback (PRO 10%)' : 'Cashback',
+                          label: widget.isPro
+                              ? 'Cashback (PRO 10%)'
+                              : 'Cashback',
                           value: '+\$${cashbackAmount.toStringAsFixed(2)}',
                           isDark: isDark,
                           isHighlight: true,
@@ -168,7 +170,10 @@ class _OrderSummarySectionState extends State<OrderSummarySection> {
                   if (widget.isPro) ...[
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: barzGold.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(4),

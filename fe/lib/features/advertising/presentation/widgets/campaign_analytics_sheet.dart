@@ -146,416 +146,433 @@ class _CampaignAnalyticsSheetState extends State<CampaignAnalyticsSheet> {
         maxWidth: 1400,
         maxWidthPercentage: 0.9,
         child: Column(
-        children: [
-          // Handle
-          Center(
-            child: Container(
-              margin: const EdgeInsets.only(top: 12, bottom: 8),
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: isDark ? dobar.surfaceElevated : surfaceDim,
-                borderRadius: BorderRadius.circular(2),
+          children: [
+            // Handle
+            Center(
+              child: Container(
+                margin: const EdgeInsets.only(top: 12, bottom: 8),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: isDark ? dobar.surfaceElevated : surfaceDim,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
-          ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              children: [
-                // Header - matching Lovable's style
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            widget.campaign.name,
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                              fontFamily: 'Space Grotesk',
-                              color: dobar.labelPrimary,
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 16,
+                ),
+                children: [
+                  // Header - matching Lovable's style
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.campaign.name,
+                              style: TextStyle(
+                                fontSize: 22,
+                                fontWeight: FontWeight.bold,
+                                fontFamily: 'Space Grotesk',
+                                color: dobar.labelPrimary,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 8),
-                          Row(
-                            children: [
-                              // Status badge with pulse dot
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: statusBg,
-                                  borderRadius: BorderRadius.circular(
-                                    BarzRadii.full,
+                            const SizedBox(height: 8),
+                            Row(
+                              children: [
+                                // Status badge with pulse dot
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 4,
                                   ),
-                                  border: Border.all(
-                                    color: statusBorderColor,
+                                  decoration: BoxDecoration(
+                                    color: statusBg,
+                                    borderRadius: BorderRadius.circular(
+                                      BarzRadii.full,
+                                    ),
+                                    border: Border.all(
+                                      color: statusBorderColor,
+                                    ),
                                   ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (showPulse) ...[
-                                      Container(
-                                        width: 6,
-                                        height: 6,
-                                        decoration: BoxDecoration(
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      if (showPulse) ...[
+                                        Container(
+                                          width: 6,
+                                          height: 6,
+                                          decoration: BoxDecoration(
+                                            color: statusColor,
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 6),
+                                      ],
+                                      Text(
+                                        status.substring(0, 1).toUpperCase() +
+                                            status.substring(1),
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
                                           color: statusColor,
-                                          shape: BoxShape.circle,
                                         ),
                                       ),
-                                      const SizedBox(width: 6),
                                     ],
-                                    Text(
-                                      status.substring(0, 1).toUpperCase() +
-                                          status.substring(1),
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: statusColor,
+                                  ),
+                                ),
+                                const SizedBox(width: 10),
+                                // Type badge
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? dobar.navBackground
+                                        : surfaceMuted,
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(
+                                      color: isDark
+                                          ? dobar.surfaceElevated
+                                          : surfaceDim,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    widget.campaign.campaignType.name,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w500,
+                                      color: dobar.labelSecondary,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: Icon(Icons.close, color: dobar.labelSecondary),
+                        style: IconButton.styleFrom(
+                          backgroundColor: isDark
+                              ? dobar.navBackground
+                              : surfaceMuted,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 28),
+
+                  // Analytics BlocBuilder
+                  BlocBuilder<AdvertisingBloc, AdvertisingState>(
+                    builder: (context, state) {
+                      if (state.isLoadingAnalytics) {
+                        return const Padding(
+                          padding: EdgeInsets.all(40),
+                          child: Center(
+                            child: CircularProgressIndicator(color: barzGold),
+                          ),
+                        );
+                      }
+
+                      final int imp =
+                          state.analytics?.impressions ??
+                          widget.campaign.impressions;
+                      final int clk =
+                          state.analytics?.clicks ?? widget.campaign.clicks;
+                      final int convs = state.analytics?.conversions ?? 0;
+
+                      final ctr = imp > 0 ? (clk / imp) * 100 : 0.0;
+                      final cpc = clk > 0 ? budgetSpent / clk : 0.0;
+                      final convRate = clk > 0 ? (convs / clk) * 100 : 0.0;
+
+                      final diffDays =
+                          widget.campaign.endDate
+                              ?.difference(widget.campaign.startDate)
+                              .inDays ??
+                          1;
+                      final int durationDays = diffDays > 0 ? diffDays : 1;
+                      final dailyAvg = budgetSpent / durationDays;
+
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Performance Metrics section
+                          Text(
+                            'PERFORMANCE METRICS',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 1.2,
+                              color: dobar.labelSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+
+                          // 3-column staggered metric grid - matching Lovable's layout
+                          _buildMetricGridRow(
+                            [
+                              _MetricCardData(
+                                icon: LucideIcons.eye,
+                                label: 'IMPRESSIONS',
+                                value: _formatNumber(imp),
+                              ),
+                              _MetricCardData(
+                                icon: LucideIcons.mouse_pointer_click,
+                                label: 'CLICKS',
+                                value: _formatNumber(clk),
+                              ),
+                              _MetricCardData(
+                                icon: LucideIcons.refresh_ccw,
+                                label: 'CONVERSIONS',
+                                value: _formatNumber(convs),
+                              ),
+                            ],
+                            dobar,
+                            isDark,
+                          ),
+                          const SizedBox(height: 10),
+                          _buildMetricGridRow(
+                            [
+                              _MetricCardData(
+                                icon: LucideIcons.trending_up,
+                                label: 'CTR',
+                                value: '${ctr.toStringAsFixed(1)}%',
+                              ),
+                              _MetricCardData(
+                                icon: LucideIcons.dollar_sign,
+                                label: 'COST PER CLICK',
+                                value: currencyFormat.format(cpc),
+                              ),
+                              _MetricCardData(
+                                icon: LucideIcons.chart_pie,
+                                label: 'CONVERSION RATE',
+                                value: '${convRate.toStringAsFixed(1)}%',
+                              ),
+                            ],
+                            dobar,
+                            isDark,
+                          ),
+
+                          const SizedBox(height: 28),
+
+                          // Budget Progress section
+                          Text(
+                            'BUDGET PROGRESS',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              letterSpacing: 1.2,
+                              color: dobar.labelSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 14),
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: dobar.background,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: isDark
+                                    ? dobar.surfaceElevated
+                                    : surfaceDim,
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Spend header row
+                                Row(
+                                  mainAxisAlignment:
+                                      MainAxisAlignment.spaceBetween,
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          'Spend',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: dobar.labelSecondary,
+                                          ),
+                                        ),
+                                        Text(
+                                          currencyNoDecimals.format(
+                                            budgetSpent,
+                                          ),
+                                          style: TextStyle(
+                                            fontSize: 30,
+                                            fontWeight: FontWeight.bold,
+                                            fontFamily: 'Space Grotesk',
+                                            color: dobar.labelPrimary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 4),
+                                      child: Text(
+                                        'of ${currencyNoDecimals.format(budgetTotal)}',
+                                        style: TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w500,
+                                          color: dobar.labelSecondary,
+                                        ),
                                       ),
                                     ),
                                   ],
                                 ),
-                              ),
-                              const SizedBox(width: 10),
-                              // Type badge
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 4,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: isDark
-                                      ? dobar.navBackground
-                                      : surfaceMuted,
+                                const SizedBox(height: 14),
+
+                                // Linear progress (matching Lovable's gradient gold)
+                                ClipRRect(
                                   borderRadius: BorderRadius.circular(4),
-                                  border: Border.all(
-                                    color: isDark
-                                        ? dobar.surfaceElevated
-                                        : surfaceDim,
+                                  child: Container(
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(4),
+                                      color: isDark
+                                          ? dobar.navBackground
+                                          : surfaceDim,
+                                    ),
+                                    child: FractionallySizedBox(
+                                      alignment: Alignment.centerLeft,
+                                      widthFactor: budgetPercent.clamp(
+                                        0.0,
+                                        1.0,
+                                      ),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(
+                                            4,
+                                          ),
+                                          gradient: const LinearGradient(
+                                            colors: [
+                                              barzGoldGradientStart,
+                                              barzGoldGradientEnd,
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ),
-                                child: Text(
-                                  widget.campaign.campaignType.name,
+                                const SizedBox(height: 6),
+                                Text(
+                                  '$budgetPercentText% spent',
                                   style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w500,
+                                    fontSize: 10,
                                     color: dobar.labelSecondary,
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: Icon(Icons.close, color: dobar.labelSecondary),
-                      style: IconButton.styleFrom(
-                        backgroundColor: isDark
-                            ? dobar.navBackground
-                            : surfaceMuted,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 28),
-            
-                // Analytics BlocBuilder
-                BlocBuilder<AdvertisingBloc, AdvertisingState>(
-                  builder: (context, state) {
-                    if (state.isLoadingAnalytics) {
-                      return const Padding(
-                        padding: EdgeInsets.all(40),
-                        child: Center(
-                          child: CircularProgressIndicator(color: barzGold),
-                        ),
-                      );
-                    }
-            
-                    final int imp =
-                        state.analytics?.impressions ??
-                        widget.campaign.impressions;
-                    final int clk =
-                        state.analytics?.clicks ?? widget.campaign.clicks;
-                    final int convs = state.analytics?.conversions ?? 0;
-            
-                    final ctr = imp > 0 ? (clk / imp) * 100 : 0.0;
-                    final cpc = clk > 0 ? budgetSpent / clk : 0.0;
-                    final convRate = clk > 0 ? (convs / clk) * 100 : 0.0;
-            
-                    final diffDays =
-                        widget.campaign.endDate
-                            ?.difference(widget.campaign.startDate)
-                            .inDays ??
-                        1;
-                    final int durationDays = diffDays > 0 ? diffDays : 1;
-                    final dailyAvg = budgetSpent / durationDays;
-            
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Performance Metrics section
-                        Text(
-                          'PERFORMANCE METRICS',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 1.2,
-                            color: dobar.labelSecondary,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-            
-                        // 3-column staggered metric grid - matching Lovable's layout
-                        _buildMetricGridRow([
-                          _MetricCardData(
-                            icon: LucideIcons.eye,
-                            label: 'IMPRESSIONS',
-                            value: _formatNumber(imp),
-                          ),
-                          _MetricCardData(
-                            icon: LucideIcons.mouse_pointer_click,
-                            label: 'CLICKS',
-                            value: _formatNumber(clk),
-                          ),
-                          _MetricCardData(
-                            icon: LucideIcons.refresh_ccw,
-                            label: 'CONVERSIONS',
-                            value: _formatNumber(convs),
-                          ),
-                        ], dobar, isDark),
-                        const SizedBox(height: 10),
-                        _buildMetricGridRow([
-                          _MetricCardData(
-                            icon: LucideIcons.trending_up,
-                            label: 'CTR',
-                            value: '${ctr.toStringAsFixed(1)}%',
-                          ),
-                          _MetricCardData(
-                            icon: LucideIcons.dollar_sign,
-                            label: 'COST PER CLICK',
-                            value: currencyFormat.format(cpc),
-                          ),
-                          _MetricCardData(
-                            icon: LucideIcons.chart_pie,
-                            label: 'CONVERSION RATE',
-                            value: '${convRate.toStringAsFixed(1)}%',
-                          ),
-                        ], dobar, isDark),
-            
-                        const SizedBox(height: 28),
-            
-                        // Budget Progress section
-                        Text(
-                          'BUDGET PROGRESS',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: 1.2,
-                            color: dobar.labelSecondary,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: dobar.background,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(
-                              color: isDark
-                                  ? dobar.surfaceElevated
-                                  : surfaceDim,
+                                const SizedBox(height: 14),
+                                const Divider(height: 1),
+                                const SizedBox(height: 14),
+
+                                // Sub-stats row - matching Lovable's Wallet/CalendarClock
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            LucideIcons.wallet,
+                                            size: 16,
+                                            color: barzGold,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'REMAINING',
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  letterSpacing: 1,
+                                                  color: dobar.labelSecondary,
+                                                ),
+                                              ),
+                                              Text(
+                                                currencyNoDecimals.format(
+                                                  remaining,
+                                                ),
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontFamily: 'Space Grotesk',
+                                                  color: dobar.labelPrimary,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Expanded(
+                                      child: Row(
+                                        children: [
+                                          Icon(
+                                            LucideIcons.calendar_clock,
+                                            size: 16,
+                                            color: barzGold,
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                'DAILY AVG',
+                                                style: TextStyle(
+                                                  fontSize: 10,
+                                                  letterSpacing: 1,
+                                                  color: dobar.labelSecondary,
+                                                ),
+                                              ),
+                                              Text(
+                                                currencyFormat.format(dailyAvg),
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.bold,
+                                                  fontFamily: 'Space Grotesk',
+                                                  color: dobar.labelPrimary,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
                             ),
                           ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Spend header row
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Spend',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: dobar.labelSecondary,
-                                        ),
-                                      ),
-                                      Text(
-                                        currencyNoDecimals.format(budgetSpent),
-                                        style: TextStyle(
-                                          fontSize: 30,
-                                          fontWeight: FontWeight.bold,
-                                          fontFamily: 'Space Grotesk',
-                                          color: dobar.labelPrimary,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  Padding(
-                                    padding: const EdgeInsets.only(bottom: 4),
-                                    child: Text(
-                                      'of ${currencyNoDecimals.format(budgetTotal)}',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.w500,
-                                        color: dobar.labelSecondary,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 14),
-            
-                              // Linear progress (matching Lovable's gradient gold)
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(4),
-                                child: Container(
-                                  height: 8,
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(4),
-                                    color: isDark
-                                        ? dobar.navBackground
-                                        : surfaceDim,
-                                  ),
-                                  child: FractionallySizedBox(
-                                    alignment: Alignment.centerLeft,
-                                    widthFactor: budgetPercent.clamp(0.0, 1.0),
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(4),
-                                        gradient: const LinearGradient(
-                                          colors: [
-                                            barzGoldGradientStart,
-                                            barzGoldGradientEnd,
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 6),
-                              Text(
-                                '$budgetPercentText% spent',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  color: dobar.labelSecondary,
-                                ),
-                              ),
-                              const SizedBox(height: 14),
-                              const Divider(height: 1),
-                              const SizedBox(height: 14),
-            
-                              // Sub-stats row - matching Lovable's Wallet/CalendarClock
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Row(
-                                      children: [
-                                        Icon(
-                                          LucideIcons.wallet,
-                                          size: 16,
-                                          color: barzGold,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'REMAINING',
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                letterSpacing: 1,
-                                                color: dobar.labelSecondary,
-                                              ),
-                                            ),
-                                            Text(
-                                              currencyNoDecimals.format(
-                                                remaining,
-                                              ),
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.bold,
-                                                fontFamily: 'Space Grotesk',
-                                                color: dobar.labelPrimary,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  Expanded(
-                                    child: Row(
-                                      children: [
-                                        Icon(
-                                          LucideIcons.calendar_clock,
-                                          size: 16,
-                                          color: barzGold,
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              'DAILY AVG',
-                                              style: TextStyle(
-                                                fontSize: 10,
-                                                letterSpacing: 1,
-                                                color: dobar.labelSecondary,
-                                              ),
-                                            ),
-                                            Text(
-                                              currencyFormat.format(dailyAvg),
-                                              style: TextStyle(
-                                                fontSize: 14,
-                                                fontWeight: FontWeight.bold,
-                                                fontFamily: 'Space Grotesk',
-                                                color: dobar.labelPrimary,
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        
-                      ],
-                    );
-                  },
-                ),
-              ],
+                        ],
+                      );
+                    },
+                  ),
+                ],
+              ),
             ),
-          ),
-        ],
-            ),
+          ],
+        ),
       ),
     );
   }

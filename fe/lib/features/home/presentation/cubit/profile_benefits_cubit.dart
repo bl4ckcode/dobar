@@ -18,9 +18,8 @@ class ProfileBenefitsState {
   final ProfileBenefits? data;
 
   /// Real active count only; null until the authenticated source answers.
-  int? get activeCount => status == BenefitsLoadStatus.loaded
-      ? data?.activeCount
-      : null;
+  int? get activeCount =>
+      status == BenefitsLoadStatus.loaded ? data?.activeCount : null;
 }
 
 /// Loads owned benefits. Never redeems or applies a benefit.

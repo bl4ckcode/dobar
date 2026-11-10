@@ -48,18 +48,22 @@ class TokenStorageService {
 
       // On iOS, if we get a keychain error, try to clear all and retry once
       if (!kIsWeb && !isRetry) {
-        _log('[TOKEN RECOVERY] Attempting to fix storage by re-creating key...');
+        _log(
+          '[TOKEN RECOVERY] Attempting to fix storage by re-creating key...',
+        );
         try {
           // Delete problematic key FIRST instead of everything
           await _storage!.delete(key: key);
           await _storage!.write(key: key, value: value);
           _log('[TOKEN RECOVERY] Write retry successful for $key');
         } catch (retryError) {
-          _log('[TOKEN RECOVERY] Individual key retry failed, trying global clear...');
+          _log(
+            '[TOKEN RECOVERY] Individual key retry failed, trying global clear...',
+          );
           try {
             // ONLY if individual clear failed, we try a more aggressive approach
             // But we should be very careful here as it logs the user out
-            // await _storage!.deleteAll(); 
+            // await _storage!.deleteAll();
             // await _storage!.write(key: key, value: value);
           } catch (_) {}
           rethrow;

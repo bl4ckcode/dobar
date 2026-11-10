@@ -9,9 +9,7 @@ class NotificationNavigationHandler {
   final NotificationService _notificationService;
   StreamSubscription<BarzNotification>? _subscription;
 
-  NotificationNavigationHandler({
-    required this._notificationService,
-  });
+  NotificationNavigationHandler({required this._notificationService});
 
   /// Start listening for notification events
   void init() {

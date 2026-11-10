@@ -57,7 +57,7 @@ class LocationDatasourceImpl implements LocationDatasource {
 
     try {
       debugPrint('[LocationDatasource] Fetching current position...');
-      
+
       final Position position = await Geolocator.getCurrentPosition(
         locationSettings: AppleSettings(
           accuracy: LocationAccuracy.high,
@@ -67,7 +67,9 @@ class LocationDatasourceImpl implements LocationDatasource {
         ),
       ).timeout(const Duration(seconds: 10));
 
-      debugPrint('[LocationDatasource] Position received: ${position.latitude}, ${position.longitude}');
+      debugPrint(
+        '[LocationDatasource] Position received: ${position.latitude}, ${position.longitude}',
+      );
 
       return LocationModel(
         latitude: position.latitude,
@@ -79,9 +81,11 @@ class LocationDatasourceImpl implements LocationDatasource {
       );
     } catch (e) {
       debugPrint('[LocationDatasource] Error fetching location: $e');
-      
+
       if (kDebugMode) {
-        debugPrint('[LocationDatasource] ⚠️ FALLBACK: Simulator/Device timed out. Providing Belo Horizonte location for development.');
+        debugPrint(
+          '[LocationDatasource] ⚠️ FALLBACK: Simulator/Device timed out. Providing Belo Horizonte location for development.',
+        );
         return LocationModel(
           latitude: -19.9191, // Belo Horizonte Center
           longitude: -43.9386,
@@ -93,7 +97,9 @@ class LocationDatasourceImpl implements LocationDatasource {
       }
 
       if (e is TimeoutException) {
-        throw Exception("Location request timed out. Please check your GPS signal or simulator settings.");
+        throw Exception(
+          "Location request timed out. Please check your GPS signal or simulator settings.",
+        );
       }
       rethrow;
     }
@@ -116,7 +122,7 @@ class LocationDatasourceImpl implements LocationDatasource {
   @override
   Future<bool> requestLocationService() async {
     // Geolocator doesn't have a direct "requestService" like 'location' package.
-    // It usually directs user to settings. 
+    // It usually directs user to settings.
     // However, some platforms show a dialog.
     // We'll use the existing permission_handler or check status.
     final enabled = await Geolocator.isLocationServiceEnabled();

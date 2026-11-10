@@ -226,9 +226,7 @@ class _CreateCampaignSheetState extends State<CreateCampaignSheet> {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: isDark
-                          ? dobar.surfaceElevated
-                          : surfaceDim,
+                      color: isDark ? dobar.surfaceElevated : surfaceDim,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -246,7 +244,10 @@ class _CreateCampaignSheetState extends State<CreateCampaignSheet> {
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
-                            colors: [barzGoldGradientStart, barzGoldGradientEnd],
+                            colors: [
+                              barzGoldGradientStart,
+                              barzGoldGradientEnd,
+                            ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
@@ -361,18 +362,16 @@ class _CreateCampaignSheetState extends State<CreateCampaignSheet> {
                                   decoration: BoxDecoration(
                                     color: isSelected
                                         ? (isDark
-                                            ? barzGold.withValues(alpha: 0.15)
-                                            : barzGold.withValues(alpha: 0.1))
-                                        : (isDark
-                                            ? barzDark
-                                            : surfaceMuted),
+                                              ? barzGold.withValues(alpha: 0.15)
+                                              : barzGold.withValues(alpha: 0.1))
+                                        : (isDark ? barzDark : surfaceMuted),
                                     borderRadius: BorderRadius.circular(10),
                                     border: Border.all(
                                       color: isSelected
                                           ? barzGold
                                           : (isDark
-                                              ? Colors.transparent
-                                              : surfaceDim),
+                                                ? Colors.transparent
+                                                : surfaceDim),
                                       width: isSelected ? 1.5 : 1,
                                     ),
                                   ),
@@ -388,9 +387,7 @@ class _CreateCampaignSheetState extends State<CreateCampaignSheet> {
                                         _typeLabel(type, l10n),
                                         style: TextStyle(
                                           color: isSelected
-                                              ? (isDark
-                                                  ? barzGold
-                                                  : barzDark)
+                                              ? (isDark ? barzGold : barzDark)
                                               : dobar.labelSecondary,
                                           fontWeight: isSelected
                                               ? FontWeight.bold
@@ -657,15 +654,9 @@ class _CreateCampaignSheetState extends State<CreateCampaignSheet> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
-        borderSide: const BorderSide(
-          color: barzGold,
-          width: 1.5,
-        ),
+        borderSide: const BorderSide(color: barzGold, width: 1.5),
       ),
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 14,
-      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
     );
   }
 
@@ -686,10 +677,7 @@ class _CreateCampaignSheetState extends State<CreateCampaignSheet> {
         GestureDetector(
           onTap: onTap,
           child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 14,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
             decoration: BoxDecoration(
               color: isDark ? barzDark : surfaceMuted,
               borderRadius: BorderRadius.circular(10),
@@ -707,16 +695,14 @@ class _CreateCampaignSheetState extends State<CreateCampaignSheet> {
                           ? dobar.labelPrimary
                           : dobar.labelSecondary.withValues(alpha: 0.6),
                       fontSize: 14,
-                      fontWeight: date != null ? FontWeight.w500 : FontWeight.normal,
+                      fontWeight: date != null
+                          ? FontWeight.w500
+                          : FontWeight.normal,
                     ),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
-                Icon(
-                  LucideIcons.calendar,
-                  size: 16,
-                  color: barzGold,
-                ),
+                Icon(LucideIcons.calendar, size: 16, color: barzGold),
               ],
             ),
           ),

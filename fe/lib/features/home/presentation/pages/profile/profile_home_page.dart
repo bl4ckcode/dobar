@@ -162,7 +162,10 @@ class _ProfileHomePageState extends State<ProfileHomePage> {
                     currencyFormat,
                   ).animate().fadeIn(delay: 50.ms).slideY(begin: 0.1, end: 0),
                   const SizedBox(height: 24),
-                  _buildProUpsellCard().animate().fadeIn(delay: 75.ms).scale(begin: const Offset(0.98, 0.98)),
+                  _buildProUpsellCard()
+                      .animate()
+                      .fadeIn(delay: 75.ms)
+                      .scale(begin: const Offset(0.98, 0.98)),
                   const SizedBox(height: 24),
                   _buildSectionTitle('Activity'),
                   const SizedBox(height: 12),
@@ -488,7 +491,9 @@ class _ProfileHomePageState extends State<ProfileHomePage> {
       decoration: BoxDecoration(
         color: barzDark,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: const Color(0xFFFFD700).withValues(alpha: 0.2)),
+        border: Border.all(
+          color: const Color(0xFFFFD700).withValues(alpha: 0.2),
+        ),
         boxShadow: [
           BoxShadow(
             color: const Color(0xFFFFD700).withValues(alpha: 0.1),
@@ -506,7 +511,11 @@ class _ProfileHomePageState extends State<ProfileHomePage> {
               color: const Color(0xFFFFD700).withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: const Icon(LucideIcons.crown, color: Color(0xFFFFD700), size: 24),
+            child: const Icon(
+              LucideIcons.crown,
+              color: Color(0xFFFFD700),
+              size: 24,
+            ),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -533,7 +542,9 @@ class _ProfileHomePageState extends State<ProfileHomePage> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFFFFD700),
               foregroundColor: barzDark,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               elevation: 0,
             ),

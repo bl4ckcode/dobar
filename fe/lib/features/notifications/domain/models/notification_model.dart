@@ -1,8 +1,4 @@
-enum NotificationType {
-  orderUpdate,
-  system,
-  promotion,
-}
+enum NotificationType { orderUpdate, system, promotion }
 
 class NotificationModel {
   final int id;

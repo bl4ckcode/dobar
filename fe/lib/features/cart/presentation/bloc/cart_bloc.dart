@@ -96,17 +96,24 @@ class CartBloc extends Bloc<CartEvent, CartState> {
       if (currentState.cart.items.isEmpty) {
         final pending = await cartUsecase.getPendingCheckout();
         pendingCheckout = pending.fold((_) => null, (value) => value);
-        if (pendingCheckout != null && (barId == null || barId == pendingCheckout!.barId)) {
+        if (pendingCheckout != null &&
+            (barId == null || barId == pendingCheckout!.barId)) {
           emit(CheckoutSuccess(result: pendingCheckout!));
           return;
         }
       }
       final result = currentState.cart.items.isEmpty
-          ? await cartUsecase.getCart() : await cartUsecase.syncCart(request);
+          ? await cartUsecase.getCart()
+          : await cartUsecase.syncCart(request);
       result.fold(
         (failure) =>
             emit(currentState.copyWith(isLoading: false, barId: barId)),
-        (serverCart) => emit(CartLoaded(cart: serverCart, barId: barId ?? serverCart.items.firstOrNull?.barId)),
+        (serverCart) => emit(
+          CartLoaded(
+            cart: serverCart,
+            barId: barId ?? serverCart.items.firstOrNull?.barId,
+          ),
+        ),
       );
     } catch (e) {
       emit(currentState.copyWith(isLoading: false, barId: barId));
@@ -495,7 +502,7 @@ class CartBloc extends Bloc<CartEvent, CartState> {
 
   Future<void> _onClearCart(ClearCart event, Emitter<CartState> emit) async {
     CartLoaded currentState;
-    
+
     if (state is CartLoaded) {
       currentState = state as CartLoaded;
     } else {
@@ -566,12 +573,18 @@ class CartBloc extends Bloc<CartEvent, CartState> {
       specialInstructions: event.specialInstructions,
       activePromotionIds: event.activePromotionIds,
     );
-    result.fold((failure) {
-      emit(CartError(message: failure.errorMessage));
-      if (currentLoadedState != null) {
-        emit(currentLoadedState);
-      }
-    }, (checkoutResult) { pendingCheckout = checkoutResult; emit(CheckoutSuccess(result: checkoutResult)); });
+    result.fold(
+      (failure) {
+        emit(CartError(message: failure.errorMessage));
+        if (currentLoadedState != null) {
+          emit(currentLoadedState);
+        }
+      },
+      (checkoutResult) {
+        pendingCheckout = checkoutResult;
+        emit(CheckoutSuccess(result: checkoutResult));
+      },
+    );
   }
 
   Future<void> _onCheckSpotAvailability(

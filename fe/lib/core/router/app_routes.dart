@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
+import 'package:barz/features/venues/domain/venue_category.dart';
 
 enum AppRoute {
   home('/'),
@@ -22,6 +23,7 @@ enum AppRoute {
   checkout('/checkout'),
   showcase('/showcase'),
   find('/find'),
+  category('/category/:categoryId'),
   profile('/profile'),
   profileEdit('/profile/edit'),
   profileSettings('/profile/settings'),
@@ -60,9 +62,7 @@ enum AppRoute {
   }
 
   static void pushBenefitVenues(BuildContext context, String benefitId) {
-    context.push(
-      '/profile/benefits/${Uri.encodeComponent(benefitId)}/venues',
-    );
+    context.push('/profile/benefits/${Uri.encodeComponent(benefitId)}/venues');
   }
 
   static void pushPromotion(BuildContext context, int promotionId) {
@@ -79,6 +79,10 @@ enum AppRoute {
 
   static void pushOrderDetail(BuildContext context, int orderId) {
     context.push('/order_detail/$orderId');
+  }
+
+  static void pushCategory(BuildContext context, VenueCategory category) {
+    context.push('/category/${category.routeId}');
   }
 
   static void pushFind(BuildContext context, {String? category}) {

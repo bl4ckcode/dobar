@@ -59,6 +59,7 @@ class DobarAppState extends State<DobarApp> with WidgetsBindingObserver {
   void _updateDeviceLocale() {
     getItInjector<LocaleCubit>().updateDeviceLocale(_localeNotifier.value);
   }
+
   final GlobalKey<ScaffoldMessengerState> snackBarKey =
       GlobalKey<ScaffoldMessengerState>();
 

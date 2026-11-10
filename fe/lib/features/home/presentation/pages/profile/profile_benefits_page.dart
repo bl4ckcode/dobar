@@ -93,7 +93,10 @@ String benefitTitle(AppLocalizations l10n, ProfileBenefit b) =>
     ? l10n.profile_benefit_cashback
     : l10n.profile_benefit_pro_coupon;
 
-String? benefitReason(AppLocalizations l10n, String? reason) => switch (reason) {
+String? benefitReason(
+  AppLocalizations l10n,
+  String? reason,
+) => switch (reason) {
   'pro_required' => l10n.profile_benefit_unavailable_pro_required,
   'allowance_exhausted' => l10n.profile_benefit_unavailable_allowance_exhausted,
   'no_eligible_venues' => l10n.profile_benefit_unavailable_no_eligible_venues,

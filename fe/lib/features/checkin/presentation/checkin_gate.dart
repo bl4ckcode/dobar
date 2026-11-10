@@ -18,11 +18,18 @@ class CheckinGate {
     final bloc = getItInjector<CheckinBloc>();
     try {
       if (await bloc.refresh(barId: barId)) return true;
-      final bar = (await getItInjector<BarUsecase>().getBar(barId)).fold((_) => null, (value) => value);
+      final bar = (await getItInjector<BarUsecase>().getBar(
+        barId,
+      )).fold((_) => null, (value) => value);
       if (!context.mounted) return false;
-      if (bar == null) { _error(context); return false; }
-      final confirmed = await context.push<bool>(AppRoute.checkin.path,
-        extra: CheckinArguments(initialBar: bar, returnOnCheckin: true));
+      if (bar == null) {
+        _error(context);
+        return false;
+      }
+      final confirmed = await context.push<bool>(
+        AppRoute.checkin.path,
+        extra: CheckinArguments(initialBar: bar, returnOnCheckin: true),
+      );
       if (confirmed != true || !context.mounted) return false;
       return await bloc.refresh(barId: barId);
     } catch (_) {
@@ -31,6 +38,10 @@ class CheckinGate {
     }
   }
 
-  static void _error(BuildContext context) => ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(AppLocalizations.of(context)!.checkin_retry_message)));
+  static void _error(BuildContext context) =>
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.checkin_retry_message),
+        ),
+      );
 }

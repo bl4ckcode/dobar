@@ -152,8 +152,9 @@ class LiveOrderModel {
       paymentMethod: json['payment_method'] ?? '',
       paymentStatus: json['payment_status'] ?? '',
       createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
-      updatedAt:
-          json['updated_at'] != null ? DateTime.tryParse(json['updated_at']) : null,
+      updatedAt: json['updated_at'] != null
+          ? DateTime.tryParse(json['updated_at'])
+          : null,
       estimatedReadyTime: json['estimated_ready_time'] != null
           ? DateTime.tryParse(json['estimated_ready_time'])
           : null,

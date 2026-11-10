@@ -189,7 +189,10 @@ class BusinessStatusToolbar extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                if (actions != null && !isMobile) ...[...actions!, const SizedBox(width: 12)],
+                if (actions != null && !isMobile) ...[
+                  ...actions!,
+                  const SizedBox(width: 12),
+                ],
                 // Open/Closed Toggle
                 if (showStatusToggle &&
                     isOpen != null &&

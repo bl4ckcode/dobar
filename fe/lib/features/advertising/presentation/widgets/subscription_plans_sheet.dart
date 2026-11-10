@@ -46,7 +46,10 @@ class SubscriptionPlansSheet extends StatefulWidget {
           child: SlideTransition(
             position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
                 .animate(
-                  CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+                  CurvedAnimation(
+                    parent: animation,
+                    curve: Curves.easeOutCubic,
+                  ),
                 ),
             child: child,
           ),
@@ -97,8 +100,7 @@ class _SubscriptionPlansSheetState extends State<SubscriptionPlansSheet> {
         color: Colors.transparent,
         child: BlocConsumer<AdvertisingBloc, AdvertisingState>(
           listener: (context, state) {
-            if (state.successMessage ==
-                'Subscription created successfully!') {
+            if (state.successMessage == 'Subscription created successfully!') {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: const Text(
@@ -190,13 +192,11 @@ class _SubscriptionPlansSheetState extends State<SubscriptionPlansSheet> {
                       ),
                       IconButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        icon: Icon(
-                          LucideIcons.x,
-                          color: dobar.labelSecondary,
-                        ),
+                        icon: Icon(LucideIcons.x, color: dobar.labelSecondary),
                         style: IconButton.styleFrom(
-                          backgroundColor:
-                              isDark ? dobar.navBackground : surfaceMuted,
+                          backgroundColor: isDark
+                              ? dobar.navBackground
+                              : surfaceMuted,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(8),
                           ),
@@ -224,9 +224,7 @@ class _SubscriptionPlansSheetState extends State<SubscriptionPlansSheet> {
                           const Center(
                             child: Padding(
                               padding: EdgeInsets.all(48.0),
-                              child: CircularProgressIndicator(
-                                color: barzGold,
-                              ),
+                              child: CircularProgressIndicator(color: barzGold),
                             ),
                           )
                         else if (state.error != null && state.plans == null)
@@ -237,10 +235,8 @@ class _SubscriptionPlansSheetState extends State<SubscriptionPlansSheet> {
                               plan: plan,
                               currency: state.plans!.currency,
                               isLoading: state.isLoadingSubscription,
-                              onSelect: () => _onSelectPlan(
-                                plan,
-                                state.plans!.regionCode,
-                              ),
+                              onSelect: () =>
+                                  _onSelectPlan(plan, state.plans!.regionCode),
                             ),
                           ),
                       ],
@@ -320,19 +316,14 @@ class _PlanCard extends StatelessWidget {
     final btnBg = isVip
         ? barzGold
         : (isDark ? dobar.navBackground : dobar.surfaceElevated);
-    final btnFg = isVip
-        ? Colors.black
-        : dobar.labelPrimary;
+    final btnFg = isVip ? Colors.black : dobar.labelPrimary;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 24),
       decoration: BoxDecoration(
         color: cardBg,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: borderColor,
-          width: isVip ? 2 : 1,
-        ),
+        border: Border.all(color: borderColor, width: isVip ? 2 : 1),
         boxShadow: isVip
             ? [
                 BoxShadow(
@@ -404,7 +395,9 @@ class _PlanCard extends StatelessWidget {
                             children: [
                               Icon(
                                 LucideIcons.check,
-                                color: isDark ? Colors.greenAccent : successGreen,
+                                color: isDark
+                                    ? Colors.greenAccent
+                                    : successGreen,
                                 size: 14,
                               ),
                               const SizedBox(width: 8),

@@ -11,7 +11,8 @@ import 'package:barz/features/business_settings/domain/models/deactivate_result.
 import 'package:barz/features/business_settings/domain/models/reactivate_result.dart';
 import 'package:barz/features/business_settings/domain/repositories/abstract_business_settings_repository.dart';
 
-class BusinessSettingsRepository implements BusinessSettingsRepositoryInterface {
+class BusinessSettingsRepository
+    implements BusinessSettingsRepositoryInterface {
   final Dio _dio;
 
   BusinessSettingsRepository() : _dio = DioNetwork.appAPI;

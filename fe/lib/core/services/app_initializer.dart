@@ -59,7 +59,9 @@ class AppInitializer {
 
   Future<void> _registerFcmToken() async {
     if (Platform.isIOS) {
-      _debugLog('FCM registration is disabled on iOS until APNs is configured.');
+      _debugLog(
+        'FCM registration is disabled on iOS until APNs is configured.',
+      );
       return;
     }
 

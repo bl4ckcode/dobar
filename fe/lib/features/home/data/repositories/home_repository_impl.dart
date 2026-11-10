@@ -18,7 +18,10 @@ class HomeRepositoryImpl implements HomeRepository {
     double? longitude,
   }) async {
     try {
-      final result = await datasource.getHomeData(latitude: latitude, longitude: longitude);
+      final result = await datasource.getHomeData(
+        latitude: latitude,
+        longitude: longitude,
+      );
       return Right(result);
     } on DioException catch (e) {
       return Left(

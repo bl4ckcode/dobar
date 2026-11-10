@@ -22,7 +22,7 @@ class VenueTableInfo extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final double itemSpacing = constraints.maxWidth < 360 ? 4 : 8;
-        
+
         return Row(
           children: [
             Expanded(
@@ -170,7 +170,9 @@ class _ActionButton extends StatelessWidget {
         decoration: BoxDecoration(
           color: colors.labelPrimary.withValues(alpha: 0.05),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: colors.labelPrimary.withValues(alpha: 0.08)),
+          border: Border.all(
+            color: colors.labelPrimary.withValues(alpha: 0.08),
+          ),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,

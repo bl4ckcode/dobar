@@ -39,7 +39,9 @@ class _ProSubscriptionModalState extends State<ProSubscriptionModal> {
       decoration: BoxDecoration(
         color: isDark ? barzDark.withValues(alpha: 0.95) : colors.surface,
         borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-        border: Border.all(color: barzGold.withValues(alpha: isDark ? 0.1 : 0.2)),
+        border: Border.all(
+          color: barzGold.withValues(alpha: isDark ? 0.1 : 0.2),
+        ),
       ),
       child: Stack(
         children: [
@@ -178,7 +180,11 @@ class _ProSubscriptionModalState extends State<ProSubscriptionModal> {
     );
   }
 
-  Widget _buildBillingToggle(AppLocalizations l10n, DobarColors colors, bool isDark) {
+  Widget _buildBillingToggle(
+    AppLocalizations l10n,
+    DobarColors colors,
+    bool isDark,
+  ) {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
@@ -208,7 +214,11 @@ class _ProSubscriptionModalState extends State<ProSubscriptionModal> {
     );
   }
 
-  Widget _buildBenefitsList(AppLocalizations l10n, DobarColors colors, bool isDark) {
+  Widget _buildBenefitsList(
+    AppLocalizations l10n,
+    DobarColors colors,
+    bool isDark,
+  ) {
     final benefits = [
       _BenefitItem(
         icon: LucideIcons.zap,
@@ -407,9 +417,15 @@ class _BenefitItem extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: isDark ? Colors.white.withValues(alpha: 0.05) : colors.surfaceElevated,
+        color: isDark
+            ? Colors.white.withValues(alpha: 0.05)
+            : colors.surfaceElevated,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: isDark ? Colors.white.withValues(alpha: 0.05) : colors.surfaceElevated.withValues(alpha: 0.3)),
+        border: Border.all(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.05)
+              : colors.surfaceElevated.withValues(alpha: 0.3),
+        ),
       ),
       child: Row(
         children: [

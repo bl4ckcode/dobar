@@ -98,14 +98,15 @@ class PixPaymentResponse {
 
   factory PixPaymentResponse.fromJson(Map<String, dynamic> json) {
     return PixPaymentResponse(
-      paymentId: (json['payment_id'] ?? json['transaction_id'])?.toString() ?? '',
+      paymentId:
+          (json['payment_id'] ?? json['transaction_id'])?.toString() ?? '',
       qrCode: json['pix_qr_code'] ?? json['qr_code'] ?? '',
       copyPaste: json['pix_copia_e_cola'] ?? json['copy_paste'] ?? '',
       expiresAt: json['pix_expires_at'] != null
           ? DateTime.parse(json['pix_expires_at'])
           : (json['expires_at'] != null
-              ? DateTime.parse(json['expires_at'])
-              : DateTime.now().add(const Duration(minutes: 30))),
+                ? DateTime.parse(json['expires_at'])
+                : DateTime.now().add(const Duration(minutes: 30))),
       amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
       orderId: json['order_id'] as int?,
     );

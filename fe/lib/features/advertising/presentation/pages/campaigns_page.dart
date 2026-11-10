@@ -1016,9 +1016,7 @@ class _CampaignsPageContentState extends State<_CampaignsPageContent> {
         campaign.status == CampaignStatus.pending) {
       // Drafts strand without this: create never auto-activates, so publish
       // explicitly (draft → active, or draft → scheduled for future starts).
-      bloc.add(
-        PublishCampaign(campaignId: campaign.id, barId: campaign.barId),
-      );
+      bloc.add(PublishCampaign(campaignId: campaign.id, barId: campaign.barId));
     }
   }
 
@@ -1167,11 +1165,10 @@ class _BalanceChip extends StatelessWidget {
     final subtitle = rateCard == null
         ? 'Carregando…'
         : rateCard.creditsAvailable.entries
-            .where((e) => (e.value) > 0)
-            .map((e) => '${e.value} ${_shortBucket(e.key)}')
-            .join(' · ');
-    final display =
-        subtitle.isEmpty ? 'Sem créditos — ver planos' : subtitle;
+              .where((e) => (e.value) > 0)
+              .map((e) => '${e.value} ${_shortBucket(e.key)}')
+              .join(' · ');
+    final display = subtitle.isEmpty ? 'Sem créditos — ver planos' : subtitle;
 
     return GestureDetector(
       onTap: () {
@@ -1185,76 +1182,76 @@ class _BalanceChip extends StatelessWidget {
         }
       },
       child: Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: barzDarkLight,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: barzGold.withValues(alpha: 0.25)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 36,
-            height: 36,
-            decoration: BoxDecoration(
-              color: barzGold.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: barzGold.withValues(alpha: 0.4)),
-            ),
-            child: const Icon(LucideIcons.wallet, size: 16, color: barzGold),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                rateCard == null ? 'Créditos' : 'Créditos · ${rateCard.tier}',
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                  letterSpacing: 0.5,
-                  color: dobar.labelSecondary,
-                ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: barzDarkLight,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: barzGold.withValues(alpha: 0.25)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: barzGold.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: barzGold.withValues(alpha: 0.4)),
               ),
-              Text(
-                display,
-                style: const TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(width: 8),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: barzGold.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: barzGold.withValues(alpha: 0.4)),
+              child: const Icon(LucideIcons.wallet, size: 16, color: barzGold),
             ),
-            child: const Row(
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(LucideIcons.plus, size: 12, color: barzGold),
-                SizedBox(width: 4),
                 Text(
-                  'Planos',
+                  rateCard == null ? 'Créditos' : 'Créditos · ${rateCard.tier}',
                   style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: barzGold,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 0.5,
+                    color: dobar.labelSecondary,
+                  ),
+                ),
+                Text(
+                  display,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
                   ),
                 ),
               ],
             ),
-          ),
-        ],
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: barzGold.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: barzGold.withValues(alpha: 0.4)),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(LucideIcons.plus, size: 12, color: barzGold),
+                  SizedBox(width: 4),
+                  Text(
+                    'Planos',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                      color: barzGold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
     );
   }
 
@@ -1359,36 +1356,36 @@ class _StatCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-          Row(
-            children: [
-              Icon(
-                icon,
-                size: 14,
-                color: isGold ? barzGold : context.dobarColors.labelSecondary,
-              ),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w600,
-                  letterSpacing: 0.5,
-                  color: context.dobarColors.labelSecondary,
+            Row(
+              children: [
+                Icon(
+                  icon,
+                  size: 14,
+                  color: isGold ? barzGold : context.dobarColors.labelSecondary,
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: isGold ? barzGold : Colors.white,
-              fontFamily: 'Space Grotesk',
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.5,
+                    color: context.dobarColors.labelSecondary,
+                  ),
+                ),
+              ],
             ),
-          ),
-        ],
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: isGold ? barzGold : Colors.white,
+                fontFamily: 'Space Grotesk',
+              ),
+            ),
+          ],
         ),
       ),
     );

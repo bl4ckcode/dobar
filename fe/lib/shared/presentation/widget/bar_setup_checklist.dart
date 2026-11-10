@@ -74,47 +74,56 @@ class _BarSetupChecklistState extends State<BarSetupChecklist> {
     }
 
     final colors = context.dobarColors;
-    final completedSteps = [_status!.hasMenu, _status!.hasBankAccount].where((v) => v).length;
+    final completedSteps = [
+      _status!.hasMenu,
+      _status!.hasBankAccount,
+    ].where((v) => v).length;
     final totalSteps = 2;
 
     return Positioned(
       bottom: 24,
       right: 16,
-      child: AnimatedSize(
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeInOut,
-        child: Material(
-          color: Colors.transparent,
-          child: Container(
-            constraints: const BoxConstraints(maxWidth: 300),
-            decoration: BoxDecoration(
-              color: colors.surfaceElevated,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: colors.buttonPrimary.withValues(alpha: 0.3),
-                width: 1.5,
-              ),
-              boxShadow: [
-                BoxShadow(
-                  color: colors.buttonPrimary.withValues(alpha: 0.15),
-                  blurRadius: 24,
-                  offset: const Offset(0, 8),
+      child:
+          AnimatedSize(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeInOut,
+                child: Material(
+                  color: Colors.transparent,
+                  child: Container(
+                    constraints: const BoxConstraints(maxWidth: 300),
+                    decoration: BoxDecoration(
+                      color: colors.surfaceElevated,
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: colors.buttonPrimary.withValues(alpha: 0.3),
+                        width: 1.5,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: colors.buttonPrimary.withValues(alpha: 0.15),
+                          blurRadius: 24,
+                          offset: const Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildHeader(colors, completedSteps, totalSteps),
+                        if (_expanded) _buildSteps(colors, context),
+                      ],
+                    ),
+                  ),
                 ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                _buildHeader(colors, completedSteps, totalSteps),
-                if (_expanded) _buildSteps(colors, context),
-              ],
-            ),
-          ),
-        ),
-      )
-        .animate()
-        .slideY(begin: 0.3, end: 0, duration: 400.ms, curve: Curves.easeOut)
-        .fadeIn(duration: 300.ms),
+              )
+              .animate()
+              .slideY(
+                begin: 0.3,
+                end: 0,
+                duration: 400.ms,
+                curve: Curves.easeOut,
+              )
+              .fadeIn(duration: 300.ms),
     );
   }
 
@@ -210,9 +219,11 @@ class _BarSetupChecklistState extends State<BarSetupChecklist> {
               ),
               const SizedBox(height: 14),
               LinearProgressIndicator(
-                value: [_status!.hasMenu, _status!.hasBankAccount]
-                        .where((v) => v)
-                        .length /
+                value:
+                    [
+                      _status!.hasMenu,
+                      _status!.hasBankAccount,
+                    ].where((v) => v).length /
                     2,
                 backgroundColor: colors.surface.withValues(alpha: 0.3),
                 color: colors.buttonPrimary,
@@ -261,7 +272,11 @@ class _StepTile extends StatelessWidget {
                     ),
             ),
             child: done
-                ? Icon(LucideIcons.check, size: 12, color: colors.buttonOnPrimary)
+                ? Icon(
+                    LucideIcons.check,
+                    size: 12,
+                    color: colors.buttonOnPrimary,
+                  )
                 : null,
           ),
           const SizedBox(width: 10),

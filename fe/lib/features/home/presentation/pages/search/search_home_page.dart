@@ -66,10 +66,7 @@ class _SearchHomePageState extends State<SearchHomePage> {
         CameraUpdate.newCameraPosition(
           CameraPosition(
             zoom: 13.5,
-            target: LatLng(
-              newLocation.latitude,
-              newLocation.longitude,
-            ),
+            target: LatLng(newLocation.latitude, newLocation.longitude),
           ),
         ),
       );

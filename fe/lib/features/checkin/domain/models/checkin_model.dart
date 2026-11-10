@@ -88,8 +88,11 @@ class CheckinModel extends Equatable {
   }
 
   /// Whether the check-in is currently active
-  bool get isActive => userId > 0 && status == CheckinStatus.active &&
-      expiresAt != null && DateTime.now().isBefore(expiresAt!);
+  bool get isActive =>
+      userId > 0 &&
+      status == CheckinStatus.active &&
+      expiresAt != null &&
+      DateTime.now().isBefore(expiresAt!);
 
   @override
   List<Object?> get props => [
@@ -157,7 +160,9 @@ class QrScanResult {
     }
 
     // Handle https scheme (web fallback)
-    if (uri.scheme == 'https' && const {'dobar.app', 'www.dobar.app'}.contains(uri.host) && uri.pathSegments.contains('bar')) {
+    if (uri.scheme == 'https' &&
+        const {'dobar.app', 'www.dobar.app'}.contains(uri.host) &&
+        uri.pathSegments.contains('bar')) {
       final barIndex = uri.pathSegments.indexOf('bar');
       if (barIndex + 1 < uri.pathSegments.length) {
         final barId = int.tryParse(uri.pathSegments[barIndex + 1]);

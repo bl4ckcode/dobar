@@ -144,64 +144,64 @@ class _LoginValidatePhoneNumberPageState
             return const BarzLoadingWidget();
           }
           return Padding(
-          padding: const EdgeInsets.all(BarzSpacing.xl),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              OtpHeader(phoneNumber: widget.phoneNumber),
-              Pinput(
-                controller: _smsCodeController,
-                length: 6,
-                defaultPinTheme: defaultPinTheme,
-                focusedPinTheme: focusedPinTheme,
-                submittedPinTheme: submittedPinTheme,
-                pinputAutovalidateMode: PinputAutovalidateMode.onSubmit,
-                showCursor: true,
-                onCompleted: (pin) {
-                  _handleCodeVerification();
-                },
-              ),
-              const SizedBox(height: BarzSpacing.xl),
-              GlowButton(
-                label: 'Verify Code',
-                enabled: _smsCodeController.text.trim().length == 6,
-                trailing: Icon(
-                  Icons.check,
-                  color: colors.buttonOnPrimary,
-                  size: 20,
+            padding: const EdgeInsets.all(BarzSpacing.xl),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                OtpHeader(phoneNumber: widget.phoneNumber),
+                Pinput(
+                  controller: _smsCodeController,
+                  length: 6,
+                  defaultPinTheme: defaultPinTheme,
+                  focusedPinTheme: focusedPinTheme,
+                  submittedPinTheme: submittedPinTheme,
+                  pinputAutovalidateMode: PinputAutovalidateMode.onSubmit,
+                  showCursor: true,
+                  onCompleted: (pin) {
+                    _handleCodeVerification();
+                  },
                 ),
-                onPressed: _handleCodeVerification,
-              ),
-              const SizedBox(height: BarzSpacing.xl),
-              Center(
-                child: Column(
-                  children: [
-                    Text(
-                      "Didn't receive code?",
-                      textAlign: TextAlign.center,
-                      style: barzTextTheme.bodyMedium?.copyWith(
-                        color: colors.labelSecondary,
-                      ),
-                    ),
-                    const SizedBox(height: BarzSpacing.md),
-                    GestureDetector(
-                      onTap: () {},
-                      child: Text(
-                        'Resend',
+                const SizedBox(height: BarzSpacing.xl),
+                GlowButton(
+                  label: 'Verify Code',
+                  enabled: _smsCodeController.text.trim().length == 6,
+                  trailing: Icon(
+                    Icons.check,
+                    color: colors.buttonOnPrimary,
+                    size: 20,
+                  ),
+                  onPressed: _handleCodeVerification,
+                ),
+                const SizedBox(height: BarzSpacing.xl),
+                Center(
+                  child: Column(
+                    children: [
+                      Text(
+                        "Didn't receive code?",
                         textAlign: TextAlign.center,
                         style: barzTextTheme.bodyMedium?.copyWith(
-                          decoration: TextDecoration.underline,
-                          color: colors.labelSelected,
-                          fontWeight: FontWeight.w600,
+                          color: colors.labelSecondary,
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: BarzSpacing.md),
+                      GestureDetector(
+                        onTap: () {},
+                        child: Text(
+                          'Resend',
+                          textAlign: TextAlign.center,
+                          style: barzTextTheme.bodyMedium?.copyWith(
+                            decoration: TextDecoration.underline,
+                            color: colors.labelSelected,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
-          ),
-        );
+              ],
+            ),
+          );
         },
       ),
     );

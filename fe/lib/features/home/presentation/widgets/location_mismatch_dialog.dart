@@ -33,11 +33,7 @@ class LocationMismatchDialog extends StatelessWidget {
                 color: colors.buttonPrimary.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
-              child: Icon(
-                Icons.public,
-                color: colors.buttonPrimary,
-                size: 32,
-              ),
+              child: Icon(Icons.public, color: colors.buttonPrimary, size: 32),
             ),
             const SizedBox(height: BarzSpacing.md),
             Text(
@@ -53,10 +49,7 @@ class LocationMismatchDialog extends StatelessWidget {
             Text(
               l10n.location_mismatch_subtitle,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 14,
-                color: colors.labelSecondary,
-              ),
+              style: TextStyle(fontSize: 14, color: colors.labelSecondary),
             ),
             const SizedBox(height: BarzSpacing.lg),
             BarzButton.primary(

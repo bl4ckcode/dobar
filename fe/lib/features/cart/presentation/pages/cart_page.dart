@@ -121,11 +121,7 @@ class _CartPageContentState extends State<_CartPageContent> {
         _isCheckoutPending) {
       if (state.spotAvailability!.isAvailable) {
         _isCheckoutPending = false;
-        _proceedToCheckout(
-          context,
-          state.cart,
-          _selectedSpotId,
-        );
+        _proceedToCheckout(context, state.cart, _selectedSpotId);
       } else {
         _isCheckoutPending = false;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -145,7 +141,11 @@ class _CartPageContentState extends State<_CartPageContent> {
     final state = context.read<CartBloc>().state;
     if (state is! CartLoaded) return;
     final venue = state.barId ?? state.cart.items.firstOrNull?.barId;
-    if (venue == null || !await CheckinGate.ensure(context, venue) || !context.mounted) return;
+    if (venue == null ||
+        !await CheckinGate.ensure(context, venue) ||
+        !context.mounted) {
+      return;
+    }
 
     final locationConfig = state.locationConfig;
     final method = locationConfig?.method ?? LocationMethod.tableNumber;
@@ -157,11 +157,11 @@ class _CartPageContentState extends State<_CartPageContent> {
       locationIdentifier = _selectedSpotId;
       if (locationIdentifier != null) {
         context.read<CartBloc>().add(
-              cart_event.CheckSpotAvailability(
-                barId: state.barId ?? 0,
-                spotId: locationIdentifier,
-              ),
-            );
+          cart_event.CheckSpotAvailability(
+            barId: state.barId ?? 0,
+            spotId: locationIdentifier,
+          ),
+        );
         _isCheckoutPending = true;
         return;
       }
@@ -228,80 +228,127 @@ class _CartPageContentState extends State<_CartPageContent> {
         listener: _listenToCartState,
         child: BlocBuilder<CheckinBloc, CheckinState>(
           builder: (context, checkinState) {
-
             return BlocBuilder<CartBloc, CartState>(
               builder: (context, state) {
                 return state.maybeWhen(
                   loading: () => (_lastLoadedCart == null)
                       ? const BarzLoadingWidget()
                       : _buildCartStack(context, state, isDark, l10n),
-                  loaded: (cart,
-                      barId,
-                      locationConfig,
-                      activePromotions,
-                      selectedPromotionIds,
-                      spotAvailability,
-                      isLoading,
-                      version,
-                      lastSyncTimestamp) {
-                    _lastLoadedCart = cart;
-                    final active = checkinState.activeCheckin;
-                    final location = active?.tableNumber;
-                    final venueId = barId ?? cart.items.firstOrNull?.barId;
-                    final prefillKey = '${active?.id}:$venueId:${locationConfig?.method}:$location';
-                    if (checkinState.isCheckedIn && active?.barId == venueId && location != null && locationConfig != null && _prefilledCheckinKey != prefillKey) {
-                      _prefilledCheckinKey = prefillKey;
-                      WidgetsBinding.instance.addPostFrameCallback((_) {
-                        if (!mounted) return;
-                        setState(() {
-                          switch (locationConfig.method) {
-                            case LocationMethod.tableNumber:
-                              _tableNumber = int.tryParse(location) ?? 0;
-                              _tableController.text = location;
-                            case LocationMethod.spotList:
-                              _selectedSpotId = locationConfig.spots.any((spot) => spot.id == location) ? location : null;
-                            case LocationMethod.freeText:
-                              _locationNoteController.text = location;
+                  loaded:
+                      (
+                        cart,
+                        barId,
+                        locationConfig,
+                        activePromotions,
+                        selectedPromotionIds,
+                        spotAvailability,
+                        isLoading,
+                        version,
+                        lastSyncTimestamp,
+                      ) {
+                        _lastLoadedCart = cart;
+                        final active = checkinState.activeCheckin;
+                        final location = active?.tableNumber;
+                        final venueId = barId ?? cart.items.firstOrNull?.barId;
+                        final prefillKey =
+                            '${active?.id}:$venueId:${locationConfig?.method}:$location';
+                        if (checkinState.isCheckedIn &&
+                            active?.barId == venueId &&
+                            location != null &&
+                            locationConfig != null &&
+                            _prefilledCheckinKey != prefillKey) {
+                          _prefilledCheckinKey = prefillKey;
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (!mounted) return;
+                            setState(() {
+                              switch (locationConfig.method) {
+                                case LocationMethod.tableNumber:
+                                  _tableNumber = int.tryParse(location) ?? 0;
+                                  _tableController.text = location;
+                                case LocationMethod.spotList:
+                                  _selectedSpotId =
+                                      locationConfig.spots.any(
+                                        (spot) => spot.id == location,
+                                      )
+                                      ? location
+                                      : null;
+                                case LocationMethod.freeText:
+                                  _locationNoteController.text = location;
+                              }
+                            });
+                          });
+                        }
+                        if (cart.items.isEmpty) {
+                          return _buildEmptyState(
+                            context,
+                            isDark,
+                            widget.showBackButton,
+                          );
+                        }
+                        final venue = barId ?? cart.items.first.barId;
+                        if (!checkinState.isCheckedIn ||
+                            checkinState.activeCheckin?.barId != venue) {
+                          if (widget.showBackButton &&
+                              _gateAttemptedBarId != venue) {
+                            _gateAttemptedBarId = venue;
+                            WidgetsBinding.instance.addPostFrameCallback((_) {
+                              if (mounted) CheckinGate.ensure(context, venue);
+                            });
                           }
-                        });
-                      });
-                    }
-                    if (cart.items.isEmpty) {
-                      return _buildEmptyState(
-                        context,
-                        isDark,
-                        widget.showBackButton,
-                      );
-                    }
-                    final venue = barId ?? cart.items.first.barId;
-                    if (!checkinState.isCheckedIn || checkinState.activeCheckin?.barId != venue) {
-                      if (widget.showBackButton && _gateAttemptedBarId != venue) {
-                        _gateAttemptedBarId = venue;
-                        WidgetsBinding.instance.addPostFrameCallback((_) {
-                          if (mounted) CheckinGate.ensure(context, venue);
-                        });
-                      }
-                      return _checkinRequired(context, venue, l10n);
-                    }
-                    return _buildCartStack(context, state, isDark, l10n);
-                  },
+                          return _checkinRequired(context, venue, l10n);
+                        }
+                        return _buildCartStack(context, state, isDark, l10n);
+                      },
                   checkoutSuccess: (result) {
                     _lastLoadedCart = null;
-                    return Center(child: Padding(padding: const EdgeInsets.all(24), child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [Text(l10n.checkout_pending_order), const SizedBox(height: 16),
-                        FilledButton(onPressed: () async {
-                          final venue = result.barId;
-                          if (venue == null || !await CheckinGate.ensure(context, venue) || !context.mounted) return;
-                          context.push(AppRoute.checkout.path, extra: CheckoutArguments(
-                            items: result.items.map((item) => CartItem(id: item.menuItemId.toString(), name: item.menuItemName, description: '', price: item.unitPrice, quantity: item.quantity)).toList(),
-                            subtotal: result.total + result.discount, total: result.total, bundleSavings: result.discount,
-                            locationIdentifier: result.locationIdentifier, pendingResult: result,
-                          ));
-                        }, child: Text(l10n.checkout_resume_payment))],
-                    )));
+                    return Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(l10n.checkout_pending_order),
+                            const SizedBox(height: 16),
+                            FilledButton(
+                              onPressed: () async {
+                                final venue = result.barId;
+                                if (venue == null ||
+                                    !await CheckinGate.ensure(context, venue) ||
+                                    !context.mounted) {
+                                  return;
+                                }
+                                context.push(
+                                  AppRoute.checkout.path,
+                                  extra: CheckoutArguments(
+                                    items: result.items
+                                        .map(
+                                          (item) => CartItem(
+                                            id: item.menuItemId.toString(),
+                                            name: item.menuItemName,
+                                            description: '',
+                                            price: item.unitPrice,
+                                            quantity: item.quantity,
+                                          ),
+                                        )
+                                        .toList(),
+                                    subtotal: result.total + result.discount,
+                                    total: result.total,
+                                    bundleSavings: result.discount,
+                                    locationIdentifier:
+                                        result.locationIdentifier,
+                                    pendingResult: result,
+                                  ),
+                                );
+                              },
+                              child: Text(l10n.checkout_resume_payment),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
                   },
-                  orElse: () => (_lastLoadedCart != null &&
+                  orElse: () =>
+                      (_lastLoadedCart != null &&
                           _lastLoadedCart!.items.isNotEmpty)
                       ? _buildCartStack(context, state, isDark, l10n)
                       : _buildEmptyState(
@@ -318,11 +365,25 @@ class _CartPageContentState extends State<_CartPageContent> {
     );
   }
 
-  Widget _checkinRequired(BuildContext context, int barId, AppLocalizations l10n) => Center(
-    child: Padding(padding: const EdgeInsets.all(24), child: Column(mainAxisSize: MainAxisSize.min, children: [
-      Text(l10n.checkin_required_order), const SizedBox(height: 16),
-      FilledButton(onPressed: () => CheckinGate.ensure(context, barId), child: Text(l10n.checkin_confirm_cta)),
-    ])),
+  Widget _checkinRequired(
+    BuildContext context,
+    int barId,
+    AppLocalizations l10n,
+  ) => Center(
+    child: Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(l10n.checkin_required_order),
+          const SizedBox(height: 16),
+          FilledButton(
+            onPressed: () => CheckinGate.ensure(context, barId),
+            child: Text(l10n.checkin_confirm_cta),
+          ),
+        ],
+      ),
+    ),
   );
 
   Widget _buildCartStack(
@@ -350,10 +411,18 @@ class _CartPageContentState extends State<_CartPageContent> {
             children: [
               BlocSelector<CartBloc, CartState, int>(
                 selector: (state) => state.maybeWhen(
-                  loaded: (cart, barId, locationConfig, activePromotions,
-                          selectedPromotionIds, spotAvailability, isLoading,
-                          version, lastSyncTimestamp) =>
-                      cart.items.length,
+                  loaded:
+                      (
+                        cart,
+                        barId,
+                        locationConfig,
+                        activePromotions,
+                        selectedPromotionIds,
+                        spotAvailability,
+                        isLoading,
+                        version,
+                        lastSyncTimestamp,
+                      ) => cart.items.length,
                   orElse: () => _lastLoadedCart?.items.length ?? 0,
                 ),
                 builder: (context, itemCount) {
@@ -597,7 +666,9 @@ class _CartPageContentState extends State<_CartPageContent> {
           const SizedBox(height: 16),
           BlocBuilder<CartBloc, CartState>(
             builder: (context, state) {
-              final config = (state is CartLoaded) ? state.locationConfig : null;
+              final config = (state is CartLoaded)
+                  ? state.locationConfig
+                  : null;
               final method = config?.method ?? LocationMethod.tableNumber;
 
               if (method == LocationMethod.tableNumber) {
@@ -742,10 +813,18 @@ class _CartItemsList extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocSelector<CartBloc, CartState, List<CartItemModel>>(
       selector: (state) => state.maybeWhen(
-        loaded: (cart, barId, locationConfig, activePromotions,
-                selectedPromotionIds, spotAvailability, isLoading, version,
-                lastSyncTimestamp) =>
-            cart.items,
+        loaded:
+            (
+              cart,
+              barId,
+              locationConfig,
+              activePromotions,
+              selectedPromotionIds,
+              spotAvailability,
+              isLoading,
+              version,
+              lastSyncTimestamp,
+            ) => cart.items,
         orElse: () => [],
       ),
       builder: (context, items) {
@@ -770,22 +849,20 @@ class _CartItemsList extends StatelessWidget {
                 final menuItemId = int.parse(uiItem.id);
                 if (qty < 1) {
                   context.read<CartBloc>().add(
-                        cart_event.RemoveFromCart(menuItemId: menuItemId),
-                      );
+                    cart_event.RemoveFromCart(menuItemId: menuItemId),
+                  );
                 } else {
                   context.read<CartBloc>().add(
-                        cart_event.UpdateCartItem(
-                          menuItemId: menuItemId,
-                          quantity: qty,
-                        ),
-                      );
+                    cart_event.UpdateCartItem(
+                      menuItemId: menuItemId,
+                      quantity: qty,
+                    ),
+                  );
                 }
               },
               onRemove: () => context.read<CartBloc>().add(
-                    cart_event.RemoveFromCart(
-                      menuItemId: int.parse(uiItem.id),
-                    ),
-                  ),
+                cart_event.RemoveFromCart(menuItemId: int.parse(uiItem.id)),
+              ),
             );
           },
         );
@@ -799,13 +876,24 @@ class _ActivePromotions extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocSelector<CartBloc, CartState,
-        ({List<Promotion> list, List<String> selected})>(
+    return BlocSelector<
+      CartBloc,
+      CartState,
+      ({List<Promotion> list, List<String> selected})
+    >(
       selector: (state) => state.maybeWhen(
-        loaded: (cart, barId, locationConfig, activePromotions,
-                selectedPromotionIds, spotAvailability, isLoading, version,
-                lastSyncTimestamp) =>
-            (list: activePromotions, selected: selectedPromotionIds),
+        loaded:
+            (
+              cart,
+              barId,
+              locationConfig,
+              activePromotions,
+              selectedPromotionIds,
+              spotAvailability,
+              isLoading,
+              version,
+              lastSyncTimestamp,
+            ) => (list: activePromotions, selected: selectedPromotionIds),
         orElse: () => (list: [], selected: []),
       ),
       builder: (context, data) {
@@ -824,10 +912,10 @@ class _ActivePromotions extends StatelessWidget {
                   currentIds.remove(id);
                 }
                 context.read<CartBloc>().add(
-                      cart_event.UpdateActivePromotions(
-                        activePromotionIds: currentIds.toList(),
-                      ),
-                    );
+                  cart_event.UpdateActivePromotions(
+                    activePromotionIds: currentIds.toList(),
+                  ),
+                );
               },
             ),
             const SizedBox(height: 16),
@@ -892,8 +980,12 @@ class _CartSummaryState extends State<_CartSummary> {
           right: 0,
           child: BlocBuilder<SessionBloc, SessionState>(
             buildWhen: (previous, current) {
-              final prevPro = previous is SessionReady ? previous.session.user.isPro : false;
-              final currPro = current is SessionReady ? current.session.user.isPro : false;
+              final prevPro = previous is SessionReady
+                  ? previous.session.user.isPro
+                  : false;
+              final currPro = current is SessionReady
+                  ? current.session.user.isPro
+                  : false;
               return prevPro != currPro;
             },
             builder: (context, sessionState) {
@@ -913,7 +1005,8 @@ class _CartSummaryState extends State<_CartSummary> {
                     .map((e) => e.toString())
                     .toList(),
                 onCheckout: () {
-                  final st = context.findAncestorStateOfType<_CartPageContentState>();
+                  final st = context
+                      .findAncestorStateOfType<_CartPageContentState>();
                   st?._handleCheckout(context);
                 },
                 isLoading: state.isLoading,

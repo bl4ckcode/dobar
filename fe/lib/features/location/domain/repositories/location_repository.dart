@@ -23,5 +23,6 @@ abstract class LocationRepository {
     LocationModel destination,
   );
   Future<Either<Failure, void>> openAppSettings(); // Added
-  Future<Either<Failure, bool>> isLocationPermissionPermanentlyDenied(); // Added
+  Future<Either<Failure, bool>>
+  isLocationPermissionPermanentlyDenied(); // Added
 }

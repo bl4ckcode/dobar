@@ -79,7 +79,6 @@ class PlacementRate {
       );
 }
 
-
 /// The full rate card for the active bar.
 class RateCard {
   /// Region used to price the bar (`BR`, `US`, `MX`, ...), uppercased.
@@ -132,13 +131,15 @@ class RateCard {
             Map<String, dynamic>.from(e.value as Map),
           ),
       },
-      creditBuckets:
-          (json['credit_buckets'] as List? ?? const []).cast<String>().toList(),
+      creditBuckets: (json['credit_buckets'] as List? ?? const [])
+          .cast<String>()
+          .toList(),
       creditsByTier: (json['credits_by_tier'] as Map? ?? const {}).map(
         (k, v) => MapEntry(k as String, Map<String, int>.from(v as Map)),
       ),
-      creditsAvailable:
-          Map<String, int>.from(json['credits_available'] as Map? ?? const {}),
+      creditsAvailable: Map<String, int>.from(
+        json['credits_available'] as Map? ?? const {},
+      ),
       generatedAt: DateTime.tryParse(json['generated_at'] as String? ?? ''),
     );
   }

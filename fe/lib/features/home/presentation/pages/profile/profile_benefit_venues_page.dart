@@ -63,9 +63,7 @@ class ProfileBenefitVenuesPage extends StatelessWidget {
             } else {
               children.add(
                 ProfileGroup(
-                  children: [
-                    for (final v in data.venues) _VenueRow(venue: v),
-                  ],
+                  children: [for (final v in data.venues) _VenueRow(venue: v)],
                 ),
               );
             }

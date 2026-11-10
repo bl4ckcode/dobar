@@ -59,13 +59,20 @@ class _BarDetailContent extends StatelessWidget {
             appBar: AppBar(
               backgroundColor: colors.navBackground,
               iconTheme: IconThemeData(color: colors.labelPrimary),
-              title: Text(l10n.menu_title, style: TextStyle(color: colors.labelPrimary)),
+              title: Text(
+                l10n.menu_title,
+                style: TextStyle(color: colors.labelPrimary),
+              ),
             ),
             body: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.error_outline, size: 64, color: Theme.of(context).colorScheme.error),
+                  Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     state.message,
@@ -95,7 +102,10 @@ class _BarDetailContent extends StatelessWidget {
               appBar: AppBar(
                 backgroundColor: colors.navBackground,
                 iconTheme: IconThemeData(color: colors.labelPrimary),
-                title: Text(l10n.menu_title, style: TextStyle(color: colors.labelPrimary)),
+                title: Text(
+                  l10n.menu_title,
+                  style: TextStyle(color: colors.labelPrimary),
+                ),
               ),
               body: Center(
                 child: Column(
@@ -132,7 +142,10 @@ class _BarDetailContent extends StatelessWidget {
           appBar: AppBar(
             backgroundColor: colors.navBackground,
             iconTheme: IconThemeData(color: colors.labelPrimary),
-            title: Text(l10n.menu_title, style: TextStyle(color: colors.labelPrimary)),
+            title: Text(
+              l10n.menu_title,
+              style: TextStyle(color: colors.labelPrimary),
+            ),
           ),
           body: const SizedBox.shrink(),
         );
@@ -213,16 +226,11 @@ class _MenuPageViewState extends State<_MenuPageView> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _BarDetailHeader(
-              barId: widget.barId,
-              barName: widget.barName,
-            ),
+            _BarDetailHeader(barId: widget.barId, barName: widget.barName),
             const SizedBox(height: 16),
             _buildCategoryTabs(),
             const SizedBox(height: 8),
-            Expanded(
-              child: _buildMenuList(),
-            ),
+            Expanded(child: _buildMenuList()),
             _ViewTabButton(barId: widget.barId),
           ],
         ),
@@ -293,10 +301,7 @@ class _BarDetailHeader extends StatelessWidget {
   final int barId;
   final String barName;
 
-  const _BarDetailHeader({
-    required this.barId,
-    required this.barName,
-  });
+  const _BarDetailHeader({required this.barId, required this.barName});
 
   @override
   Widget build(BuildContext context) {
@@ -344,10 +349,7 @@ class _BarDetailHeader extends StatelessWidget {
                 ),
                 Text(
                   'Menu & Order',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: colors.labelSecondary,
-                  ),
+                  style: TextStyle(fontSize: 14, color: colors.labelSecondary),
                 ),
               ],
             ),
@@ -370,18 +372,27 @@ class _HeaderCartBadge extends StatelessWidget {
 
     return BlocSelector<CartBloc, CartState, int>(
       selector: (state) => state.maybeWhen(
-        loaded: (cart, barId, locationConfig, activePromotions,
-                selectedPromotionIds, spotAvailability, isLoading, version,
-                lastSyncTimestamp) =>
-            cart.items.fold<int>(
-          0,
-          (sum, item) => sum + item.quantity,
-        ),
+        loaded:
+            (
+              cart,
+              barId,
+              locationConfig,
+              activePromotions,
+              selectedPromotionIds,
+              spotAvailability,
+              isLoading,
+              version,
+              lastSyncTimestamp,
+            ) => cart.items.fold<int>(0, (sum, item) => sum + item.quantity),
         orElse: () => 0,
       ),
       builder: (context, totalItems) {
         return GestureDetector(
-          onTap: () async { if (await CheckinGate.ensure(context, barId) && context.mounted) AppRoute.cart.push(context, extra: barId); },
+          onTap: () async {
+            if (await CheckinGate.ensure(context, barId) && context.mounted) {
+              AppRoute.cart.push(context, extra: barId);
+            }
+          },
           child: Container(
             width: 44,
             height: 44,
@@ -476,21 +487,23 @@ class _MenuItem extends StatelessWidget {
             price: item.price,
             quantity: quantity,
             onAdd: () async {
-              if (!await CheckinGate.ensure(context, barId) || !context.mounted) return;
+              if (!await CheckinGate.ensure(context, barId) || !context.mounted) {
+                return;
+              }
               context.read<CartBloc>().add(
-                    AddToCart(
-                      menuItemId: item.id ?? 0,
-                      barId: barId,
-                      menuItemName: item.itemName,
-                      quantity: 1,
-                      unitPrice: item.price,
-                    ),
-                  );
+                AddToCart(
+                  menuItemId: item.id ?? 0,
+                  barId: barId,
+                  menuItemName: item.itemName,
+                  quantity: 1,
+                  unitPrice: item.price,
+                ),
+              );
             },
             onRemove: () {
               context.read<CartBloc>().add(
-                    DecreaseCartItem(menuItemId: item.id ?? 0),
-                  );
+                DecreaseCartItem(menuItemId: item.id ?? 0),
+              );
             },
           ),
         );
@@ -508,13 +521,24 @@ class _ViewTabButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocSelector<CartBloc, CartState, ({int count, double total})>(
       selector: (state) => state.maybeWhen(
-        loaded: (cart, barId, locationConfig, activePromotions,
-                selectedPromotionIds, spotAvailability, isLoading, version,
-                lastSyncTimestamp) =>
+        loaded:
             (
-          count: cart.items.fold<int>(0, (sum, item) => sum + item.quantity),
-          total: cart.total,
-        ),
+              cart,
+              barId,
+              locationConfig,
+              activePromotions,
+              selectedPromotionIds,
+              spotAvailability,
+              isLoading,
+              version,
+              lastSyncTimestamp,
+            ) => (
+              count: cart.items.fold<int>(
+                0,
+                (sum, item) => sum + item.quantity,
+              ),
+              total: cart.total,
+            ),
         orElse: () => (count: 0, total: 0.0),
       ),
       builder: (context, data) {
@@ -538,10 +562,19 @@ class _ViewTabButton extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 4),
-                      Icon(Icons.chevron_right, color: colors.buttonOnPrimary, size: 20),
+                      Icon(
+                        Icons.chevron_right,
+                        color: colors.buttonOnPrimary,
+                        size: 20,
+                      ),
                     ],
                   ),
-                  onPressed: () async { if (await CheckinGate.ensure(context, barId) && context.mounted) AppRoute.cart.push(context, extra: barId); },
+                  onPressed: () async {
+                    if (await CheckinGate.ensure(context, barId) &&
+                        context.mounted) {
+                      AppRoute.cart.push(context, extra: barId);
+                    }
+                  },
                 )
               : const SizedBox.shrink(),
         );

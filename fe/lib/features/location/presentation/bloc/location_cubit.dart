@@ -21,20 +21,41 @@ class LocationCubit extends Cubit<LocationState> {
     try {
       // 1. Service check
       final serviceResult = await _usecase.checkLocationService();
-      final bool isServiceEnabled = serviceResult.fold((_) => false, (enabled) => enabled);
+      final bool isServiceEnabled = serviceResult.fold(
+        (_) => false,
+        (enabled) => enabled,
+      );
       if (!isServiceEnabled) {
-        emit(state.copyWith(isLoading: false, error: 'Location services disabled. Please enable them in Settings.'));
+        emit(
+          state.copyWith(
+            isLoading: false,
+            error:
+                'Location services disabled. Please enable them in Settings.',
+          ),
+        );
         return;
       }
 
       // 2. Permission check/request
       final permissionCheck = await _usecase.checkLocationPermission();
-      bool hasPermission = permissionCheck.fold((_) => false, (enabled) => enabled);
+      bool hasPermission = permissionCheck.fold(
+        (_) => false,
+        (enabled) => enabled,
+      );
       if (!hasPermission) {
         final permissionRequest = await _usecase.requestLocationPermission();
-        hasPermission = permissionRequest.fold((_) => false, (granted) => granted);
+        hasPermission = permissionRequest.fold(
+          (_) => false,
+          (granted) => granted,
+        );
         if (!hasPermission) {
-          emit(state.copyWith(isLoading: false, hasPermission: false, error: 'Location permission required.'));
+          emit(
+            state.copyWith(
+              isLoading: false,
+              hasPermission: false,
+              error: 'Location permission required.',
+            ),
+          );
           return;
         }
       }
@@ -49,12 +70,60 @@ class LocationCubit extends Cubit<LocationState> {
         },
         (location) {
           debugPrint('[LocationCubit] Fetch success');
-          emit(state.copyWith(isLoading: false, currentLocation: location, hasPermission: true, error: null));
+          emit(
+            state.copyWith(
+              isLoading: false,
+              currentLocation: location,
+              hasPermission: true,
+              error: null,
+            ),
+          );
         },
       );
     } catch (e) {
       debugPrint('[LocationCubit] Fatal error: $e');
-      emit(state.copyWith(isLoading: false, error: 'Failed to obtain location. Please try again.'));
+      emit(
+        state.copyWith(
+          isLoading: false,
+          error: 'Failed to obtain location. Please try again.',
+        ),
+      );
+    }
+  }
+
+  /// Browsing never prompts. If the user already granted permission, pick up a
+  /// fix silently so nearby discovery works; otherwise do nothing.
+  Future<void> restoreIfGranted() async {
+    if (state.isLoading || state.currentLocation != null) return;
+    try {
+      final service = await _usecase.checkLocationService();
+      if (!service.fold((_) => false, (enabled) => enabled)) return;
+      final permission = await _usecase.checkLocationPermission();
+      if (!permission.fold((_) => false, (granted) => granted)) return;
+    } catch (_) {
+      return;
+    }
+    await getCurrentLocation();
+  }
+
+  /// Whether the OS permission is already granted (no prompt).
+  Future<bool> hasPermissionNow() async {
+    try {
+      final permission = await _usecase.checkLocationPermission();
+      final bool granted = permission.fold<bool>((_) => false, (g) => g);
+      return granted;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  Future<bool> isPermanentlyDenied() async {
+    try {
+      final result = await _usecase.isLocationPermissionPermanentlyDenied();
+      final bool denied = result.fold<bool>((_) => false, (d) => d);
+      return denied;
+    } catch (_) {
+      return false;
     }
   }
 

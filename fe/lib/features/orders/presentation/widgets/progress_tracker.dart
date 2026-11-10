@@ -54,7 +54,7 @@ class DobarProgressTracker extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dobarColors = context.dobarColors;
-    
+
     // Map internal status to index
     int currentIndex = _stages.indexWhere((s) => s.status == currentStatus);
     // If pending, it's before confirmed (0)
@@ -63,7 +63,7 @@ class DobarProgressTracker extends StatelessWidget {
         currentIndex = -1; // Not yet at first stage
       } else {
         // Cancelled or similar, maybe show as served if we want to finish
-        currentIndex = _stages.length - 1; 
+        currentIndex = _stages.length - 1;
       }
     }
 
@@ -77,11 +77,18 @@ class DobarProgressTracker extends StatelessWidget {
     );
   }
 
-  Widget _buildHorizontal(BuildContext context, DobarColors colors, int currentIndex) {
+  Widget _buildHorizontal(
+    BuildContext context,
+    DobarColors colors,
+    int currentIndex,
+  ) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final trackWidth = constraints.maxWidth - 80; // 40 left + 40 right padding
-        final maxWidth = trackWidth > 0 ? trackWidth : 400; // Fallback for edge cases
+        final trackWidth =
+            constraints.maxWidth - 80; // 40 left + 40 right padding
+        final maxWidth = trackWidth > 0
+            ? trackWidth
+            : 400; // Fallback for edge cases
 
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 20),
@@ -109,13 +116,16 @@ class DobarProgressTracker extends StatelessWidget {
                     child: TweenAnimationBuilder<double>(
                       tween: Tween(
                         begin: 0.0,
-                        end: currentIndex == -1 ? 0.0 : (currentIndex / (_stages.length - 1)),
+                        end: currentIndex == -1
+                            ? 0.0
+                            : (currentIndex / (_stages.length - 1)),
                       ),
                       duration: const Duration(milliseconds: 1200),
                       curve: Curves.easeOutCubic,
                       builder: (context, value, child) {
                         final progressWidth = value * maxWidth * 0.8;
-                        final safeWidth = progressWidth.isNaN || progressWidth.isInfinite
+                        final safeWidth =
+                            progressWidth.isNaN || progressWidth.isInfinite
                             ? 0.0
                             : (progressWidth < 0 ? 0.0 : progressWidth);
 
@@ -124,7 +134,10 @@ class DobarProgressTracker extends StatelessWidget {
                           height: 4,
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
-                              colors: [barzGold, barzGold.withValues(alpha: 0.7)],
+                              colors: [
+                                barzGold,
+                                barzGold.withValues(alpha: 0.7),
+                              ],
                             ),
                             borderRadius: BorderRadius.circular(2),
                             boxShadow: [
@@ -138,7 +151,10 @@ class DobarProgressTracker extends StatelessWidget {
                         );
                       },
                     ),
-                  ).animate().shimmer(duration: const Duration(seconds: 2), color: barzGold.withValues(alpha: 0.2)),
+                  ).animate().shimmer(
+                    duration: const Duration(seconds: 2),
+                    color: barzGold.withValues(alpha: 0.2),
+                  ),
 
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -155,7 +171,8 @@ class DobarProgressTracker extends StatelessWidget {
                               completed: completed,
                               active: active,
                               icon: stage.icon,
-                              isReady: currentStatus == OrderStatus.ready ||
+                              isReady:
+                                  currentStatus == OrderStatus.ready ||
                                   currentStatus == OrderStatus.completed,
                             ),
                             const SizedBox(height: 12),
@@ -164,7 +181,9 @@ class DobarProgressTracker extends StatelessWidget {
                               style: TextStyle(
                                 color: active || completed
                                     ? null
-                                    : colors.labelPrimary.withValues(alpha: 0.6),
+                                    : colors.labelPrimary.withValues(
+                                        alpha: 0.6,
+                                      ),
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
                               ),
@@ -174,7 +193,9 @@ class DobarProgressTracker extends StatelessWidget {
                               style: TextStyle(
                                 color: active
                                     ? barzGold
-                                    : colors.labelPrimary.withValues(alpha: 0.4),
+                                    : colors.labelPrimary.withValues(
+                                        alpha: 0.4,
+                                      ),
                                 fontSize: 10,
                                 letterSpacing: 1.5,
                                 fontWeight: FontWeight.w600,
@@ -194,103 +215,127 @@ class DobarProgressTracker extends StatelessWidget {
     );
   }
 
-  Widget _buildVertical(BuildContext context, DobarColors colors, int currentIndex) {
+  Widget _buildVertical(
+    BuildContext context,
+    DobarColors colors,
+    int currentIndex,
+  ) {
     return Column(
-      children: List.generate(_stages.length, (i) {
-        final completed = i < currentIndex;
-        final active = i == currentIndex;
-        final stage = _stages[i];
-        final isLast = i == _stages.length - 1;
+      children:
+          List.generate(_stages.length, (i) {
+                final completed = i < currentIndex;
+                final active = i == currentIndex;
+                final stage = _stages[i];
+                final isLast = i == _stages.length - 1;
 
-        return IntrinsicHeight(
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Column(
-                children: [
-                  _StageDot(
-                    colors: colors,
-                    completed: completed,
-                    active: active,
-                    icon: stage.icon,
-                    isReady: currentStatus == OrderStatus.ready ||
-                        currentStatus == OrderStatus.completed,
-                  ),
-                  if (!isLast)
-                    Expanded(
-                      child: Container(
-                        width: 2,
-                        margin: const EdgeInsets.symmetric(vertical: 8),
-                        color: colors.labelPrimary.withValues(alpha: 0.1),
-                        child: active
-                            ? null
-                            : (completed ? Container(color: barzGold) : null),
-                      ),
-                    ),
-                ],
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Padding(
-                  padding: const EdgeInsets.only(top: 14, bottom: 24),
-                  child: Column(
+                return IntrinsicHeight(
+                  child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      Column(
                         children: [
-                          Text(
-                            stage.label,
-                            style: TextStyle(
-                              color: active || completed
-                                  ? null
-                                  : colors.labelPrimary.withValues(alpha: 0.6),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                            ),
+                          _StageDot(
+                            colors: colors,
+                            completed: completed,
+                            active: active,
+                            icon: stage.icon,
+                            isReady:
+                                currentStatus == OrderStatus.ready ||
+                                currentStatus == OrderStatus.completed,
                           ),
-                          if (active)
-                            Container(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: (currentStatus == OrderStatus.ready
-                                        ? Colors.green
-                                        : barzGold)
-                                    .withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                'NOW',
-                                style: TextStyle(
-                                  color: currentStatus == OrderStatus.ready
-                                      ? pixGreen
-                                      : barzGold,
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1,
+                          if (!isLast)
+                            Expanded(
+                              child: Container(
+                                width: 2,
+                                margin: const EdgeInsets.symmetric(vertical: 8),
+                                color: colors.labelPrimary.withValues(
+                                  alpha: 0.1,
                                 ),
+                                child: active
+                                    ? null
+                                    : (completed
+                                          ? Container(color: barzGold)
+                                          : null),
                               ),
                             ),
                         ],
                       ),
-                      Text(
-                        stage.sub,
-                        style: TextStyle(
-                          color: active
-                              ? colors.labelPrimary.withValues(alpha: 0.8)
-                              : colors.labelPrimary.withValues(alpha: 0.4),
-                          fontSize: 12,
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Padding(
+                          padding: const EdgeInsets.only(top: 14, bottom: 24),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    stage.label,
+                                    style: TextStyle(
+                                      color: active || completed
+                                          ? null
+                                          : colors.labelPrimary.withValues(
+                                              alpha: 0.6,
+                                            ),
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  if (active)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 2,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color:
+                                            (currentStatus == OrderStatus.ready
+                                                    ? Colors.green
+                                                    : barzGold)
+                                                .withValues(alpha: 0.1),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        'NOW',
+                                        style: TextStyle(
+                                          color:
+                                              currentStatus == OrderStatus.ready
+                                              ? pixGreen
+                                              : barzGold,
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 1,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                              Text(
+                                stage.sub,
+                                style: TextStyle(
+                                  color: active
+                                      ? colors.labelPrimary.withValues(
+                                          alpha: 0.8,
+                                        )
+                                      : colors.labelPrimary.withValues(
+                                          alpha: 0.4,
+                                        ),
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
                   ),
-                ),
-              ),
-            ],
-          ),
-        );
-      }).animate(interval: const Duration(milliseconds: 80)).fadeIn(duration: const Duration(milliseconds: 500)).slideX(begin: -0.1),
+                );
+              })
+              .animate(interval: const Duration(milliseconds: 80))
+              .fadeIn(duration: const Duration(milliseconds: 500))
+              .slideX(begin: -0.1),
     );
   }
 }
@@ -317,13 +362,13 @@ class _StageDot extends StatelessWidget {
       children: [
         if (active)
           Container(
-            width: 48,
-            height: 48,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isReady ? pixGreen : barzGold,
-            ),
-          )
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isReady ? pixGreen : barzGold,
+                ),
+              )
               .animate(onPlay: (c) => c.repeat())
               .scale(
                 begin: const Offset(1, 1),
@@ -351,21 +396,22 @@ class _StageDot extends StatelessWidget {
             boxShadow: active
                 ? [
                     BoxShadow(
-                      color: (isReady ? pixGreen : barzGold)
-                          .withValues(alpha: 0.6),
+                      color: (isReady ? pixGreen : barzGold).withValues(
+                        alpha: 0.6,
+                      ),
                       blurRadius: 20,
                       spreadRadius: 2,
-                    )
+                    ),
                   ]
                 : completed
-                    ? [
-                        BoxShadow(
-                          color: barzGold.withValues(alpha: 0.3),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
-                        )
-                      ]
-                    : null,
+                ? [
+                    BoxShadow(
+                      color: barzGold.withValues(alpha: 0.3),
+                      blurRadius: 10,
+                      offset: const Offset(0, 2),
+                    ),
+                  ]
+                : null,
           ),
           child: Center(
             child: Icon(

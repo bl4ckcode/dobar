@@ -80,10 +80,7 @@ class InvitationWrongAccount extends InvitationState {
 class InvitationUnverified extends InvitationState {
   final String code;
   final String contactType; // 'email' or 'phone'
-  const InvitationUnverified({
-    required this.code,
-    required this.contactType,
-  });
+  const InvitationUnverified({required this.code, required this.contactType});
 }
 
 /// Invitation has expired.

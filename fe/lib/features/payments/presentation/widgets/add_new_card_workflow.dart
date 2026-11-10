@@ -151,7 +151,10 @@ class _AddNewCardWorkflowState extends State<AddNewCardWorkflow>
 
   Future<void> _handleConfirm() async {
     if (_tokenizing) return;
-    setState(() { _tokenizing = true; _tokenError = null; });
+    setState(() {
+      _tokenizing = true;
+      _tokenError = null;
+    });
     final clean = _cardNumber.replaceAll(RegExp(r'\D'), '');
     final expiry = _expiry.split('/');
     final year = int.tryParse(expiry.last) ?? 0;
@@ -170,12 +173,17 @@ class _AddNewCardWorkflowState extends State<AddNewCardWorkflow>
         'last4': clean.substring(clean.length - 4),
         'expiry': _expiry,
       });
-      _cardNumber = ''; _cvv = ''; _name = '';
+      _cardNumber = '';
+      _cvv = '';
+      _name = '';
     } on CardTokenizationException catch (error) {
       if (!mounted) return;
       final l10n = AppLocalizations.of(context)!;
-      setState(() => _tokenError = error.unavailable
-          ? l10n.payment_card_unavailable : l10n.payment_card_token_failed);
+      setState(
+        () => _tokenError = error.unavailable
+            ? l10n.payment_card_unavailable
+            : l10n.payment_card_token_failed,
+      );
     } finally {
       if (mounted) setState(() => _tokenizing = false);
     }
@@ -203,7 +211,10 @@ class _AddNewCardWorkflowState extends State<AddNewCardWorkflow>
               style: IconButton.styleFrom(backgroundColor: inputBgColor),
             ),
             Text(
-              l10n.payment_card_step(AddCardStep.values.indexOf(_currentStep) + 1, AddCardStep.values.length),
+              l10n.payment_card_step(
+                AddCardStep.values.indexOf(_currentStep) + 1,
+                AddCardStep.values.length,
+              ),
               style: TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,
@@ -366,7 +377,14 @@ class _AddNewCardWorkflowState extends State<AddNewCardWorkflow>
         ),
         const SizedBox(height: 24),
 
-        if (_tokenError != null) Padding(padding: const EdgeInsets.all(12), child: Text(_tokenError!, style: const TextStyle(color: Colors.red))),
+        if (_tokenError != null)
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Text(
+              _tokenError!,
+              style: const TextStyle(color: Colors.red),
+            ),
+          ),
         if (_tokenizing) const LinearProgressIndicator(),
         // Animated Form Content
         AnimatedSwitcher(
@@ -405,7 +423,9 @@ class _AddNewCardWorkflowState extends State<AddNewCardWorkflow>
               elevation: _currentStep == AddCardStep.confirm ? 4 : 0,
             ),
             child: Text(
-              _currentStep == AddCardStep.confirm ? l10n.payment_save_card_button : l10n.next,
+              _currentStep == AddCardStep.confirm
+                  ? l10n.payment_save_card_button
+                  : l10n.next,
               style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
             ),
           ),
@@ -656,7 +676,13 @@ class _AddNewCardWorkflowState extends State<AddNewCardWorkflow>
           ),
           const SizedBox(height: 4),
           Text(
-            l10n.payment_card_summary(_detectBrand(_cardNumber), _cardNumber.replaceAll(' ', '').substring(_cardNumber.replaceAll(' ', '').length - 4), _expiry),
+            l10n.payment_card_summary(
+              _detectBrand(_cardNumber),
+              _cardNumber
+                  .replaceAll(' ', '')
+                  .substring(_cardNumber.replaceAll(' ', '').length - 4),
+              _expiry,
+            ),
             style: TextStyle(
               fontSize: 14,
               color: textColor.withValues(alpha: 0.6),

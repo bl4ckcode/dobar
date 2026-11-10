@@ -1,6 +1,7 @@
-import 'package:barz/core/design/components/bar_card.dart';
 import 'package:barz/core/design/components/category_pill.dart';
 import 'package:barz/core/design/components/home_connected_header.dart';
+import 'package:barz/features/home/domain/home_toolbar.dart';
+import 'package:barz/features/home/domain/models/home_model.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:barz/l10n/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -78,7 +79,13 @@ void main() {
           SizedBox(
             width: 420,
             child: HomeConnectedHeader(
-              nearbyBarName: 'Bar e Restaurante do Zé — Unidade Savassi',
+              content: const NearbyVenueToolbar(
+                NearestVenue(
+                  id: 1,
+                  name: 'Bar e Restaurante do Zé — Unidade Savassi',
+                  distanceMeters: 4,
+                ),
+              ),
               unreadNotifications: 140,
               onNotificationTap: () {},
             ),

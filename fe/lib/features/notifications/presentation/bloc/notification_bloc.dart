@@ -22,37 +22,35 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
       emit(NotificationLoading());
     }
 
-    final offset =
-        (state is NotificationLoaded && !event.refresh)
-            ? (state as NotificationLoaded).notifications.length
-            : 0;
+    final offset = (state is NotificationLoaded && !event.refresh)
+        ? (state as NotificationLoaded).notifications.length
+        : 0;
 
     final result = await repository.getNotifications(offset: offset);
 
-    result.fold(
-      (failure) => emit(NotificationError(failure.errorMessage)),
-      (notifications) {
-        if (state is NotificationLoaded && !event.refresh) {
-          final current = state as NotificationLoaded;
-          final updated = List.of(current.notifications)..addAll(notifications);
-          emit(
-            NotificationLoaded(
-              notifications: updated,
-              hasReachedMax: notifications.isEmpty,
-              unreadCount: updated.where((n) => !n.isRead).length,
-            ),
-          );
-        } else {
-          emit(
-            NotificationLoaded(
-              notifications: notifications,
-              hasReachedMax: notifications.length < 50,
-              unreadCount: notifications.where((n) => !n.isRead).length,
-            ),
-          );
-        }
-      },
-    );
+    result.fold((failure) => emit(NotificationError(failure.errorMessage)), (
+      notifications,
+    ) {
+      if (state is NotificationLoaded && !event.refresh) {
+        final current = state as NotificationLoaded;
+        final updated = List.of(current.notifications)..addAll(notifications);
+        emit(
+          NotificationLoaded(
+            notifications: updated,
+            hasReachedMax: notifications.isEmpty,
+            unreadCount: updated.where((n) => !n.isRead).length,
+          ),
+        );
+      } else {
+        emit(
+          NotificationLoaded(
+            notifications: notifications,
+            hasReachedMax: notifications.length < 50,
+            unreadCount: notifications.where((n) => !n.isRead).length,
+          ),
+        );
+      }
+    });
   }
 
   Future<void> _onMarkAsRead(
@@ -67,13 +65,12 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     result.fold(
       (failure) => null, // Silently fail or handle error
       (_) {
-        final updated =
-            current.notifications.map((n) {
-              if (n.id == event.notificationId) {
-                return n.copyWith(isRead: true);
-              }
-              return n;
-            }).toList();
+        final updated = current.notifications.map((n) {
+          if (n.id == event.notificationId) {
+            return n.copyWith(isRead: true);
+          }
+          return n;
+        }).toList();
 
         emit(
           current.copyWith(
@@ -94,14 +91,14 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
 
     final result = await repository.markAllAsRead();
 
-    result.fold(
-      (failure) => emit(NotificationError(failure.errorMessage)),
-      (_) {
-        final updated =
-            current.notifications.map((n) => n.copyWith(isRead: true)).toList();
+    result.fold((failure) => emit(NotificationError(failure.errorMessage)), (
+      _,
+    ) {
+      final updated = current.notifications
+          .map((n) => n.copyWith(isRead: true))
+          .toList();
 
-        emit(current.copyWith(notifications: updated, unreadCount: 0));
-      },
-    );
+      emit(current.copyWith(notifications: updated, unreadCount: 0));
+    });
   }
 }

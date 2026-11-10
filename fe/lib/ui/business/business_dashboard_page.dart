@@ -65,77 +65,76 @@ class _DashboardContent extends StatelessWidget {
           child: Stack(
             children: [
               RefreshIndicator(
-            onRefresh: () async {
-              context.read<DashboardBloc>().add(
-                RefreshDashboard(barId: activeBar.barId),
-              );
-            },
-            child: CustomScrollView(
-              slivers: [
-                SliverToBoxAdapter(
-                  child: _BusinessDashboardHeader(
-                    barName: activeBar.barName,
-                    role: activeBar.role,
-                    isOpen: dashboardState is DashboardLoaded
-                        ? dashboardState.status.isOpen
-                        : true,
-                    onToggleOpen: () {
-                      if (dashboardState is DashboardLoaded) {
-                        context.read<DashboardBloc>().add(
-                          ToggleBarOpen(
-                            barId: activeBar.barId,
-                            isOpen: !dashboardState.status.isOpen,
-                          ),
-                        );
-                      }
-                    },
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: ResponsiveCenterContainer(
-                    maxWidthPercentage: 0.9,
-                    maxWidth: 1400,
-                    padding: EdgeInsets.zero,
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          _QuickActionsSection(activeBar: activeBar),
-                          const SizedBox(height: 24),
-                          _SummaryCardsGrid(
-                            isOwnerOrAdmin: isOwnerOrAdmin,
-                            stats: dashboardState is DashboardLoaded
-                                ? dashboardState.stats
-                                : null,
-                            isLoading: dashboardState is DashboardLoading,
-                          ),
-                          const SizedBox(height: 24),
-                          _LiveOrderQueue(
-                            orders: dashboardState is DashboardLoaded
-                                ? dashboardState.recentOrders
-                                : null,
-                            isLoading: dashboardState is DashboardLoading,
-                          ),
-                          const SizedBox(height: 24),
-                          if (isOwnerOrAdmin) ...[
-                            _PromoteCampaignCard(
-                              key: const ValueKey('promote_campaign_card'),
-                            ),
-                          ],
-                          const SizedBox(height: 32),
-                        ],
+                onRefresh: () async {
+                  context.read<DashboardBloc>().add(
+                    RefreshDashboard(barId: activeBar.barId),
+                  );
+                },
+                child: CustomScrollView(
+                  slivers: [
+                    SliverToBoxAdapter(
+                      child: _BusinessDashboardHeader(
+                        barName: activeBar.barName,
+                        role: activeBar.role,
+                        isOpen: dashboardState is DashboardLoaded
+                            ? dashboardState.status.isOpen
+                            : true,
+                        onToggleOpen: () {
+                          if (dashboardState is DashboardLoaded) {
+                            context.read<DashboardBloc>().add(
+                              ToggleBarOpen(
+                                barId: activeBar.barId,
+                                isOpen: !dashboardState.status.isOpen,
+                              ),
+                            );
+                          }
+                        },
                       ),
                     ),
-                  ),
+                    SliverToBoxAdapter(
+                      child: ResponsiveCenterContainer(
+                        maxWidthPercentage: 0.9,
+                        maxWidth: 1400,
+                        padding: EdgeInsets.zero,
+                        child: Padding(
+                          padding: const EdgeInsets.all(24),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              _QuickActionsSection(activeBar: activeBar),
+                              const SizedBox(height: 24),
+                              _SummaryCardsGrid(
+                                isOwnerOrAdmin: isOwnerOrAdmin,
+                                stats: dashboardState is DashboardLoaded
+                                    ? dashboardState.stats
+                                    : null,
+                                isLoading: dashboardState is DashboardLoading,
+                              ),
+                              const SizedBox(height: 24),
+                              _LiveOrderQueue(
+                                orders: dashboardState is DashboardLoaded
+                                    ? dashboardState.recentOrders
+                                    : null,
+                                isLoading: dashboardState is DashboardLoading,
+                              ),
+                              const SizedBox(height: 24),
+                              if (isOwnerOrAdmin) ...[
+                                _PromoteCampaignCard(
+                                  key: const ValueKey('promote_campaign_card'),
+                                ),
+                              ],
+                              const SizedBox(height: 32),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),   // closes RefreshIndicator
-          if (isOwnerOrAdmin)
-            BarSetupChecklist(barId: activeBar.barId),
-        ],   // closes Stack.children
-      ),     // closes Stack
+              ), // closes RefreshIndicator
+              if (isOwnerOrAdmin) BarSetupChecklist(barId: activeBar.barId),
+            ], // closes Stack.children
+          ), // closes Stack
         );
       },
     );
@@ -354,56 +353,56 @@ class _BusinessSummaryCardState extends State<_BusinessSummaryCard> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text(
-                            widget.title.toUpperCase(),
-                            style: TextStyle(
-                              color: mutedColor,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 1.0,
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            widget.value,
-                            style: TextStyle(
-                              color: textColor,
-                              fontSize: 28,
-                              fontWeight: FontWeight.w900,
-                              letterSpacing: -0.5,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            children: [
-                              if (widget.trendValue != null) ...[
-                                Text(
-                                  '${widget.trendPositive ? "↑" : "↓"} ${widget.trendValue}',
-                                  style: TextStyle(
-                                    color: widget.trendPositive
-                                        ? successGreen
-                                        : errorRed,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                const SizedBox(width: 6),
-                              ],
-                              Flexible(
-                                child: Text(
-                                  widget.subtitle,
-                                  style: TextStyle(
-                                    color: mutedColor,
-                                    fontSize: 11,
-                                  ),
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                          children: [
+                            Text(
+                              widget.title.toUpperCase(),
+                              style: TextStyle(
+                                color: mutedColor,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                letterSpacing: 1.0,
                               ),
-                            ],
-                          ),
-                        ],
-                      ),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              widget.value,
+                              style: TextStyle(
+                                color: textColor,
+                                fontSize: 28,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                if (widget.trendValue != null) ...[
+                                  Text(
+                                    '${widget.trendPositive ? "↑" : "↓"} ${widget.trendValue}',
+                                    style: TextStyle(
+                                      color: widget.trendPositive
+                                          ? successGreen
+                                          : errorRed,
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                ],
+                                Flexible(
+                                  child: Text(
+                                    widget.subtitle,
+                                    style: TextStyle(
+                                      color: mutedColor,
+                                      fontSize: 11,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     Container(
@@ -785,9 +784,7 @@ class _PromoteCampaignCard extends StatelessWidget {
                   style: FilledButton.styleFrom(
                     backgroundColor: barzDark,
                     foregroundColor: barzGold,
-                    textStyle: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
+                    textStyle: const TextStyle(fontWeight: FontWeight.bold),
                     padding: const EdgeInsets.symmetric(
                       horizontal: 20,
                       vertical: 16,

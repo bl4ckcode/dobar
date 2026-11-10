@@ -69,11 +69,13 @@ class Transaction {
         orElse: () => TransactionType.payment,
       ),
       status: TransactionStatus.values.firstWhere(
-        (e) => e.name == switch (json['status']) {
-          'paid' || 'succeeded' => 'approved',
-          'failed' => 'declined',
-          _ => json['status'],
-        },
+        (e) =>
+            e.name ==
+            switch (json['status']) {
+              'paid' || 'succeeded' => 'approved',
+              'failed' => 'declined',
+              _ => json['status'],
+            },
         orElse: () => TransactionStatus.pending,
       ),
       amount: (json['amount'] as num).toDouble(),

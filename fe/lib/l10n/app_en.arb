@@ -1363,13 +1363,40 @@
   "profile_benefit_pro_coupon": "Dobar Pro coupons",
   "profile_benefit_cashback": "Cashback balance",
   "profile_benefit_coupons_remaining": "{count} of {limit} coupons left this month",
-  "@profile_benefit_coupons_remaining": {"placeholders": {"count": {"type": "int"}, "limit": {"type": "int"}}},
+  "@profile_benefit_coupons_remaining": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
   "profile_benefit_cashback_available": "Available: {amount}",
-  "@profile_benefit_cashback_available": {"placeholders": {"amount": {"type": "String"}}},
+  "@profile_benefit_cashback_available": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "profile_benefit_cashback_pending": "Pending: {amount}",
-  "@profile_benefit_cashback_pending": {"placeholders": {"amount": {"type": "String"}}},
+  "@profile_benefit_cashback_pending": {
+    "placeholders": {
+      "amount": {
+        "type": "String"
+      }
+    }
+  },
   "profile_benefit_expires": "Valid until {date}",
-  "@profile_benefit_expires": {"placeholders": {"date": {"type": "String"}}},
+  "@profile_benefit_expires": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "profile_benefit_unavailable_pro_required": "Available to Dobar Pro subscribers.",
   "profile_benefit_unavailable_allowance_exhausted": "You've used all your coupons this month.",
   "profile_benefit_unavailable_no_eligible_venues": "No participating venues right now.",
@@ -1385,9 +1412,78 @@
   "profile_benefit_venues_empty": "No participating venues right now.",
   "profile_benefit_open_note": "Opening a venue does not use or apply the benefit.",
   "profile_benefits_count": "{count, plural, one{# active benefit} other{# active benefits}}",
-  "@profile_benefits_count": {"placeholders": {"count": {"type": "int"}}},
+  "@profile_benefits_count": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "profile_sign_in_again": "Sign in again",
   "profile_privacy_preferences": "Privacy",
   "profile_privacy_location": "Share location",
-  "profile_privacy_data": "Share usage data"
+  "profile_privacy_data": "Share usage data",
+  "home_greeting_plain": "Hello",
+  "home_greeting_promos": "Hello, {name}, you have {count, plural, =1{1 promo} other{{count} promos}}",
+  "@home_greeting_promos": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "home_nearby_venue": "You're near {venue}",
+  "@home_nearby_venue": {
+    "placeholders": {
+      "venue": {
+        "type": "String"
+      }
+    }
+  },
+  "home_notifications_none": "Notifications",
+  "home_theme_to_dark": "Switch to dark theme",
+  "home_theme_to_light": "Switch to light theme",
+  "home_categories_label": "Categories",
+  "location_explain_title": "Use your location",
+  "location_explain_body": "We need your location to verify you are at the venue and to place orders.",
+  "location_explain_continue": "Continue",
+  "location_explain_cancel": "Not now",
+  "location_denied_title": "Location unavailable",
+  "location_denied_body": "Without location you can't check in or place orders. You can enable it in Settings.",
+  "location_open_settings": "Open settings",
+  "category_venues_search": "Search",
+  "category_venues_search_hint": "Search by name",
+  "category_venues_filter": "Filters",
+  "category_venues_max_distance": "Maximum distance: {km} km",
+  "@category_venues_max_distance": {
+    "placeholders": {
+      "km": {
+        "type": "int"
+      }
+    }
+  },
+  "category_venues_min_rating": "Minimum rating: {rating}",
+  "@category_venues_min_rating": {
+    "placeholders": {
+      "rating": {
+        "type": "String"
+      }
+    }
+  },
+  "category_venues_promos_available": "Promos available",
+  "category_venues_apply": "Apply",
+  "category_venues_clear": "Clear",
+  "category_venues_empty": "No venues found",
+  "category_venues_no_location": "Showing venues in your country. Enable location to see distances.",
+  "home_greeting_promos_anon": "Hello, you have {count, plural, =1{1 promo} other{{count} promos}}",
+  "@home_greeting_promos_anon": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

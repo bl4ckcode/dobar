@@ -86,16 +86,13 @@ class OrderBloc extends Bloc<OrderEvent, OrderState> {
     if (!isAlreadyLoaded) {
       emit(OrderLoading());
     }
-    
+
     final result = await orderUsecase.getOrderTimeline(event.orderId);
-    result.fold(
-      (failure) {
-        if (!isAlreadyLoaded) {
-          emit(OrderError(message: failure.errorMessage));
-        }
-      },
-      (order) => emit(OrderTimelineLoaded(order: order)),
-    );
+    result.fold((failure) {
+      if (!isAlreadyLoaded) {
+        emit(OrderError(message: failure.errorMessage));
+      }
+    }, (order) => emit(OrderTimelineLoaded(order: order)));
   }
 
   Future<void> _onCancelOrder(

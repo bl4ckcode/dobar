@@ -2,10 +2,7 @@ class HomeParams {
   final double? latitude;
   final double? longitude;
 
-  HomeParams({
-    this.latitude,
-    this.longitude,
-  });
+  HomeParams({this.latitude, this.longitude});
 
   factory HomeParams.fromJson(Map<String, dynamic> json) {
     return HomeParams(
@@ -15,9 +12,6 @@ class HomeParams {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'latitude': latitude,
-      'longitude': longitude,
-    };
+    return {'latitude': latitude, 'longitude': longitude};
   }
 }

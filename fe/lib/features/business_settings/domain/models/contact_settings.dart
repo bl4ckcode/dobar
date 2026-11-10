@@ -35,12 +35,12 @@ class ContactSettings {
       );
 
   Map<String, dynamic> toJson() => {
-        if (phone != null) 'phone': phone,
-        if (email != null) 'email': email,
-        if (website != null) 'website': website,
-        if (instagram != null) 'instagram': instagram,
-        if (facebook != null) 'facebook': facebook,
-        if (whatsapp != null) 'whatsapp': whatsapp,
-        if (whatsappEnabled != null) 'whatsapp_enabled': whatsappEnabled,
-      };
+    if (phone != null) 'phone': phone,
+    if (email != null) 'email': email,
+    if (website != null) 'website': website,
+    if (instagram != null) 'instagram': instagram,
+    if (facebook != null) 'facebook': facebook,
+    if (whatsapp != null) 'whatsapp': whatsapp,
+    if (whatsappEnabled != null) 'whatsapp_enabled': whatsappEnabled,
+  };
 }

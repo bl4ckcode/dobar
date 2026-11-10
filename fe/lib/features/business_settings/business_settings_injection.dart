@@ -16,8 +16,6 @@ void initBusinessSettings() {
   );
 
   getItInjector.registerFactory<BusinessSettingsBloc>(
-    () => BusinessSettingsBloc(
-      getItInjector<BusinessSettingsUsecase>(),
-    ),
+    () => BusinessSettingsBloc(getItInjector<BusinessSettingsUsecase>()),
   );
 }

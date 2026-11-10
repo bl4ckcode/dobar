@@ -5,9 +5,16 @@ import 'package:barz/features/checkin/data/repositories/checkin_network_reposito
 import 'package:barz/features/checkin/presentation/bloc/checkin_bloc.dart';
 
 Future<void> initCheckinInjection() async {
-  getItInjector.registerLazySingleton<CheckinRepository>(() => CheckinNetworkRepository(DioNetwork.appAPI));
-  getItInjector.registerLazySingleton<CheckinBloc>(() => CheckinBloc(
-    barUsecase: getItInjector(), bars: getItInjector(), repository: getItInjector(),
-    location: getItInjector(), session: getItInjector(),
-  ));
+  getItInjector.registerLazySingleton<CheckinRepository>(
+    () => CheckinNetworkRepository(DioNetwork.appAPI),
+  );
+  getItInjector.registerLazySingleton<CheckinBloc>(
+    () => CheckinBloc(
+      barUsecase: getItInjector(),
+      bars: getItInjector(),
+      repository: getItInjector(),
+      location: getItInjector(),
+      session: getItInjector(),
+    ),
+  );
 }

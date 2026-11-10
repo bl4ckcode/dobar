@@ -109,12 +109,19 @@ class CartNetworkDataSource {
   Future<CheckoutResult?> getPendingCheckout() async {
     _scopeToUser();
     try {
-      final response = await dio.get('${ApiEndpoints.baseUrl}${ApiEndpoints.cartCheckout}/pending');
-      final pending = response.data == null ? null : CheckoutResult.fromJson(response.data);
+      final response = await dio.get(
+        '${ApiEndpoints.baseUrl}${ApiEndpoints.cartCheckout}/pending',
+      );
+      final pending = response.data == null
+          ? null
+          : CheckoutResult.fromJson(response.data);
       _pendingCheckout = pending;
       return pending;
     } on DioException catch (error) {
-      throw ServerException('Failed to load pending checkout', error.response?.statusCode);
+      throw ServerException(
+        'Failed to load pending checkout',
+        error.response?.statusCode,
+      );
     }
   }
 

@@ -111,7 +111,10 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
           .map((json) => FeaturedAd.fromJson(json))
           .toList();
     } on DioException catch (e) {
-      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
+      throw ServerException.fromResponse(
+        e.response?.data,
+        e.response?.statusCode,
+      );
     }
   }
 
@@ -138,7 +141,10 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
           .map((json) => SearchAd.fromJson(json))
           .toList();
     } on DioException catch (e) {
-      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
+      throw ServerException.fromResponse(
+        e.response?.data,
+        e.response?.statusCode,
+      );
     }
   }
 
@@ -163,7 +169,10 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
           .map((json) => MapAd.fromJson(json))
           .toList();
     } on DioException catch (e) {
-      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
+      throw ServerException.fromResponse(
+        e.response?.data,
+        e.response?.statusCode,
+      );
     }
   }
 
@@ -202,7 +211,10 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
       );
       return PlansResponse.fromJson(response.data);
     } on DioException catch (e) {
-      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
+      throw ServerException.fromResponse(
+        e.response?.data,
+        e.response?.statusCode,
+      );
     }
   }
 
@@ -221,7 +233,10 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
       if (e.response?.statusCode == 404) {
         return null; // No subscription
       }
-      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
+      throw ServerException.fromResponse(
+        e.response?.data,
+        e.response?.statusCode,
+      );
     }
   }
 
@@ -234,7 +249,10 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
       );
       return RateCard.fromJson(Map<String, dynamic>.from(response.data as Map));
     } on DioException catch (e) {
-      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
+      throw ServerException.fromResponse(
+        e.response?.data,
+        e.response?.statusCode,
+      );
     }
   }
 
@@ -251,11 +269,11 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
         data: {
           'tier': tier.name,
           'billing_cycle': 'monthly',
-          'payment_method': {
-            'type': 'pix',
-          },
+          'payment_method': {'type': 'pix'},
         },
-        options: Options(headers: {"Access-Control-Request-Headers": "content-type, accept"}),
+        options: Options(
+          headers: {"Access-Control-Request-Headers": "content-type, accept"},
+        ),
       );
 
       // Backend returns two different response shapes:
@@ -286,7 +304,10 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
           'Could not reach the server. Check your connection and try again.',
         );
       }
-      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
+      throw ServerException.fromResponse(
+        e.response?.data,
+        e.response?.statusCode,
+      );
     }
   }
 
@@ -317,7 +338,10 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
         response.data as Map<String, dynamic>,
       );
     } on DioException catch (e) {
-      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
+      throw ServerException.fromResponse(
+        e.response?.data,
+        e.response?.statusCode,
+      );
     }
   }
 
@@ -328,7 +352,10 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
         '${ApiEndpoints.baseUrl}${ApiEndpoints.cancelSubscription(subscriptionId)}',
       );
     } on DioException catch (e) {
-      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
+      throw ServerException.fromResponse(
+        e.response?.data,
+        e.response?.statusCode,
+      );
     }
   }
 
@@ -340,10 +367,7 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
     try {
       final response = await dio.post(
         '${ApiEndpoints.baseUrl}${ApiEndpoints.subscriptionCapture}',
-        data: {
-          'payment_id': paymentId,
-          'amount_cents': amountCents,
-        },
+        data: {'payment_id': paymentId, 'amount_cents': amountCents},
       );
       return SubscriptionCaptureResult.fromJson(
         response.data as Map<String, dynamic>,
@@ -382,9 +406,7 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
           'proration_info': proration.toJson(),
         },
         options: Options(
-          headers: {
-            'X-Idempotency-Key': IdempotencyKey.generate(),
-          },
+          headers: {'X-Idempotency-Key': IdempotencyKey.generate()},
         ),
       );
       return SubscriptionUpgradeResult.fromJson(
@@ -408,7 +430,10 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
       final campaignsList = response.data['campaigns'] as List? ?? [];
       return campaignsList.map((json) => AdCampaign.fromJson(json)).toList();
     } on DioException catch (e) {
-      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
+      throw ServerException.fromResponse(
+        e.response?.data,
+        e.response?.statusCode,
+      );
     }
   }
 
@@ -420,7 +445,10 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
       );
       return AdCampaign.fromJson(response.data);
     } on DioException catch (e) {
-      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
+      throw ServerException.fromResponse(
+        e.response?.data,
+        e.response?.statusCode,
+      );
     }
   }
 
@@ -477,7 +505,10 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
       );
       return AdCampaign.fromJson(response.data);
     } on DioException catch (e) {
-      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
+      throw ServerException.fromResponse(
+        e.response?.data,
+        e.response?.statusCode,
+      );
     }
   }
 
@@ -486,13 +517,14 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
     try {
       final response = await dio.post(
         '${ApiEndpoints.baseUrl}${ApiEndpoints.publishCampaign(campaignId)}',
-        queryParameters: {
-          'bar_id': barId,
-        },
+        queryParameters: {'bar_id': barId},
       );
       return AdCampaign.fromJson(response.data);
     } on DioException catch (e) {
-      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
+      throw ServerException.fromResponse(
+        e.response?.data,
+        e.response?.statusCode,
+      );
     }
   }
 
@@ -501,13 +533,14 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
     try {
       final response = await dio.post(
         '${ApiEndpoints.baseUrl}${ApiEndpoints.pauseCampaign(campaignId)}',
-        queryParameters: {
-          'bar_id': barId,
-        }
+        queryParameters: {'bar_id': barId},
       );
       return AdCampaign.fromJson(response.data);
     } on DioException catch (e) {
-      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
+      throw ServerException.fromResponse(
+        e.response?.data,
+        e.response?.statusCode,
+      );
     }
   }
 
@@ -516,13 +549,14 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
     try {
       final response = await dio.post(
         '${ApiEndpoints.baseUrl}${ApiEndpoints.resumeCampaign(campaignId)}',
-        queryParameters: {
-          'bar_id': barId,
-        }
+        queryParameters: {'bar_id': barId},
       );
       return AdCampaign.fromJson(response.data);
     } on DioException catch (e) {
-      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
+      throw ServerException.fromResponse(
+        e.response?.data,
+        e.response?.statusCode,
+      );
     }
   }
 
@@ -531,12 +565,13 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
     try {
       await dio.delete(
         '${ApiEndpoints.baseUrl}${ApiEndpoints.campaign(campaignId)}',
-        queryParameters: {
-          'bar_id': barId,
-        },
+        queryParameters: {'bar_id': barId},
       );
     } on DioException catch (e) {
-      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
+      throw ServerException.fromResponse(
+        e.response?.data,
+        e.response?.statusCode,
+      );
     }
   }
 
@@ -552,7 +587,10 @@ class AdvertisingNetworkDatasource implements AdvertisingDatasource {
       );
       return CampaignAnalytics.fromJson(response.data);
     } on DioException catch (e) {
-      throw ServerException.fromResponse(e.response?.data, e.response?.statusCode);
+      throw ServerException.fromResponse(
+        e.response?.data,
+        e.response?.statusCode,
+      );
     }
   }
 }

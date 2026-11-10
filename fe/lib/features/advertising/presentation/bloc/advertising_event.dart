@@ -104,16 +104,22 @@ sealed class AdvertisingEvent with _$AdvertisingEvent {
   }) = CreateCampaignEvent;
 
   /// Pause a campaign.
-  const factory AdvertisingEvent.pauseCampaign({required int campaignId, required int barId}) =
-      PauseCampaign;
+  const factory AdvertisingEvent.pauseCampaign({
+    required int campaignId,
+    required int barId,
+  }) = PauseCampaign;
 
   /// Publish a draft campaign (draft → active/scheduled). Requires ads:manage.
-  const factory AdvertisingEvent.publishCampaign({required int campaignId, required int barId}) =
-      PublishCampaign;
+  const factory AdvertisingEvent.publishCampaign({
+    required int campaignId,
+    required int barId,
+  }) = PublishCampaign;
 
   /// Resume a campaign.
-  const factory AdvertisingEvent.resumeCampaign({required int campaignId, required int barId}) =
-      ResumeCampaign;
+  const factory AdvertisingEvent.resumeCampaign({
+    required int campaignId,
+    required int barId,
+  }) = ResumeCampaign;
 
   /// Delete a campaign.
   const factory AdvertisingEvent.deleteCampaign({
@@ -136,6 +142,5 @@ sealed class AdvertisingEvent with _$AdvertisingEvent {
   const factory AdvertisingEvent.setSort({required String sortBy}) = SetSort;
 
   /// Set search query for campaign filtering.
-  const factory AdvertisingEvent.setSearch({required String query}) =
-      SetSearch;
+  const factory AdvertisingEvent.setSearch({required String query}) = SetSearch;
 }

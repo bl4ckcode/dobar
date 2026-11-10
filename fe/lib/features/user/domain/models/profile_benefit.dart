@@ -69,13 +69,14 @@ class ProfileBenefits {
   final List<ProfileBenefit> benefits;
   final int activeCount;
 
-  factory ProfileBenefits.fromJson(Map<String, dynamic> json) => ProfileBenefits(
-    benefits: [
-      for (final b in (json['benefits'] as List? ?? const []))
-        ProfileBenefit.fromJson(Map<String, dynamic>.from(b as Map)),
-    ],
-    activeCount: (json['active_count'] as num?)?.toInt() ?? 0,
-  );
+  factory ProfileBenefits.fromJson(Map<String, dynamic> json) =>
+      ProfileBenefits(
+        benefits: [
+          for (final b in (json['benefits'] as List? ?? const []))
+            ProfileBenefit.fromJson(Map<String, dynamic>.from(b as Map)),
+        ],
+        activeCount: (json['active_count'] as num?)?.toInt() ?? 0,
+      );
 }
 
 class BenefitPromotion {

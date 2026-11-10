@@ -8,6 +8,9 @@ abstract class HomeModel {
   List<NearbyBar> get nearbyBars;
   TrendingSection get trendingDrinks;
   List<PromotionModel> get activePromotions;
+  String? get displayName;
+  PromoSummary? get promoSummary;
+  NearestVenue? get nearestVenue;
 
   factory HomeModel({
     UserStatus? userStatus,
@@ -15,6 +18,9 @@ abstract class HomeModel {
     required List<NearbyBar> nearbyBars,
     required TrendingSection trendingDrinks,
     required List<PromotionModel> activePromotions,
+    String? displayName,
+    PromoSummary? promoSummary,
+    NearestVenue? nearestVenue,
   }) = _HomeModelImpl;
 
   factory HomeModel.fromJson(Map<String, dynamic> json) =
@@ -32,6 +38,12 @@ class _HomeModelImpl implements HomeModel {
   final TrendingSection trendingDrinks;
   @override
   final List<PromotionModel> activePromotions;
+  @override
+  final String? displayName;
+  @override
+  final PromoSummary? promoSummary;
+  @override
+  final NearestVenue? nearestVenue;
 
   _HomeModelImpl({
     this.userStatus,
@@ -39,31 +51,77 @@ class _HomeModelImpl implements HomeModel {
     required this.nearbyBars,
     required this.trendingDrinks,
     required this.activePromotions,
+    this.displayName,
+    this.promoSummary,
+    this.nearestVenue,
   });
 
   factory _HomeModelImpl.fromJson(Map<String, dynamic> json) {
     return _HomeModelImpl(
-      userStatus:
-          json['user_status'] != null
-              ? UserStatus.fromJson(json['user_status'])
-              : null,
+      userStatus: json['user_status'] != null
+          ? UserStatus.fromJson(json['user_status'])
+          : null,
       locationMismatch: json['location_mismatch'] ?? false,
       nearbyBars:
           (json['nearby_bars'] as List?)
               ?.map((e) => NearbyBar.fromJson(e))
               .toList() ??
           [],
-      trendingDrinks:
-          json['trending_drinks'] != null
-              ? TrendingSection.fromJson(json['trending_drinks'])
-              : TrendingSection(mostWanted: [], hottest: []),
+      trendingDrinks: json['trending_drinks'] != null
+          ? TrendingSection.fromJson(json['trending_drinks'])
+          : TrendingSection(mostWanted: [], hottest: []),
       activePromotions:
           (json['active_promotions'] as List?)
               ?.map((e) => PromotionModel.fromJson(e))
               .toList() ??
           [],
+      displayName: (json['display_name'] as String?)?.trim().isEmpty ?? true
+          ? null
+          : (json['display_name'] as String).trim(),
+      promoSummary: json['promo_summary'] is Map<String, dynamic>
+          ? PromoSummary.fromJson(json['promo_summary'])
+          : null,
+      nearestVenue: json['nearest_venue'] is Map<String, dynamic>
+          ? NearestVenue.fromJson(json['nearest_venue'])
+          : null,
     );
   }
+}
+
+/// Server-computed count of promotions usable now. Absent => unknown.
+class PromoSummary {
+  final int total;
+  const PromoSummary({required this.total});
+
+  factory PromoSummary.fromJson(Map<String, dynamic> json) =>
+      PromoSummary(total: (json['total'] as num?)?.toInt() ?? 0);
+}
+
+/// Nearest ready venue, independent of carousel ranking/limits.
+class NearestVenue {
+  final int id;
+  final String name;
+  final double? distanceMeters;
+  const NearestVenue({
+    required this.id,
+    required this.name,
+    this.distanceMeters,
+  });
+
+  factory NearestVenue.fromJson(Map<String, dynamic> json) => NearestVenue(
+    id: (json['id'] as num?)?.toInt() ?? 0,
+    name: json['name'] as String? ?? '',
+    distanceMeters: (json['distance_meters'] as num?)?.toDouble(),
+  );
+
+  BarModel toBarModel() => BarModel(
+    id: id,
+    name: name,
+    address: '',
+    phoneNumber: '',
+    email: '',
+    approximateLocation: distanceMeters,
+  );
 }
 
 class UserStatus {
@@ -109,17 +167,25 @@ class NearbyBar {
   final int id;
   final String name;
   final String? imageUrl;
-  final double distanceMeters;
+  final double? distanceMeters;
   final double rating;
   final bool isOpen;
+  final String? category;
+
+  /// `happy_hour` | `cashback` | `promotion` (backend classification).
+  final String? primaryPromotion;
+  final String? promotionText;
 
   NearbyBar({
     required this.id,
     required this.name,
     this.imageUrl,
-    required this.distanceMeters,
+    this.distanceMeters,
     required this.rating,
     required this.isOpen,
+    this.category,
+    this.primaryPromotion,
+    this.promotionText,
   });
 
   factory NearbyBar.fromJson(Map<String, dynamic> json) {
@@ -127,9 +193,12 @@ class NearbyBar {
       id: json['id'] ?? 0,
       name: json['name'] ?? '',
       imageUrl: json['image_url'],
-      distanceMeters: (json['distance_meters'] as num?)?.toDouble() ?? 0.0,
+      distanceMeters: (json['distance_meters'] as num?)?.toDouble(),
       rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
       isOpen: json['is_open'] ?? false,
+      category: json['category'] as String?,
+      primaryPromotion: json['primary_promotion'] as String?,
+      promotionText: json['promotion_text'] as String?,
     );
   }
 

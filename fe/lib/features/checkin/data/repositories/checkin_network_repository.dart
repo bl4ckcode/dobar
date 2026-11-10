@@ -12,29 +12,46 @@ class CheckinNetworkRepository implements CheckinRepository {
   Future<CheckinModel?> getActive() async {
     try {
       final response = await dio.get('${ApiEndpoints.baseUrl}/checkins/active');
-      return response.data == null ? null : CheckinModel.fromJson(Map<String, dynamic>.from(response.data));
-    } on DioException catch (error) { throw _failure(error); }
+      return response.data == null
+          ? null
+          : CheckinModel.fromJson(Map<String, dynamic>.from(response.data));
+    } on DioException catch (error) {
+      throw _failure(error);
+    }
   }
 
   @override
-  Future<CheckinModel> confirm({required int barId, required LocationModel location, String? tableNumber}) async {
+  Future<CheckinModel> confirm({
+    required int barId,
+    required LocationModel location,
+    String? tableNumber,
+  }) async {
     try {
-      final response = await dio.post('${ApiEndpoints.baseUrl}/checkins', data: {
-        'bar_id': barId,
-        'latitude': location.latitude,
-        'longitude': location.longitude,
-        'measured_at': location.timestamp.toUtc().toIso8601String(),
-        if (location.accuracy != null) 'accuracy_meters': location.accuracy,
-        if (tableNumber?.trim().isNotEmpty == true) 'table_number': tableNumber!.trim(),
-      });
+      final response = await dio.post(
+        '${ApiEndpoints.baseUrl}/checkins',
+        data: {
+          'bar_id': barId,
+          'latitude': location.latitude,
+          'longitude': location.longitude,
+          'measured_at': location.timestamp.toUtc().toIso8601String(),
+          if (location.accuracy != null) 'accuracy_meters': location.accuracy,
+          if (tableNumber?.trim().isNotEmpty == true)
+            'table_number': tableNumber!.trim(),
+        },
+      );
       return CheckinModel.fromJson(Map<String, dynamic>.from(response.data));
-    } on DioException catch (error) { throw _failure(error); }
+    } on DioException catch (error) {
+      throw _failure(error);
+    }
   }
 
   @override
   Future<void> end() async {
-    try { await dio.delete('${ApiEndpoints.baseUrl}/checkins/active'); }
-    on DioException catch (error) { throw _failure(error); }
+    try {
+      await dio.delete('${ApiEndpoints.baseUrl}/checkins/active');
+    } on DioException catch (error) {
+      throw _failure(error);
+    }
   }
 
   CheckinException _failure(DioException error) {
@@ -42,9 +59,15 @@ class CheckinNetworkRepository implements CheckinRepository {
     if (data is Map) {
       final details = data['details'];
       if (details is Map) {
-        if (details.containsKey('location')) return const CheckinException('CHECKIN_TOO_FAR');
-        if (details.containsKey('measured_at')) return const CheckinException('CHECKIN_LOCATION_STALE');
-        if (details.containsKey('table_number')) return const CheckinException('CHECKIN_INVALID_LOCATION');
+        if (details.containsKey('location')) {
+          return const CheckinException('CHECKIN_TOO_FAR');
+        }
+        if (details.containsKey('measured_at')) {
+          return const CheckinException('CHECKIN_LOCATION_STALE');
+        }
+        if (details.containsKey('table_number')) {
+          return const CheckinException('CHECKIN_INVALID_LOCATION');
+        }
       }
       return CheckinException('${data['error_code'] ?? 'NETWORK_ERROR'}');
     }

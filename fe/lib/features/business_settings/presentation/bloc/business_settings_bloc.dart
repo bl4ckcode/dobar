@@ -43,9 +43,8 @@ class BusinessSettingsBloc
       (failure) => emit(
         state.copyWith(isProcessing: false, error: failure.errorMessage),
       ),
-      (barDetails) => emit(
-        state.copyWith(isProcessing: false, barDetails: barDetails),
-      ),
+      (barDetails) =>
+          emit(state.copyWith(isProcessing: false, barDetails: barDetails)),
     );
   }
 
@@ -69,8 +68,10 @@ class BusinessSettingsBloc
     Emitter<BusinessSettingsState> emit,
   ) async {
     emit(state.copyWith(isProcessing: true, error: null));
-    final result =
-        await _usecase.updateContactSettings(event.barId, event.data);
+    final result = await _usecase.updateContactSettings(
+      event.barId,
+      event.data,
+    );
     result.fold(
       (failure) => emit(
         state.copyWith(isProcessing: false, error: failure.errorMessage),
@@ -91,9 +92,8 @@ class BusinessSettingsBloc
       (failure) => emit(
         state.copyWith(isProcessing: false, error: failure.errorMessage),
       ),
-      (deleteResult) => emit(
-        state.copyWith(isProcessing: false, deleteResult: deleteResult),
-      ),
+      (deleteResult) =>
+          emit(state.copyWith(isProcessing: false, deleteResult: deleteResult)),
     );
   }
 
@@ -148,10 +148,17 @@ class BusinessSettingsBloc
       fileName: event.fileName,
     );
     result.fold(
-      (failure) => emit(state.copyWith(isProcessing: false, error: failure.errorMessage)),
+      (failure) => emit(
+        state.copyWith(isProcessing: false, error: failure.errorMessage),
+      ),
       (imageResult) {
         // Return the URL through the state — caller picks it up
-        emit(state.copyWith(isProcessing: false, uploadedImageUrl: imageResult.url));
+        emit(
+          state.copyWith(
+            isProcessing: false,
+            uploadedImageUrl: imageResult.url,
+          ),
+        );
       },
     );
   }

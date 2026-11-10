@@ -134,7 +134,9 @@ class _CashierPageState extends State<CashierPage>
                     actions: [
                       IconButton(
                         icon: Icon(
-                          _soundOn ? LucideIcons.volume_off : LucideIcons.volume_x,
+                          _soundOn
+                              ? LucideIcons.volume_off
+                              : LucideIcons.volume_x,
                           size: 20,
                           color: _soundOn ? barzGold : mutedColor,
                         ),
@@ -248,7 +250,7 @@ class _CashierPageState extends State<CashierPage>
                                       .where(
                                         (o) =>
                                             (_activeFilter == statusPending &&
-                                                    o.status == 'confirmed') ||
+                                                o.status == 'confirmed') ||
                                             o.status == _activeFilter,
                                       )
                                       .toList();
@@ -317,8 +319,9 @@ class _CashierPageState extends State<CashierPage>
     int total = allOrders.length;
     for (var o in allOrders) {
       // Map backend "confirmed" to our "pending" filter
-      final normalizedStatus =
-          o.status == 'confirmed' ? statusPending : o.status;
+      final normalizedStatus = o.status == 'confirmed'
+          ? statusPending
+          : o.status;
       counts[normalizedStatus] = (counts[normalizedStatus] ?? 0) + 1;
     }
 
@@ -346,10 +349,26 @@ class _CashierPageState extends State<CashierPage>
               ),
               child: Row(
                 children: [
-                  _buildTabItem(l10n.business_status_pending, statusPending, counts[statusPending]!),
-                  _buildTabItem(l10n.business_status_preparing, statusPreparing, counts[statusPreparing]!),
-                  _buildTabItem(l10n.business_status_ready, statusReady, counts[statusReady]!),
-                  _buildTabItem(l10n.business_status_completed, statusCompleted, counts[statusCompleted]!),
+                  _buildTabItem(
+                    l10n.business_status_pending,
+                    statusPending,
+                    counts[statusPending]!,
+                  ),
+                  _buildTabItem(
+                    l10n.business_status_preparing,
+                    statusPreparing,
+                    counts[statusPreparing]!,
+                  ),
+                  _buildTabItem(
+                    l10n.business_status_ready,
+                    statusReady,
+                    counts[statusReady]!,
+                  ),
+                  _buildTabItem(
+                    l10n.business_status_completed,
+                    statusCompleted,
+                    counts[statusCompleted]!,
+                  ),
                   _buildTabItem(l10n.business_status_all, null, total),
                 ],
               ),
@@ -513,7 +532,9 @@ class _OrderCard extends StatelessWidget {
     }
 
     // Normalize backend status to our filter constants
-    final displayStatus = order.status == 'confirmed' ? statusPending : order.status;
+    final displayStatus = order.status == 'confirmed'
+        ? statusPending
+        : order.status;
 
     // Status config
     Color statusColor;
@@ -544,7 +565,9 @@ class _OrderCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     switch (displayStatus) {
       case statusPending:
-        actionLabel = isConfirmed ? l10n.business_status_preparing : l10n.business_confirm;
+        actionLabel = isConfirmed
+            ? l10n.business_status_preparing
+            : l10n.business_confirm;
         nextStatus = statusPreparing;
         actionColor = const Color(0xFF16A34A); // Success
         actionTextColor = Colors.white;
@@ -746,7 +769,9 @@ class _OrderCard extends StatelessWidget {
 
   Widget _buildTimeText(BuildContext context, int minsWait, bool isUrgent) {
     final l10n = AppLocalizations.of(context)!;
-    String timeStr = minsWait == 0 ? l10n.business_time_just_now : l10n.business_time_ago(minsWait);
+    String timeStr = minsWait == 0
+        ? l10n.business_time_just_now
+        : l10n.business_time_ago(minsWait);
     return Row(
       children: [
         Icon(

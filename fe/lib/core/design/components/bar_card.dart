@@ -54,6 +54,7 @@ class BarCard extends StatelessWidget {
                         ? DecorationImage(
                             image: NetworkImage(imageUrl!),
                             fit: BoxFit.cover,
+                            onError: (_, _) {},
                           )
                         : null,
                   ),
@@ -154,23 +155,24 @@ class BarCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.location_on_outlined,
-                        size: 12,
-                        color: colors.labelSecondary,
-                      ),
-                      const SizedBox(width: 4),
-                      Text(
-                        distance,
-                        style: TextStyle(
-                          fontSize: 10,
+                  if (distance.isNotEmpty)
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.location_on_outlined,
+                          size: 12,
                           color: colors.labelSecondary,
                         ),
-                      ),
-                    ],
-                  ),
+                        const SizedBox(width: 4),
+                        Text(
+                          distance,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: colors.labelSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
                 ],
               ),
             ),
@@ -231,6 +233,174 @@ class _BadgePill extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Full-width venue row used by the category listing: name, actual rating,
+/// optional distance and colored promotion text (badge priority already
+/// resolved by the backend).
+class VenueListCard extends StatelessWidget {
+  final String name;
+  final double rating;
+  final String? distance;
+  final String? imageUrl;
+  final BarBadge? promotion;
+  final String? promotionText;
+  final VoidCallback? onTap;
+
+  const VenueListCard({
+    super.key,
+    required this.name,
+    required this.rating,
+    this.distance,
+    this.imageUrl,
+    this.promotion,
+    this.promotionText,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colors = context.dobarColors;
+    final l10n = AppLocalizations.of(context)!;
+    final promoColor = switch (promotion) {
+      BarBadge.happyHour => const Color(0xFFFF8A3D),
+      BarBadge.cashback => const Color(0xFF22B985),
+      BarBadge.promo => colors.labelSelected,
+      null => colors.labelSecondary,
+    };
+    final promoLabel = switch (promotion) {
+      BarBadge.happyHour => l10n.home_badge_happy_hour,
+      BarBadge.cashback => l10n.home_badge_cashback,
+      BarBadge.promo => l10n.home_badge_promotion,
+      null => null,
+    };
+    final text = (promotionText != null && promotionText!.trim().isNotEmpty)
+        ? promotionText!
+        : promoLabel;
+    return Semantics(
+      button: true,
+      label: name,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(BarzRadii.lg),
+        child: Container(
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: colors.surface,
+            borderRadius: BorderRadius.circular(BarzRadii.lg),
+            border: Border.all(color: colors.surfaceElevated, width: 1),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(BarzRadii.lg),
+                ),
+                child: SizedBox(
+                  height: 140,
+                  width: double.infinity,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      ColoredBox(color: colors.surfaceElevated),
+                      if (imageUrl != null)
+                        Image.network(
+                          imageUrl!,
+                          fit: BoxFit.cover,
+                          loadingBuilder: (c, child, progress) =>
+                              progress == null
+                              ? child
+                              : const Center(
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                          errorBuilder: (_, _, _) => Icon(
+                            LucideIcons.wine,
+                            color: colors.labelSecondary,
+                          ),
+                        )
+                      else
+                        Icon(LucideIcons.wine, color: colors.labelSecondary),
+                    ],
+                  ),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            name,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: colors.labelPrimary,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(Icons.star, size: 14, color: colors.labelSelected),
+                        const SizedBox(width: 2),
+                        Text(
+                          rating.toStringAsFixed(1),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: colors.labelPrimary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (distance != null && distance!.isNotEmpty) ...[
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.location_on_outlined,
+                            size: 14,
+                            color: colors.labelSecondary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            distance!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: colors.labelSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                    if (text != null) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        text,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: promoColor,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -52,7 +52,10 @@ class ProPlanSheet extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 24),
                   child: Stack(
                     children: [
-                      const Align(alignment: Alignment.center, child: _ProBadge()),
+                      const Align(
+                        alignment: Alignment.center,
+                        child: _ProBadge(),
+                      ),
                       Positioned(
                         right: 0,
                         top: 0,
@@ -181,20 +184,27 @@ class ProPlanSheet extends StatelessWidget {
                         style: TextStyle(fontSize: 13, color: mutedTextColor),
                       ),
                       const SizedBox(height: 20),
-                      BlocConsumer<SubscriptionTrialCubit, SubscriptionTrialState>(
+                      BlocConsumer<
+                        SubscriptionTrialCubit,
+                        SubscriptionTrialState
+                      >(
                         listener: (context, state) {
                           if (state.error != null && state.error!.isNotEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                  content: Text(state.error!),
-                                  backgroundColor: errorRed),
+                                content: Text(state.error!),
+                                backgroundColor: errorRed,
+                              ),
                             );
                           } else if (state.result != null) {
                             Navigator.of(context).pop();
                             ScaffoldMessenger.of(context).showSnackBar(
                               SnackBar(
-                                  content: Text(l10n.subscription_upgrade_success),
-                                  backgroundColor: successGreen),
+                                content: Text(
+                                  l10n.subscription_upgrade_success,
+                                ),
+                                backgroundColor: successGreen,
+                              ),
                             );
                           }
                         },
@@ -214,20 +224,28 @@ class ProPlanSheet extends StatelessWidget {
                               onPressed: state.isLoading
                                   ? null
                                   : () {
-                                      final sessionState =
-                                          context.read<SessionBloc>().state;
+                                      final sessionState = context
+                                          .read<SessionBloc>()
+                                          .state;
                                       if (sessionState is SessionReady &&
-                                          sessionState.session.activeBar != null) {
+                                          sessionState.session.activeBar !=
+                                              null) {
                                         final user = sessionState.session.user;
-                                        context.read<SubscriptionTrialCubit>().setupTrial(
+                                        context
+                                            .read<SubscriptionTrialCubit>()
+                                            .setupTrial(
                                               barId: sessionState
-                                                  .session.activeBar!.barId,
+                                                  .session
+                                                  .activeBar!
+                                                  .barId,
                                               ownerId: user.id ?? 0,
-                                              plan: 'MASTER', // Default to Master for trial
+                                              plan:
+                                                  'MASTER', // Default to Master for trial
                                               paymentMethodId:
                                                   'pm_card_visa', // Placeholder or real ID
                                               customerEmail: user.email ?? '',
-                                              customerName: user.displayName ?? '',
+                                              customerName:
+                                                  user.displayName ?? '',
                                             );
                                       }
                                     },

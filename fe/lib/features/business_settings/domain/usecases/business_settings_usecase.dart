@@ -60,6 +60,10 @@ class BusinessSettingsUsecase {
     required Uint8List imageBytes,
     required String fileName,
   }) {
-    return _repository.uploadBarImage(barId, imageBytes: imageBytes, fileName: fileName);
+    return _repository.uploadBarImage(
+      barId,
+      imageBytes: imageBytes,
+      fileName: fileName,
+    );
   }
 }

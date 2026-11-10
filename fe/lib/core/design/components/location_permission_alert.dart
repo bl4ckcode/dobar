@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:barz/l10n/app_localizations.dart';
 import 'package:barz/core/design/design_system.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 
@@ -17,10 +18,16 @@ class LocationPermissionAlert extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.dobarColors;
-    
+
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: BarzSpacing.md, vertical: BarzSpacing.sm),
-      padding: const EdgeInsets.symmetric(horizontal: BarzSpacing.md, vertical: BarzSpacing.sm),
+      margin: const EdgeInsets.symmetric(
+        horizontal: BarzSpacing.md,
+        vertical: BarzSpacing.sm,
+      ),
+      padding: const EdgeInsets.symmetric(
+        horizontal: BarzSpacing.md,
+        vertical: BarzSpacing.sm,
+      ),
       decoration: BoxDecoration(
         color: colors.surface.withValues(alpha: 0.95),
         borderRadius: BorderRadius.circular(BarzRadii.lg),
@@ -46,7 +53,7 @@ class LocationPermissionAlert extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Location Required',
+                  AppLocalizations.of(context)!.location_explain_title,
                   style: TextStyle(
                     color: colors.labelPrimary,
                     fontWeight: FontWeight.bold,
@@ -54,11 +61,8 @@ class LocationPermissionAlert extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  error ?? 'Enable location to find bars near you.',
-                  style: TextStyle(
-                    color: colors.labelSecondary,
-                    fontSize: 12,
-                  ),
+                  AppLocalizations.of(context)!.category_venues_no_location,
+                  style: TextStyle(color: colors.labelSecondary, fontSize: 12),
                 ),
               ],
             ),
@@ -79,7 +83,7 @@ class LocationPermissionAlert extends StatelessWidget {
                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
               ),
               child: Text(
-                'Grant',
+                AppLocalizations.of(context)!.location_explain_continue,
                 style: TextStyle(
                   color: colors.labelSelected,
                   fontWeight: FontWeight.bold,

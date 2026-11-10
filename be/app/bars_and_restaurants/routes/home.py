@@ -31,8 +31,25 @@ class NearbyBarSummary(BaseModel):
     name: str
     image_url: Optional[str] = None
     distance_meters: Optional[float] = None
-    rating: float = 0.0 # Placeholder for now
+    rating: float = 0.0
     is_open: bool = False # Simplified logic for now
+    category: Optional[str] = None
+    primary_promotion: Optional[str] = None  # happy_hour | cashback | promotion
+    promotion_text: Optional[str] = None
+
+
+class PromoSummaryModel(BaseModel):
+    total: int
+    pro_coupons: int = 0
+    cashback: int = 0
+    promotions: int = 0
+    campaigns: int = 0
+
+
+class NearestVenue(BaseModel):
+    id: int
+    name: str
+    distance_meters: Optional[float] = None
 
 class TrendingItem(BaseModel):
     id: int
@@ -63,6 +80,10 @@ class HomeResponse(BaseModel):
     active_promotions: List[ActivePromotion] = []
     location_mismatch: bool = False
     detected_country: Optional[str] = None
+    # Additive Home fields (absent/None => clients show a plain greeting)
+    display_name: Optional[str] = None
+    promo_summary: Optional[PromoSummaryModel] = None
+    nearest_venue: Optional[NearestVenue] = None
 
 
 # --- Helpes ---
@@ -176,40 +197,50 @@ async def get_home_dashboard(
         if detected_country and detected_country != user_country:
             location_mismatch = True
     
-    # 2. Nearby Bars
+    # 2. Nearby Bars (ready venues only; nearest-first, independent of ad tiers)
+    from app.bars_and_restaurants.services import venue_discovery as vd
+
     nearby_bars = []
-    if latitude is not None and longitude is not None:
-        bar_ids = await find_bars_near_location(latitude, longitude, max_distance=50000) # Increased to 50km for better discovery
-        if bar_ids:
-            # Reusing get_bars_by_ids from bars.py which handles image signing and merging
-            bars_data = await get_bars_by_ids(bar_ids)
-
-            # Filter by detected country from coordinates (not user profile country)
-            # Only filter if reverse geocoding succeeded; otherwise return all nearby bars
-            if detected_country:
-                bars_data = [b for b in bars_data if (b.get("country_code") or "BR") == detected_country]
-                print(f"DEBUG: get_home_dashboard: Found {len(bar_ids)} bars in Mongo, matched {len(bars_data)} in Postgres for detected country {detected_country}")
-            else:
-                print(f"DEBUG: get_home_dashboard: Found {len(bar_ids)} bars in Mongo, reverse geocode failed, returning all {len(bars_data)} bars")
-            
-            # Only surface bars that completed basic setup (menu + bank account)
-            if bars_data:
-                ready_bar_ids = [b["id"] for b in bars_data if b.get("id")]
-                setup_map = await get_bars_setup_status(ready_bar_ids)
-                bars_data = [b for b in bars_data if setup_map.get(b["id"], {}).get("is_ready", False)]
-
-            # Map to response model
-            for b in bars_data[:10]: # Limit to 10
-                 # Simple logic for is_open (can be improved to check operating hours)
-                 # Reusing the structure from bars.py output
-                nearby_bars.append(NearbyBarSummary(
-                    id=b["id"],
-                    name=b["name"],
-                    image_url=b.get("image_url"),
-                    distance_meters=b.get("approximateLocation"),
-                    rating=b.get("rating", 4.5), # Mock rating default
-                    is_open=True # Default to true for list view for now, or fetch sophisticated status
-                ))
+    nearest_venue = None
+    promo_summary = None
+    has_location = latitude is not None and longitude is not None
+    try:
+        if has_location:
+            venues = await vd.located_ready_venues(database, latitude, longitude, vd.DISCOVERY_RADIUS_M)
+        else:
+            venues = await vd.country_ready_venues(
+                database, getattr(current_user, "country_code", None) if current_user else None, limit=10
+            )
+        snapshot = None
+        if venues:
+            distances = {v["id"]: v.get("approximateLocation") for v in venues}
+            snapshot = await vd.load_promo_snapshot(database, [v["id"] for v in venues], distances)
+        if has_location and venues:
+            first = venues[0]
+            nearest_venue = NearestVenue(
+                id=first["id"], name=first["name"], distance_meters=first.get("approximateLocation")
+            )
+        if current_user:
+            summary = await vd.compute_promo_summary(
+                database, current_user.id, current_user.is_pro(), snapshot if has_location else None
+            )
+            promo_summary = PromoSummaryModel(**summary.__dict__)
+        vd.annotate(venues, snapshot)
+        for b in venues[:10]:  # carousel limit applies after count/nearest selection
+            nearby_bars.append(NearbyBarSummary(
+                id=b["id"],
+                name=b["name"],
+                image_url=b.get("image_url"),
+                distance_meters=b.get("approximateLocation"),
+                rating=b.get("rating") or 0.0,
+                is_open=True,
+                category=b.get("category"),
+                primary_promotion=b.get("primary_promotion"),
+                promotion_text=b.get("promotion_text"),
+            ))
+    except Exception as e:  # discovery failure must not break Home; summary stays unknown
+        print(f"⚠️ Warning: home discovery unavailable: {e}")
+        nearby_bars, nearest_venue, promo_summary = [], None, None
 
     # 3. Trending Drinks
     # "Most Wanted" = Top ordered
@@ -276,5 +307,8 @@ async def get_home_dashboard(
         ),
         active_promotions=active_promotions,
         location_mismatch=location_mismatch,
-        detected_country=detected_country
+        detected_country=detected_country,
+        display_name=(current_user.display_name or None) if current_user else None,
+        promo_summary=promo_summary,
+        nearest_venue=nearest_venue,
     )

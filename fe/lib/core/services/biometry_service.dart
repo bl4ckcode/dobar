@@ -7,7 +7,7 @@ class BiometryService {
 
   final SharedPreferences _prefs;
   final LocalAuthentication _localAuth = LocalAuthentication();
-  
+
   // Track if the user has authenticated with biometry during this session
   bool _authenticatedThisSession = false;
 
@@ -41,11 +41,11 @@ class BiometryService {
         biometricOnly: true,
         persistAcrossBackgrounding: true,
       );
-      
+
       if (authenticated) {
         _authenticatedThisSession = true;
       }
-      
+
       return authenticated;
     } catch (_) {
       return false;

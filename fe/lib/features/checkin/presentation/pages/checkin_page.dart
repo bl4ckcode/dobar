@@ -16,6 +16,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_lucide/flutter_lucide.dart';
 import 'package:barz/features/bars/domain/models/bar_model.dart';
 import 'package:barz/features/location/presentation/bloc/location_cubit.dart';
+import 'package:barz/features/location/presentation/location_permission_explainer.dart';
 
 class CheckinPage extends StatefulWidget {
   final BarModel? initialBar;
@@ -44,7 +45,10 @@ class _CheckinPageState extends State<CheckinPage> {
   @override
   Widget build(BuildContext context) => BlocProvider.value(
     value: bloc,
-    child: _CheckinPageContent(returnOnCheckin: widget.returnOnCheckin, barId: widget.initialBar?.id),
+    child: _CheckinPageContent(
+      returnOnCheckin: widget.returnOnCheckin,
+      barId: widget.initialBar?.id,
+    ),
   );
 }
 
@@ -74,7 +78,9 @@ class _CheckinPageContent extends StatelessWidget {
             previous.activeCheckin != current.activeCheckin,
         listener: (context, state) {
           if (!context.mounted) return;
-          if (returnOnCheckin && state.isCheckedIn && state.activeCheckin?.barId == barId) {
+          if (returnOnCheckin &&
+              state.isCheckedIn &&
+              state.activeCheckin?.barId == barId) {
             context.pop(true);
             return;
           }
@@ -91,12 +97,18 @@ class _CheckinPageContent extends StatelessWidget {
                 content: Text(
                   switch (state.error) {
                     'CHECKIN_INVALID_QR' => l10n.checkin_invalid_qr,
-                    'CHECKIN_TOO_FAR' || 'CHECKIN_DISTANCE_REQUIRED' => l10n.checkin_too_far,
-                    'CHECKIN_LOCATION_REQUIRED' || 'CHECKIN_LOCATION_STALE' || 'CHECKIN_STALE_LOCATION' => l10n.checkin_location_required,
-                    'CHECKIN_INVALID_LOCATION' || 'VALIDATION_ERROR' => l10n.checkin_invalid_location,
+                    'CHECKIN_TOO_FAR' ||
+                    'CHECKIN_DISTANCE_REQUIRED' => l10n.checkin_too_far,
+                    'CHECKIN_LOCATION_REQUIRED' ||
+                    'CHECKIN_LOCATION_STALE' ||
+                    'CHECKIN_STALE_LOCATION' => l10n.checkin_location_required,
+                    'CHECKIN_INVALID_LOCATION' ||
+                    'VALIDATION_ERROR' => l10n.checkin_invalid_location,
                     _ => l10n.checkin_retry_message,
                   },
-                  style: GoogleFonts.spaceGrotesk(color: Theme.of(context).colorScheme.onError),
+                  style: GoogleFonts.spaceGrotesk(
+                    color: Theme.of(context).colorScheme.onError,
+                  ),
                 ),
                 backgroundColor: Theme.of(context).colorScheme.error,
               ),
@@ -290,29 +302,29 @@ class _InitialViewState extends State<_InitialView> {
 
                 // Action Buttons (Stacked vertically one after another)
                 Column(
-                  children: [
-                    _PrimaryButton(
-                      onPressed: () => context.read<CheckinBloc>().add(
+                      children: [
+                        _PrimaryButton(
+                          onPressed: () => context.read<CheckinBloc>().add(
                             const StartQrScan(),
                           ),
-                      icon: LucideIcons.scan,
-                      label: l10n.checkin_qr_input,
-                    ),
-                    const SizedBox(height: 16),
-                    _SecondaryButton(
-                      onPressed: () {
-                        // Switch straight to nearby bars view
-                        context.read<CheckinBloc>().add(
+                          icon: LucideIcons.scan,
+                          label: l10n.checkin_qr_input,
+                        ),
+                        const SizedBox(height: 16),
+                        _SecondaryButton(
+                          onPressed: () {
+                            // Switch straight to nearby bars view
+                            context.read<CheckinBloc>().add(
                               const ResetCheckin(),
                             );
-                        // Trigger finding bars immediately
-                        _findNearbyBars(context);
-                      },
-                      icon: LucideIcons.map_pin,
-                      label: l10n.checkin_initial_find_nearby,
-                    ),
-                  ],
-                )
+                            // Trigger finding bars immediately
+                            _findNearbyBars(context);
+                          },
+                          icon: LucideIcons.map_pin,
+                          label: l10n.checkin_initial_find_nearby,
+                        ),
+                      ],
+                    )
                     .animate()
                     .fadeIn(delay: 400.ms, duration: 600.ms)
                     .slideY(begin: 0.2, end: 0),
@@ -331,9 +343,10 @@ class _InitialViewState extends State<_InitialView> {
     final locationCubit = context.read<LocationCubit>();
 
     try {
-      await locationCubit.getCurrentLocation();
+      if (!await LocationPermissionExplainer.ensure(context)) return;
+      if (!context.mounted) return;
       final locationData = locationCubit.state.currentLocation;
-      
+
       if (locationData != null && context.mounted) {
         context.read<CheckinBloc>().add(
           FindNearbyBars(
@@ -346,7 +359,9 @@ class _InitialViewState extends State<_InitialView> {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context)!.checkin_location_required),
+            content: Text(
+              AppLocalizations.of(context)!.checkin_location_required,
+            ),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -484,31 +499,55 @@ class _ScanningView extends StatefulWidget {
 class _ScanningViewState extends State<_ScanningView> {
   final controller = TextEditingController();
   void _submit() {
-    if (controller.text.trim().isNotEmpty) context.read<CheckinBloc>().add(QrCodeScanned(controller.text.trim()));
+    if (controller.text.trim().isNotEmpty) {
+      context.read<CheckinBloc>().add(QrCodeScanned(controller.text.trim()));
+    }
   }
+
   @override
-  void dispose() { controller.dispose(); super.dispose(); }
+  void dispose() {
+    controller.dispose();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final colors = context.dobarColors;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-        const SizedBox(height: 24),
-        Icon(LucideIcons.link, size: 48, color: colors.buttonPrimary),
-        const SizedBox(height: 24),
-        Text(l10n.checkin_qr_input, style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 12),
-        Text(l10n.checkin_qr_manual_hint, style: TextStyle(color: colors.labelSecondary)),
-        const SizedBox(height: 24),
-        TextField(controller: controller, decoration: InputDecoration(labelText: l10n.checkin_qr_input),
-          keyboardType: TextInputType.url, onSubmitted: (_) => _submit()),
-        const SizedBox(height: 24),
-        FilledButton(onPressed: _submit, child: Text(l10n.next)),
-        const SizedBox(height: 12),
-        _GhostButton(onPressed: () => context.read<CheckinBloc>().add(const ResetCheckin()), label: l10n.cancel),
-      ]),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const SizedBox(height: 24),
+          Icon(LucideIcons.link, size: 48, color: colors.buttonPrimary),
+          const SizedBox(height: 24),
+          Text(
+            l10n.checkin_qr_input,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            l10n.checkin_qr_manual_hint,
+            style: TextStyle(color: colors.labelSecondary),
+          ),
+          const SizedBox(height: 24),
+          TextField(
+            controller: controller,
+            decoration: InputDecoration(labelText: l10n.checkin_qr_input),
+            keyboardType: TextInputType.url,
+            onSubmitted: (_) => _submit(),
+          ),
+          const SizedBox(height: 24),
+          FilledButton(onPressed: _submit, child: Text(l10n.next)),
+          const SizedBox(height: 12),
+          _GhostButton(
+            onPressed: () =>
+                context.read<CheckinBloc>().add(const ResetCheckin()),
+            label: l10n.cancel,
+          ),
+        ],
+      ),
     );
   }
 }
@@ -653,7 +692,12 @@ class _BarCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            BarImageAvatar(barId: bar.id, imageUrl: bar.imageUrl, imageUrlExpiration: bar.imageUrlExpiration, radius: 30),
+            BarImageAvatar(
+              barId: bar.id,
+              imageUrl: bar.imageUrl,
+              imageUrlExpiration: bar.imageUrlExpiration,
+              radius: 30,
+            ),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
@@ -688,7 +732,9 @@ class _BarCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
-                bar.approximateLocation != null ? '${bar.approximateLocation!.round()} m' : '—',
+                bar.approximateLocation != null
+                    ? '${bar.approximateLocation!.round()} m'
+                    : '—',
                 style: GoogleFonts.spaceGrotesk(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
@@ -800,49 +846,76 @@ class _ConfirmCheckinViewState extends State<_ConfirmCheckinView> {
 
                 const SizedBox(height: 48),
 
-                if (widget.state.locationConfig?.method == LocationMethod.spotList)
+                if (widget.state.locationConfig?.method ==
+                    LocationMethod.spotList)
                   DropdownButtonFormField<String>(
-                    initialValue: widget.state.locationConfig!.spots.any((spot) => spot.id == widget.state.tableNumber)
-                        ? widget.state.tableNumber : null,
-                    decoration: InputDecoration(labelText: l10n.cart_location_label),
-                    items: widget.state.locationConfig!.spots.map((spot) => DropdownMenuItem(value: spot.id, child: Text(spot.name))).toList(),
-                    onChanged: (value) { if (value != null) context.read<CheckinBloc>().add(SetTableNumber(value)); },
+                    initialValue:
+                        widget.state.locationConfig!.spots.any(
+                          (spot) => spot.id == widget.state.tableNumber,
+                        )
+                        ? widget.state.tableNumber
+                        : null,
+                    decoration: InputDecoration(
+                      labelText: l10n.cart_location_label,
+                    ),
+                    items: widget.state.locationConfig!.spots
+                        .map(
+                          (spot) => DropdownMenuItem(
+                            value: spot.id,
+                            child: Text(spot.name),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      if (value != null) {
+                        context.read<CheckinBloc>().add(SetTableNumber(value));
+                      }
+                    },
                   )
-                else TextField(
-                  controller: _tableController,
-                  style: GoogleFonts.spaceGrotesk(
-                    color: colors.labelPrimary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  keyboardType: widget.state.locationConfig?.method == LocationMethod.freeText ? TextInputType.text : TextInputType.number,
-                  decoration: InputDecoration(
-                    labelText: widget.state.locationConfig?.method == LocationMethod.freeText ? l10n.cart_location_label : l10n.cart_table_number,
-                    labelStyle: GoogleFonts.spaceGrotesk(
-                      color: colors.labelSecondary,
+                else
+                  TextField(
+                    controller: _tableController,
+                    style: GoogleFonts.spaceGrotesk(
+                      color: colors.labelPrimary,
+                      fontWeight: FontWeight.bold,
                     ),
-                    hintText: "00",
-                    hintStyle: GoogleFonts.spaceGrotesk(
-                      color: colors.labelSecondary.withValues(alpha: 0.3),
+                    keyboardType:
+                        widget.state.locationConfig?.method ==
+                            LocationMethod.freeText
+                        ? TextInputType.text
+                        : TextInputType.number,
+                    decoration: InputDecoration(
+                      labelText:
+                          widget.state.locationConfig?.method ==
+                              LocationMethod.freeText
+                          ? l10n.cart_location_label
+                          : l10n.cart_table_number,
+                      labelStyle: GoogleFonts.spaceGrotesk(
+                        color: colors.labelSecondary,
+                      ),
+                      hintText: "00",
+                      hintStyle: GoogleFonts.spaceGrotesk(
+                        color: colors.labelSecondary.withValues(alpha: 0.3),
+                      ),
+                      prefixIcon: Icon(
+                        LucideIcons.hash,
+                        color: colors.buttonPrimary,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(color: colors.surfaceElevated),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        borderSide: BorderSide(color: colors.buttonPrimary),
+                      ),
+                      filled: true,
+                      fillColor: colors.surfaceElevated.withValues(alpha: 0.5),
                     ),
-                    prefixIcon: Icon(
-                      LucideIcons.hash,
-                      color: colors.buttonPrimary,
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(color: colors.surfaceElevated),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(color: colors.buttonPrimary),
-                    ),
-                    filled: true,
-                    fillColor: colors.surfaceElevated.withValues(alpha: 0.5),
-                  ),
-                  onChanged: (value) {
-                    context.read<CheckinBloc>().add(SetTableNumber(value));
-                  },
-                ).animate().fadeIn(delay: 300.ms),
+                    onChanged: (value) {
+                      context.read<CheckinBloc>().add(SetTableNumber(value));
+                    },
+                  ).animate().fadeIn(delay: 300.ms),
 
                 const SizedBox(height: 40),
 
@@ -1132,7 +1205,9 @@ class _PrimaryDestructiveButton extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(100),
           color: Theme.of(context).colorScheme.error.withValues(alpha: 0.1),
-          border: Border.all(color: Theme.of(context).colorScheme.error.withValues(alpha: 0.2)),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.error.withValues(alpha: 0.2),
+          ),
         ),
         child: Center(
           child: Text(

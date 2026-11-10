@@ -123,7 +123,10 @@ class _BarImageState extends State<BarImage> {
         child: SizedBox(
           width: 24,
           height: 24,
-          child: BarzLoadingWidget(size: 24, color: context.dobarColors.buttonPrimary),
+          child: BarzLoadingWidget(
+            size: 24,
+            color: context.dobarColors.buttonPrimary,
+          ),
         ),
       ),
     );
@@ -316,10 +319,15 @@ class _BarImageAvatarState extends State<BarImageAvatar> {
 
   @override
   Widget build(BuildContext context) {
-    final bgColor = widget.backgroundColor ?? context.dobarColors.surfaceElevated;
+    final bgColor =
+        widget.backgroundColor ?? context.dobarColors.surfaceElevated;
     final fallback =
         widget.fallbackIcon ??
-        Icon(Icons.store, size: widget.radius, color: context.dobarColors.labelSecondary);
+        Icon(
+          Icons.store,
+          size: widget.radius,
+          color: context.dobarColors.labelSecondary,
+        );
 
     if (_isLoading) {
       return CircleAvatar(
@@ -328,7 +336,10 @@ class _BarImageAvatarState extends State<BarImageAvatar> {
         child: SizedBox(
           width: widget.radius,
           height: widget.radius,
-          child: BarzLoadingWidget(size: 24, color: context.dobarColors.buttonPrimary),
+          child: BarzLoadingWidget(
+            size: 24,
+            color: context.dobarColors.buttonPrimary,
+          ),
         ),
       );
     }

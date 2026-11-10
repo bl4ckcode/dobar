@@ -1176,5 +1176,68 @@
   "profile_sign_in_again": "Iniciar sesión de nuevo",
   "profile_privacy_preferences": "Privacidad",
   "profile_privacy_location": "Compartir ubicación",
-  "profile_privacy_data": "Compartir datos de uso"
+  "profile_privacy_data": "Compartir datos de uso",
+  "home_greeting_plain": "Hola",
+  "home_greeting_promos": "Hola, {name}, tienes {count, plural, =1{1 promo} other{{count} promos}}",
+  "@home_greeting_promos": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "home_nearby_venue": "Estás cerca de {venue}",
+  "@home_nearby_venue": {
+    "placeholders": {
+      "venue": {
+        "type": "String"
+      }
+    }
+  },
+  "home_notifications_none": "Notificaciones",
+  "home_theme_to_dark": "Cambiar al tema oscuro",
+  "home_theme_to_light": "Cambiar al tema claro",
+  "home_categories_label": "Categorías",
+  "location_explain_title": "Usar tu ubicación",
+  "location_explain_body": "Necesitamos tu ubicación para verificar tu presencia en el local y hacer pedidos.",
+  "location_explain_continue": "Continuar",
+  "location_explain_cancel": "Ahora no",
+  "location_denied_title": "Ubicación no disponible",
+  "location_denied_body": "Sin ubicación no puedes hacer check-in ni pedidos. Puedes activarla en Ajustes.",
+  "location_open_settings": "Abrir ajustes",
+  "category_venues_search": "Buscar",
+  "category_venues_search_hint": "Buscar por nombre",
+  "category_venues_filter": "Filtros",
+  "category_venues_max_distance": "Distancia máxima: {km} km",
+  "@category_venues_max_distance": {
+    "placeholders": {
+      "km": {
+        "type": "int"
+      }
+    }
+  },
+  "category_venues_min_rating": "Calificación mínima: {rating}",
+  "@category_venues_min_rating": {
+    "placeholders": {
+      "rating": {
+        "type": "String"
+      }
+    }
+  },
+  "category_venues_promos_available": "Promos disponibles",
+  "category_venues_apply": "Aplicar",
+  "category_venues_clear": "Limpiar",
+  "category_venues_empty": "No se encontraron locales",
+  "category_venues_no_location": "Mostrando locales de tu país. Activa la ubicación para ver distancias.",
+  "home_greeting_promos_anon": "Hola, tienes {count, plural, =1{1 promo} other{{count} promos}}",
+  "@home_greeting_promos_anon": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  }
 }

@@ -143,11 +143,7 @@ class DigitalWalletsSection extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Image.asset(
-              'assets/icons/google.png',
-              width: 20,
-              height: 20,
-            ),
+            Image.asset('assets/icons/google.png', width: 20, height: 20),
             const SizedBox(width: 6),
             Text(
               'Pay',

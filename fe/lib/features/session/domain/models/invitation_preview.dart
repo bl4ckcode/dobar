@@ -29,7 +29,8 @@ class InvitationPreview {
       role: json['role'] as String? ?? 'staff',
       maskedRecipient: json['masked_recipient'] as String? ?? '',
       expiresAt: DateTime.parse(json['expires_at'] as String),
-      permissions: (json['permissions'] as List<dynamic>?)
+      permissions:
+          (json['permissions'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
           [],

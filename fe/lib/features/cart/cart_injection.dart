@@ -10,7 +10,11 @@ import 'package:barz/features/cart/presentation/bloc/cart_bloc.dart';
 
 Future<void> initCartInjection() async {
   getItInjector.registerLazySingleton<CartNetworkDataSource>(
-    () => CartNetworkDataSource(dio: DioNetwork.appAPI, currentUserId: () => getItInjector<SessionBloc>().state.currentSession?.user.id),
+    () => CartNetworkDataSource(
+      dio: DioNetwork.appAPI,
+      currentUserId: () =>
+          getItInjector<SessionBloc>().state.currentSession?.user.id,
+    ),
   );
 
   getItInjector.registerLazySingleton<AbstractCartRepository>(

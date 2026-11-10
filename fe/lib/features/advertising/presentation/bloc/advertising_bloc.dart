@@ -318,10 +318,7 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
       if (draft.status == CampaignStatus.draft ||
           draft.status == CampaignStatus.pending) {
         try {
-          published = await _usecase.publishCampaign(
-            draft.id,
-            draft.barId,
-          );
+          published = await _usecase.publishCampaign(draft.id, draft.barId);
         } catch (e) {
           publishError = _friendlyError(e);
         }
@@ -334,8 +331,7 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
             selectedCampaign: published,
             isLoadingCampaign: false,
             successMessage: null,
-            error:
-                'Rascunho criado, mas a ativação falhou: $publishError',
+            error: 'Rascunho criado, mas a ativação falhou: $publishError',
           ),
         );
         return;
@@ -355,12 +351,7 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
         ),
       );
     } catch (e) {
-      emit(
-        state.copyWith(
-          isLoadingCampaign: false,
-          error: _friendlyError(e),
-        ),
-      );
+      emit(state.copyWith(isLoadingCampaign: false, error: _friendlyError(e)));
     }
   }
 
@@ -398,12 +389,7 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
         ),
       );
     } catch (e) {
-      emit(
-        state.copyWith(
-          isLoadingCampaign: false,
-          error: _friendlyError(e),
-        ),
-      );
+      emit(state.copyWith(isLoadingCampaign: false, error: _friendlyError(e)));
     }
   }
 
@@ -413,7 +399,10 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
   ) async {
     emit(state.copyWith(isLoadingCampaign: true, error: null));
     try {
-      final campaign = await _usecase.pauseCampaign(event.campaignId, event.barId);
+      final campaign = await _usecase.pauseCampaign(
+        event.campaignId,
+        event.barId,
+      );
       final updatedCampaigns = state.campaigns
           .map((c) => c.id == campaign.id ? campaign : c)
           .toList();
@@ -436,7 +425,10 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
   ) async {
     emit(state.copyWith(isLoadingCampaign: true, error: null));
     try {
-      final campaign = await _usecase.resumeCampaign(event.campaignId, event.barId);
+      final campaign = await _usecase.resumeCampaign(
+        event.campaignId,
+        event.barId,
+      );
       final updatedCampaigns = state.campaigns
           .map((c) => c.id == campaign.id ? campaign : c)
           .toList();
@@ -460,8 +452,9 @@ class AdvertisingBloc extends Bloc<AdvertisingEvent, AdvertisingState> {
     emit(state.copyWith(isLoadingCampaign: true, error: null));
     try {
       await _usecase.deleteCampaign(event.campaignId, event.barId);
-      final updatedCampaigns =
-          state.campaigns.where((c) => c.id != event.campaignId).toList();
+      final updatedCampaigns = state.campaigns
+          .where((c) => c.id != event.campaignId)
+          .toList();
       emit(
         state.copyWith(
           campaigns: updatedCampaigns,

@@ -6,8 +6,16 @@ class PagarmeCardTokenizer implements CardTokenizer {
   final String publicKey;
 
   PagarmeCardTokenizer({Dio? dio, String? publicKey})
-    : _dio = dio ?? Dio(BaseOptions(connectTimeout: const Duration(seconds: 20), receiveTimeout: const Duration(seconds: 30))),
-      publicKey = publicKey ?? const String.fromEnvironment('PAGARME_PUBLIC_KEY');
+    : _dio =
+          dio ??
+          Dio(
+            BaseOptions(
+              connectTimeout: const Duration(seconds: 20),
+              receiveTimeout: const Duration(seconds: 30),
+            ),
+          ),
+      publicKey =
+          publicKey ?? const String.fromEnvironment('PAGARME_PUBLIC_KEY');
 
   @override
   Future<String> tokenize({
@@ -21,7 +29,9 @@ class PagarmeCardTokenizer implements CardTokenizer {
       throw const CardTokenizationException(unavailable: true);
     }
     final now = DateTime.now();
-    if (expMonth < 1 || expMonth > 12 || expYear < now.year ||
+    if (expMonth < 1 ||
+        expMonth > 12 ||
+        expYear < now.year ||
         (expYear == now.year && expMonth < now.month)) {
       throw const CardTokenizationException();
     }

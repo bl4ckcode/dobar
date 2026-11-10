@@ -86,7 +86,10 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Account & Data', style: TextStyle(color: errorRed)),
+        title: const Text(
+          'Delete Account & Data',
+          style: TextStyle(color: errorRed),
+        ),
         content: const Text(
           'Are you sure you want to permanently delete your account and data? This action cannot be undone.',
         ),
@@ -134,7 +137,9 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
           if (mounted) {
             AppRoute.login.go(context);
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Your data and account have been deleted.')),
+              const SnackBar(
+                content: Text('Your data and account have been deleted.'),
+              ),
             );
           }
         },
@@ -321,10 +326,16 @@ class _PrivacySettingsPageState extends State<PrivacySettingsPage> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: isDestructive ? errorRed.withValues(alpha: 0.1) : barzGoldSoft,
+                color: isDestructive
+                    ? errorRed.withValues(alpha: 0.1)
+                    : barzGoldSoft,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: isDestructive ? errorRed : barzGold, size: 24),
+              child: Icon(
+                icon,
+                color: isDestructive ? errorRed : barzGold,
+                size: 24,
+              ),
             ),
             const SizedBox(width: 16),
             Expanded(

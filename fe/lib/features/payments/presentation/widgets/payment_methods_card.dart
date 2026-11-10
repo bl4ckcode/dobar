@@ -192,8 +192,7 @@ class _PaymentMethodsCardState extends State<PaymentMethodsCard> {
                       : AnimatedCrossFade(
                           firstChild: AddNewCardWorkflow(
                             isDark: widget.isDark,
-                            onClose: () =>
-                                setState(() => _showAddCard = false),
+                            onClose: () => setState(() => _showAddCard = false),
                             onComplete: _handleAddCardComplete,
                           ),
                           secondChild: Column(
@@ -218,8 +217,7 @@ class _PaymentMethodsCardState extends State<PaymentMethodsCard> {
                                       width: double.infinity,
                                       padding: const EdgeInsets.all(16),
                                       decoration: BoxDecoration(
-                                        borderRadius:
-                                            BorderRadius.circular(12),
+                                        borderRadius: BorderRadius.circular(12),
                                         border: Border.all(
                                           color: widget.isDark
                                               ? const Color(0xFF444444)
@@ -254,7 +252,8 @@ class _PaymentMethodsCardState extends State<PaymentMethodsCard> {
                               const SizedBox(height: 24),
                               const SizedBox(height: 16),
                               ...widget.paymentOptions.map((option) {
-                                final isSelected = widget.selectedCardId ==
+                                final isSelected =
+                                    widget.selectedCardId ==
                                     (option.label.contains('Nubank')
                                         ? '__nubank__'
                                         : '__pix__');
@@ -262,7 +261,9 @@ class _PaymentMethodsCardState extends State<PaymentMethodsCard> {
                                   onTap: option.onTap,
                                   child: Container(
                                     margin: const EdgeInsets.symmetric(
-                                        horizontal: 16, vertical: 8),
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
                                     padding: const EdgeInsets.all(16),
                                     decoration: BoxDecoration(
                                       color: widget.isDark
@@ -273,15 +274,17 @@ class _PaymentMethodsCardState extends State<PaymentMethodsCard> {
                                         color: isSelected
                                             ? barzGold
                                             : (widget.isDark
-                                                ? const Color(0xFF444444)
-                                                : const Color(0xFFDDDDDD)),
+                                                  ? const Color(0xFF444444)
+                                                  : const Color(0xFFDDDDDD)),
                                         width: 2,
                                       ),
                                     ),
                                     child: Row(
                                       children: [
-                                        Icon(option.icon,
-                                            color: option.iconColor),
+                                        Icon(
+                                          option.icon,
+                                          color: option.iconColor,
+                                        ),
                                         const SizedBox(width: 16),
                                         Expanded(
                                           child: Text(
@@ -309,8 +312,11 @@ class _PaymentMethodsCardState extends State<PaymentMethodsCard> {
                                                 : Colors.transparent,
                                           ),
                                           child: isSelected
-                                              ? const Icon(Icons.check,
-                                                  size: 16, color: barzDark)
+                                              ? const Icon(
+                                                  Icons.check,
+                                                  size: 16,
+                                                  color: barzDark,
+                                                )
                                               : null,
                                         ),
                                       ],

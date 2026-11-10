@@ -126,7 +126,8 @@ class CampaignService:
             "tagline": None,
             "banner_url": None,
             "animation_url": None,
-            "promoted_item_id": None
+            "promoted_item_id": None,
+            "promote_happy_hour": False,
         }
         
         # Prepare distribution

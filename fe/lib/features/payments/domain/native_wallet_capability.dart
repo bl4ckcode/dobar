@@ -78,7 +78,11 @@ class NativeWalletCapability {
     final os = platform ?? defaultTargetPlatform;
     if (web) return NativeWalletAvailability.none;
 
-    Future<bool> offered(NativeWallet wallet, TargetPlatform required, String key) async {
+    Future<bool> offered(
+      NativeWallet wallet,
+      TargetPlatform required,
+      String key,
+    ) async {
       if (os != required) return false;
       if (!config.isConfigured(wallet)) return false;
       if (!gatewayPaymentMethods.contains(key)) return false;
@@ -90,8 +94,16 @@ class NativeWalletCapability {
     }
 
     return NativeWalletAvailability(
-      applePay: await offered(NativeWallet.applePay, TargetPlatform.iOS, 'apple_pay'),
-      googlePay: await offered(NativeWallet.googlePay, TargetPlatform.android, 'google_pay'),
+      applePay: await offered(
+        NativeWallet.applePay,
+        TargetPlatform.iOS,
+        'apple_pay',
+      ),
+      googlePay: await offered(
+        NativeWallet.googlePay,
+        TargetPlatform.android,
+        'google_pay',
+      ),
     );
   }
 }

@@ -79,7 +79,11 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
 
           final activeBar = sessionState.session.activeBar;
           if (activeBar == null) {
-            return Center(child: Text(AppLocalizations.of(context)!.business_no_bar_selected));
+            return Center(
+              child: Text(
+                AppLocalizations.of(context)!.business_no_bar_selected,
+              ),
+            );
           }
 
           // Initial Load
@@ -137,9 +141,8 @@ class _StaffManagementPageState extends State<StaffManagementPage> {
                             activeBar.barId,
                             isDark,
                           ),
-                          orElse: () => Center(
-                            child: Text(l10n.business_staff_no_data),
-                          ),
+                          orElse: () =>
+                              Center(child: Text(l10n.business_staff_no_data)),
                         ),
                       ),
                     ],

@@ -249,9 +249,11 @@ class VersionMigrationService {
     // Also consider authenticated if we have a refresh token
     final refreshToken = await _tokenStorage.getRefreshToken();
     final hasRefreshToken = refreshToken != null && refreshToken.isNotEmpty;
-    
-    _debugLog('🔐 Auth check - Access: $hasAccessToken, Refresh: $hasRefreshToken');
-    
+
+    _debugLog(
+      '🔐 Auth check - Access: $hasAccessToken, Refresh: $hasRefreshToken',
+    );
+
     return hasAccessToken || hasRefreshToken;
   }
 

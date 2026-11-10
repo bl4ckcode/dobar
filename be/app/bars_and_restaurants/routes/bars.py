@@ -1,7 +1,7 @@
 import math
 import time
 import re
-from fastapi import APIRouter, UploadFile, File, Form, Depends, Body
+from fastapi import APIRouter, UploadFile, File, Form, Depends, Body, Response
 from fastapi.params import Query
 from pydantic import EmailStr
 from sqlalchemy import and_
@@ -431,41 +431,66 @@ async def get_bar_setup_status(bar_id: int, current_user: AuthUser = Depends(get
 
 @bars_router.get("/", response_model=list[Bar])
 async def get_bars(
-    latitude: float = Query(..., description="Latitude of the location"),
-    longitude: float = Query(..., description="Longitude of the location"),
+    response: Response,
+    latitude: Optional[float] = Query(None, description="Latitude of the location (optional)"),
+    longitude: Optional[float] = Query(None, description="Longitude of the location (optional)"),
     max_distance: float = Query(50000, description="Max distance in meters (default: 50000m)"),
     current_user: AuthUser = Depends(get_current_user),
-    category: Optional[str] = Query(None, description="Filter by category: bar, night_club, restaurant_bar, cafe_bar, hotel_bar, casino")
+    category: Optional[str] = Query(None, description="Filter by category: bar, night_club, restaurant_bar, cafe_bar, hotel_bar, casino"),
+    q: Optional[str] = Query(None, max_length=100, description="Case-insensitive name search"),
+    min_rating: Optional[float] = Query(None, ge=0, le=5, description="Minimum venue rating"),
+    has_promotions: bool = Query(False, description="Only venues with a currently available promotion"),
+    limit: Optional[int] = Query(None, ge=1, le=100, description="Opt-in pagination page size; enables nearest-first/name ordering"),
+    offset: int = Query(0, ge=0, description="Pagination offset (used with limit)"),
 ):
-    bar_ids = await find_bars_near_location(latitude, longitude, max_distance)
+    """List ready venues. Without ``limit`` this keeps the legacy behaviour
+    (coordinates required for results, tier-first ordering, full list).
 
-    if not bar_ids:
-        return []
+    With ``limit`` the listing is paginated *after* filtering and ordered
+    nearest-first (location) or by name then id (no location, user's country).
+    Pagination metadata is returned in ``X-Total-Count`` / ``X-Has-More``.
+    """
+    from app.bars_and_restaurants.services import venue_discovery as vd
 
-    bars = await get_bars_by_ids(bar_ids)
+    has_location = latitude is not None and longitude is not None
+    listing_mode = limit is not None or q is not None or min_rating is not None or has_promotions or not has_location
 
-    if not bars:
-        return []
+    if not listing_mode:
+        bar_ids = await find_bars_near_location(latitude, longitude, max_distance)
+        if not bar_ids:
+            return []
+        bars = await get_bars_by_ids(bar_ids)
+        if not bars:
+            return []
+        detected_country = await reverse_geocode(latitude, longitude)
+        if detected_country:
+            bars = [b for b in bars if (b.get("country_code") or "BR") == detected_country]
+        if category:
+            bars = [b for b in bars if b.get("category") == category]
+        if bars:
+            setup_map = await get_bars_setup_status([b["id"] for b in bars if b.get("id")])
+            bars = [b for b in bars if setup_map.get(b["id"], {}).get("is_ready", False)]
+        return bars
 
-    # Filter by detected country from coordinates (not user profile country)
-    # Only filter if reverse geocoding succeeds; otherwise return all nearby bars
-    detected_country = await reverse_geocode(latitude, longitude)
-    if detected_country:
-        bars = [b for b in bars if (b.get("country_code") or "BR") == detected_country]
-        print(f"DEBUG: /bars filtered by detected country {detected_country}, returning {len(bars)} bars")
+    if has_location:
+        venues = await vd.located_ready_venues(
+            database, latitude, longitude, min(max_distance, vd.DISCOVERY_RADIUS_M), category
+        )
     else:
-        print(f"DEBUG: /bars reverse geocode failed, returning all {len(bars)} nearby bars")
+        venues = await vd.country_ready_venues(database, getattr(current_user, "country_code", None), category)
 
-    if category:
-        bars = [b for b in bars if b.get("category") == category]
-
-    # Only surface bars that have completed basic setup (menu + bank account)
-    if bars:
-        bar_ids = [b["id"] for b in bars if b.get("id")]
-        setup_map = await get_bars_setup_status(bar_ids)
-        bars = [b for b in bars if setup_map.get(b["id"], {}).get("is_ready", False)]
-
-    return bars
+    snapshot = None
+    if venues:
+        distances = {v["id"]: v.get("approximateLocation") for v in venues}
+        snapshot = await vd.load_promo_snapshot(database, [v["id"] for v in venues], distances)
+    venues = vd.apply_filters(venues, snapshot, q, min_rating, has_promotions)
+    total = len(venues)
+    page_size = limit if limit is not None else total
+    page = venues[offset: offset + page_size] if limit is not None else venues
+    vd.annotate(page, snapshot)
+    response.headers["X-Total-Count"] = str(total)
+    response.headers["X-Has-More"] = "true" if offset + len(page) < total else "false"
+    return page
 
 @bars_router.put("/{bar_id}/image", response_model=dict)
 async def update_bar_image(bar_id: int, image: UploadFile = File(...)):

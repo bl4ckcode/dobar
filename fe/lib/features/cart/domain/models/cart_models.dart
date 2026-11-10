@@ -72,13 +72,16 @@ class Promotion {
   });
 
   factory Promotion.fromJson(Map<String, dynamic> json) {
-    final resolvedType = (json['promotion_type'] ?? json['type'] ?? 'discount') as String;
+    final resolvedType =
+        (json['promotion_type'] ?? json['type'] ?? 'discount') as String;
     return Promotion(
       id: json['id']?.toString() ?? '',
       name: (json['title'] ?? json['name'] ?? 'Promotion') as String,
       benefit: json['benefit_text'] ?? '',
       type: resolvedType,
-      value: ((json['discount_value'] ?? json['value']) as num?)?.toDouble() ?? 0.0,
+      value:
+          ((json['discount_value'] ?? json['value']) as num?)?.toDouble() ??
+          0.0,
       active: json['is_active_by_default'] ?? false,
     );
   }

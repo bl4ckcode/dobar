@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:barz/core/design/design_system.dart';
 import 'package:flutter/material.dart';
+import 'package:barz/core/session/shell_session.dart';
 import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -19,8 +20,6 @@ import 'package:barz/features/location/presentation/bloc/location_state.dart';
 import 'package:barz/shared/presentation/widget/bar_image.dart';
 import 'package:barz/core/utils/marker_generator.dart';
 import 'package:barz/core/design/components/location_permission_alert.dart';
-
-
 
 const String _darkMapStyle = '''
 [
@@ -114,9 +113,46 @@ class FindConnectedViewState extends State<FindConnectedView>
       duration: const Duration(milliseconds: 400),
     );
 
+    _restoreSession();
     _searchController.addListener(_onSearchChanged);
     WidgetsBinding.instance.addObserver(this);
   }
+
+  FindSession get _session => getItInjector<ShellSession>().find;
+
+  /// Rebuild Find from saved shell state. The route is redrawn from the saved
+  /// points; no directions request is issued.
+  void _restoreSession() {
+    final saved = _session;
+    _searchController.text = saved.searchText;
+    _showListPanel = saved.showListPanel;
+    _isListExpanded = saved.isListExpanded;
+    _isSearchExpanded = saved.isSearchExpanded;
+    if (_showListPanel) _panelAnimController.value = 1;
+    _selectedDestinationBar = saved.destination;
+    _routeDistance = saved.routeDistance;
+    _routeDuration = saved.routeDuration;
+    if (saved.destination != null && saved.routePoints.isNotEmpty) {
+      _polylines.add(
+        Polyline(
+          polylineId: const PolylineId('route'),
+          color: const Color(0xFFEBC147),
+          width: 5,
+          points: saved.routePoints.map((p) => LatLng(p[0], p[1])).toList(),
+        ),
+      );
+    }
+  }
+
+  void _saveSession() {
+    final saved = _session;
+    saved.searchText = _searchController.text;
+    saved.showListPanel = _showListPanel;
+    saved.isListExpanded = _isListExpanded;
+    saved.isSearchExpanded = _isSearchExpanded;
+  }
+
+  CameraPosition? _lastCamera;
 
   /// Load bars when this view becomes visible
   /// Called by WireframeShell when user taps Find tab
@@ -135,7 +171,9 @@ class FindConnectedViewState extends State<FindConnectedView>
         // Location is ready, load bars immediately
         final lat = locationState.currentLocation!.latitude;
         final lng = locationState.currentLocation!.longitude;
-        debugPrint('[FindView] Loading bars on tab activation (location ready)');
+        debugPrint(
+          '[FindView] Loading bars on tab activation (location ready)',
+        );
         barBloc.add(LoadNearbyBars(latitude: lat, longitude: lng));
         _needsBarsLoad = false;
       } else {
@@ -163,6 +201,17 @@ class FindConnectedViewState extends State<FindConnectedView>
 
   @override
   void dispose() {
+    _saveSession();
+    final cam = _lastCamera;
+    if (cam != null) {
+      _session
+        ..cameraLat = cam.target.latitude
+        ..cameraLng = cam.target.longitude
+        ..cameraZoom = cam.zoom;
+    }
+    if (_mapController.isCompleted) {
+      _mapController.future.then((c) => c.dispose());
+    }
     WidgetsBinding.instance.removeObserver(this);
     _searchController.removeListener(_onSearchChanged);
     _searchController.dispose();
@@ -176,7 +225,9 @@ class FindConnectedViewState extends State<FindConnectedView>
       debugPrint('[FindView] App resumed, checking location state...');
       final locationState = context.read<LocationCubit>().state;
       if (locationState.currentLocation == null) {
-        debugPrint('[FindView] Location still null on resume, re-triggering getCurrentLocation');
+        debugPrint(
+          '[FindView] Location still null on resume, re-triggering getCurrentLocation',
+        );
         context.read<LocationCubit>().getCurrentLocation();
       }
     }
@@ -184,6 +235,7 @@ class FindConnectedViewState extends State<FindConnectedView>
 
   void _onSearchChanged() {
     final query = _searchController.text;
+    _session.searchText = query;
     final barState = context.read<BarBloc>().state;
     if (barState is BarsLoaded) {
       _filterBars(query, barState.bars);
@@ -222,6 +274,7 @@ class FindConnectedViewState extends State<FindConnectedView>
     setState(() {
       _showListPanel = !_showListPanel;
     });
+    _saveSession();
     if (_showListPanel) {
       _panelAnimController.forward();
     } else {
@@ -336,7 +389,11 @@ class FindConnectedViewState extends State<FindConnectedView>
                               color: colors.surfaceElevated,
                               borderRadius: BorderRadius.circular(BarzRadii.sm),
                             ),
-                            child: Icon(Icons.store, color: colors.labelSecondary, size: 20),
+                            child: Icon(
+                              Icons.store,
+                              color: colors.labelSecondary,
+                              size: 20,
+                            ),
                           ),
                         ),
                         const SizedBox(width: BarzSpacing.md),
@@ -365,10 +422,7 @@ class FindConnectedViewState extends State<FindConnectedView>
                             ],
                           ),
                         ),
-                        Icon(
-                          Icons.chevron_right,
-                          color: colors.labelSecondary,
-                        ),
+                        Icon(Icons.chevron_right, color: colors.labelSecondary),
                       ],
                     ),
                   );
@@ -518,6 +572,7 @@ class FindConnectedViewState extends State<FindConnectedView>
     setState(() {
       _selectedDestinationBar = bar;
     });
+    _session.destination = bar;
 
     final locationState = context.read<LocationCubit>().state;
     final userLoc = locationState.currentLocation;
@@ -540,6 +595,7 @@ class FindConnectedViewState extends State<FindConnectedView>
       _routeDistance = null;
       _routeDuration = null;
     });
+    _session.clearRoute();
   }
 
   Future<void> _drawRoute(LatLng start, LatLng dest) async {
@@ -587,6 +643,12 @@ class FindConnectedViewState extends State<FindConnectedView>
           _routeDistance = distance;
           _routeDuration = duration;
         });
+        _session
+          ..routePoints = [
+            for (final p in points) [p.latitude, p.longitude],
+          ]
+          ..routeDistance = distance
+          ..routeDuration = duration;
 
         final controller = await _mapController.future;
         LatLngBounds bounds = _boundsFromLatLngList(points);
@@ -649,7 +711,9 @@ class FindConnectedViewState extends State<FindConnectedView>
     }
 
     const myMaps = [ml.MapApp.apple, ml.MapApp.google, ml.MapApp.waze];
-    final availableMaps = await ml.MapLauncher.marker(ml.Location.coords(bar.latitude!, bar.longitude!, title: bar.name)).getSupportedMaps(myMaps);
+    final availableMaps = await ml.MapLauncher.marker(
+      ml.Location.coords(bar.latitude!, bar.longitude!, title: bar.name),
+    ).getSupportedMaps(myMaps);
     if (availableMaps.isEmpty) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -695,10 +759,7 @@ class FindConnectedViewState extends State<FindConnectedView>
             const SizedBox(height: BarzSpacing.md),
             ...availableMaps.map(
               (map) => ListTile(
-                leading: Icon(
-                  _getMapIcon(map),
-                  color: colors.labelSelected,
-                ),
+                leading: Icon(_getMapIcon(map), color: colors.labelSelected),
                 title: Text(
                   map.name,
                   style: TextStyle(color: colors.labelPrimary),
@@ -720,11 +781,11 @@ class FindConnectedViewState extends State<FindConnectedView>
       case ml.MapApp.waze:
         return Icons.navigation;
       case ml.MapApp.google:
-      return Icons.map;
+        return Icons.map;
       case ml.MapApp.apple:
-      return Icons.map_outlined;
+        return Icons.map_outlined;
       default:
-      return Icons.directions;
+        return Icons.directions;
     }
   }
 
@@ -807,7 +868,8 @@ class FindConnectedViewState extends State<FindConnectedView>
                 child: LocationPermissionAlert(
                   error: locationState.error,
                   isLoading: locationState.isLoading,
-                  onGrant: () => context.read<LocationCubit>().getCurrentLocation(),
+                  onGrant: () =>
+                      context.read<LocationCubit>().getCurrentLocation(),
                 ),
               ),
           ],
@@ -860,9 +922,13 @@ class FindConnectedViewState extends State<FindConnectedView>
               // Cluster marker
               markers.add(
                 Marker(
-                  markerId: MarkerId('cluster_${pos.latitude}_${pos.longitude}'),
+                  markerId: MarkerId(
+                    'cluster_${pos.latitude}_${pos.longitude}',
+                  ),
                   position: pos,
-                  icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
+                  icon: BitmapDescriptor.defaultMarkerWithHue(
+                    BitmapDescriptor.hueAzure,
+                  ),
                   infoWindow: InfoWindow(
                     title: '${barsAtPos.length} Bars here',
                     snippet: barsAtPos.map((b) => b.name).join(', '),
@@ -879,10 +945,13 @@ class FindConnectedViewState extends State<FindConnectedView>
           style: Theme.of(context).brightness == Brightness.dark
               ? _darkMapStyle
               : _lightMapStyle,
-          initialCameraPosition: CameraPosition(
-            target: LatLng(lat, lng),
-            zoom: 15,
-          ),
+          initialCameraPosition: _session.hasCamera
+              ? CameraPosition(
+                  target: LatLng(_session.cameraLat!, _session.cameraLng!),
+                  zoom: _session.cameraZoom,
+                )
+              : CameraPosition(target: LatLng(lat, lng), zoom: 15),
+          onCameraMove: (position) => _lastCamera = position,
           myLocationEnabled: true,
           myLocationButtonEnabled: false,
           zoomControlsEnabled: false,

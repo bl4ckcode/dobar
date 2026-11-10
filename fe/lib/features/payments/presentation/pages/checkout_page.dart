@@ -95,15 +95,25 @@ class _CheckoutPageState extends State<CheckoutPage> {
     _cachedBarId = _checkoutResult?.barId;
     _paymentAttemptKey = _checkoutResult?.paymentAttemptKey;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) context.read<UserBloc>().add(const UserEvent.loadCurrentUser());
+      if (mounted) {
+        context.read<UserBloc>().add(const UserEvent.loadCurrentUser());
+      }
     });
   }
 
   Future<bool> _beforeAddCard() async {
     final user = context.read<UserBloc>().state.user;
-    if (user == null) { context.read<UserBloc>().add(const UserEvent.loadCurrentUser()); return false; }
-    if (!user.hasCompletedRegistration) { await _openCompleteRegistration(user); return false; }
-    if (!user.documents.any((doc) => doc.type == DocumentType.cpf && doc.number.trim().isNotEmpty)) {
+    if (user == null) {
+      context.read<UserBloc>().add(const UserEvent.loadCurrentUser());
+      return false;
+    }
+    if (!user.hasCompletedRegistration) {
+      await _openCompleteRegistration(user);
+      return false;
+    }
+    if (!user.documents.any(
+      (doc) => doc.type == DocumentType.cpf && doc.number.trim().isNotEmpty,
+    )) {
       _resumePaymentAfterDocument = false;
       _showCpfPrompt(context, user);
       return false;
@@ -204,7 +214,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
         ),
         BlocListener<UserBloc, UserState>(
           listener: (context, state) {
-            if (_isWaitingForProfile && !state.isLoading && state.error == null && state.user != null) {
+            if (_isWaitingForProfile &&
+                !state.isLoading &&
+                state.error == null &&
+                state.user != null) {
               setState(() => _isWaitingForProfile = false);
               if (state.user!.hasCompletedRegistration) {
                 _handlePayment(context, widget.arguments!);
@@ -218,12 +231,22 @@ class _CheckoutPageState extends State<CheckoutPage> {
               );
               if (hasCpf && !state.isUpdating) {
                 setState(() => _isWaitingForDocument = false);
-                if (_resumePaymentAfterDocument) _handlePayment(context, widget.arguments!);
+                if (_resumePaymentAfterDocument) {
+                  _handlePayment(context, widget.arguments!);
+                }
               }
             }
-            if (state.error != null && !state.isLoading && !state.isUpdating && (_isWaitingForDocument || _isWaitingForProfile)) {
-              setState(() { _isWaitingForDocument = false; _isWaitingForProfile = false; });
-              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.error!)));
+            if (state.error != null &&
+                !state.isLoading &&
+                !state.isUpdating &&
+                (_isWaitingForDocument || _isWaitingForProfile)) {
+              setState(() {
+                _isWaitingForDocument = false;
+                _isWaitingForProfile = false;
+              });
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text(state.error!)));
             }
           },
         ),
@@ -354,7 +377,9 @@ class _CheckoutPageState extends State<CheckoutPage> {
             total: widget.arguments?.total ?? 0,
             isLoading:
                 _isProcessing || _isWaitingForProfile || _isOpeningRegistration,
-            loadingLabel: _isWaitingForProfile ? l10n.payment_loading_profile : null,
+            loadingLabel: _isWaitingForProfile
+                ? l10n.payment_loading_profile
+                : null,
             onPressed: () => _handlePayment(context, widget.arguments!),
           ),
         ),
@@ -411,7 +436,10 @@ class _CheckoutPageState extends State<CheckoutPage> {
     );
   }
 
-  Future<void> _handlePayment(BuildContext context, CheckoutArguments args) async {
+  Future<void> _handlePayment(
+    BuildContext context,
+    CheckoutArguments args,
+  ) async {
     if (_isProcessing || _isWaitingForProfile || _isOpeningRegistration) {
       return;
     }
@@ -428,18 +456,35 @@ class _CheckoutPageState extends State<CheckoutPage> {
       return;
     }
 
-    if (_selectedCardId != '__pix__' && int.tryParse(_selectedCardId ?? '') == null) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.payment_select_method)));
+    if (_selectedCardId != '__pix__' &&
+        int.tryParse(_selectedCardId ?? '') == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.payment_select_method),
+        ),
+      );
       return;
     }
-    if (!userState.user!.documents.any((doc) => doc.type == DocumentType.cpf && doc.number.trim().isNotEmpty)) {
+    if (!userState.user!.documents.any(
+      (doc) => doc.type == DocumentType.cpf && doc.number.trim().isNotEmpty,
+    )) {
       _resumePaymentAfterDocument = true;
       _showCpfPrompt(context, userState.user!);
       return;
     }
     final cartState = context.read<CartBloc>().state;
-    final venue = _checkoutResult?.barId ?? (cartState is CheckoutSuccess ? cartState.result.barId : cartState is CartLoaded ? cartState.barId : _cachedBarId);
-    if (venue == null || !await CheckinGate.ensure(context, venue) || !context.mounted) return;
+    final venue =
+        _checkoutResult?.barId ??
+        (cartState is CheckoutSuccess
+            ? cartState.result.barId
+            : cartState is CartLoaded
+            ? cartState.barId
+            : _cachedBarId);
+    if (venue == null ||
+        !await CheckinGate.ensure(context, venue) ||
+        !context.mounted) {
+      return;
+    }
     if (_checkoutResult != null) {
       _initiatePaymentProcess(context, _checkoutResult!);
       return;
@@ -492,7 +537,11 @@ class _CheckoutPageState extends State<CheckoutPage> {
   void _initiatePaymentProcess(BuildContext context, CheckoutResult result) {
     _checkoutResult = result;
     _cachedBarId = result.barId ?? _cachedBarId;
-    if (const {'paid', 'completed', 'approved'}.contains(result.paymentStatus)) {
+    if (const {
+      'paid',
+      'completed',
+      'approved',
+    }.contains(result.paymentStatus)) {
       if (mounted) setState(() => _isProcessing = false);
       context.read<CartBloc>().add(cart_event.ClearCart());
       AppRoute.goOrder(context, result.orderId);
@@ -504,12 +553,21 @@ class _CheckoutPageState extends State<CheckoutPage> {
 
     if (user == null) {
       if (mounted) setState(() => _isProcessing = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(AppLocalizations.of(context)!.payment_user_session_lost)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            AppLocalizations.of(context)!.payment_user_session_lost,
+          ),
+        ),
+      );
       return;
     }
 
     final barId = result.barId ?? _cachedBarId;
-    if (barId == null) { setState(() => _isProcessing = false); return; }
+    if (barId == null) {
+      setState(() => _isProcessing = false);
+      return;
+    }
 
     String? documentNumber;
     if (user.documents.isNotEmpty) {
@@ -543,7 +601,8 @@ class _CheckoutPageState extends State<CheckoutPage> {
       orderId: result.orderId,
       barId: barId,
       amount: result.total,
-      idempotencyKey: _paymentAttemptKey ??= result.paymentAttemptKey ?? 'order-${result.orderId}-charge',
+      idempotencyKey: _paymentAttemptKey ??=
+          result.paymentAttemptKey ?? 'order-${result.orderId}-charge',
       paymentType: paymentType,
       paymentMethodId:
           paymentType == PaymentType.credit &&
@@ -591,7 +650,12 @@ class _CheckoutPageState extends State<CheckoutPage> {
         timer.cancel();
         if (mounted) {
           // Dismiss modal and show timeout error
-          if (_pixModalOpen) Navigator.of(context, rootNavigator: true).pop(PixPaymentResult.timeout);
+          if (_pixModalOpen) {
+            Navigator.of(
+              context,
+              rootNavigator: true,
+            ).pop(PixPaymentResult.timeout);
+          }
           _currentPixPayment = null;
           setState(() => _isProcessing = false);
           ScaffoldMessenger.of(context).showSnackBar(
@@ -605,9 +669,7 @@ class _CheckoutPageState extends State<CheckoutPage> {
         return;
       }
       if (mounted) {
-        context.read<PaymentBloc>().add(
-          CheckPaymentStatus(paymentId),
-        );
+        context.read<PaymentBloc>().add(CheckPaymentStatus(paymentId));
       }
     });
   }
@@ -615,11 +677,19 @@ class _CheckoutPageState extends State<CheckoutPage> {
   void _listenToPaymentState(BuildContext context, PaymentState state) {
     final transaction = state.currentTransaction;
     final expectedOrder = _checkoutResult?.orderId ?? _currentPixOrderId;
-    final matches = expectedOrder != null && (transaction?.orderId == expectedOrder ||
-        (_pollingPaymentId != null && transaction?.externalId == _pollingPaymentId));
+    final matches =
+        expectedOrder != null &&
+        (transaction?.orderId == expectedOrder ||
+            (_pollingPaymentId != null &&
+                transaction?.externalId == _pollingPaymentId));
     if (transaction?.isApproved == true && matches) {
       _pixPollTimer?.cancel();
-      if (_pixModalOpen) Navigator.of(context, rootNavigator: true).pop(PixPaymentResult.approved);
+      if (_pixModalOpen) {
+        Navigator.of(
+          context,
+          rootNavigator: true,
+        ).pop(PixPaymentResult.approved);
+      }
       _currentPixPayment = null;
       setState(() => _isProcessing = false);
       context.read<PaymentBloc>().add(const ClearPixPayment());
@@ -630,19 +700,39 @@ class _CheckoutPageState extends State<CheckoutPage> {
     if (transaction?.isFailed == true && matches) {
       _paymentAttemptKey = IdempotencyKey.forPayment(expectedOrder);
       _pixPollTimer?.cancel();
-      if (_pixModalOpen) Navigator.of(context, rootNavigator: true).pop(PixPaymentResult.cancelled);
+      if (_pixModalOpen) {
+        Navigator.of(
+          context,
+          rootNavigator: true,
+        ).pop(PixPaymentResult.cancelled);
+      }
       _currentPixPayment = null;
       setState(() => _isProcessing = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(transaction?.failureReason ?? AppLocalizations.of(context)!.payment_failed)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            transaction?.failureReason ??
+                AppLocalizations.of(context)!.payment_failed,
+          ),
+        ),
+      );
       return;
     }
-    if (transaction != null && matches && !state.isProcessing && _currentPixPayment == null) {
+    if (transaction != null &&
+        matches &&
+        !state.isProcessing &&
+        _currentPixPayment == null) {
       setState(() => _isProcessing = false);
-      if (transaction.externalId != null && _pixPollTimer?.isActive != true) _startPixPolling(transaction.externalId!, expectedOrder);
+      if (transaction.externalId != null && _pixPollTimer?.isActive != true) {
+        _startPixPolling(transaction.externalId!, expectedOrder);
+      }
     }
-    if (state.pixPayment != null && _currentPixPayment == null && !_pixModalOpen) {
+    if (state.pixPayment != null &&
+        _currentPixPayment == null &&
+        !_pixModalOpen) {
       _currentPixPayment = state.pixPayment;
-      _currentPixOrderId = state.pixPayment!.orderId ?? _checkoutResult?.orderId;
+      _currentPixOrderId =
+          state.pixPayment!.orderId ?? _checkoutResult?.orderId;
       _startPixPolling(state.pixPayment!.paymentId, _currentPixOrderId ?? 0);
       _pixModalOpen = true;
       PixPaymentModal.show(context, state.pixPayment!).then((result) {
@@ -651,19 +741,29 @@ class _CheckoutPageState extends State<CheckoutPage> {
         _pixPollTimer?.cancel();
         _currentPixPayment = null;
         setState(() => _isProcessing = false);
-        if (context.mounted) context.read<PaymentBloc>().add(const ClearPixPayment());
+        if (context.mounted) {
+          context.read<PaymentBloc>().add(const ClearPixPayment());
+        }
       });
       return;
     }
     if (state.error != null) {
-      if (const {400, 402, 422}.contains(state.paymentFailureStatus) && expectedOrder != null) {
+      if (const {400, 402, 422}.contains(state.paymentFailureStatus) &&
+          expectedOrder != null) {
         _paymentAttemptKey = IdempotencyKey.forPayment(expectedOrder);
       }
       _pixPollTimer?.cancel();
-      if (_pixModalOpen) Navigator.of(context, rootNavigator: true).pop(PixPaymentResult.cancelled);
+      if (_pixModalOpen) {
+        Navigator.of(
+          context,
+          rootNavigator: true,
+        ).pop(PixPaymentResult.cancelled);
+      }
       _currentPixPayment = null;
       setState(() => _isProcessing = false);
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.error!), backgroundColor: Colors.red));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(state.error!), backgroundColor: Colors.red),
+      );
     }
   }
 

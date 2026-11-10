@@ -93,8 +93,7 @@ class _CampaignCardState extends State<CampaignCard>
     // NOTE (FE_BE_COMMUNICATION.md §10.8): cash budget accrual is not live —
     // no scheduler invokes billing, so `budget_spent` stays at 0. Never drive
     // progress/status UI on it; show the allocated budget instead.
-    final ctr =
-        c.impressions > 0 ? (c.clicks / c.impressions) * 100 : 0.0;
+    final ctr = c.impressions > 0 ? (c.clicks / c.impressions) * 100 : 0.0;
 
     final placements = <CampaignType>[c.campaignType];
     final statusColor = _statusColor(c.status);
@@ -119,11 +118,7 @@ class _CampaignCardState extends State<CampaignCard>
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 200),
             curve: Curves.easeOutCubic,
-            transform: Matrix4.translationValues(
-              0,
-              _isHovered ? -2 : 0,
-              0,
-            ),
+            transform: Matrix4.translationValues(0, _isHovered ? -2 : 0, 0),
             decoration: BoxDecoration(
               color: barzDarkCard,
               borderRadius: BorderRadius.circular(12),
@@ -282,8 +277,7 @@ class _CampaignCardState extends State<CampaignCard>
                     ),
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 6),
-                      child:
-                          Text('·', style: TextStyle(color: Colors.white24)),
+                      child: Text('·', style: TextStyle(color: Colors.white24)),
                     ),
                     _buildMetricChip(
                       '${_formatCompact(c.clicks)} cliques',
@@ -291,8 +285,7 @@ class _CampaignCardState extends State<CampaignCard>
                     ),
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 6),
-                      child:
-                          Text('·', style: TextStyle(color: Colors.white24)),
+                      child: Text('·', style: TextStyle(color: Colors.white24)),
                     ),
                     _buildMetricChip(
                       '${ctr.toStringAsFixed(1)}% CTR',
@@ -306,8 +299,9 @@ class _CampaignCardState extends State<CampaignCard>
 
                 // Divider + Action buttons
                 Container(
-                    height: 1,
-                    color: Colors.white.withValues(alpha: 0.06)),
+                  height: 1,
+                  color: Colors.white.withValues(alpha: 0.06),
+                ),
                 const SizedBox(height: 16),
 
                 Row(
@@ -367,14 +361,20 @@ class _CampaignCardState extends State<CampaignCard>
                         if (isActive)
                           PopupMenuItem(
                             value: 'toggle',
-                            child: _menuItem(LucideIcons.circle_pause, 'Pausar',
-                                dobar),
+                            child: _menuItem(
+                              LucideIcons.circle_pause,
+                              'Pausar',
+                              dobar,
+                            ),
                           )
                         else if (c.status == CampaignStatus.paused)
                           PopupMenuItem(
                             value: 'toggle',
-                            child: _menuItem(LucideIcons.circle_play, 'Retomar',
-                                dobar),
+                            child: _menuItem(
+                              LucideIcons.circle_play,
+                              'Retomar',
+                              dobar,
+                            ),
                           )
                         else if (c.status == CampaignStatus.draft ||
                             c.status == CampaignStatus.pending)
@@ -383,19 +383,24 @@ class _CampaignCardState extends State<CampaignCard>
                           PopupMenuItem(
                             value: 'toggle',
                             child: _menuItem(
-                                LucideIcons.rocket, 'Ativar', dobar),
+                              LucideIcons.rocket,
+                              'Ativar',
+                              dobar,
+                            ),
                           ),
                         PopupMenuItem(
                           value: 'duplicate',
-                          child: _menuItem(
-                              LucideIcons.copy, 'Duplicar', dobar),
+                          child: _menuItem(LucideIcons.copy, 'Duplicar', dobar),
                         ),
                         const PopupMenuDivider(),
                         PopupMenuItem(
                           value: 'delete',
-                          child: _menuItem(LucideIcons.trash, 'Excluir',
-                              dobar,
-                              color: errorRed),
+                          child: _menuItem(
+                            LucideIcons.trash,
+                            'Excluir',
+                            dobar,
+                            color: errorRed,
+                          ),
                         ),
                       ],
                       child: Container(
@@ -422,17 +427,14 @@ class _CampaignCardState extends State<CampaignCard>
     );
   }
 
-  Widget _buildMetricChip(
-    String text,
-    DobarColors dobar, {
-    bool bold = false,
-  }) {
+  Widget _buildMetricChip(String text, DobarColors dobar, {bool bold = false}) {
     return Text(
       text,
       style: TextStyle(
         fontSize: 12,
-        color:
-            bold ? Colors.white.withValues(alpha: 0.8) : dobar.labelSecondary,
+        color: bold
+            ? Colors.white.withValues(alpha: 0.8)
+            : dobar.labelSecondary,
         fontWeight: bold ? FontWeight.w600 : FontWeight.normal,
       ),
     );
@@ -446,18 +448,11 @@ class _CampaignCardState extends State<CampaignCard>
   }) {
     return Row(
       children: [
-        Icon(
-          icon,
-          size: 16,
-          color: color ?? dobar.labelSecondary,
-        ),
+        Icon(icon, size: 16, color: color ?? dobar.labelSecondary),
         const SizedBox(width: 10),
         Text(
           label,
-          style: TextStyle(
-            fontSize: 13,
-            color: color ?? Colors.white,
-          ),
+          style: TextStyle(fontSize: 13, color: color ?? Colors.white),
         ),
       ],
     );

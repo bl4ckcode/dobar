@@ -19,7 +19,9 @@ class LocaleCubit extends Cubit<Locale> {
     if (const {'pt', 'es', 'en'}.contains(saved)) {
       return Locale(saved!);
     }
-    return LocaleNotifier.resolve(WidgetsBinding.instance.platformDispatcher.locale);
+    return LocaleNotifier.resolve(
+      WidgetsBinding.instance.platformDispatcher.locale,
+    );
   }
 
   void updateDeviceLocale(Locale locale) {
