@@ -7,9 +7,11 @@ on:
       - 'dpe/**'
       - 'be/**'
       - 'fe/**'
+  workflow_dispatch:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: production-deployment
@@ -27,27 +29,40 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - name: Compare the full pushed revision range
+      - run: git fetch --tags --force
+      - name: Compare each target with its last deployed commit
         id: detect
         env:
-          BEFORE_SHA: ${{ github.event.before }}
+          EVENT_BEFORE: ${{ github.event.before }}
         run: |
           python3 - <<'PY'
           import os
           import subprocess
 
-          before = os.environ["BEFORE_SHA"]
-          if before == "0" * 40:
-              before = subprocess.check_output(
-                  ["git", "hash-object", "-t", "tree", "--stdin"], input=b""
-              ).decode().strip()
-          paths = subprocess.check_output([
-              "git", "diff", "--no-renames", "--name-only", "-z",
-              before, os.environ["GITHUB_SHA"], "--",
-          ]).split(b"\0")
+          def rev(ref):
+              r = subprocess.run(
+                  ["git", "rev-parse", "-q", "--verify", f"{ref}^{{commit}}"],
+                  capture_output=True, text=True,
+              )
+              return r.stdout.strip() or None
+
+          empty = subprocess.check_output(
+              ["git", "hash-object", "-t", "tree", "--stdin"], input=b""
+          ).decode().strip()
+          event_before = os.environ.get("EVENT_BEFORE", "")
+          # No tag yet: fall back to the pushed range. Manual runs and new
+          # branches have no usable "before", so everything counts as changed.
+          fallback = event_before if rev(event_before) else empty
+
           with open(os.environ["GITHUB_OUTPUT"], "a") as output:
               for area in ("dpe", "be", "fe"):
-                  changed = any(path.startswith(area.encode() + b"/") for path in paths)
+                  base = rev(f"refs/tags/deployed/{area}") or fallback
+                  diff = subprocess.check_output([
+                      "git", "diff", "--no-renames", "--name-only", "-z",
+                      base, os.environ["GITHUB_SHA"], "--", f"{area}/",
+                  ]).split(b"\0")
+                  changed = any(diff)
+                  print(f"{area}: base={base} changed={changed}")
                   output.write(f"{area}={str(changed).lower()}\n")
           PY
 
@@ -80,3 +95,42 @@ jobs:
       (needs.be.result == 'success' || needs.be.result == 'skipped')
     uses: ./.github/workflows/deploy-fe.yml
     secrets: inherit
+
+  mark-dpe:
+    name: Mark dpe deployed
+    needs: dpe
+    if: needs.dpe.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          git tag -f deployed/dpe "$GITHUB_SHA"
+          git push -f origin refs/tags/deployed/dpe
+
+  mark-be:
+    name: Mark be deployed
+    needs: be
+    if: needs.be.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          git tag -f deployed/be "$GITHUB_SHA"
+          git push -f origin refs/tags/deployed/be
+
+  mark-fe:
+    name: Mark fe deployed
+    needs: fe
+    if: needs.fe.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          git tag -f deployed/fe "$GITHUB_SHA"
+          git push -f origin refs/tags/deployed/fe
