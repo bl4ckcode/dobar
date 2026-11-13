@@ -1,9 +1,10 @@
 """
 Live cashier queue expiry (GET /bars/{bar_id}/orders/live).
 
-An order expires at the close of the venue operating day (America/Sao_Paulo)
-in which it was created. Overnight shifts belong to the day they opened on.
-Bars without configured hours expire orders 24h after creation.
+An order placed during a configured shift expires at that shift's close
+(America/Sao_Paulo). Overnight shifts belong to the day they opened on.
+Orders outside every configured shift, including all orders at bars without
+configured hours, expire 24h after creation.
 
 2025-06-02 is a Monday. Sao Paulo is UTC-3 all year (no DST since 2019).
 """
@@ -34,7 +35,8 @@ from app.bars_and_restaurants.models.cart_models import OrderItem, OrderStatusHi
 from app.bars_and_restaurants.models.relational_models import Bar, BarOwner, Order
 from app.bars_and_restaurants.routes import orders as orders_routes
 from app.bars_and_restaurants.services.order_expiry import (
-    MAX_ORDER_LIFETIME,
+    FALLBACK_ORDER_LIFETIME,
+    LIVE_ORDER_LOOKBACK,
     is_order_expired,
     order_expiry_utc,
 )
@@ -130,30 +132,44 @@ def test_order_expires_at_close_of_its_operating_day(config, created, expected):
     assert is_order_expired(created, config, now=expected)
 
 
-@pytest.mark.parametrize("config, created, expected", [
-    # Before opening: belongs to the shift that opens later that day.
-    pytest.param(OVERNIGHT, sp(MON, 10, 0), sp(TUE, 2, 0), id="before-open"),
-    # After an overnight close, before the next open: the upcoming shift.
-    pytest.param(OVERNIGHT, sp(TUE, 2, 0), sp(WED, 2, 0), id="exactly-at-overnight-close"),
-    pytest.param(OVERNIGHT, sp(TUE, 3, 0), sp(WED, 2, 0), id="after-overnight-close"),
-    # After a same-day close: the next day's shift.
-    pytest.param(SAME_DAY, sp(MON, 23, 0), sp(TUE, 23, 0), id="exactly-at-same-day-close"),
-    pytest.param(SAME_DAY, sp(MON, 23, 30), sp(TUE, 23, 0), id="after-same-day-close"),
-    # Closed days in between: still never live for more than 24h.
-    pytest.param(SAME_DAY, sp(TUE, 23, 30), sp(TUE, 23, 30) + MAX_ORDER_LIFETIME, id="closed-days-ahead"),
-    pytest.param(hours(friday=("18:00", "02:00")), sp(MON, 12, 0), sp(TUE, 12, 0), id="only-friday"),
+@pytest.mark.parametrize("config, created", [
+    # Before opening (the shift opens later that day).
+    pytest.param(OVERNIGHT, sp(MON, 10, 0), id="before-overnight-open"),
+    pytest.param(SAME_DAY, sp(TUE, 9, 0), id="before-same-day-open"),
+    # After an overnight close, before the next open.
+    pytest.param(OVERNIGHT, sp(TUE, 2, 0), id="exactly-at-overnight-close"),
+    pytest.param(OVERNIGHT, sp(TUE, 3, 0), id="after-overnight-close"),
+    # After a same-day close, even though the next day has a shift.
+    pytest.param(SAME_DAY, sp(MON, 23, 0), id="exactly-at-same-day-close"),
+    pytest.param(SAME_DAY, sp(MON, 23, 30), id="after-same-day-close"),
+    # Closed days.
+    pytest.param(SAME_DAY, sp(TUE, 23, 30), id="closed-days-ahead"),
+    pytest.param(hours(friday=("18:00", "02:00")), sp(MON, 12, 0), id="only-friday"),
 ])
-def test_order_created_while_closed_goes_to_next_shift_within_24h(config, created, expected):
-    assert order_expiry_utc(created, config) == expected
+def test_configured_venue_order_outside_shift_expires_after_24h(config, created):
+    assert order_expiry_utc(created, config) == created + FALLBACK_ORDER_LIFETIME
+
+
+def test_configured_shift_is_not_capped_at_24h():
+    # Lisbon falls back on Sun 2025-10-26 at 02:00 -> 01:00. A Sat 03:00 ->
+    # Sun 02:59 shift is 23h59m on the clock but 24h59m in real time. An
+    # order at opening runs to the configured close, not to 24h.
+    lisbon = ZoneInfo("Europe/Lisbon")
+    config = hours(saturday=("03:00", "02:59"))
+    created = datetime(2025, 10, 25, 3, 0, tzinfo=lisbon)
+    expected = datetime(2025, 10, 26, 2, 59, tzinfo=lisbon)
+    expiry = order_expiry_utc(created, config, "Europe/Lisbon")
+    assert expiry == expected.astimezone(UTC)
+    assert FALLBACK_ORDER_LIFETIME < expiry - created <= LIVE_ORDER_LOOKBACK
 
 
 def test_explicitly_closed_day_is_not_a_shift():
     config = {**OVERNIGHT, "tuesday": {"open": "20:00", "close": "02:00", "is_closed": True}}
     # Monday's overnight shift still covers early Tuesday...
     assert order_expiry_utc(sp(TUE, 1, 0), config) == sp(TUE, 2, 0)
-    # ...but Tuesday evening is closed, so nothing opens before the 24h cap.
+    # ...but Tuesday evening is closed, so the 24h fallback applies.
     created = sp(TUE, 21, 0)
-    assert order_expiry_utc(created, config) == created + MAX_ORDER_LIFETIME
+    assert order_expiry_utc(created, config) == created + FALLBACK_ORDER_LIFETIME
 
 
 def test_operating_day_uses_venue_local_time_not_utc():
@@ -190,7 +206,7 @@ def test_malformed_days_are_ignored_but_valid_days_still_apply():
     assert order_expiry_utc(sp(MON, 21, 0), config) == sp(TUE, 2, 0)
 
 
-def test_expiry_is_always_after_creation_and_within_24h():
+def test_expiry_is_shift_close_or_24h_fallback():
     rng = random.Random(1234)
     names = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
     for _ in range(2000):
@@ -205,7 +221,13 @@ def test_expiry_is_always_after_creation_and_within_24h():
             }
         created = sp(MON, 0) + timedelta(minutes=rng.randrange(7 * 24 * 60))
         expiry = order_expiry_utc(created, config)
-        assert created < expiry <= created + MAX_ORDER_LIFETIME, (config, created, expiry)
+        # Sao Paulo has no DST, so a shift is always under 24h.
+        assert created < expiry <= created + FALLBACK_ORDER_LIFETIME, (config, created, expiry)
+        if expiry != created + FALLBACK_ORDER_LIFETIME:
+            # Not the fallback, so the expiry must be a configured close time.
+            local = expiry.astimezone(SP)
+            closes = {day["close"] for day in config.values() if not day["is_closed"]}
+            assert local.strftime("%H:%M") in closes, (config, created, expiry)
 
 
 # ----------------------------------------------------------------------------
@@ -351,12 +373,33 @@ async def test_live_overnight_shift_across_midnight(client, db, freeze_now):
     assert await live_ids(client, BAR_OVERNIGHT) == []
 
 
-async def test_live_order_placed_before_opening_stays_for_that_nights_shift(client, db, freeze_now):
-    early = await make_order(db, BAR_OVERNIGHT, sp(FRI, 20, 0))  # 2h before opening
-    freeze_now(sp(SAT, 5, 0))
-    assert await live_ids(client, BAR_OVERNIGHT) == [early]
+async def test_live_order_placed_while_closed_uses_24h_fallback(client, db, freeze_now):
+    # Placed 2h before the club opens: not inside any shift, so it stays
+    # live for 24h, past the close of that night's shift.
+    early = await make_order(db, BAR_OVERNIGHT, sp(FRI, 20, 0))
     freeze_now(sp(SAT, 6, 0))
+    assert await live_ids(client, BAR_OVERNIGHT) == [early]
+    freeze_now(sp(SAT, 19, 59))
+    assert await live_ids(client, BAR_OVERNIGHT) == [early]
+    freeze_now(sp(SAT, 20, 0))
     assert await live_ids(client, BAR_OVERNIGHT) == []
+
+
+async def test_live_configured_venue_after_close_uses_24h_fallback(client, db, freeze_now):
+    await db.execute(Bar.__table__.update().where(Bar.__table__.c.id == BAR_NO_HOURS)
+                     .values(operating_hours=SAME_DAY))   # Mon/Tue 11:00-23:00
+    in_shift = await make_order(db, BAR_NO_HOURS, sp(MON, 22, 0))
+    freeze_now(sp(MON, 22, 30))   # during Monday's shift
+    assert await live_ids(client, BAR_NO_HOURS) == [in_shift]
+
+    after_close = await make_order(db, BAR_NO_HOURS, sp(MON, 23, 30))
+
+    freeze_now(sp(MON, 23, 45))   # Monday's shift has closed; placed after close
+    assert await live_ids(client, BAR_NO_HOURS) == [after_close]
+    freeze_now(sp(TUE, 23, 0))    # Tuesday's shift closes; the order isn't tied to it
+    assert await live_ids(client, BAR_NO_HOURS) == [after_close]
+    freeze_now(sp(TUE, 23, 30))   # 24h after the order
+    assert await live_ids(client, BAR_NO_HOURS) == []
 
 
 async def test_live_keeps_priority_ordering(client, db, freeze_now):
@@ -371,3 +414,40 @@ async def test_live_is_scoped_to_bar_staff(client, db, freeze_now):
     freeze_now(sp(WED, 15, 0))
     r = await client.get(f"/bars/{BAR_NO_HOURS}/orders/live", headers=auth(OTHER_OWNER))
     assert r.status_code == 403
+
+
+# ----------------------------------------------------------------------------
+# compatibility: routes.orders.compute_order_expiry_utc
+# ----------------------------------------------------------------------------
+
+def test_route_module_keeps_compute_order_expiry_utc():
+    from app.bars_and_restaurants.routes.orders import _DAYS, compute_order_expiry_utc
+
+    assert _DAYS == ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+    cases = [
+        (naive_utc(sp(MON, 23, 45)), OVERNIGHT, "America/Sao_Paulo"),
+        (naive_utc(sp(TUE, 1, 30)), OVERNIGHT, "America/Sao_Paulo"),
+        (naive_utc(sp(MON, 14, 0)), SAME_DAY, None),
+        (naive_utc(sp(MON, 14, 0)), {}, "America/Sao_Paulo"),
+        (naive_utc(sp(MON, 14, 0)), None, None),
+    ]
+    for created, config, tz_name in cases:
+        # Same positional call shape as before.
+        assert compute_order_expiry_utc(created, config, tz_name) == order_expiry_utc(created, config, tz_name)
+    assert compute_order_expiry_utc(sp(MON, 23, 45), OVERNIGHT) == sp(TUE, 2, 0)
+
+
+async def test_live_endpoint_goes_through_compute_order_expiry_utc(client, db, freeze_now, monkeypatch):
+    now = sp(WED, 15, 0)
+    freeze_now(now)
+    kept = await make_order(db, BAR_NO_HOURS, now - timedelta(hours=1))
+    dropped = await make_order(db, BAR_NO_HOURS, now - timedelta(hours=2))
+    calls = []
+
+    def fake(created_at, operating_hours, tz_name):
+        calls.append(created_at)
+        return now - timedelta(seconds=1) if created_at == naive_utc(now - timedelta(hours=2)) else None
+
+    monkeypatch.setattr(orders_routes, "compute_order_expiry_utc", fake)
+    assert await live_ids(client, BAR_NO_HOURS) == [kept]
+    assert len(calls) == 2 and dropped

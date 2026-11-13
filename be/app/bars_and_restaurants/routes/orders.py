@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from app.errors import APIError
 from app.order_queue import OrderQueue
 from ..services.realtime_updates import stream_order_changes
-from ..services.order_expiry import MAX_ORDER_LIFETIME, is_order_expired
+from ..services.order_expiry import LIVE_ORDER_LOOKBACK, WEEKDAYS, order_expiry_utc
 from ..services.order_status import (
     fetch_order,
     apply_status_transition,
@@ -284,6 +284,25 @@ async def sync_offline_operations(
 # CASHIER OPERATIONS (BAR-SCOPED ORDERS)
 # =============================================================================
 
+_DAYS = list(WEEKDAYS)
+
+
+def compute_order_expiry_utc(
+    created_at: datetime,
+    operating_hours: dict | str | None,
+    tz_name: str | None = None,
+) -> datetime | None:
+    """
+    UTC instant at which an order stops being live on the cashier queue.
+
+    Kept here for existing callers and tests; the rules are in
+    services/order_expiry.py. A result is always returned now (the return
+    type still allows None): orders outside every configured shift, including
+    all orders at bars without configured hours, expire 24h after creation.
+    """
+    return order_expiry_utc(created_at, operating_hours, tz_name)
+
+
 @bar_orders_router.get("/live", response_model=List[OrderSchema])
 async def get_live_orders(
     bar_id: int,
@@ -293,10 +312,10 @@ async def get_live_orders(
     Fetch the active (live) orders for a specific bar: orders not yet
     'completed' or 'cancelled' whose operating day has not closed yet.
 
-    An order expires at the close of the venue's operating day (venue local
-    time) in which it was created. Overnight shifts are supported. Bars
-    without configured hours expire orders 24h after creation. See
-    services/order_expiry.py.
+    An order placed during a configured shift expires at that shift's close
+    (venue local time). Overnight shifts are supported. Orders outside every
+    configured shift, including all orders at bars without hours, expire 24h
+    after creation. See services/order_expiry.py.
     """
     bar = await database.fetch_one(
         BarModel.__table__.select().where(BarModel.id == bar_id)
@@ -306,9 +325,10 @@ async def get_live_orders(
     bar = dict(bar)
 
     now_utc = datetime.now(timezone.utc)
-    # No order is live for more than MAX_ORDER_LIFETIME, so older rows can be
-    # skipped in SQL. created_at is stored as naive UTC.
-    oldest_live = (now_utc - MAX_ORDER_LIFETIME).replace(tzinfo=None)
+    # No order can be live for longer than LIVE_ORDER_LOOKBACK, so skip older
+    # rows in SQL. The exact expiry is checked per order below. created_at is
+    # stored as naive UTC.
+    oldest_live = (now_utc - LIVE_ORDER_LOOKBACK).replace(tzinfo=None)
 
     query = (
         OrderModel.__table__
@@ -332,7 +352,8 @@ async def get_live_orders(
     for order in orders:
         order_dict = dict(order)
 
-        if is_order_expired(order_dict["created_at"], operating_hours, tz_name, now=now_utc):
+        expiry = compute_order_expiry_utc(order_dict["created_at"], operating_hours, tz_name)
+        if expiry is not None and now_utc >= expiry:
             continue
 
         # Fetch items for this order

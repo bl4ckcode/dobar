@@ -1,21 +1,19 @@
 """
 When an order drops off the live cashier queue.
 
-An order expires at the close of the venue operating day (shift) in which it
-was created, in the venue's local time (``America/Sao_Paulo`` for the MVP):
+Bars with configured operating hours: an order placed during a shift expires
+at that shift's close, in the venue's local time (``America/Sao_Paulo`` for
+the MVP). There is no 24h cap here; the configuration decides.
 
 * Same-day shift (e.g. 11:00-23:00): expires at that day's close.
 * Overnight shift (close <= open, e.g. 20:00-04:00): an evening order expires
   at the next day's close, and an early-morning order (before the close)
   belongs to the previous day's shift and expires at that close.
-* Created while the venue is closed (before opening, after closing, on a
-  closed day): belongs to the next shift and expires at its close.
 
-Bars without configured operating hours expire orders 24h after creation.
-No order is live for more than 24h. A shift is always shorter than 24h, so
-this cap only affects orders created while the venue is closed, e.g. right
-before several closed days. Callers may therefore skip orders older than
-``MAX_ORDER_LIFETIME`` without evaluating the hours.
+Orders outside every configured shift expire 24h after creation
+(``FALLBACK_ORDER_LIFETIME``). That covers bars without configured hours and
+orders a configured venue receives while closed: before opening, after
+closing, or on a closed day.
 
 Operating hours come from ``bars.operating_hours``:
 ``{"monday": {"open": "18:00", "close": "02:00", "is_closed": false}, ...}``.
@@ -33,7 +31,13 @@ from zoneinfo import ZoneInfo
 logger = logging.getLogger(__name__)
 
 DEFAULT_VENUE_TIMEZONE = "America/Sao_Paulo"
-MAX_ORDER_LIFETIME = timedelta(hours=24)
+# Lifetime of an order that doesn't fall inside a configured shift.
+FALLBACK_ORDER_LIFETIME = timedelta(hours=24)
+
+# Upper bound on any order's lifetime, so callers can skip older rows in SQL.
+# The fallback is 24h. A configured shift is under 24h of wall-clock time,
+# but a DST change can make it longer in real time. 48h covers both.
+LIVE_ORDER_LOOKBACK = timedelta(hours=48)
 
 WEEKDAYS = ("monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday")
 
@@ -93,10 +97,13 @@ def _as_utc(value: datetime) -> datetime:
     return value.astimezone(timezone.utc)
 
 
-def _shift_close_utc(day: date, shift: Shift, tz: ZoneInfo) -> datetime:
+def _shift_bounds_utc(day: date, shift: Shift, tz: ZoneInfo) -> Tuple[datetime, datetime]:
+    """UTC [open, close) of the shift that opens on local ``day``."""
     open_time, close_time = shift
     close_day = day + timedelta(days=1) if close_time <= open_time else day
-    return datetime.combine(close_day, close_time, tzinfo=tz).astimezone(timezone.utc)
+    opens = datetime.combine(day, open_time, tzinfo=tz).astimezone(timezone.utc)
+    closes = datetime.combine(close_day, close_time, tzinfo=tz).astimezone(timezone.utc)
+    return opens, closes
 
 
 def order_expiry_utc(
@@ -106,28 +113,28 @@ def order_expiry_utc(
 ) -> datetime:
     """UTC instant at which an order created at ``created_at`` stops being live."""
     created_utc = _as_utc(created_at)
-    latest = created_utc + MAX_ORDER_LIFETIME
+    fallback = created_utc + FALLBACK_ORDER_LIFETIME
 
     shifts = parse_operating_hours(operating_hours)
     if not shifts:
-        return latest
+        return fallback
 
     tz = venue_timezone(tz_name)
     local_date = created_utc.astimezone(tz).date()
 
-    # Check shifts in start order, beginning with yesterday's (it may run past
-    # midnight). The first one still open at creation time is the order's
-    # operating day: the shift it was placed in, or the next one if the venue
-    # was closed.
-    for offset in range(-1, 8):
-        day = local_date + timedelta(days=offset)
+    # Only shifts that open yesterday (overnight, still running past midnight)
+    # or today can contain the order. Yesterday's is checked first so an
+    # early-morning order belongs to the shift that was already running.
+    for day in (local_date - timedelta(days=1), local_date):
         shift = shifts.get(day.weekday())
         if shift is None:
             continue
-        close_utc = _shift_close_utc(day, shift, tz)
-        if close_utc > created_utc:
-            return min(close_utc, latest)
-    return latest
+        opens, closes = _shift_bounds_utc(day, shift, tz)
+        if opens <= created_utc < closes:
+            return closes
+
+    # Placed while the venue was closed: no operating day applies.
+    return fallback
 
 
 def is_order_expired(
