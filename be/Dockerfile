@@ -24,11 +24,6 @@ COPY . .
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# TODO: When dobar-payment-engine is ready, uncomment below:
-# RUN --mount=type=secret,id=GITHUB_TOKEN \
-#     GITHUB_TOKEN=$(cat /run/secrets/GITHUB_TOKEN) && \
-#     pip install --no-cache-dir "dobar-payment-engine @ git+https://${GITHUB_TOKEN}@github.com/bl4ckcode/dobar-payment-engine.git@main"
-
 # Expose port
 EXPOSE 8080
 
