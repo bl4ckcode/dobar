@@ -1,13 +1,12 @@
-import json
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, status, Query, BackgroundTasks
 from sqlalchemy import and_, or_, desc
 from typing import Optional, List
-from datetime import datetime, time, timedelta, timezone
-from zoneinfo import ZoneInfo
+from datetime import datetime, timezone
 
 from app.errors import APIError
 from app.order_queue import OrderQueue
 from ..services.realtime_updates import stream_order_changes
+from ..services.order_expiry import MAX_ORDER_LIFETIME, is_order_expired
 from ..services.order_status import (
     fetch_order,
     apply_status_transition,
@@ -285,88 +284,19 @@ async def sync_offline_operations(
 # CASHIER OPERATIONS (BAR-SCOPED ORDERS)
 # =============================================================================
 
-_DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
-
-
-def compute_order_expiry_utc(
-    created_at: datetime,
-    operating_hours: dict | None,
-    tz_name: str | None,
-) -> datetime | None:
-    """
-    Return the UTC instant when an order expires: the close of the venue
-    operating day (local time) that contains the order's creation time.
-    Returns None when no expiry can be determined (no configured hours), in
-    which case the caller keeps the previous behavior (order stays live).
-    """
-    if isinstance(operating_hours, str):
-        try:
-            operating_hours = json.loads(operating_hours)
-        except (TypeError, ValueError):
-            return None
-    if not operating_hours:
-        return None
-
-    tz = ZoneInfo(tz_name or "America/Sao_Paulo")
-    if created_at.tzinfo is None:
-        created_at = created_at.replace(tzinfo=timezone.utc)
-    local_dt = created_at.astimezone(tz)
-    local_date = local_dt.date()
-    local_time = local_dt.time()
-
-    def entry(day_name: str) -> dict | None:
-        hours = operating_hours.get(day_name)
-        if not hours or hours.get("is_closed"):
-            return None
-        if not hours.get("open") or not hours.get("close"):
-            return None
-        return hours
-
-    def close_at(day, hours) -> datetime:
-        return datetime.combine(
-            day, time.fromisoformat(hours["close"]), tzinfo=tz
-        ).astimezone(timezone.utc)
-
-    today_name = _DAYS[local_date.weekday()]
-    yesterday_name = _DAYS[(local_date.weekday() - 1) % 7]
-    today = entry(today_name)
-    yesterday = entry(yesterday_name)
-
-    # Early morning still inside yesterday's overnight shift (e.g. Tue 01:00
-    # for a Monday 20:00 -> 02:00 venue).
-    if yesterday:
-        y_open = time.fromisoformat(yesterday["open"])
-        y_close = time.fromisoformat(yesterday["close"])
-        if y_close < y_open and local_time < y_close:
-            return close_at(local_date, yesterday)
-
-    if not today:
-        return None
-
-    open_time = time.fromisoformat(today["open"])
-    close_time = time.fromisoformat(today["close"])
-
-    if close_time > open_time:
-        # Same-day window: the order's day is today.
-        return close_at(local_date, today)
-    # Overnight window [today open, tomorrow close].
-    if local_time >= open_time:
-        return close_at(local_date + timedelta(days=1), today)
-    # Before today's open and not inside yesterday's overnight shift: the
-    # order falls outside any operating window; keep previous behavior.
-    return None
-
-
 @bar_orders_router.get("/live", response_model=List[OrderSchema])
 async def get_live_orders(
     bar_id: int,
     auth: BarAuthContext = Depends(require_bar_permission(Permission.ORDER_VIEW))
 ):
     """
-    Fetch all active (live) orders for a specific bar.
-    Active orders are those not in 'completed' or 'cancelled' status and
-    still within their venue's operating day: an order expires at the close
-    of the operating day (venue local time) in which it was created.
+    Fetch the active (live) orders for a specific bar: orders not yet
+    'completed' or 'cancelled' whose operating day has not closed yet.
+
+    An order expires at the close of the venue's operating day (venue local
+    time) in which it was created. Overnight shifts are supported. Bars
+    without configured hours expire orders 24h after creation. See
+    services/order_expiry.py.
     """
     bar = await database.fetch_one(
         BarModel.__table__.select().where(BarModel.id == bar_id)
@@ -375,13 +305,19 @@ async def get_live_orders(
         return []
     bar = dict(bar)
 
+    now_utc = datetime.now(timezone.utc)
+    # No order is live for more than MAX_ORDER_LIFETIME, so older rows can be
+    # skipped in SQL. created_at is stored as naive UTC.
+    oldest_live = (now_utc - MAX_ORDER_LIFETIME).replace(tzinfo=None)
+
     query = (
         OrderModel.__table__
         .select()
         .where(
             and_(
                 OrderModel.bar_id == bar_id,
-                OrderModel.status.in_(["pending", "confirmed", "preparing", "ready"])
+                OrderModel.status.in_(["pending", "confirmed", "preparing", "ready"]),
+                OrderModel.created_at > oldest_live,
             )
         )
         .order_by(desc(OrderModel.is_priority), OrderModel.created_at.asc())
@@ -389,20 +325,14 @@ async def get_live_orders(
 
     orders = await database.fetch_all(query)
 
-    operating_hours = bar.get("operating_hours") or {}
-    tz_name = bar.get("timezone") or "America/Sao_Paulo"
-    now_utc = datetime.now(timezone.utc)
+    operating_hours = bar.get("operating_hours")
+    tz_name = bar.get("timezone")
 
     result = []
     for order in orders:
         order_dict = dict(order)
 
-        # Orders past their operating-day close are no longer live. Bars
-        # without configured hours keep previous behavior (stay live).
-        expiry = compute_order_expiry_utc(
-            order_dict["created_at"], operating_hours, tz_name
-        )
-        if expiry is not None and now_utc >= expiry:
+        if is_order_expired(order_dict["created_at"], operating_hours, tz_name, now=now_utc):
             continue
 
         # Fetch items for this order
