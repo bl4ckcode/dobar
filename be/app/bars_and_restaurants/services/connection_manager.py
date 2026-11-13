@@ -12,7 +12,10 @@ from app.redis_client import get_redis
 from ..models.nosql_models import menus_collection, orders_collection
 from app.database import database
 from app.bars_and_restaurants.models.relational_models import Order, Bar
-from app.auth.rbac_models import BarStaff
+from app.auth.rbac_models import BarStaff, Permission
+from app.auth.rbac_middleware import get_active_bar_permissions
+from ..schemas.orders import OrderStatusUpdate
+from .order_status import apply_status_transition, status_for_action
 
 ws_router = APIRouter(tags=["WebSocket"])
 
@@ -278,6 +281,7 @@ async def _handle_bar_owner_message(
     websocket: WebSocket,
     bar_id: int,
     data: str,
+    user_id: Optional[int] = None,
 ) -> None:
     try:
         command = json.loads(data)
@@ -289,7 +293,8 @@ async def _handle_bar_owner_message(
                 order_id=order_id,
                 action=action,
                 reason=command.get("reason"),
-                websocket=websocket
+                websocket=websocket,
+                user_id=user_id,
             )
             await websocket.send_json(result)
         else:
@@ -304,11 +309,13 @@ async def _handle_bar_owner_message(
         })
 
 
-async def _listen_for_bar_owner_commands(websocket: WebSocket, bar_id: int) -> None:
+async def _listen_for_bar_owner_commands(
+    websocket: WebSocket, bar_id: int, user_id: Optional[int] = None
+) -> None:
     while True:
         try:
             data = await asyncio.wait_for(websocket.receive_text(), timeout=30.0)
-            await _handle_bar_owner_message(websocket, bar_id, data)
+            await _handle_bar_owner_message(websocket, bar_id, data, user_id=user_id)
         except asyncio.TimeoutError:
             await websocket.send_json({
                 "type": "heartbeat",
@@ -381,7 +388,7 @@ async def websocket_bar_owner_dashboard(
 
     try:
         await _send_bar_dashboard_snapshot(websocket, bar_id, staff_info)
-        await _listen_for_bar_owner_commands(websocket, bar_id)
+        await _listen_for_bar_owner_commands(websocket, bar_id, staff_info["user_id"])
     except WebSocketDisconnect:
         pass
     finally:
@@ -389,51 +396,57 @@ async def websocket_bar_owner_dashboard(
 
 
 async def handle_bar_owner_command(
-    bar_id: int, 
-    order_id: int, 
-    action: str, 
+    bar_id: int,
+    order_id: int,
+    action: str,
     reason: str = None,
-    websocket: WebSocket = None
+    websocket: WebSocket = None,
+    user_id: Optional[int] = None,
 ) -> dict:
     """
-    Handle commands from bar owner to update order status.
+    Handle commands from bar staff to update order status.
+
+    Goes through the same transition rules, compare-and-set write and status
+    history as the HTTP status routes, and requires order:process at the bar
+    for every command (not just when the socket was opened), so a membership
+    revoked mid-session stops working immediately.
     """
-    # Verify order belongs to this bar
-    query = Order.__table__.select().where(Order.id == order_id)
-    order = await database.fetch_one(query)
-    
-    if not order:
-        return {"type": "error", "message": f"Order {order_id} not found"}
-    
-    if order["bar_id"] != bar_id:
-        return {"type": "error", "message": "Order does not belong to this bar"}
-    
-    # Map actions to statuses
-    action_status_map = {
-        "confirm": "confirmed",
-        "prepare": "preparing",
-        "ready": "ready",
-        "complete": "completed",
-        "cancel": "cancelled"
-    }
-    
-    new_status = action_status_map.get(action)
+    if user_id is None or Permission.ORDER_PROCESS.value not in await get_active_bar_permissions(user_id, bar_id):
+        return {"type": "error", "message": "You don't have permission to process orders at this bar"}
+
+    # JSON can carry any type; only accept a real integer id.
+    if isinstance(order_id, bool):
+        order_id = None
+    try:
+        order_id = int(order_id)
+    except (TypeError, ValueError):
+        return {"type": "error", "message": "Invalid order_id"}
+
+    new_status = status_for_action(action)
     if not new_status:
         return {"type": "error", "message": f"Unknown action: {action}"}
-    
-    # Update order status in database
-    update_data = {
-        "status": new_status,
-        "updated_at": datetime.now(timezone.utc)
-    }
-    
-    if new_status == "completed":
-        update_data["completed_at"] = datetime.now(timezone.utc)
-    
-    update_query = Order.__table__.update().where(Order.id == order_id).values(**update_data)
-    await database.execute(update_query)
-    
-    # Prepare notification for user tracking this order
+
+    # Verify order belongs to this bar
+    order = await database.fetch_one(Order.__table__.select().where(Order.id == order_id))
+    if not order:
+        return {"type": "error", "message": f"Order {order_id} not found"}
+    if order["bar_id"] != bar_id:
+        return {"type": "error", "message": "Order does not belong to this bar"}
+
+    try:
+        await apply_status_transition(
+            order,
+            OrderStatusUpdate(
+                status=new_status,
+                notes=reason if isinstance(reason, str) and reason else None,
+            ),
+            actor_user_id=user_id,
+        )
+    except APIError as exc:
+        return {"type": "error", "message": exc.message}
+
+    # Committed. The order worker is not part of this deployment, so notify the
+    # sockets directly as before (order.status_changed is also published).
     user_notification = {
         "type": "status_update",
         "order_id": order_id,
@@ -441,11 +454,8 @@ async def handle_bar_owner_command(
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "message": get_status_message(new_status)
     }
-    
-    # Notify user watching this order
     await manager.notify_order(order_id, user_notification)
-    
-    # Notify other bar owner connections (if multiple devices)
+
     bar_notification = {
         "type": "order_update",
         "order_id": order_id,
@@ -456,7 +466,7 @@ async def handle_bar_owner_command(
         "updated_by": "bar_owner"
     }
     await manager.notify_bar(bar_id, bar_notification)
-    
+
     return {
         "type": "command_success",
         "action": action,

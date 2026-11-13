@@ -23,26 +23,26 @@ class ProfileFrame extends StatelessWidget {
     final colors = context.dobarColors;
     return Scaffold(
       backgroundColor: colors.background,
-      appBar: AppBar(
-        automaticallyImplyLeading: !root,
-        backgroundColor: colors.background,
-        foregroundColor: colors.labelPrimary,
-        surfaceTintColor: colors.background,
-        centerTitle: false,
-        elevation: 0,
-        title: Text(
-          title,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-            color: colors.labelPrimary,
-          ),
-        ),
-        actions: actions,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1),
-          child: Divider(height: 1, color: Theme.of(context).dividerColor),
-        ),
-      ),
+      // appBar: AppBar(
+      //   automaticallyImplyLeading: !root,
+      //   backgroundColor: colors.background,
+      //   foregroundColor: colors.labelPrimary,
+      //   surfaceTintColor: colors.background,
+      //   centerTitle: false,
+      //   elevation: 0,
+      //   title: Text(
+      //     title,
+      //     style: Theme.of(context).textTheme.titleMedium?.copyWith(
+      //       fontWeight: FontWeight.w700,
+      //       color: colors.labelPrimary,
+      //     ),
+      //   ),
+      //   actions: actions,
+      //   bottom: PreferredSize(
+      //     preferredSize: const Size.fromHeight(1),
+      //     child: Divider(height: 1, color: Theme.of(context).dividerColor),
+      //   ),
+      // ),
       body: SafeArea(
         top: false,
         child: Align(

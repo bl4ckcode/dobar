@@ -8,6 +8,11 @@ from zoneinfo import ZoneInfo
 from app.errors import APIError
 from app.order_queue import OrderQueue
 from ..services.realtime_updates import stream_order_changes
+from ..services.order_status import (
+    fetch_order,
+    apply_status_transition,
+    cancel_order_as_customer,
+)
 from ..models.relational_models import Order as OrderModel, Bar as BarModel
 from ..models.cart_models import OrderItem as OrderItemModel, OrderStatusHistory as OrderStatusHistoryModel
 from ..schemas.orders import (
@@ -234,155 +239,36 @@ async def cancel_order(
     current_user: User = Depends(get_current_active_user)
 ):
     """Cancel an order. Only allowed if status is pending or confirmed."""
-    # Fetch the order
-    query = OrderModel.__table__.select().where(OrderModel.id == order_id)
-    db_order = await database.fetch_one(query)
-    
-    if db_order is None:
-        raise APIError.order_not_found()
-    
+    db_order = await fetch_order(order_id)
+
     # Verify ownership
     if db_order["user_id"] != current_user.id:
         raise APIError.forbidden("You don't have permission to cancel this order")
-    
-    # Check if order can be cancelled
-    if db_order["status"] not in ["pending", "confirmed"]:
-        raise APIError.order_cancelled(f"Cannot cancel order with status: {db_order['status']}")
-    
-    # Start transaction
-    transaction = await database.transaction()
-    
-    try:
-        # Update order status
-        update_query = (
-            OrderModel.__table__
-            .update()
-            .where(OrderModel.id == order_id)
-            .values(
-                status="cancelled",
-                updated_at=datetime.utcnow()
-            )
-        )
-        await database.execute(update_query)
-        
-        history_data = {
-            "order_id": order_id,
-            "status": "cancelled",
-            "updated_by_user_id": current_user.id,
-            "notes": "Cancelled by customer"
-        }
-        await database.execute(
-            OrderStatusHistoryModel.__table__.insert().values(**history_data)
-        )
-        
-        await transaction.commit()
-        
-        updated_order = await database.fetch_one(
-            OrderModel.__table__.select().where(OrderModel.id == order_id)
-        )
-        
-        await OrderQueue.publish_cancellation(
-            order_id=order_id,
-            bar_id=db_order["bar_id"],
-            user_id=current_user.id,
-            reason="Cancelled by customer"
-        )
-        
-        return updated_order
-        
-    except Exception as e:
-        await transaction.rollback()
-        raise APIError.server_error(f"Failed to cancel order: {str(e)}")
+
+    # The pending/confirmed check is enforced at write time, so a bar that
+    # advances the order concurrently is never overwritten by the cancel.
+    return await cancel_order_as_customer(db_order, current_user.id)
 
 
 @orders_router.put("/{order_id}/status", response_model=OrderSchema)
 async def update_order_status(
     order_id: int,
     status_update: OrderStatusUpdate,
-    current_user: User = Depends(get_current_active_user)
+    current_user: AuthUser = Depends(get_current_active_user)
 ):
     """
-    Update order status. Only allowed for bar owners.
+    Update order status. Only allowed for the owner of the order's bar.
     Status flow: pending -> confirmed -> preparing -> ready -> completed
+    (pending may also go straight to preparing)
     """
-    # Fetch the order
-    query = OrderModel.__table__.select().where(OrderModel.id == order_id)
-    db_order = await database.fetch_one(query)
-    
-    if db_order is None:
-        raise APIError.order_not_found()
-    
-    # TODO: Verify user is bar owner of the bar
-    # For now, we'll allow any authenticated user (should be restricted to bar owners)
-    
-    # Validate status transition
-    valid_transitions = {
-        "pending": ["confirmed", "cancelled"],
-        "confirmed": ["preparing", "cancelled"],
-        "preparing": ["ready", "cancelled"],
-        "ready": ["completed"],
-        "completed": [],
-        "cancelled": []
-    }
-    
-    if status_update.status not in valid_transitions.get(db_order["status"], []):
-        raise APIError.bad_request(
-            f"Invalid status transition from {db_order['status']} to {status_update.status}"
-        )
-    
-    # Start transaction
-    transaction = await database.transaction()
-    
-    try:
-        update_data = {
-            "status": status_update.status,
-            "updated_at": datetime.utcnow()
-        }
-        
-        if status_update.status == "completed":
-            update_data["completed_at"] = datetime.utcnow()
-        
-        # Update estimated_ready_time if provided
-        if status_update.estimated_ready_time:
-            update_data["estimated_ready_time"] = status_update.estimated_ready_time
-        
-        # Update order status
-        update_query = (
-            OrderModel.__table__
-            .update()
-            .where(OrderModel.id == order_id)
-            .values(**update_data)
-        )
-        await database.execute(update_query)
-        
-        history_data = {
-            "order_id": order_id,
-            "status": status_update.status,
-            "updated_by_user_id": current_user.id,
-            "notes": status_update.notes
-        }
-        await database.execute(
-            OrderStatusHistoryModel.__table__.insert().values(**history_data)
-        )
-        
-        await transaction.commit()
-        
-        updated_order = await database.fetch_one(
-            OrderModel.__table__.select().where(OrderModel.id == order_id)
-        )
-        
-        await OrderQueue.publish_status_change(
-            order_id=order_id,
-            bar_id=db_order["bar_id"],
-            old_status=db_order["status"],
-            new_status=status_update.status
-        )
-        
-        return updated_order
-        
-    except Exception as e:
-        await transaction.rollback()
-        raise APIError.server_error(f"Failed to update order status: {str(e)}")
+    db_order = await fetch_order(order_id)
+
+    # Authorize before validating the transition, so error messages never
+    # reveal an order's status to someone who doesn't own its bar.
+    if not current_user.is_bar_owner(db_order["bar_id"]):
+        raise APIError.forbidden("Only the bar owner can update this order's status")
+
+    return await apply_status_transition(db_order, status_update, current_user.id)
 
 
 @orders_router.post("/sync", response_model=SyncResponse)
@@ -557,81 +443,7 @@ async def update_bar_order_status(
     """
     Update order status. Protected by RBAC for bar staff.
     Status flow: pending -> confirmed -> preparing -> ready -> completed
+    (pending may also go straight to preparing)
     """
-    # Fetch the order
-    query = OrderModel.__table__.select().where(
-        and_(OrderModel.id == order_id, OrderModel.bar_id == bar_id)
-    )
-    db_order = await database.fetch_one(query)
-    
-    if db_order is None:
-        raise APIError.order_not_found()
-    
-    # Validate status transition
-    valid_transitions = {
-        "pending": ["confirmed", "cancelled"],
-        "confirmed": ["preparing", "cancelled"],
-        "preparing": ["ready", "cancelled"],
-        "ready": ["completed"],
-        "completed": [],
-        "cancelled": []
-    }
-    
-    if status_update.status not in valid_transitions.get(db_order["status"], []):
-        raise APIError.bad_request(
-            f"Invalid status transition from {db_order['status']} to {status_update.status}"
-        )
-    
-    # Start transaction
-    transaction = await database.transaction()
-    
-    try:
-        update_data = {
-            "status": status_update.status,
-            "updated_at": datetime.utcnow()
-        }
-        
-        if status_update.status == "completed":
-            update_data["completed_at"] = datetime.utcnow()
-        
-        if status_update.estimated_ready_time:
-            update_data["estimated_ready_time"] = status_update.estimated_ready_time
-        
-        # Update order status
-        update_query = (
-            OrderModel.__table__
-            .update()
-            .where(OrderModel.id == order_id)
-            .values(**update_data)
-        )
-        await database.execute(update_query)
-        
-        history_data = {
-            "order_id": order_id,
-            "status": status_update.status,
-            "updated_by_user_id": auth.user.id,
-            "notes": status_update.notes
-        }
-        await database.execute(
-            OrderStatusHistoryModel.__table__.insert().values(**history_data)
-        )
-        
-        await transaction.commit()
-        
-        updated_order = await database.fetch_one(
-            OrderModel.__table__.select().where(OrderModel.id == order_id)
-        )
-        
-        # This will trigger the webhooks via order_worker.py -> connection_manager.py
-        await OrderQueue.publish_status_change(
-            order_id=order_id,
-            bar_id=bar_id,
-            old_status=db_order["status"],
-            new_status=status_update.status
-        )
-        
-        return updated_order
-        
-    except Exception as e:
-        await transaction.rollback()
-        raise APIError.server_error(f"Failed to update order status: {str(e)}")
+    db_order = await fetch_order(order_id, bar_id=bar_id)
+    return await apply_status_transition(db_order, status_update, auth.user.id)
