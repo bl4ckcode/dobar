@@ -6,8 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi import Body
 from pydantic import BaseModel, EmailStr
 from typing import Optional, List
-from datetime import datetime, timezone, timedelta
-import secrets
+from datetime import datetime, timezone
 import json
 
 from ...database import database
@@ -17,10 +16,15 @@ from ...auth.rbac_middleware import (
     add_user_to_bar, remove_user_from_bar, get_user_bars
 )
 from ...auth.rbac_models import (
-    BarRole, Permission, BarStaff, StaffInvitation, UserProfile, get_permissions_for_role
+    BarRole, Permission, BarStaff, StaffInvitation, UserProfile, get_permissions_for_role,
+    role_within_rank,
 )
 from ...auth.auth_models import User
 from ...bars_and_restaurants.models.relational_models import Bar
+from ...bars_and_restaurants.services.staff_invitations import (
+    create_staff_invitation, normalize_email, normalize_phone,
+    sanitized_invitation_errors,
+)
 from ...errors import APIError, ErrorCode
 
 
@@ -132,76 +136,16 @@ async def invite_staff(
     invite: StaffInviteRequest,
     auth: BarAuthContext = Depends(require_bar_permission(Permission.STAFF_MANAGE))
 ):
-    """Invite someone to join the bar's staff."""
-    # Detect if contact is email or phone
-    email = None
-    phone = None
-    
-    if "@" in invite.contact:
-        email = invite.contact
-    else:
-        # Assume phone if no @ (should ideally validate E.164)
-        phone = invite.contact
-    
-    if not email and not phone:
-        raise HTTPException(status_code=400, detail="Valid email or phone required")
-    
-    try:
-        role = BarRole(invite.role)
-    except ValueError:
-        raise HTTPException(status_code=400, detail=f"Invalid role: {invite.role}")
-    
-    if role == BarRole.OWNER and not auth.is_owner():
-        raise HTTPException(status_code=403, detail="Only owner can invite another owner")
-    
-    # Check if user already exists
-    existing_user = None
-    # Check if user already exists
-    existing_user = None
-    if email:
-        existing_user = await database.fetch_one(
-            User.__table__.select().where(User.email == email)
-        )
-    elif phone:
-        existing_user = await database.fetch_one(
-            User.__table__.select().where(User.phone_number == phone)
-        )
-    
-    invitation_code = secrets.token_urlsafe(16)
-    # Use naive UTC — StaffInvitation.expires_at is DateTime(timezone=False)
-    expires_at_naive = datetime.utcnow() + timedelta(days=7)
-    
-    if existing_user:
-        existing_staff = await database.fetch_one(
-            BarStaff.__table__.select().where(
-                (BarStaff.user_id == existing_user["id"]) & (BarStaff.bar_id == bar_id)
-            )
-        )
-        if existing_staff and existing_staff["is_active"]:
-            raise HTTPException(status_code=409, detail="User already staff at this bar")
-    # All invitations start pending — no auto-accept, even for existing users.
-    status_val = "pending"
-    
-    invitation_data = {
-        "bar_id": bar_id,
-        "email": email,
-        "phone": phone,
-        "role": role.value,
-        "invitation_code": invitation_code,
-        "status": status_val,
-        "expires_at": expires_at_naive,
-        "invited_by_id": auth.user.id,
-    }
-    
-    inv_id = await database.execute(
-        StaffInvitation.__table__.insert().values(**invitation_data)
-    )
-    
-    return StaffInvitationResponse(
-        id=inv_id, bar_id=bar_id, email=email, phone=phone,
-        role=role.value, status=status_val, invitation_code=invitation_code,
-        expires_at=expires_at_naive
-    )
+    """Invite someone to join the bar's staff.
+
+    Authorization (role defaults + custom permissions) is shared with the
+    compatibility route ``POST /staff/invite``. Contact/role validation, the
+    no-inviting-above-your-own-role rule, the existing-member check,
+    code generation and persistence are all delegated to
+    ``create_staff_invitation``.
+    """
+    invitation = await create_staff_invitation(auth, invite.contact, invite.role)
+    return StaffInvitationResponse(**invitation)
 
 
 @staff_router.put("/{staff_id}/role")
@@ -211,7 +155,13 @@ async def update_staff_role(
     request: StaffRoleUpdateRequest,
     auth: BarAuthContext = Depends(require_bar_permission(Permission.STAFF_MANAGE))
 ):
-    """Change a staff member's role."""
+    """Change a staff member's role.
+
+    Same rank rule as invitations: nobody can assign a role above their own,
+    or change the role of someone ranked above them. This includes the
+    caller's own membership, so e.g. a cashier holding ``staff:manage`` cannot
+    promote themselves (or anyone) to manager/admin/owner.
+    """
     try:
         new_role = BarRole(request.role)
     except ValueError:
@@ -231,6 +181,18 @@ async def update_staff_role(
         
     if new_role == BarRole.OWNER and not auth.is_owner():
         raise HTTPException(status_code=403, detail="Only owner can promote someone to owner")
+
+    if not role_within_rank(auth.role, staff["role"]):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Cannot change the role of a {staff['role']}: role is above your own ({auth.role})",
+        )
+
+    if not role_within_rank(auth.role, new_role):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Cannot assign {new_role.value}: role is above your own ({auth.role})",
+        )
         
     await database.execute(
         BarStaff.__table__.update()
@@ -251,7 +213,12 @@ async def remove_staff(
     staff_id: int,
     auth: BarAuthContext = Depends(require_bar_permission(Permission.STAFF_MANAGE))
 ):
-    """Remove a staff member from the bar."""
+    """Remove a staff member from the bar.
+
+    Same rank rule as invitations and role changes: nobody can remove a
+    member ranked above them (e.g. a cashier holding ``staff:manage`` cannot
+    remove a manager, admin or owner).
+    """
     staff = await database.fetch_one(
         BarStaff.__table__.select().where(
             (BarStaff.id == staff_id) & (BarStaff.bar_id == bar_id)
@@ -262,6 +229,12 @@ async def remove_staff(
     
     if staff["role"] == BarRole.OWNER.value and not auth.is_owner():
         raise HTTPException(status_code=403, detail="Only owner can remove another owner")
+
+    if not role_within_rank(auth.role, staff["role"]):
+        raise HTTPException(
+            status_code=403,
+            detail=f"Cannot remove a {staff['role']}: role is above your own ({auth.role})",
+        )
     
     await database.execute(
         BarStaff.__table__.update()
@@ -310,7 +283,8 @@ def _mask_recipient(email, phone):
 
 
 def _normalize_phone(value):
-    return "".join(ch for ch in (value or "") if ch.isdigit())
+    # Same rule the invite flow uses to detect existing members.
+    return normalize_phone(value)
 
 
 def _recipient_matches(invitation, user):
@@ -322,7 +296,7 @@ def _recipient_matches(invitation, user):
     if inv_email:
         if not user.email:
             return False
-        if inv_email.strip().lower() != user.email.strip().lower():
+        if normalize_email(inv_email) != normalize_email(user.email):
             return False
     if inv_phone:
         if not user.phone_number:
@@ -359,6 +333,13 @@ def _invitation_expired(invitation):
 
 @my_bars_router.get("/invitations/pending", response_model=List[PendingInvitationResponse])
 async def get_pending_invitations(user: AuthUser = Depends(get_current_user)):
+    async with sanitized_invitation_errors(
+        "list", message="Could not load pending invitations", user_id=user.id,
+    ):
+        return await _get_pending_invitations(user)
+
+
+async def _get_pending_invitations(user: AuthUser):
     from sqlalchemy import and_, or_, func
 
     contacts = []
@@ -420,6 +401,11 @@ def _invitation_preview(invitation, bar):
 
 @my_bars_router.post("/invitations/preview", response_model=InvitationPreviewResponse)
 async def preview_invitation(payload: InvitationCodeRequest, user: AuthUser = Depends(get_current_user)):
+    async with sanitized_invitation_errors("preview", user_id=user.id):
+        return await _preview_invitation(payload, user)
+
+
+async def _preview_invitation(payload: InvitationCodeRequest, user: AuthUser):
     invitation = await database.fetch_one(
         StaffInvitation.__table__.select().where(
             StaffInvitation.invitation_code == payload.invitation_code
@@ -455,6 +441,17 @@ async def accept_invitation(
     payload: Optional[InvitationCodeRequest] = Body(None),
     invitation_code: Optional[str] = Query(None),
     user: AuthUser = Depends(get_current_user),
+):
+    # Sanitized: a failure here (e.g. inside the claim/membership transaction,
+    # which then rolls back) never logs or returns the code or contact.
+    async with sanitized_invitation_errors("accept", user_id=user.id):
+        return await _accept_invitation(payload, invitation_code, user)
+
+
+async def _accept_invitation(
+    payload: Optional[InvitationCodeRequest],
+    invitation_code: Optional[str],
+    user: AuthUser,
 ):
     if payload is not None and invitation_code is not None and payload.invitation_code != invitation_code:
         raise APIError(400, ErrorCode.BAD_REQUEST, "Conflicting invitation_code values")

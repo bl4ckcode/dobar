@@ -101,6 +101,37 @@ class Permission(str, enum.Enum):
     ADS_MANAGE = "ads:manage"
 
 
+# Role hierarchy: OWNER > ADMIN > MANAGER > CASHIER > STAFF.
+# Higher number = more authority. Unknown roles rank 0 (below everything).
+BAR_ROLE_LEVELS = {
+    BarRole.OWNER: 5,
+    BarRole.ADMIN: 4,
+    BarRole.MANAGER: 3,
+    BarRole.CASHIER: 2,
+    BarRole.STAFF: 1,
+}
+
+
+def bar_role_level(role) -> int:
+    """Rank of a role (``BarRole`` or its string value); 0 if unknown."""
+    try:
+        return BAR_ROLE_LEVELS.get(BarRole(role), 0)
+    except ValueError:
+        return 0
+
+
+def role_within_rank(actor_role, role) -> bool:
+    """True if ``role`` is at or below ``actor_role`` in the hierarchy.
+
+    The single rule for granting roles at a bar (inviting someone, or
+    assigning/changing a role): nobody can grant a role above their own, and
+    nobody can act on a membership ranked above their own. An unknown actor
+    role ranks 0 and is within rank of nothing.
+    """
+    actor_level = bar_role_level(actor_role)
+    return actor_level > 0 and bar_role_level(role) <= actor_level
+
+
 # Role -> Permissions mapping
 ROLE_PERMISSIONS = {
     BarRole.OWNER: [p for p in Permission],  # All permissions
