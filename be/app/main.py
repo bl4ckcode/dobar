@@ -41,6 +41,7 @@ from fastapi.openapi.utils import get_openapi
 from contextlib import asynccontextmanager
 from firebase_admin import initialize_app, credentials
 from .payment.routes import payment_router, pix_router, cards_router, subscription_router
+from .payment.order_payments import refund_reconciliation_worker
 from .payment import close_dpe_client
 from .advertising.routes import advertising_router
 from .bars_and_restaurants.routes.bundles import bundles_router
@@ -95,12 +96,14 @@ async def lifespan(app: FastAPI):
         print(f"   Error: {type(e).__name__}: {str(e)}")
     
     projection_task = asyncio.create_task(projection_worker())
+    refund_reconciliation_task = asyncio.create_task(refund_reconciliation_worker())
     try:
         yield
     finally:
-        projection_task.cancel()
-        with suppress(asyncio.CancelledError):
-            await projection_task
+        for task in (projection_task, refund_reconciliation_task):
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
     await close_dpe_client()
     await close_redis()
     await database.disconnect()

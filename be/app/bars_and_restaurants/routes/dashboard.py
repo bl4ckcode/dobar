@@ -4,7 +4,7 @@ from typing import Optional, List
 from datetime import datetime, time, timezone, timedelta
 from zoneinfo import ZoneInfo
 
-from sqlalchemy import and_, case, func, or_, select
+from sqlalchemy import Float, Integer, and_, case, func, literal_column, or_, select
 
 from app.database import database
 from app.errors import APIError
@@ -18,6 +18,7 @@ from ..models.relational_models import (
     Order as OrderModel,
 )
 from ..services.order_expiry import venue_timezone
+from app.payment.order_payments import REFUND_COUNTED_STATUSES
 
 dashboard_router = APIRouter(prefix="/bars", tags=["Dashboard"])
 
@@ -115,9 +116,11 @@ class BarOrdersResponse(BaseModel):
 # start of the previous period (clamped so the two windows never overlap).
 
 # Revenue only counts money the venue actually kept: the order's payment
-# succeeded, the order was not cancelled, and whatever was refunded since
-# (recorded in order_refunds - a refunded order stays payment_status "paid")
-# is subtracted. Revenue, average ticket and top items all use this same set
+# succeeded, the order was not cancelled, and its refunds are subtracted
+# (order_refunds - a refunded order stays payment_status "paid"). Refunds
+# still "pending" are subtracted too: they are recorded before the payment
+# engine moves the money, so while an outcome is unknown revenue errs low,
+# never high. Revenue, average ticket and top items all use this same set
 # of orders so the numbers agree with each other.
 PAID_PAYMENT_STATUS = "paid"
 CANCELLED_ORDER_STATUS = "cancelled"
@@ -130,7 +133,10 @@ FULLY_REFUNDED_TOLERANCE = 0.005
 _order_status = func.coalesce(OrderModel.status, "pending")
 _refunded_amount = (
     select(func.coalesce(func.sum(OrderRefundModel.amount), 0.0))
-    .where(OrderRefundModel.order_id == OrderModel.id)
+    .where(
+        OrderRefundModel.order_id == OrderModel.id,
+        OrderRefundModel.status.in_(REFUND_COUNTED_STATUSES),
+    )
     .correlate(OrderModel)
     .scalar_subquery()
 )
@@ -194,6 +200,11 @@ def calc_trend(current: float, previous: float) -> float:
     return round(((current - previous) / previous) * 100, 1)
 
 
+_ONE = literal_column("1", Integer)
+_ZERO = literal_column("0", Integer)
+_ZERO_MONEY = literal_column("0.0", Float)
+
+
 def _in_window(bar_id: int, start: datetime, end: datetime):
     return and_(
         OrderModel.bar_id == bar_id,
@@ -203,7 +214,9 @@ def _in_window(bar_id: int, start: datetime, end: datetime):
 
 
 def _count_where(condition):
-    return func.coalesce(func.sum(case((condition, 1), else_=0)), 0)
+    # Inline constants, not bind parameters: PostgreSQL types an untyped
+    # parameter in CASE as text, and sum(text) does not exist.
+    return func.coalesce(func.sum(case((condition, _ONE), else_=_ZERO)), _ZERO)
 
 
 async def _period_order_stats(bar_id: int, start: datetime, end: datetime) -> dict:
@@ -217,7 +230,7 @@ async def _period_order_stats(bar_id: int, start: datetime, end: datetime) -> di
             _count_where(_order_status == CANCELLED_ORDER_STATUS).label("cancelled"),
             _count_where(_counts_as_revenue).label("paid_orders"),
             func.coalesce(
-                func.sum(case((_counts_as_revenue, _net_amount), else_=0.0)),
+                func.sum(case((_counts_as_revenue, _net_amount), else_=_ZERO_MONEY)),
                 0.0,
             ).label("revenue"),
         ).where(_in_window(bar_id, start, end))
@@ -235,30 +248,79 @@ async def _period_order_stats(bar_id: int, start: datetime, end: datetime) -> di
     }
 
 
-async def _top_items(bar_id: int, start: datetime, end: datetime, limit: int = 5) -> List[TopItem]:
-    """Best-selling items among the orders that make up the period's revenue
-    (paid, not cancelled, not fully refunded) created in ``[start, end)``.
+# Name snapshot taken on the order item at checkout ('' treated as missing).
+_item_name_snapshot = func.nullif(OrderItemModel.menu_item_name, "")
 
+
+def _top_item_label(name: Optional[str], menu_item_id: Optional[int]) -> str:
+    if name:
+        return name
+    return f"Item #{menu_item_id}" if menu_item_id is not None else "Unknown item"
+
+
+async def _top_items(bar_id: int, start: datetime, end: datetime, limit: int = 5) -> List[TopItem]:
+    """Best-selling menu items among the orders that make up the period's
+    revenue (paid, not cancelled, not fully refunded) created in
+    ``[start, end)``.
+
+    There is one entry per menu item, so an item renamed during the period is
+    not split. It is labelled with its latest sold name: the name snapshot of
+    its most recent counted sale (by order time). Renaming or deleting a menu
+    item afterwards does not change it. Only when none of those sales carries
+    a snapshot (legacy rows) does the label fall back to the menu item's
+    current name, then to "Item #<id>". Order items without a menu item id
+    (legacy) are grouped by their snapshot name instead.
+
+    Quantities and revenue use the order items' own quantity and unit price.
     Refunds are amount-based and are not tied to specific items, so items of a
     partially refunded order are still listed at their sold price."""
-    quantity = func.sum(OrderItemModel.quantity)
-    revenue = func.sum(OrderItemModel.quantity * OrderItemModel.unit_price)
-    rows = await database.fetch_all(
+    no_menu_item = OrderItemModel.menu_item_id.is_(None)
+    latest_sold_name = func.first_value(_item_name_snapshot).over(
+        partition_by=OrderItemModel.menu_item_id,
+        # Latest sale first; rows without a snapshot last so one is used when any exists.
+        order_by=(
+            _item_name_snapshot.is_(None),
+            OrderModel.created_at.desc(),
+            OrderItemModel.id.desc(),
+        ),
+    )
+    sales = (
         select(
-            MenuItemModel.name.label("name"),
-            quantity.label("qty"),
-            revenue.label("rev"),
+            OrderItemModel.menu_item_id.label("menu_item_id"),
+            # Extra grouping key only for legacy rows that have no menu item id.
+            case((no_menu_item, _item_name_snapshot)).label("orphan_name"),
+            case((no_menu_item, _item_name_snapshot), else_=latest_sold_name).label("sold_name"),
+            OrderItemModel.quantity.label("quantity"),
+            (OrderItemModel.quantity * OrderItemModel.unit_price).label("amount"),
         )
         .select_from(OrderItemModel)
-        .join(MenuItemModel, OrderItemModel.menu_item_id == MenuItemModel.id)
         .join(OrderModel, OrderItemModel.order_id == OrderModel.id)
         .where(_in_window(bar_id, start, end), _counts_as_revenue)
-        .group_by(MenuItemModel.name)
-        .order_by(quantity.desc(), MenuItemModel.name)
+        .subquery()
+    )
+    quantity = func.sum(sales.c.quantity)
+    # Current menu name is only a fallback; the outer join never filters sales
+    # of menu items that were deleted since.
+    name = func.coalesce(func.max(sales.c.sold_name), func.max(MenuItemModel.name))
+    rows = await database.fetch_all(
+        select(
+            sales.c.menu_item_id,
+            name.label("name"),
+            quantity.label("qty"),
+            func.sum(sales.c.amount).label("rev"),
+        )
+        .select_from(sales)
+        .outerjoin(MenuItemModel, sales.c.menu_item_id == MenuItemModel.id)
+        .group_by(sales.c.menu_item_id, sales.c.orphan_name)
+        .order_by(quantity.desc(), name, sales.c.menu_item_id)
         .limit(limit)
     )
     return [
-        TopItem(name=r["name"], quantity=int(r["qty"] or 0), revenue=round(float(r["rev"] or 0), 2))
+        TopItem(
+            name=_top_item_label(r["name"], r["menu_item_id"]),
+            quantity=int(r["qty"] or 0),
+            revenue=round(float(r["rev"] or 0), 2),
+        )
         for r in rows
     ]
 

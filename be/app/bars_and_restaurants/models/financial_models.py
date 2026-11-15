@@ -62,16 +62,28 @@ class Dispute(Base):
 
 
 class OrderRefund(Base):
-    """A refund the payment engine (DPE) confirmed for an order's payment.
+    """A refund of an order's payment, recorded *before* the payment engine
+    (DPE) is asked to move the money.
+
+    Lifecycle (``status``):
+    * ``pending``   - written before calling DPE. If anything fails after the
+      money may have moved (DPE timeout / 5xx, or recording the outcome), the
+      row stays pending. The dashboard subtracts pending refunds, so revenue
+      is never overstated while the outcome is unknown.
+    * ``succeeded`` - DPE confirmed the refund; ``amount`` is the confirmed
+      amount and ``gateway_refund_id`` its id.
+    * ``failed``    - DPE definitively rejected it (4xx), or reconciliation
+      found DPE never refunded it. Not subtracted.
+
+    Pending rows are settled by a retry with the same idempotency key, or by
+    ``reconcile_pending_refunds`` (read-only: compares with the refunded total
+    DPE reports for the payment; it never issues refunds).
 
     Refunds are amount-based and an order can have several (partial) refunds,
-    so they are recorded here instead of on the order. ``orders.payment_status``
-    keeps describing the payment itself ("paid"): the charge, webhook and
+    so they live here instead of on the order. ``orders.payment_status`` keeps
+    describing the payment itself ("paid"): the charge, webhook and
     status-polling flows treat any other value as "not paid yet" and would
     re-open or re-settle a refunded order.
-
-    ``gateway_refund_id`` is unique so replaying the same refund (client retry
-    with the same idempotency key) is recorded only once.
     """
     __tablename__ = "order_refunds"
 
@@ -80,8 +92,12 @@ class OrderRefund(Base):
     bar_id = Column(Integer, ForeignKey("bars.id"), index=True, nullable=False)
 
     payment_id = Column(String(100), nullable=False, index=True)
-    gateway_refund_id = Column(String(100), nullable=False, unique=True, index=True)
+    # Key sent to DPE for this refund; one row per refund attempt.
+    idempotency_key = Column(String(128), nullable=False, unique=True, index=True)
+    gateway_refund_id = Column(String(100), nullable=True, unique=True, index=True)
 
+    status = Column(String(20), nullable=False, default="pending", index=True)
+    # Requested amount while pending; the amount DPE confirmed once succeeded.
     amount = Column(Float, nullable=False)
     currency = Column(String(3), default="BRL")
     reason = Column(String(500), nullable=True)
@@ -89,3 +105,4 @@ class OrderRefund(Base):
     requested_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
 
     created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

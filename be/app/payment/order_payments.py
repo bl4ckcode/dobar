@@ -1,3 +1,4 @@
+import asyncio
 import hashlib
 import json
 import re
@@ -6,6 +7,7 @@ from datetime import datetime, timedelta
 from decimal import Decimal, ROUND_HALF_UP
 
 import httpx
+from sqlalchemy import func, select
 
 from app.auth.auth_models import User
 from app.auth.rbac_models import UserProfile
@@ -243,42 +245,178 @@ async def publish_payment(order, status):
         logging.getLogger(__name__).warning("Payment notification failed for order %s", order["id"])
 
 
-async def record_order_refund(db, refund, reason=None, requested_by_user_id=None):
-    """Record a refund the payment engine confirmed against the order it paid.
+async def refundable_order(db, user_id, payment_id):
+    """The order paid by ``payment_id``, if ``user_id`` may refund it.
 
-    ``refund`` is a successful ``DPEClient.refund`` result; its ``amount`` is
-    what was actually refunded (the full payment when no amount was requested).
-    The order's ``payment_status`` is deliberately left as is (see
-    ``OrderRefund``). Recording is idempotent on the gateway refund id, so a
-    retried refund that the engine de-duplicated is not counted twice.
+    A payment may be refunded by:
+    * the consumer who paid it (the order is theirs), or
+    * the venue it was paid to: an active member of the order's bar holding
+      ``order:refund`` there (role defaults + custom permissions).
 
-    Returns False when the payment does not belong to an order (e.g. a
-    subscription invoice), True otherwise.
+    Anyone else gets the same 404 as a payment that does not exist, so payment
+    ids cannot be probed - except members of the venue without the refund
+    permission, who can already see the order and get a 403 instead.
+    Payments that do not belong to an order cannot be refunded here.
     """
-    order = await db.fetch_one(Order.__table__.select().where(Order.payment_id == refund["payment_id"]))
+    from app.auth.rbac_middleware import get_active_bar_permissions
+    from app.auth.rbac_models import Permission
+
+    order = await db.fetch_one(Order.__table__.select().where(Order.payment_id == payment_id))
     if order is None:
-        return False
-    await db.execute(
+        raise APIError.not_found("Payment")
+    if order["user_id"] is not None and order["user_id"] == user_id:
+        return order
+    permissions = await get_active_bar_permissions(user_id, order["bar_id"])
+    if Permission.ORDER_REFUND.value in permissions:
+        return order
+    if permissions:
+        raise APIError.forbidden(f"Missing permission: {Permission.ORDER_REFUND.value}")
+    raise APIError.not_found("Payment")
+
+
+REFUND_OPERATION = "/payments/v2/refund"
+# Refund states that reduce venue revenue. Pending counts: the money may
+# already have moved even though the outcome was never recorded.
+REFUND_COUNTED_STATUSES = ("pending", "succeeded")
+REFUND_RECONCILE_AFTER = timedelta(minutes=10)
+_HALF_CENT = Decimal("0.005")
+
+
+def _refunds_table():
+    from app.bars_and_restaurants.models.financial_models import OrderRefund
+    return OrderRefund.__table__
+
+
+async def begin_order_refund(db, order, idempotency_key, amount=None, reason=None, requested_by_user_id=None):
+    """Record a refund as ``pending`` *before* DPE is asked to move money.
+
+    If this fails, the caller must not call DPE - so no refund can happen
+    without a row. ``amount`` defaults to what is left to refund on the order
+    (a full refund). Returns ``(row, created)``; ``created`` is False when the
+    idempotency key was already used (a retry), in which case the existing row
+    is returned unchanged. A key already used for another order is a conflict.
+    """
+    refunds = _refunds_table()
+    if amount is None:
+        already = await db.fetch_val(
+            select(func.coalesce(func.sum(refunds.c.amount), 0.0)).where(
+                refunds.c.order_id == order["id"],
+                refunds.c.status.in_(REFUND_COUNTED_STATUSES),
+            )
+        )
+        amount = max(money(order["total_price"] or 0) - money(already or 0), Decimal(0))
+    now = datetime.utcnow()
+    inserted = await db.fetch_one(
         """
         INSERT INTO order_refunds (
-            order_id, bar_id, payment_id, gateway_refund_id, amount,
-            currency, reason, requested_by_user_id, created_at
+            order_id, bar_id, payment_id, idempotency_key, status, amount,
+            currency, reason, requested_by_user_id, created_at, updated_at
         ) VALUES (
-            :order_id, :bar_id, :payment_id, :gateway_refund_id, :amount,
-            :currency, :reason, :requested_by_user_id, :created_at
+            :order_id, :bar_id, :payment_id, :idempotency_key, 'pending', :amount,
+            'BRL', :reason, :requested_by_user_id, :now, :now
         )
-        ON CONFLICT (gateway_refund_id) DO NOTHING
+        ON CONFLICT (idempotency_key) DO NOTHING
+        RETURNING id
         """,
         {
             "order_id": order["id"],
             "bar_id": order["bar_id"],
-            "payment_id": refund["payment_id"],
-            "gateway_refund_id": refund["refund_id"],
-            "amount": float(money(refund["amount"])),
-            "currency": "BRL",
+            "payment_id": order["payment_id"],
+            "idempotency_key": idempotency_key,
+            "amount": float(money(amount)),
             "reason": reason[:500] if reason else None,
             "requested_by_user_id": requested_by_user_id,
-            "created_at": datetime.utcnow(),
+            "now": now,
         },
     )
-    return True
+    row = await db.fetch_one(refunds.select().where(refunds.c.idempotency_key == idempotency_key))
+    if row is None or row["order_id"] != order["id"]:
+        raise APIError.conflict("This idempotency key was already used for another refund")
+    return row, inserted is not None
+
+
+async def complete_order_refund(db, idempotency_key, refund):
+    """DPE confirmed the refund: store the confirmed amount and refund id.
+    Applies from any state - money that moved is always counted."""
+    refunds = _refunds_table()
+    await db.execute(refunds.update().where(refunds.c.idempotency_key == idempotency_key).values(
+        status="succeeded",
+        amount=float(money(refund["amount"])),
+        gateway_refund_id=refund.get("refund_id"),
+        updated_at=datetime.utcnow(),
+    ))
+
+
+async def fail_order_refund(db, idempotency_key):
+    """DPE definitively rejected the refund. Only a pending row can fail; a
+    confirmed refund is never un-counted."""
+    refunds = _refunds_table()
+    await db.execute(refunds.update().where(
+        refunds.c.idempotency_key == idempotency_key, refunds.c.status == "pending"
+    ).values(status="failed", updated_at=datetime.utcnow()))
+
+
+async def reconcile_pending_refunds(db, dpe, older_than=REFUND_RECONCILE_AFTER, now=None):
+    """Settle refunds left ``pending`` (DPE timeout/5xx, or the outcome could
+    not be recorded) using the refunded total DPE reports for the payment.
+
+    Read-only towards DPE: it never issues a refund. For each payment, the
+    amount DPE refunded beyond our confirmed refunds is attributed to its
+    pending refunds oldest first; those it covers become ``succeeded``, the
+    rest ``failed``. Payments with a pending refund newer than ``older_than``
+    are skipped (possibly still in flight), as are payments DPE cannot report
+    on - those stay pending, i.e. still subtracted from revenue.
+
+    Returns ``{"succeeded": n, "failed": n}``.
+    """
+    refunds = _refunds_table()
+    cutoff = (now or datetime.utcnow()) - older_than
+    pending = await db.fetch_all(select(
+        refunds.c.payment_id, func.max(refunds.c.created_at).label("newest")
+    ).where(refunds.c.status == "pending").group_by(refunds.c.payment_id))
+    settled = {"succeeded": 0, "failed": 0}
+    for payment in pending:
+        if payment["newest"] is None or payment["newest"] > cutoff:
+            continue
+        try:
+            info = await dpe.get_payment(payment["payment_id"])
+        except Exception:
+            logging.getLogger(__name__).warning("Refund reconciliation: payment %s unavailable", payment["payment_id"])
+            continue
+        if info.get("status") != "found":
+            continue
+        async with db.transaction():
+            rows = await db.fetch_all(refunds.select().where(
+                refunds.c.payment_id == payment["payment_id"]
+            ).order_by(refunds.c.created_at, refunds.c.id))
+            confirmed = sum((money(r["amount"]) for r in rows if r["status"] == "succeeded"), Decimal(0))
+            unaccounted = money(info.get("refunded_amount") or 0) - confirmed
+            for row in rows:
+                if row["status"] != "pending":
+                    continue
+                if unaccounted + _HALF_CENT >= money(row["amount"]):
+                    unaccounted -= money(row["amount"])
+                    new_status = "succeeded"
+                else:
+                    new_status = "failed"
+                await db.execute(refunds.update().where(
+                    refunds.c.id == row["id"], refunds.c.status == "pending"
+                ).values(status=new_status, updated_at=datetime.utcnow()))
+                settled[new_status] += 1
+            if unaccounted > _HALF_CENT:
+                logging.getLogger(__name__).warning(
+                    "Refund reconciliation: payment %s has %s refunded outside this service",
+                    payment["payment_id"], unaccounted,
+                )
+    return settled
+
+
+async def refund_reconciliation_worker(interval_seconds=60):
+    from app.database import database
+    from .dpe_client import get_dpe_client
+    while True:
+        try:
+            await reconcile_pending_refunds(database, get_dpe_client())
+        except Exception:
+            logging.getLogger(__name__).warning("Refund reconciliation worker unavailable")
+        await asyncio.sleep(interval_seconds)

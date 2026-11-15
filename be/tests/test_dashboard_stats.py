@@ -24,6 +24,8 @@ from app.bars_and_restaurants.models.relational_models import Bar, Menu, MenuIte
 from app.bars_and_restaurants.models.financial_models import OrderRefund
 from app.bars_and_restaurants.routes import dashboard
 import app.payment.routes as payment_routes
+from app.payment.order_payments import complete_order_refund, reconcile_pending_refunds
+import httpx
 
 
 pytestmark = pytest.mark.asyncio
@@ -110,6 +112,23 @@ async def make_menu_item(bar_id, name, price):
     ))
 
 
+async def menu_of(menu_item_id):
+    return await test_database.fetch_val(
+        MenuItem.__table__.select().with_only_columns(MenuItem.menu_id).where(MenuItem.id == menu_item_id)
+    )
+
+
+async def rename_menu_item(client, menu_item_id, name):
+    response = await client.put(f"/menus/{await menu_of(menu_item_id)}/items/{menu_item_id}", json={"name": name})
+    assert response.status_code == 200, response.text
+
+
+async def delete_menu_item(client, menu_item_id):
+    response = await client.delete(f"/menus/{await menu_of(menu_item_id)}/items/{menu_item_id}")
+    assert response.status_code == 200, response.text
+    assert await test_database.fetch_one(MenuItem.__table__.select().where(MenuItem.id == menu_item_id)) is None
+
+
 async def make_order(bar_id, total, *, status="completed", payment_status="paid",
                      created_at=TODAY_START + timedelta(hours=1), items=(), payment_id=None):
     order_id = await test_database.execute(Order.__table__.insert().values(
@@ -121,10 +140,19 @@ async def make_order(bar_id, total, *, status="completed", payment_status="paid"
         created_at=created_at,
         updated_at=created_at,
     ))
-    for menu_item_id, quantity, unit_price in items:
+    for item in items:
+        menu_item_id, quantity, unit_price = item[:3]
+        if len(item) > 3:
+            name = item[3]  # explicit snapshot (None = legacy row without one)
+        else:
+            # Like checkout: snapshot the menu item's name at order time.
+            name = await test_database.fetch_val(
+                MenuItem.__table__.select().with_only_columns(MenuItem.name).where(MenuItem.id == menu_item_id)
+            )
         await test_database.execute(OrderItem.__table__.insert().values(
             order_id=order_id,
             menu_item_id=menu_item_id,
+            menu_item_name=name,
             quantity=quantity,
             unit_price=unit_price,
             total_price=quantity * unit_price,
@@ -320,6 +348,138 @@ async def test_top_items_use_the_revenue_orders_of_the_period(client):
     ]
 
 
+async def test_top_items_keep_the_name_the_item_was_sold_under(client):
+    bar_id = await make_bar()
+    user = await member(bar_id)
+    beer = await make_menu_item(bar_id, "Beer", 10.0)
+    await make_order(bar_id, 30.0, items=[(beer, 3, 10.0)])
+
+    await rename_menu_item(client, beer, "Craft Lager")
+
+    body = (await get_stats(client, bar_id, user)).json()
+    assert body["top_items"] == [{"name": "Beer", "quantity": 3, "revenue": 30.0}]
+
+
+async def test_item_renamed_during_the_period_is_one_entry_under_its_latest_sold_name(client):
+    bar_id = await make_bar()
+    user = await member(bar_id)
+    beer = await make_menu_item(bar_id, "Beer", 10.0)
+    await make_order(bar_id, 30.0, items=[(beer, 3, 10.0)], created_at=TODAY_START + timedelta(hours=1))
+    await rename_menu_item(client, beer, "Craft Lager")
+    await make_order(bar_id, 24.0, items=[(beer, 2, 12.0)], created_at=TODAY_START + timedelta(hours=2))
+
+    body = (await get_stats(client, bar_id, user)).json()
+    assert body["top_items"] == [{"name": "Craft Lager", "quantity": 5, "revenue": 54.0}]
+
+
+async def test_latest_sold_name_follows_order_time_not_insertion_order(client):
+    bar_id = await make_bar()
+    user = await member(bar_id)
+    beer = await make_menu_item(bar_id, "Beer", 10.0)
+    # Recorded out of order (e.g. a late sync): the later sale decides the name.
+    await make_order(bar_id, 10.0, items=[(beer, 1, 10.0, "Craft Lager")], created_at=TODAY_START + timedelta(hours=5))
+    await make_order(bar_id, 10.0, items=[(beer, 1, 10.0, "Beer")], created_at=TODAY_START + timedelta(hours=1))
+
+    body = (await get_stats(client, bar_id, user)).json()
+    assert body["top_items"] == [{"name": "Craft Lager", "quantity": 2, "revenue": 20.0}]
+
+
+async def test_latest_sold_name_only_comes_from_counted_sales(client):
+    bar_id = await make_bar()
+    user = await member(bar_id)
+    beer = await make_menu_item(bar_id, "Beer", 10.0)
+    await make_order(bar_id, 10.0, items=[(beer, 1, 10.0)], created_at=TODAY_START + timedelta(hours=1))
+    await rename_menu_item(client, beer, "Craft Lager")
+    # Newer, but never paid / cancelled: not a sale, so it does not relabel.
+    await make_order(bar_id, 10.0, payment_status="pending", items=[(beer, 1, 10.0)],
+                     created_at=TODAY_START + timedelta(hours=2))
+    await make_order(bar_id, 10.0, status="cancelled", items=[(beer, 1, 10.0)],
+                     created_at=TODAY_START + timedelta(hours=3))
+
+    body = (await get_stats(client, bar_id, user)).json()
+    assert body["top_items"] == [{"name": "Beer", "quantity": 1, "revenue": 10.0}]
+
+
+async def test_different_menu_items_with_the_same_name_are_separate_entries(client):
+    bar_id = await make_bar()
+    user = await member(bar_id)
+    draft = await make_menu_item(bar_id, "House Beer", 10.0)
+    bottle = await make_menu_item(bar_id, "House Beer", 15.0)
+    await make_order(bar_id, 75.0, items=[(draft, 3, 10.0), (bottle, 3, 15.0)])
+
+    body = (await get_stats(client, bar_id, user)).json()
+    assert sorted((i["quantity"], i["revenue"]) for i in body["top_items"]) == [(3, 30.0), (3, 45.0)]
+    assert [i["name"] for i in body["top_items"]] == ["House Beer", "House Beer"]
+
+
+async def test_deleted_menu_items_stay_in_the_ranking(client):
+    bar_id = await make_bar()
+    user = await member(bar_id)
+    beer = await make_menu_item(bar_id, "Beer", 10.0)
+    wine = await make_menu_item(bar_id, "Wine", 30.0)
+    await make_order(bar_id, 110.0, items=[(beer, 2, 10.0), (wine, 3, 30.0)])
+
+    await delete_menu_item(client, wine)
+
+    body = (await get_stats(client, bar_id, user)).json()
+    assert body["top_items"] == [
+        {"name": "Wine", "quantity": 3, "revenue": 90.0},
+        {"name": "Beer", "quantity": 2, "revenue": 20.0},
+    ]
+    # The revenue total and the ranking still describe the same sales.
+    assert body["revenue"]["total"] == 110.0
+
+
+async def test_snapshot_is_preferred_over_newer_rows_without_one(client):
+    bar_id = await make_bar()
+    user = await member(bar_id)
+    beer = await make_menu_item(bar_id, "Beer", 10.0)
+    await make_order(bar_id, 10.0, items=[(beer, 1, 10.0)], created_at=TODAY_START + timedelta(hours=1))
+    await rename_menu_item(client, beer, "Craft Lager")
+    await make_order(bar_id, 10.0, items=[(beer, 1, 10.0, None)], created_at=TODAY_START + timedelta(hours=2))
+
+    body = (await get_stats(client, bar_id, user)).json()
+    assert body["top_items"] == [{"name": "Beer", "quantity": 2, "revenue": 20.0}]
+
+
+async def test_legacy_rows_only_use_the_current_menu_name(client):
+    bar_id = await make_bar()
+    user = await member(bar_id)
+    beer = await make_menu_item(bar_id, "Beer", 10.0)
+    await make_order(bar_id, 20.0, items=[(beer, 2, 10.0, None)])
+    await rename_menu_item(client, beer, "Craft Lager")
+
+    body = (await get_stats(client, bar_id, user)).json()
+    assert body["top_items"] == [{"name": "Craft Lager", "quantity": 2, "revenue": 20.0}]
+
+
+async def test_order_items_without_a_snapshot_fall_back_to_the_menu_item_name(client):
+    bar_id = await make_bar()
+    user = await member(bar_id)
+    beer = await make_menu_item(bar_id, "Beer", 10.0)
+    await make_order(bar_id, 20.0, items=[(beer, 2, 10.0, None)])  # legacy row
+    await make_order(bar_id, 10.0, items=[(beer, 1, 10.0)])        # snapshot "Beer"
+
+    body = (await get_stats(client, bar_id, user)).json()
+    assert body["top_items"] == [{"name": "Beer", "quantity": 3, "revenue": 30.0}]
+
+
+async def test_unnamed_deleted_items_are_kept_apart(client):
+    bar_id = await make_bar()
+    user = await member(bar_id)
+    gone_a = await make_menu_item(bar_id, "Gone A", 10.0)
+    gone_b = await make_menu_item(bar_id, "Gone B", 5.0)
+    await make_order(bar_id, 40.0, items=[(gone_a, 2, 10.0, None), (gone_b, 4, 5.0, None)])
+    await delete_menu_item(client, gone_a)
+    await delete_menu_item(client, gone_b)
+
+    body = (await get_stats(client, bar_id, user)).json()
+    assert body["top_items"] == [
+        {"name": f"Item #{gone_b}", "quantity": 4, "revenue": 20.0},
+        {"name": f"Item #{gone_a}", "quantity": 2, "revenue": 20.0},
+    ]
+
+
 async def test_week_and_month_periods(client):
     bar_id = await make_bar()
     user = await member(bar_id)
@@ -392,26 +552,44 @@ def test_period_range_defaults_to_utc():
 # ---------------------------------------------------------------------------
 
 class FakeDPE:
-    """Stands in for the payment engine's refund API: idempotent per key, a
-    missing amount refunds what is left, over-refunds are rejected."""
+    """Stands in for the payment engine: refunds are idempotent per key (a key
+    reused with a different amount is a 409), a missing amount refunds what is
+    left, over-refunds are rejected. ``fail_next`` injects one failure:
+    "timeout_after" (refunds, then times out), "timeout_before", or
+    "server_error" (502, nothing refunded). ``get_payment`` reports the
+    refunded total, like the real API."""
 
     def __init__(self, payments):
         self.payments = dict(payments)  # payment_id -> amount charged
         self.refunded = {}
         self.by_key = {}
         self.calls = 0
+        self.fail_next = None
+        self.unavailable = False
+        self.on_refund = None  # hook called with the payment id before refunding
 
     async def refund(self, payment_id, amount=None, reason=None, idempotency_key=None):
         self.calls += 1
+        if self.on_refund:
+            await self.on_refund(payment_id)
+        failure, self.fail_next = self.fail_next, None
+        if failure == "timeout_before":
+            raise httpx.ReadTimeout("timed out")
+        if failure == "server_error":
+            return {"status": "error", "http_status": 502, "message": "Bad gateway"}
         if idempotency_key in self.by_key:
-            return self.by_key[idempotency_key]
+            cached, cached_amount = self.by_key[idempotency_key]
+            if amount is not None and cached_amount is not None and amount != cached_amount:
+                return {"status": "error", "http_status": 409, "message": "Idempotency key reused with different parameters"}
+            return cached
         if payment_id not in self.payments:
             return {"status": "error", "http_status": 404, "message": "Payment not found"}
         remaining = round(self.payments[payment_id] - self.refunded.get(payment_id, 0.0), 2)
+        requested = amount
         amount = remaining if amount is None else amount
         if amount > remaining:
             return {"status": "error", "http_status": 400, "message": "Refund exceeds captured amount"}
-        self.refunded[payment_id] = self.refunded.get(payment_id, 0.0) + amount
+        self.refunded[payment_id] = round(self.refunded.get(payment_id, 0.0) + amount, 2)
         result = {
             "status": "succeeded",
             "refund_id": f"re_{len(self.by_key) + 1}_{payment_id}",
@@ -419,8 +597,19 @@ class FakeDPE:
             "amount": amount,
             "created_at": datetime.now(timezone.utc).isoformat(),
         }
-        self.by_key[idempotency_key] = result
+        self.by_key[idempotency_key] = (result, requested)
+        if failure == "timeout_after":
+            raise httpx.ReadTimeout("timed out after processing")
         return result
+
+    async def get_payment(self, payment_id):
+        if self.unavailable:
+            raise httpx.ConnectError("payment engine unreachable")
+        return {
+            "status": "found",
+            "payment_id": payment_id,
+            "refunded_amount": self.refunded.get(payment_id, 0.0),
+        }
 
 
 @pytest.fixture
@@ -525,19 +714,22 @@ async def test_rejected_refund_changes_nothing(client, dpe):
     response = await refund(client, user, "pay_rejected", amount=500.0)
 
     assert response.status_code == 400
-    assert await test_database.fetch_all(OrderRefund.__table__.select()) == []
+    # Kept as an audit trail, but marked failed: it is not subtracted.
+    [row] = await test_database.fetch_all(OrderRefund.__table__.select())
+    assert row["status"] == "failed"
     body = (await get_stats(client, bar_id, user)).json()
     assert body["revenue"]["total"] == 100.0
 
 
-async def test_refund_of_a_payment_without_an_order_is_not_recorded(client, dpe):
+async def test_payment_without_an_order_cannot_be_refunded(client, dpe):
     bar_id = await make_bar()
     user = await member(bar_id)
     dpe.payments["pay_subscription_invoice"] = 199.0
 
     response = await refund(client, user, "pay_subscription_invoice")
 
-    assert response.status_code == 200
+    assert response.status_code == 404
+    assert dpe.calls == 0
     assert await test_database.fetch_all(OrderRefund.__table__.select()) == []
 
 
@@ -570,18 +762,237 @@ async def test_refund_counts_against_the_period_the_order_was_placed_in(client, 
     assert body["revenue"]["trend_percent"] == 100.0  # 100 today vs 50 net yesterday
 
 
-async def test_refund_still_succeeds_if_recording_it_fails(client, dpe, monkeypatch):
+# ---------------------------------------------------------------------------
+# Revenue is never overstated, whatever fails around a refund
+# ---------------------------------------------------------------------------
+
+async def refund_rows():
+    return await test_database.fetch_all(OrderRefund.__table__.select().order_by(OrderRefund.id))
+
+
+async def revenue(client, bar_id, user):
+    return (await get_stats(client, bar_id, user)).json()["revenue"]["total"]
+
+
+async def reconcile(dpe, minutes_later=11):
+    return await reconcile_pending_refunds(
+        test_database, dpe, now=datetime.utcnow() + timedelta(minutes=minutes_later)
+    )
+
+
+def broken(*args, **kwargs):
+    async def fail(*a, **k):
+        raise RuntimeError("database unavailable")
+    return fail
+
+
+async def test_refund_is_recorded_before_the_payment_engine_moves_money(client, dpe):
     bar_id = await make_bar()
     user = await member(bar_id)
-    await paid_order(dpe, bar_id, 100.0, "pay_unrecorded")
+    await paid_order(dpe, bar_id, 100.0, "pay_order")
+    seen = []
 
-    async def broken(*args, **kwargs):
-        raise RuntimeError("database unavailable")
+    async def check_recorded(payment_id):
+        rows = await test_database.fetch_all(OrderRefund.__table__.select().where(OrderRefund.payment_id == payment_id))
+        seen.append([(r["status"], r["amount"]) for r in rows])
 
-    monkeypatch.setattr(payment_routes, "record_order_refund", broken)
+    dpe.on_refund = check_recorded
 
-    response = await refund(client, user, "pay_unrecorded")
+    await refund(client, user, "pay_order", amount=30.0)
+
+    assert seen == [[("pending", 30.0)]]
+
+
+async def test_if_the_refund_cannot_be_recorded_no_money_moves(client, dpe, monkeypatch):
+    bar_id = await make_bar()
+    user = await member(bar_id)
+    await paid_order(dpe, bar_id, 100.0, "pay_no_record")
+    monkeypatch.setattr(payment_routes, "begin_order_refund", broken())
+
+    with pytest.raises(RuntimeError):
+        await refund(client, user, "pay_no_record")
+
+    assert dpe.calls == 0
+    assert dpe.refunded == {}
+    assert await revenue(client, bar_id, user) == 100.0
+
+
+async def test_if_the_confirmation_cannot_be_stored_revenue_still_excludes_the_refund(client, dpe, monkeypatch):
+    bar_id = await make_bar()
+    user = await member(bar_id)
+    await paid_order(dpe, bar_id, 100.0, "pay_lost")
+    monkeypatch.setattr(payment_routes, "complete_order_refund", broken())
+
+    response = await refund(client, user, "pay_lost", amount=30.0, key="key-lost")
 
     # The money moved; an error would invite a retry that refunds it again.
     assert response.status_code == 200
-    assert dpe.calls == 1
+    assert dpe.refunded == {"pay_lost": 30.0}
+    [row] = await refund_rows()
+    assert (row["status"], row["amount"]) == ("pending", 30.0)
+    assert await revenue(client, bar_id, user) == 70.0
+
+    # A retry with the same key settles it without refunding again.
+    monkeypatch.setattr(payment_routes, "complete_order_refund", complete_order_refund)
+    retry = await refund(client, user, "pay_lost", amount=30.0, key="key-lost")
+
+    assert retry.status_code == 200
+    assert dpe.refunded == {"pay_lost": 30.0}
+    [row] = await refund_rows()
+    assert (row["status"], row["amount"]) == ("succeeded", 30.0)
+    assert row["gateway_refund_id"] == retry.json()["refund_id"]
+    assert await revenue(client, bar_id, user) == 70.0
+
+
+async def test_lost_confirmation_without_retry_is_settled_by_reconciliation(client, dpe, monkeypatch):
+    bar_id = await make_bar()
+    user = await member(bar_id)
+    await paid_order(dpe, bar_id, 100.0, "pay_lost")
+    monkeypatch.setattr(payment_routes, "complete_order_refund", broken())
+    await refund(client, user, "pay_lost", amount=30.0)
+
+    assert await reconcile(dpe) == {"succeeded": 1, "failed": 0}
+
+    [row] = await refund_rows()
+    assert row["status"] == "succeeded"
+    assert await revenue(client, bar_id, user) == 70.0
+
+
+async def test_timeout_after_the_refund_went_through(client, dpe):
+    bar_id = await make_bar()
+    user = await member(bar_id)
+    await paid_order(dpe, bar_id, 100.0, "pay_slow")
+    dpe.fail_next = "timeout_after"
+
+    response = await refund(client, user, "pay_slow")
+
+    assert response.status_code == 504
+    assert dpe.refunded == {"pay_slow": 100.0}
+    assert await revenue(client, bar_id, user) == 0.0  # pending full refund already subtracted
+    assert await reconcile(dpe) == {"succeeded": 1, "failed": 0}
+    assert await revenue(client, bar_id, user) == 0.0
+
+
+async def test_timeout_before_the_refund_went_through(client, dpe):
+    bar_id = await make_bar()
+    user = await member(bar_id)
+    await paid_order(dpe, bar_id, 100.0, "pay_slow")
+    dpe.fail_next = "timeout_before"
+
+    response = await refund(client, user, "pay_slow", amount=40.0)
+
+    assert response.status_code == 504
+    assert dpe.refunded == {}
+    # Unknown outcome: erring low (60) rather than high (100).
+    assert await revenue(client, bar_id, user) == 60.0
+    assert await reconcile(dpe) == {"succeeded": 0, "failed": 1}
+    assert await revenue(client, bar_id, user) == 100.0
+
+
+async def test_payment_engine_server_error_leaves_the_refund_pending(client, dpe):
+    bar_id = await make_bar()
+    user = await member(bar_id)
+    await paid_order(dpe, bar_id, 100.0, "pay_5xx")
+    dpe.fail_next = "server_error"
+
+    response = await refund(client, user, "pay_5xx", amount=40.0)
+
+    assert response.status_code == 400
+    [row] = await refund_rows()
+    assert row["status"] == "pending"
+    assert await revenue(client, bar_id, user) == 60.0
+    assert await reconcile(dpe) == {"succeeded": 0, "failed": 1}
+    assert await revenue(client, bar_id, user) == 100.0
+
+
+async def test_error_on_a_retry_does_not_uncount_a_refund_that_went_through(client, dpe, monkeypatch):
+    bar_id = await make_bar()
+    user = await member(bar_id)
+    await paid_order(dpe, bar_id, 100.0, "pay_retry")
+    monkeypatch.setattr(payment_routes, "complete_order_refund", broken())
+    await refund(client, user, "pay_retry", amount=30.0, key="key-1")  # refunded, left pending
+    monkeypatch.setattr(payment_routes, "complete_order_refund", complete_order_refund)
+
+    # Same key, different amount: the engine rejects the retry (409).
+    response = await refund(client, user, "pay_retry", amount=50.0, key="key-1")
+
+    assert response.status_code == 400
+    [row] = await refund_rows()
+    assert row["status"] == "pending"  # not "failed": the first attempt refunded 30
+    assert await revenue(client, bar_id, user) == 70.0
+    assert await reconcile(dpe) == {"succeeded": 1, "failed": 0}
+    assert await revenue(client, bar_id, user) == 70.0
+
+
+async def test_full_refund_after_a_pending_partial_requests_the_remainder(client, dpe, monkeypatch):
+    bar_id = await make_bar()
+    user = await member(bar_id)
+    await paid_order(dpe, bar_id, 100.0, "pay_two")
+    monkeypatch.setattr(payment_routes, "complete_order_refund", broken())
+    await refund(client, user, "pay_two", amount=30.0)
+    monkeypatch.setattr(payment_routes, "complete_order_refund", complete_order_refund)
+
+    response = await refund(client, user, "pay_two")
+
+    assert response.status_code == 200
+    assert [(r["status"], r["amount"]) for r in await refund_rows()] == [("pending", 30.0), ("succeeded", 70.0)]
+    assert await revenue(client, bar_id, user) == 0.0
+
+
+async def test_reconciliation_credits_refunded_money_to_the_oldest_pending_refunds(client, dpe):
+    bar_id = await make_bar()
+    user = await member(bar_id)
+    await paid_order(dpe, bar_id, 100.0, "pay_multi")
+    dpe.fail_next = "timeout_after"
+    await refund(client, user, "pay_multi", amount=30.0)   # went through
+    dpe.fail_next = "timeout_before"
+    await refund(client, user, "pay_multi", amount=50.0)   # did not
+    assert await revenue(client, bar_id, user) == 20.0
+
+    assert await reconcile(dpe) == {"succeeded": 1, "failed": 1}
+
+    assert [(r["status"], r["amount"]) for r in await refund_rows()] == [("succeeded", 30.0), ("failed", 50.0)]
+    assert await revenue(client, bar_id, user) == 70.0
+
+
+async def test_reconciliation_waits_while_a_refund_may_still_be_in_flight(client, dpe):
+    bar_id = await make_bar()
+    user = await member(bar_id)
+    await paid_order(dpe, bar_id, 100.0, "pay_recent")
+    dpe.fail_next = "timeout_before"
+    await refund(client, user, "pay_recent", amount=40.0)
+
+    assert await reconcile(dpe, minutes_later=5) == {"succeeded": 0, "failed": 0}
+    [row] = await refund_rows()
+    assert row["status"] == "pending"
+    assert await revenue(client, bar_id, user) == 60.0
+
+
+async def test_reconciliation_keeps_refunds_pending_if_the_engine_is_unreachable(client, dpe):
+    bar_id = await make_bar()
+    user = await member(bar_id)
+    await paid_order(dpe, bar_id, 100.0, "pay_down")
+    dpe.fail_next = "timeout_before"
+    await refund(client, user, "pay_down", amount=40.0)
+    dpe.unavailable = True
+
+    assert await reconcile(dpe) == {"succeeded": 0, "failed": 0}
+    [row] = await refund_rows()
+    assert row["status"] == "pending"
+    assert await revenue(client, bar_id, user) == 60.0
+
+
+async def test_same_client_key_from_different_users_are_different_refunds(client, dpe):
+    bar_id = await make_bar()
+    owner = await member(bar_id)
+    admin = await member(bar_id, "admin")
+    await paid_order(dpe, bar_id, 100.0, "pay_a")
+    await paid_order(dpe, bar_id, 100.0, "pay_b")
+
+    first = await refund(client, owner, "pay_a", amount=10.0, key="same-key")
+    second = await refund(client, admin, "pay_b", amount=20.0, key="same-key")
+
+    assert first.status_code == second.status_code == 200
+    assert first.json()["refund_id"] != second.json()["refund_id"]
+    assert dpe.refunded == {"pay_a": 10.0, "pay_b": 20.0}
+    assert await revenue(client, bar_id, owner) == 170.0
