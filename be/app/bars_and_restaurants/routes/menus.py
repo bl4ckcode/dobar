@@ -3,10 +3,29 @@ Menu and Menu Items Routes
 
 All menu data is now stored in PostgreSQL for referential integrity with orders.
 MongoDB support is deprecated but kept for legacy data migration.
+
+Authorization
+-------------
+Every route on this router requires an authenticated, active user (enforced
+at the router level, so new routes are covered automatically). Any logged-in
+user, including customers, may browse menus, items and trending data.
+
+Every mutation additionally requires the matching menu permission *at the
+venue that owns the menu* (role defaults + the membership's custom
+permissions, via the shared ``authorize_bar_permission`` resolver):
+
+    create menu / add items (single, bulk)   -> menu:create  (owner, admin, manager)
+    update menu / update item / availability -> menu:edit    (owner, admin, manager)
+    delete menu / delete item                -> menu:delete  (owner, admin)
+
+The venue is always taken from the stored menu record (or, when creating a
+menu, from the body ``bar_id`` that the menu will be created under). The
+``bar_id`` query parameter and ``X-Bar-Id`` header are deliberately ignored so
+a caller cannot be authorized at one venue and mutate another venue's menu.
 """
 from datetime import datetime, timezone
 from typing import List, Optional
-from fastapi import APIRouter, Query, UploadFile, File, Form, Depends, Request
+from fastapi import APIRouter, Query, UploadFile, File, Form, Depends, Request, Response
 from sqlalchemy import and_
 import httpx
 
@@ -23,8 +42,16 @@ from app.errors import APIError, ErrorCode
 from ..services.menu_extraction import MenuExtractionUnavailable
 from app.auth.middleware import get_current_active_user
 from app.auth.auth_models import User
+from app.auth.rbac_middleware import AuthUser, authorize_bar_permission, emit_bar_headers
+from app.auth.rbac_models import Permission
 
-menus_router = APIRouter(prefix="/menus", tags=["Menus"])
+menus_router = APIRouter(
+    prefix="/menus",
+    tags=["Menus"],
+    # Browsing menus requires login. FastAPI caches this dependency per
+    # request, so routes that also take ``current_user`` resolve it once.
+    dependencies=[Depends(get_current_active_user)],
+)
 
 
 # =============================================================================
@@ -41,17 +68,59 @@ async def get_menu_by_id(menu_id: int):
     return await database.fetch_one(query)
 
 
+async def get_menu_item_in_menu(menu_id: int, item_id: int):
+    query = MenuItemModel.__table__.select().where(
+        and_(MenuItemModel.id == item_id, MenuItemModel.menu_id == menu_id)
+    )
+    return await database.fetch_one(query)
+
+
+async def authorize_venue_menu_permission(
+    user: AuthUser,
+    bar_id: int,
+    permission: Permission,
+    response: Response,
+):
+    """Require ``permission`` at venue ``bar_id`` and echo the X-Bar-* headers."""
+    auth = await authorize_bar_permission(user, bar_id, permission)
+    emit_bar_headers(response, auth)
+    return auth
+
+
+async def authorize_menu_mutation(
+    menu_id: int,
+    user: AuthUser,
+    permission: Permission,
+    response: Response,
+):
+    """Load the menu (404 if missing) and require ``permission`` at the venue
+    that owns it. Returns the menu record."""
+    menu = await get_menu_by_id(menu_id)
+    if not menu:
+        raise APIError.not_found("Menu not found")
+    await authorize_venue_menu_permission(user, menu["bar_id"], permission, response)
+    return menu
+
+
 # =============================================================================
 # MENU ROUTES
 # =============================================================================
 
 @menus_router.post("/", response_model=Menu)
-async def create_menu(menu: MenuCreate):
-    """Create a new menu for a bar."""
+async def create_menu(
+    menu: MenuCreate,
+    response: Response,
+    current_user: AuthUser = Depends(get_current_active_user),
+):
+    """Create a new menu for a bar. Requires ``menu:create`` at ``menu.bar_id``."""
     # Check if the bar exists
     bar = await get_bar_by_id(menu.bar_id)
     if not bar:
         raise APIError.partner_not_found("Bar not found")
+    
+    await authorize_venue_menu_permission(
+        current_user, menu.bar_id, Permission.MENU_CREATE, response
+    )
     
     # Create the menu in PostgreSQL
     now = datetime.utcnow()
@@ -106,11 +175,14 @@ async def get_menu_with_items(menu_id: int):
 
 
 @menus_router.put("/{menu_id}", response_model=Menu)
-async def update_menu(menu_id: int, menu_update: MenuUpdate):
-    """Update a menu's metadata."""
-    menu = await get_menu_by_id(menu_id)
-    if not menu:
-        raise APIError.not_found("Menu not found")
+async def update_menu(
+    menu_id: int,
+    menu_update: MenuUpdate,
+    response: Response,
+    current_user: AuthUser = Depends(get_current_active_user),
+):
+    """Update a menu's metadata. Requires ``menu:edit`` at the menu's venue."""
+    await authorize_menu_mutation(menu_id, current_user, Permission.MENU_EDIT, response)
     
     # Build update data (only non-None values)
     update_data = {k: v for k, v in menu_update.dict().items() if v is not None}
@@ -123,11 +195,14 @@ async def update_menu(menu_id: int, menu_update: MenuUpdate):
 
 
 @menus_router.delete("/{menu_id}")
-async def delete_menu(menu_id: int):
-    """Delete a menu and all its items (CASCADE)."""
-    menu = await get_menu_by_id(menu_id)
-    if not menu:
-        raise APIError.not_found("Menu not found")
+async def delete_menu(
+    menu_id: int,
+    response: Response,
+    current_user: AuthUser = Depends(get_current_active_user),
+):
+    """Delete a menu and all its items (CASCADE). Requires ``menu:delete`` at
+    the menu's venue."""
+    await authorize_menu_mutation(menu_id, current_user, Permission.MENU_DELETE, response)
     
     # Delete from PostgreSQL (items will cascade)
     delete_query = MenuModel.__table__.delete().where(MenuModel.id == menu_id)
@@ -173,12 +248,14 @@ async def get_menu_items(
 
 
 @menus_router.post("/{menu_id}/items", response_model=MenuItem)
-async def create_menu_item(menu_id: int, item: MenuItemCreateViaURL):
-    """Add a new item to a menu."""
-    # Verify menu exists
-    menu = await get_menu_by_id(menu_id)
-    if not menu:
-        raise APIError.not_found("Menu not found")
+async def create_menu_item(
+    menu_id: int,
+    item: MenuItemCreateViaURL,
+    response: Response,
+    current_user: AuthUser = Depends(get_current_active_user),
+):
+    """Add a new item to a menu. Requires ``menu:create`` at the menu's venue."""
+    await authorize_menu_mutation(menu_id, current_user, Permission.MENU_CREATE, response)
     
     now = datetime.utcnow()
     item_data = item.dict()
@@ -198,11 +275,11 @@ async def create_menu_item(menu_id: int, item: MenuItemCreateViaURL):
 async def create_menu_items_bulk(
     menu_id: int,
     bulk: BulkMenuItemCreate,
-    current_user: User = Depends(get_current_active_user)
+    response: Response,
+    current_user: AuthUser = Depends(get_current_active_user)
 ):
-    menu = await get_menu_by_id(menu_id)
-    if not menu:
-        raise APIError.not_found("Menu not found")
+    """Add many items to a menu. Requires ``menu:create`` at the menu's venue."""
+    await authorize_menu_mutation(menu_id, current_user, Permission.MENU_CREATE, response)
     
     now = datetime.now(timezone.utc)
     created_items = []
@@ -239,14 +316,18 @@ async def get_menu_item(menu_id: int, item_id: int):
 
 
 @menus_router.put("/{menu_id}/items/{item_id}", response_model=MenuItem)
-async def update_menu_item(menu_id: int, item_id: int, item_update: MenuItemUpdate):
-    """Update a menu item."""
-    # Verify item exists
-    query = MenuItemModel.__table__.select().where(
-        and_(MenuItemModel.id == item_id, MenuItemModel.menu_id == menu_id)
-    )
-    item = await database.fetch_one(query)
+async def update_menu_item(
+    menu_id: int,
+    item_id: int,
+    item_update: MenuItemUpdate,
+    response: Response,
+    current_user: AuthUser = Depends(get_current_active_user),
+):
+    """Update a menu item. Requires ``menu:edit`` at the menu's venue."""
+    await authorize_menu_mutation(menu_id, current_user, Permission.MENU_EDIT, response)
     
+    # Verify the item exists in this (authorized) menu
+    item = await get_menu_item_in_menu(menu_id, item_id)
     if not item:
         raise APIError.not_found("Menu item not found")
     
@@ -255,7 +336,7 @@ async def update_menu_item(menu_id: int, item_id: int, item_update: MenuItemUpda
     update_data["updated_at"] = datetime.utcnow()
     
     update_query = MenuItemModel.__table__.update().where(
-        MenuItemModel.id == item_id
+        and_(MenuItemModel.id == item_id, MenuItemModel.menu_id == menu_id)
     ).values(**update_data)
     await database.execute(update_query)
     
@@ -265,36 +346,46 @@ async def update_menu_item(menu_id: int, item_id: int, item_update: MenuItemUpda
 
 
 @menus_router.delete("/{menu_id}/items/{item_id}")
-async def delete_menu_item(menu_id: int, item_id: int):
-    """Delete a menu item."""
-    # Verify item exists
-    query = MenuItemModel.__table__.select().where(
-        and_(MenuItemModel.id == item_id, MenuItemModel.menu_id == menu_id)
-    )
-    item = await database.fetch_one(query)
+async def delete_menu_item(
+    menu_id: int,
+    item_id: int,
+    response: Response,
+    current_user: AuthUser = Depends(get_current_active_user),
+):
+    """Delete a menu item. Requires ``menu:delete`` at the menu's venue."""
+    await authorize_menu_mutation(menu_id, current_user, Permission.MENU_DELETE, response)
     
+    # Verify the item exists in this (authorized) menu
+    item = await get_menu_item_in_menu(menu_id, item_id)
     if not item:
         raise APIError.not_found("Menu item not found")
     
-    delete_query = MenuItemModel.__table__.delete().where(MenuItemModel.id == item_id)
+    delete_query = MenuItemModel.__table__.delete().where(
+        and_(MenuItemModel.id == item_id, MenuItemModel.menu_id == menu_id)
+    )
     await database.execute(delete_query)
     
     return {"message": "Menu item deleted successfully", "id": item_id}
 
 
 @menus_router.patch("/{menu_id}/items/{item_id}/availability")
-async def toggle_item_availability(menu_id: int, item_id: int, available: bool):
-    """Quick toggle for item availability (86'd or back in stock)."""
-    query = MenuItemModel.__table__.select().where(
-        and_(MenuItemModel.id == item_id, MenuItemModel.menu_id == menu_id)
-    )
-    item = await database.fetch_one(query)
+async def toggle_item_availability(
+    menu_id: int,
+    item_id: int,
+    available: bool,
+    response: Response,
+    current_user: AuthUser = Depends(get_current_active_user),
+):
+    """Quick toggle for item availability (86'd or back in stock).
+    Requires ``menu:edit`` at the menu's venue."""
+    await authorize_menu_mutation(menu_id, current_user, Permission.MENU_EDIT, response)
     
+    item = await get_menu_item_in_menu(menu_id, item_id)
     if not item:
         raise APIError.not_found("Menu item not found")
     
     update_query = MenuItemModel.__table__.update().where(
-        MenuItemModel.id == item_id
+        and_(MenuItemModel.id == item_id, MenuItemModel.menu_id == menu_id)
     ).values(available=available, updated_at=datetime.utcnow())
     await database.execute(update_query)
     
