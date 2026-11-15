@@ -8,8 +8,9 @@ import sqlalchemy.exc
 from asyncpg.exceptions import UniqueViolationError
 import hashlib
 import httpx
+import logging
 
-from .order_payments import charge_order, customer_for_payment, raise_payment_error, owned_order, publish_payment, settle_order_rewards, update_attempt_status
+from .order_payments import charge_order, customer_for_payment, raise_payment_error, owned_order, publish_payment, record_order_refund, settle_order_rewards, update_attempt_status
 
 from app.errors import APIError, map_gateway_error
 from app.auth.dependencies import get_current_user
@@ -35,6 +36,8 @@ from . import get_payment_gateway, PaymentGateway, get_dpe_client, DPEClient
 from .dpe_client import DPE_SERVICE_SECRET
 
 payment_router = APIRouter(prefix="/payments", tags=["Payments"])
+
+logger = logging.getLogger(__name__)
 
 IDEMPOTENCY_TTL_HOURS = 24
 
@@ -240,7 +243,23 @@ async def create_refund_v2(
         raise APIError.refund_failed(
             message=result.get("message", "Refund failed"),
         )
-    
+
+    # The money has moved: record it so venue revenue is reported net of
+    # refunds. A failure here must not turn into an error response - the
+    # client could retry and refund the payment a second time.
+    try:
+        await record_order_refund(
+            database,
+            {**result, "payment_id": result.get("payment_id") or request.payment_id},
+            reason=request.reason,
+            requested_by_user_id=current_user.id,
+        )
+    except Exception:
+        logger.exception(
+            "Refund %s for payment %s succeeded but could not be recorded",
+            result.get("refund_id"), request.payment_id,
+        )
+
     return DPERefundResponse(
         refund_id=result["refund_id"],
         payment_id=result["payment_id"],

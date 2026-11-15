@@ -241,3 +241,44 @@ async def publish_payment(order, status):
         await manager.notify_order(order["id"], event)
     except Exception:
         logging.getLogger(__name__).warning("Payment notification failed for order %s", order["id"])
+
+
+async def record_order_refund(db, refund, reason=None, requested_by_user_id=None):
+    """Record a refund the payment engine confirmed against the order it paid.
+
+    ``refund`` is a successful ``DPEClient.refund`` result; its ``amount`` is
+    what was actually refunded (the full payment when no amount was requested).
+    The order's ``payment_status`` is deliberately left as is (see
+    ``OrderRefund``). Recording is idempotent on the gateway refund id, so a
+    retried refund that the engine de-duplicated is not counted twice.
+
+    Returns False when the payment does not belong to an order (e.g. a
+    subscription invoice), True otherwise.
+    """
+    order = await db.fetch_one(Order.__table__.select().where(Order.payment_id == refund["payment_id"]))
+    if order is None:
+        return False
+    await db.execute(
+        """
+        INSERT INTO order_refunds (
+            order_id, bar_id, payment_id, gateway_refund_id, amount,
+            currency, reason, requested_by_user_id, created_at
+        ) VALUES (
+            :order_id, :bar_id, :payment_id, :gateway_refund_id, :amount,
+            :currency, :reason, :requested_by_user_id, :created_at
+        )
+        ON CONFLICT (gateway_refund_id) DO NOTHING
+        """,
+        {
+            "order_id": order["id"],
+            "bar_id": order["bar_id"],
+            "payment_id": refund["payment_id"],
+            "gateway_refund_id": refund["refund_id"],
+            "amount": float(money(refund["amount"])),
+            "currency": "BRL",
+            "reason": reason[:500] if reason else None,
+            "requested_by_user_id": requested_by_user_id,
+            "created_at": datetime.utcnow(),
+        },
+    )
+    return True

@@ -59,3 +59,33 @@ class Dispute(Base):
     
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+
+class OrderRefund(Base):
+    """A refund the payment engine (DPE) confirmed for an order's payment.
+
+    Refunds are amount-based and an order can have several (partial) refunds,
+    so they are recorded here instead of on the order. ``orders.payment_status``
+    keeps describing the payment itself ("paid"): the charge, webhook and
+    status-polling flows treat any other value as "not paid yet" and would
+    re-open or re-settle a refunded order.
+
+    ``gateway_refund_id`` is unique so replaying the same refund (client retry
+    with the same idempotency key) is recorded only once.
+    """
+    __tablename__ = "order_refunds"
+
+    id = Column(Integer, primary_key=True, index=True)
+    order_id = Column(Integer, ForeignKey("orders.id", ondelete="CASCADE"), index=True, nullable=False)
+    bar_id = Column(Integer, ForeignKey("bars.id"), index=True, nullable=False)
+
+    payment_id = Column(String(100), nullable=False, index=True)
+    gateway_refund_id = Column(String(100), nullable=False, unique=True, index=True)
+
+    amount = Column(Float, nullable=False)
+    currency = Column(String(3), default="BRL")
+    reason = Column(String(500), nullable=True)
+
+    requested_by_user_id = Column(Integer, ForeignKey("users.id", ondelete="SET NULL"), nullable=True)
+
+    created_at = Column(DateTime, default=datetime.utcnow)
