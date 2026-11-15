@@ -1,7 +1,7 @@
 import pytest
 from httpx import AsyncClient
 from app.database import database
-from app.bars_and_restaurants.routes.orders import compute_order_expiry_utc
+from app.bars_and_restaurants.services.order_expiry import order_expiry_utc as compute_order_expiry_utc
 from app.bars_and_restaurants.models.relational_models import (
     Bar as BarModel,
     Order as OrderModel,
@@ -57,12 +57,12 @@ class TestOrderExpiryHelper:
         expiry = compute_order_expiry_utc(created, hours, TZ)
         assert expiry == datetime(2026, 3, 10, 1, 0, tzinfo=timezone.utc)  # Mon 22:00 local
 
-    def test_normal_day_after_close_is_expired(self):
+    def test_normal_day_after_close_uses_24_hour_limit(self):
         # Mon 23:00 local (Tue 02:00 UTC), venue open Mon 08:00-22:00.
         hours = {"monday": {"open": "08:00", "close": "22:00", "is_closed": False}}
         created = datetime(2026, 3, 10, 2, 0, tzinfo=timezone.utc)
         expiry = compute_order_expiry_utc(created, hours, TZ)
-        assert expiry == datetime(2026, 3, 10, 1, 0, tzinfo=timezone.utc)  # Mon 22:00 local (past)
+        assert expiry == created + timedelta(hours=24)
 
     def test_overnight_evening_expires_next_day(self):
         # Mon 23:00 local (Tue 02:00 UTC), venue open Mon 20:00 -> Tue 02:00.
@@ -81,15 +81,15 @@ class TestOrderExpiryHelper:
         expiry = compute_order_expiry_utc(created, hours, TZ)
         assert expiry == datetime(2026, 3, 10, 5, 0, tzinfo=timezone.utc)  # Tue 02:00 local
 
-    def test_missing_hours_keeps_order_live(self):
+    def test_missing_hours_expires_after_24_hours(self):
         created = datetime(2026, 3, 9, 13, 0, tzinfo=timezone.utc)
-        assert compute_order_expiry_utc(created, None, TZ) is None
-        assert compute_order_expiry_utc(created, {}, TZ) is None
+        assert compute_order_expiry_utc(created, None, TZ) == created + timedelta(hours=24)
+        assert compute_order_expiry_utc(created, {}, TZ) == created + timedelta(hours=24)
 
-    def test_closed_day_keeps_order_live(self):
+    def test_closed_day_expires_after_24_hours(self):
         hours = {"monday": {"open": None, "close": None, "is_closed": True}}
         created = datetime(2026, 3, 9, 13, 0, tzinfo=timezone.utc)
-        assert compute_order_expiry_utc(created, hours, TZ) is None
+        assert compute_order_expiry_utc(created, hours, TZ) == created + timedelta(hours=24)
 
 
 @pytest.mark.asyncio
@@ -154,7 +154,7 @@ class TestCashierOrderExpiryEndpoint:
         client, headers, user = auth_client
         bar_id = test_bar_in_db["id"]
         await self._make_owner(user, bar_id)
-        # operating_hours stays None: no expiry configured, previous behavior.
+        # operating_hours stays None; a recently created order is still live.
 
         now = datetime.now(timezone.utc)
         order_id = await database.execute(

@@ -44,7 +44,7 @@ from ..database import database
 from .auth_models import User
 from .rbac_models import (
     BarStaff, UserProfile, BarRole, Permission,
-    UserType, ROLE_PERMISSIONS, get_permissions_for_role
+    UserType, ROLE_PERMISSIONS, get_permissions_for_role, bar_role_level
 )
 from ..errors import APIError
 
@@ -239,19 +239,12 @@ async def get_optional_user(
 # BAR-SPECIFIC DEPENDENCIES
 # =============================================================================
 
-async def _resolve_bar_context(
-    request: Request,
-    user: AuthUser,
-) -> BarAuthContext:
-    """Resolve the bar context (bar_id, role, permissions) for the current user.
-
-    Shared by ``require_bar_role`` and ``require_bar_permission`` so every
-    bar-scoped endpoint resolves ``bar_id`` consistently (path → query →
-    ``X-Bar-Id`` header) and enforces bar membership exactly once.
+def _bar_id_from_request(request: Request) -> int:
+    """Extract the target ``bar_id`` from the request (path → query →
+    ``X-Bar-Id`` header).
 
     Raises:
         HTTPException(400) if no ``bar_id`` is provided/invalid.
-        HTTPException(403) if the user has no role at the bar.
     """
     bar_id = (
         request.path_params.get("bar_id")
@@ -266,52 +259,130 @@ async def _resolve_bar_context(
         )
 
     try:
-        bar_id = int(bar_id)
+        return int(bar_id)
     except (ValueError, TypeError):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Invalid bar_id format",
         )
 
-    # Check if user has a role at this bar
-    user_role = user.get_role_at_bar(bar_id)
-    if not user_role:
+
+async def resolve_bar_context(user: AuthUser, bar_id: int) -> BarAuthContext:
+    """Resolve the user's role and effective permissions at ``bar_id``.
+
+    Single source of truth for bar-scoped authorization: the role comes from
+    the user's *active* ``bar_staff`` row for this bar, and the permissions
+    are the role defaults merged with that row's ``custom_permissions``.
+
+    Callers that receive ``bar_id`` somewhere other than the path/query/header
+    (e.g. a request body) must call this with that exact ``bar_id`` so the bar
+    that is authorized is the bar that is acted upon.
+
+    Raises:
+        HTTPException(403) if the user has no active role at the bar.
+    """
+    staff = await database.fetch_one(
+        BarStaff.__table__.select().where(
+            (BarStaff.user_id == user.id) &
+            (BarStaff.bar_id == bar_id) &
+            (BarStaff.is_active == True)
+        )
+    )
+    if staff is None:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have access to this bar",
         )
 
-    # Get role's permissions
-    try:
-        role_enum = BarRole(user_role)
-        permissions = [p.value for p in get_permissions_for_role(role_enum)]
-    except ValueError:
-        permissions = []
-
-    # Merge custom permissions (override / extend role defaults)
-    staff_query = BarStaff.__table__.select().where(
-        (BarStaff.user_id == user.id) &
-        (BarStaff.bar_id == bar_id) &
-        (BarStaff.is_active == True)
-    )
-    staff = await database.fetch_one(staff_query)
-
-    if staff and staff["custom_permissions"]:
-        try:
-            custom = json.loads(staff["custom_permissions"])
-            permissions.extend(custom)
-        except (json.JSONDecodeError, TypeError):
-            pass
-
     return BarAuthContext(
         user=user,
         bar_id=bar_id,
-        role=user_role,
-        permissions=list(set(permissions)),
+        role=staff["role"],
+        permissions=list(_merge_bar_permissions(
+            staff["role"], staff["custom_permissions"]
+        )),
     )
 
 
-def _emit_bar_headers(response: Response, context: BarAuthContext) -> None:
+async def authorize_bar_permission(
+    user: AuthUser,
+    bar_id: int,
+    permission: Permission,
+) -> BarAuthContext:
+    """Resolve the bar context for ``bar_id`` and require ``permission``.
+
+    Same rules as ``require_bar_permission`` (role defaults + custom
+    permissions), for handlers whose ``bar_id`` is not in the path, query
+    or ``X-Bar-Id`` header.
+
+    Raises:
+        HTTPException(403) if the user has no role at the bar or lacks
+        ``permission`` there.
+    """
+    context = await resolve_bar_context(user, bar_id)
+    if permission.value not in context.permissions:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Missing permission: {permission.value}",
+        )
+    return context
+
+
+async def _resolve_bar_context(
+    request: Request,
+    user: AuthUser,
+) -> BarAuthContext:
+    """Resolve the bar context (bar_id, role, permissions) for the current user.
+
+    Shared by ``require_bar_role`` and ``require_bar_permission`` so every
+    bar-scoped endpoint resolves ``bar_id`` consistently (path → query →
+    ``X-Bar-Id`` header) and enforces bar membership exactly once.
+
+    Raises:
+        HTTPException(400) if no ``bar_id`` is provided/invalid.
+        HTTPException(403) if the user has no role at the bar.
+    """
+    return await resolve_bar_context(user, _bar_id_from_request(request))
+
+
+def _merge_bar_permissions(role: str, custom_permissions: Optional[str]) -> set:
+    """Role default permissions plus the membership's custom permissions
+    (a JSON array of Permission values that extends the role defaults)."""
+    try:
+        permissions = {p.value for p in get_permissions_for_role(BarRole(role))}
+    except ValueError:
+        permissions = set()
+
+    if custom_permissions:
+        try:
+            permissions.update(json.loads(custom_permissions))
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    return permissions
+
+
+async def get_active_bar_permissions(user_id: int, bar_id: int) -> set:
+    """
+    Permission values the user currently holds at the bar (empty if they have
+    no active membership). Same rules as ``require_bar_permission``, for
+    callers without an HTTP request, e.g. commands on a long-lived WebSocket
+    that must be re-authorized each time in case the membership was
+    revoked or changed after the socket was opened.
+    """
+    staff = await database.fetch_one(
+        BarStaff.__table__.select().where(
+            (BarStaff.user_id == user_id) &
+            (BarStaff.bar_id == bar_id) &
+            (BarStaff.is_active == True)
+        )
+    )
+    if staff is None:
+        return set()
+    return _merge_bar_permissions(staff["role"], staff["custom_permissions"])
+
+
+def emit_bar_headers(response: Response, context: BarAuthContext) -> None:
     """Emit the front-end bar context headers on the response.
 
     The front-end reads ``X-Bar-Id`` / ``X-Bar-Role`` / ``X-Bar-Permissions``
@@ -349,16 +420,8 @@ def require_bar_role(*allowed_roles: BarRole):
 
         # Check if user's role is in allowed roles
         # Role hierarchy: OWNER > ADMIN > MANAGER > CASHIER > STAFF
-        role_hierarchy = {
-            BarRole.OWNER.value: 5,
-            BarRole.ADMIN.value: 4,
-            BarRole.MANAGER.value: 3,
-            BarRole.CASHIER.value: 2,
-            BarRole.STAFF.value: 1,
-        }
-
-        user_level = role_hierarchy.get(context.role, 0)
-        min_required_level = min(role_hierarchy.get(r.value, 0) for r in allowed_roles)
+        user_level = bar_role_level(context.role)
+        min_required_level = min(bar_role_level(r) for r in allowed_roles)
 
         if user_level < min_required_level:
             raise HTTPException(
@@ -366,7 +429,7 @@ def require_bar_role(*allowed_roles: BarRole):
                 detail=f"Insufficient permissions. Required: {', '.join(r.value for r in allowed_roles)}"
             )
 
-        _emit_bar_headers(response, context)
+        emit_bar_headers(response, context)
         return context
 
     return dependency
@@ -393,16 +456,11 @@ def require_bar_permission(permission: Permission):
         response: Response,
         user: AuthUser = Depends(get_current_user)
     ) -> BarAuthContext:
-        context = await _resolve_bar_context(request, user)
+        context = await authorize_bar_permission(
+            user, _bar_id_from_request(request), permission
+        )
 
-        # Check if required permission is present
-        if permission.value not in context.permissions:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Missing permission: {permission.value}"
-            )
-
-        _emit_bar_headers(response, context)
+        emit_bar_headers(response, context)
         return context
 
     return dependency

@@ -191,6 +191,9 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
     import app.bars_and_restaurants.routes.staff as staff_routes
     advertising_routes.database = test_database
     staff_routes.database = test_database
+
+    import app.bars_and_restaurants.services.staff_invitations as staff_invitations_service
+    staff_invitations_service.database = test_database
     
     # Patch new discounts service
     import app.bars_and_restaurants.services.discounts as discounts_service
@@ -231,6 +234,7 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
     discounts_service.database = original_db
     user_documents_routes.database = original_db
     notifications_routes.database = original_db
+    staff_invitations_service.database = original_db
 
 
 @pytest.fixture

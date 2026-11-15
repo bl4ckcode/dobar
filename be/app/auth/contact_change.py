@@ -17,7 +17,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Literal, Optional
 
 from fastapi import APIRouter, Depends, Request
-from pydantic import BaseModel, EmailStr, TypeAdapter, ValidationError
+from pydantic import BaseModel
 from sqlalchemy import func
 
 from app.database import database
@@ -26,6 +26,7 @@ from app.rate_limiter import limiter, RateLimits
 from .auth_models import RefreshToken, User
 from .contact_change_models import ContactChangeRequest
 from .rbac_middleware import AuthUser, get_current_user
+from .contact_validation import InvalidContact, canonical_email, canonical_phone
 
 contact_change_router = APIRouter(prefix="/me/contact-change", tags=["Profile"])
 
@@ -33,8 +34,6 @@ CONTACT_CHANGE_TTL_MINUTES = 10
 MAX_CONFIRM_ATTEMPTS = 5
 PROOF_MAX_AGE_SECONDS = 300  # provider sign-in must be recent
 
-_PHONE_RE = re.compile(r"^\+[1-9]\d{7,14}$")
-_EMAIL = TypeAdapter(EmailStr)
 
 
 class ContactChangeStart(BaseModel):
@@ -71,17 +70,16 @@ class ContactChangeStatus(BaseModel):
 
 
 def normalize_contact(channel: str, value: str) -> str:
-    value = (value or "").strip()
     if channel == "phone":
-        compact = re.sub(r"[\s\-()]", "", value)
-        if not _PHONE_RE.match(compact):
+        try:
+            return canonical_phone(value)
+        except InvalidContact:
             raise APIError.validation_error(
                 "Invalid phone number", {"new_value": ["Use international format, e.g. +5531999999999"]}
             )
-        return compact
     try:
-        return str(_EMAIL.validate_python(value)).lower()
-    except ValidationError:
+        return canonical_email(value)
+    except InvalidContact:
         raise APIError.validation_error("Invalid email", {"new_value": ["Invalid email address"]})
 
 
