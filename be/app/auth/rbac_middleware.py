@@ -281,14 +281,6 @@ async def _resolve_bar_context(
             detail="You don't have access to this bar",
         )
 
-    # Get role's permissions
-    try:
-        role_enum = BarRole(user_role)
-        permissions = [p.value for p in get_permissions_for_role(role_enum)]
-    except ValueError:
-        permissions = []
-
-    # Merge custom permissions (override / extend role defaults)
     staff_query = BarStaff.__table__.select().where(
         (BarStaff.user_id == user.id) &
         (BarStaff.bar_id == bar_id) &
@@ -296,19 +288,51 @@ async def _resolve_bar_context(
     )
     staff = await database.fetch_one(staff_query)
 
-    if staff and staff["custom_permissions"]:
-        try:
-            custom = json.loads(staff["custom_permissions"])
-            permissions.extend(custom)
-        except (json.JSONDecodeError, TypeError):
-            pass
-
     return BarAuthContext(
         user=user,
         bar_id=bar_id,
         role=user_role,
-        permissions=list(set(permissions)),
+        permissions=list(_merge_bar_permissions(
+            user_role, staff["custom_permissions"] if staff else None
+        )),
     )
+
+
+def _merge_bar_permissions(role: str, custom_permissions: Optional[str]) -> set:
+    """Role default permissions plus the membership's custom permissions
+    (a JSON array of Permission values that extends the role defaults)."""
+    try:
+        permissions = {p.value for p in get_permissions_for_role(BarRole(role))}
+    except ValueError:
+        permissions = set()
+
+    if custom_permissions:
+        try:
+            permissions.update(json.loads(custom_permissions))
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    return permissions
+
+
+async def get_active_bar_permissions(user_id: int, bar_id: int) -> set:
+    """
+    Permission values the user currently holds at the bar (empty if they have
+    no active membership). Same rules as ``require_bar_permission``, for
+    callers without an HTTP request, e.g. commands on a long-lived WebSocket
+    that must be re-authorized each time in case the membership was
+    revoked or changed after the socket was opened.
+    """
+    staff = await database.fetch_one(
+        BarStaff.__table__.select().where(
+            (BarStaff.user_id == user_id) &
+            (BarStaff.bar_id == bar_id) &
+            (BarStaff.is_active == True)
+        )
+    )
+    if staff is None:
+        return set()
+    return _merge_bar_permissions(staff["role"], staff["custom_permissions"])
 
 
 def _emit_bar_headers(response: Response, context: BarAuthContext) -> None:

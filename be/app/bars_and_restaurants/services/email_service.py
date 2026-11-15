@@ -12,9 +12,9 @@ EMAIL_PROVIDER = os.getenv("EMAIL_PROVIDER", "sendgrid").lower()
 SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
 MAILJET_API_KEY = os.getenv("MAILJET_API_KEY")
 MAILJET_SECRET = os.getenv("MAILJET_SECRET")
-FROM_EMAIL = os.getenv("FROM_EMAIL", "contato@dobar.app")
+FROM_EMAIL = os.getenv("FROM_EMAIL", "contact@example.invalid")
 FROM_NAME = os.getenv("FROM_NAME", "Dobar")
-ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "contato@dobar.app")
+ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "contact@example.invalid")
 
 
 async def send_confirmation_email(
@@ -48,7 +48,7 @@ async def send_confirmation_email(
             
             <p>Enquanto isso, siga a gente no Instagram <a href="https://instagram.com/dobarapp">@dobarapp</a> para novidades.</p>
             
-            <p>Dúvidas? Responda este email ou entre em contato diretamente pelo e-mail: contato@dobar.app</p>
+            <p>Dúvidas? Responda este email ou entre em contato diretamente pelo e-mail: contact@example.invalid</p>
             
             <p>Abraço,<br>
             <strong>Time Dobar</strong></p>

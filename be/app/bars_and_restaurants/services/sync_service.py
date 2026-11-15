@@ -1,7 +1,10 @@
 from datetime import datetime
 from typing import List, Dict, Any, Optional
+from sqlalchemy import and_
+
 from app.database import database
 from ..models.relational_models import Order, Bar
+from .order_status import can_customer_cancel
 
 
 CONFLICT_TYPES = {
@@ -13,8 +16,19 @@ CONFLICT_TYPES = {
 }
 
 
-async def check_order_conflict(order_id: int, operation_type: str, client_timestamp: str) -> Optional[Dict[str, Any]]:
-    query = Order.__table__.select().where(Order.id == order_id)
+async def check_order_conflict(
+    order_id: int,
+    operation_type: str,
+    client_timestamp: str,
+    *,
+    user_id: int,
+) -> Optional[Dict[str, Any]]:
+    # Only the caller's own orders are visible. Someone else's order gets the
+    # same answer as a nonexistent one, so the response reveals neither that
+    # it exists nor its status or timestamps.
+    query = Order.__table__.select().where(
+        and_(Order.id == order_id, Order.user_id == user_id)
+    )
     db_order = await database.fetch_one(query)
     
     if not db_order:
@@ -47,7 +61,7 @@ async def check_order_conflict(order_id: int, operation_type: str, client_timest
                 "resolution": CONFLICT_TYPES["already_completed"]
             }
         
-        if order_dict["status"] not in ["pending", "confirmed"]:
+        if not can_customer_cancel(order_dict["status"]):
             return {
                 "conflict_type": "cannot_cancel",
                 "server_state": {"status": order_dict["status"]},
@@ -91,7 +105,7 @@ async def sync_operations(user_id: int, operations: List[Dict[str, Any]]) -> Dic
             order_id = op.get("order_id")
             client_timestamp = op.get("client_timestamp")
             
-            conflict = await check_order_conflict(order_id, op_type, client_timestamp)
+            conflict = await check_order_conflict(order_id, op_type, client_timestamp, user_id=user_id)
             
             if conflict:
                 conflicts.append({
