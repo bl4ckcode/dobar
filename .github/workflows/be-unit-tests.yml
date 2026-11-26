@@ -1,7 +1,21 @@
-name: Run Unit Tests
+name: Backend Tests
 
 on:
   workflow_call:
+  # Also gate pull requests, so failures surface before a merge to main
+  # starts the production deploy (deploy-be.yml reuses this workflow).
+  push:
+    branches: [develop, 'feat/**']
+    paths:
+      - 'be/**'
+      - 'dpe/**'
+      - '.github/workflows/be-unit-tests.yml'
+  pull_request:
+    branches: [main, develop]
+    paths:
+      - 'be/**'
+      - 'dpe/**'
+      - '.github/workflows/be-unit-tests.yml'
 
 jobs:
   test:
