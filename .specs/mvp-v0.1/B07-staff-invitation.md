@@ -9,7 +9,7 @@ source_requirements: ["MVP-B07-01", "MVP-B07-02", "MVP-B07-03", "LAUNCH-B07-01"]
 planning_role: "cross-repo-planner"
 implementation_roles: ["frontend", "backend"]
 skills: ["dobar-spec", "dobar-frontend", "dobar-backend"]
-delivery_status: "ready"
+delivery_status: "in_progress"
 verification_status: "unverified"
 checks: ["foundation", "product-e2e"]
 ---
@@ -53,7 +53,7 @@ Use [FE/BE contract](../../docs/FE_BE_COMMUNICATION.md) for durable interfaces; 
 
 ## Validation scenarios and evidence
 
-- Exercise both routes with role defaults and custom permissions, cross-venue callers, rank boundaries, malformed contacts, existing members, pending duplicates and concurrent PostgreSQL issuance; verify new and existing accounts have no membership before acceptance.
+- Exercise both routes with role defaults and custom permissions, cross-venue callers, rank boundaries, malformed contacts, existing members, pending duplicates and concurrent PostgreSQL issuance, including a verified recipient accepting between a same-role resend's pending-row selection and its renewal (required outcome: the resend returns 409 "already staff", never an accepted invitation reported as a successful resend, and no second pending invitation is created); verify new and existing accounts have no membership before acceptance.
 - Deliver invitations through a test adapter, inject failure and retry/resend; independently verify provider delivery with redacted sandbox evidence. Verify expired, replaced and explicitly revoked invitations cannot grant access, and record the absence of an explicit revoke endpoint until resolved.
 - Verify logged and returned errors do not expose contacts or codes, including validation and database failures. Review legacy invitation rows and client compatibility for normalized contacts and reuse/replacement behavior.
 - Local check at the PR #2 review: `cd be && python -m pytest -o addopts='' -p no:cacheprovider tests/test_staff_invite_authorization.py tests/test_pending_invitations.py -q --disable-warnings` passed on SQLite with mocked services (Python 3.12, the `be-unit-tests.yml` environment variables); this does not prove provider delivery, PostgreSQL lock behavior or product E2E.

@@ -147,7 +147,9 @@ ROLE_PERMISSIONS = {
     ],
     BarRole.MANAGER: [
         Permission.BAR_VIEW,
-        Permission.MENU_VIEW, Permission.MENU_EDIT,
+        # Managers can save menus (new menus, items, bulk import) and edit them,
+        # but deleting menus/items stays with ADMIN and OWNER.
+        Permission.MENU_VIEW, Permission.MENU_EDIT, Permission.MENU_CREATE,
         Permission.ORDER_VIEW, Permission.ORDER_PROCESS, Permission.ORDER_CANCEL,
         Permission.STAFF_VIEW,
         Permission.PROMO_VIEW,

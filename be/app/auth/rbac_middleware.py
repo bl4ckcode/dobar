@@ -371,6 +371,10 @@ async def get_active_bar_permissions(user_id: int, bar_id: int) -> set:
     callers without an HTTP request, e.g. commands on a long-lived WebSocket
     that must be re-authorized each time in case the membership was
     revoked or changed after the socket was opened.
+
+    A disabled user account holds no permissions, whatever its memberships
+    say: ``get_current_user`` rejects the same account with 403 on HTTP, and
+    this helper must not be a way around that.
     """
     staff = await database.fetch_one(
         BarStaff.__table__.select().where(
@@ -380,6 +384,11 @@ async def get_active_bar_permissions(user_id: int, bar_id: int) -> set:
         )
     )
     if staff is None:
+        return set()
+    user = await database.fetch_one(
+        User.__table__.select().with_only_columns(User.is_active).where(User.id == user_id)
+    )
+    if user is None or not user["is_active"]:
         return set()
     return _merge_bar_permissions(staff["role"], staff["custom_permissions"])
 
