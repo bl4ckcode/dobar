@@ -1,8 +1,8 @@
 ### 1. Secure menu and item mutations
 
-**Spec:** [C06: Live menu](/Users/carlosalves/Documents/PDev/dobar/.specs/mvp-v0.1/C06-live-menu.md), with server authorization as a prerequisite for reliable business-side updates.
+**Spec:** [C06: Live menu](../../.specs/mvp-v0.1/C06-live-menu.md), with server authorization as a prerequisite for reliable business-side updates.
 
-**Concrete starting point:** Several mutation routes in [menus.py](/Users/carlosalves/Documents/PDev/dobar/be/app/bars_and_restaurants/routes/menus.py:48), including menu creation and item updates, have no authentication dependency. The bulk item route authenticates a user but does not visibly check that user’s permission for the menu’s venue.
+**Concrete starting point:** Several mutation routes in [menus.py](../../be/app/bars_and_restaurants/routes/menus.py#L48), including menu creation and item updates, have no authentication dependency. The bulk item route authenticates a user but does not visibly check that user’s permission for the menu’s venue.
 
 **Task:** Apply venue-scoped menu permissions to every menu and item mutation while preserving customer menu browsing and existing API shapes.
 
@@ -19,9 +19,9 @@ This task does not require a menu provider or live credentials. Real-time propag
 
 ### 2. Secure the legacy global order-change WebSocket
 
-**Spec:** [C11: Customer order tracking](/Users/carlosalves/Documents/PDev/dobar/.specs/mvp-v0.1/C11-order-tracking.md), especially authenticated order visibility.
+**Spec:** [C11: Customer order tracking](../../.specs/mvp-v0.1/C11-order-tracking.md), especially authenticated order visibility.
 
-**Concrete starting point:** [orders.py](/Users/carlosalves/Documents/PDev/dobar/be/app/bars_and_restaurants/routes/orders.py:38) exposes a WebSocket without an authentication check. Its [change-stream service](/Users/carlosalves/Documents/PDev/dobar/be/app/bars_and_restaurants/services/realtime_updates.py:4) watches the MongoDB orders collection with an empty filter and forwards changes. The separate order-specific tracker already checks the customer’s ownership, but this legacy stream needs its own compatibility and access review.
+**Concrete starting point:** [orders.py](../../be/app/bars_and_restaurants/routes/orders.py#L38) exposes a WebSocket without an authentication check. Its [change-stream service](../../be/app/bars_and_restaurants/services/realtime_updates.py#L4) watches the MongoDB orders collection with an empty filter and forwards changes. The separate order-specific tracker already checks the customer’s ownership, but this legacy stream needs its own compatibility and access review.
 
 **Task:** Prevent unauthorized or cross-customer order data from reaching subscribers of the legacy stream, while preserving an explicit migration path for legitimate existing clients.
 

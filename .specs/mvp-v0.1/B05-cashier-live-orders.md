@@ -38,7 +38,7 @@ Reviewed at commit `5233ab94` ("feat: B05-cashier-live-orders.md"), which implem
 2. **Resolved.** `tests/test_orders.py::TestOrderStatusUpdate` encoded the old any-user bypass and was red. It now uses a cashier membership and adds a rejected-customer case.
 3. **Open (BE-3), B05-AC02.** HTTP status changes do not reach live sockets. The HTTP routes publish `order.status_changed` to the Redis stream `orders:events`. Its only consumer, [order_worker.py](../../be/app/order_worker.py), is not started by [main.py](../../be/app/main.py) lifespan (only `projection_worker`), and [fly.toml](../../be/fly.toml) has no worker process. Only WS-originated commands notify sockets directly. The Flutter cashier changes status over HTTP (`ApiEndpoints.barOrderStatus` in [live_orders_remote_data_source.dart](../../fe/lib/features/orders/data/data_sources/live_orders_remote_data_source.dart)), so customer trackers and other cashier sessions never receive those changes. `ConnectionManager` is in memory per process, so delivery across machines needs a shared fan-out (Redis).
 4. **Open (FE-2, per D2).** Offline cashier status sync is silently dropped. FE `OrderSyncExecutor._executeOrderStatusSync` ([order_sync_executor.dart](../../fe/lib/features/orders/data/sync/order_sync_executor.dart)) posts `operation: 'status_change'` to `POST /orders/sync`. `sync_operations` reads `type`, returns `unknown_operation` and never mutates status, and the FE treats the operation as synced.
-5. **Resolved (REV-1), except one step.** Out-of-scope edits in `5233ab94` were reverted from its parent: the `email_service.py` production sender/support address, the `ProfileFrame` AppBar (its removal broke `profile_account_widget_test.dart` in Flutter CI) and the Dockerfile DPE TODO. `be/.gitignore` now ignores coverage artifacts. Still to do: `be/.coverage` and `be/coverage.xml` remain tracked until someone runs `git rm --cached`.
+5. **Resolved (REV-1).** Out-of-scope edits in `5233ab94` were reverted from its parent: the `email_service.py` production sender/support address, the `ProfileFrame` AppBar (its removal broke `profile_account_widget_test.dart` in Flutter CI) and the Dockerfile DPE TODO. `be/.gitignore` now ignores coverage artifacts. This PR removes `be/.coverage` and `be/coverage.xml` from the tracked tree.
 6. **Open, smaller items.**
    - The WS customer tracker sends only a `connected` snapshot plus later events and has no sequence/version field, so B05-AC02 reconnect-without-duplicates is unproven (BE-3/FE-1).
    - No test asserts that `payment_status` is unchanged after a rejected or failed status transition (BE-2).
@@ -72,7 +72,7 @@ Use the [FE/BE contract](../../docs/FE_BE_COMMUNICATION.md) for durable interfac
 
 - **B05-AC01** — An authorized order operator sees the current venue orders and advances the shared four-state pipeline with persisted backend acknowledgement.
 - **B05-AC02** — A status transition immediately reaches connected customer trackers and other authorized cashier sessions, whichever route made it (HTTP or WS). Reconnecting recovers the current snapshot without duplicates.
-- **B05-AC03** — Every status mutation route checks venue scope and the `order:process` permission. This includes the legacy general route, the venue route, WS commands and any offline-sync path. Direct unauthorized or cross-venue mutations are rejected without revealing order state.
+- **B05-AC03** — Every cashier status mutation route checks venue scope and the `order:process` permission. This includes the legacy general route, the venue route, WS commands and any offline-sync path. Customer cancellation (`POST /orders/{id}/cancel`) is separate: it is authorized by order ownership and cancellation eligibility, not `order:process`. Direct unauthorized or cross-venue mutations are rejected without revealing order state.
 - **B05-AC04** — Pending, failed and confirmed payment states remain distinguishable. Retries or simultaneous updates cannot regress a completed order or invent payment success.
 - **B05-AC05** — The live cashier excludes orders past their venue's operating-day close. An order expires at the close of the venue operating day (local venue time, `America/Sao_Paulo` for the BH MVP) in which it was created. Overnight shifts that span midnight are covered: an evening order expires at the next-day close, and an early-morning order belongs to the previous day's shift. Bars without configured operating hours keep previous behavior (no expiry). Payment records, API shape and cashier status semantics are unchanged.
 
@@ -103,8 +103,8 @@ Planner ordering: BE-1 and REV-1 are done. BE-2 and FE-2 are independent of each
 - **FE-2 (frontend), B05-AC03, per D2:**
   - In `OrderSyncExecutor`, send queued status changes through the venue-scoped PUT instead of `POST /orders/sync`.
   - Treat 400 and 404 as a final rejection of the queued change, refetch on 409, and never treat `unknown_operation` as synced.
-- **REV-1 (human review): done**, except running `git rm --cached be/.coverage be/coverage.xml` (see gap 5).
-- **VER-1 (verifier):** After BE-1/BE-3/FE-1, run the validation scenarios below and record the evidence per criterion.
+- **REV-1 (human review): done.**
+- **VER-1 (verifier):** After BE-1/BE-2/BE-3/FE-1/FE-2 (offline replay and payment invariance need BE-2 and FE-2), run the validation scenarios below and record the evidence per criterion.
 
 ## Validation scenarios and evidence
 
@@ -118,7 +118,7 @@ Evidence at `5233ab94` (macOS, Python 3.11.14, scratch venv; SQLite fixtures, Re
 - `python -m unittest discover -s tools/agent_workflow/tests`: 1 error. `test_deployment_workflows` still expected the `deploy.yml` layout from before `641a8ee3`; this is unrelated to B05.
 - Flutter CI: `profile_account_widget_test.dart` failed (gap 5, AppBar removed).
 
-Evidence after the 2026-11-25 fixes (same environment; Flutter 3.47.1):
+Historical observation after the 2026-11-25 fixes (same environment; Flutter 3.47.1; run on an uncommitted tree, so no SHA identifies it; rerun on an identified commit for VER-1):
 
 - `pytest tests/` with the `be-unit-tests.yml` env: passed (541 passed, 41 skipped).
 - `python -m tools.agent_workflow validate`, `--catalog platform validate`, `unittest discover -s tools/agent_workflow/tests` (38 tests) and `-s tools/agent_workflow/contract_tests`: all passed.

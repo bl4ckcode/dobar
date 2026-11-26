@@ -171,7 +171,13 @@ async def _compare_and_set_status(
                     )
                 )
         except _StatusChanged:
-            order = await fetch_order(order_id, bar_id)
+            try:
+                order = await fetch_order(order_id, bar_id)
+            except APIError:
+                raise
+            except Exception:
+                logger.exception("Failed to reload order %s", order_id)
+                raise APIError.server_error(failure_message)
             continue
         except Exception:
             # Log the details but don't send raw DB errors to the client.

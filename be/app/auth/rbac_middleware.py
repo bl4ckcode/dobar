@@ -287,13 +287,19 @@ async def _resolve_bar_context(
         (BarStaff.is_active == True)
     )
     staff = await database.fetch_one(staff_query)
+    if staff is None:
+        # Membership revoked after get_current_user loaded the roles.
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You don't have access to this bar",
+        )
 
     return BarAuthContext(
         user=user,
         bar_id=bar_id,
-        role=user_role,
+        role=staff["role"],
         permissions=list(_merge_bar_permissions(
-            user_role, staff["custom_permissions"] if staff else None
+            staff["role"], staff["custom_permissions"]
         )),
     )
 
