@@ -118,13 +118,20 @@ async def menu_of(menu_item_id):
     )
 
 
-async def rename_menu_item(client, menu_item_id, name):
-    response = await client.put(f"/menus/{await menu_of(menu_item_id)}/items/{menu_item_id}", json={"name": name})
+# Menu mutations require ``menu:edit`` / ``menu:delete`` at the item's venue,
+# so these helpers act as that venue's member (``user``).
+async def rename_menu_item(client, user, menu_item_id, name):
+    response = await client.put(
+        f"/menus/{await menu_of(menu_item_id)}/items/{menu_item_id}",
+        json={"name": name}, headers=headers_for(user),
+    )
     assert response.status_code == 200, response.text
 
 
-async def delete_menu_item(client, menu_item_id):
-    response = await client.delete(f"/menus/{await menu_of(menu_item_id)}/items/{menu_item_id}")
+async def delete_menu_item(client, user, menu_item_id):
+    response = await client.delete(
+        f"/menus/{await menu_of(menu_item_id)}/items/{menu_item_id}", headers=headers_for(user),
+    )
     assert response.status_code == 200, response.text
     assert await test_database.fetch_one(MenuItem.__table__.select().where(MenuItem.id == menu_item_id)) is None
 
@@ -354,7 +361,7 @@ async def test_top_items_keep_the_name_the_item_was_sold_under(client):
     beer = await make_menu_item(bar_id, "Beer", 10.0)
     await make_order(bar_id, 30.0, items=[(beer, 3, 10.0)])
 
-    await rename_menu_item(client, beer, "Craft Lager")
+    await rename_menu_item(client, user, beer, "Craft Lager")
 
     body = (await get_stats(client, bar_id, user)).json()
     assert body["top_items"] == [{"name": "Beer", "quantity": 3, "revenue": 30.0}]
@@ -365,7 +372,7 @@ async def test_item_renamed_during_the_period_is_one_entry_under_its_latest_sold
     user = await member(bar_id)
     beer = await make_menu_item(bar_id, "Beer", 10.0)
     await make_order(bar_id, 30.0, items=[(beer, 3, 10.0)], created_at=TODAY_START + timedelta(hours=1))
-    await rename_menu_item(client, beer, "Craft Lager")
+    await rename_menu_item(client, user, beer, "Craft Lager")
     await make_order(bar_id, 24.0, items=[(beer, 2, 12.0)], created_at=TODAY_START + timedelta(hours=2))
 
     body = (await get_stats(client, bar_id, user)).json()
@@ -389,7 +396,7 @@ async def test_latest_sold_name_only_comes_from_counted_sales(client):
     user = await member(bar_id)
     beer = await make_menu_item(bar_id, "Beer", 10.0)
     await make_order(bar_id, 10.0, items=[(beer, 1, 10.0)], created_at=TODAY_START + timedelta(hours=1))
-    await rename_menu_item(client, beer, "Craft Lager")
+    await rename_menu_item(client, user, beer, "Craft Lager")
     # Newer, but never paid / cancelled: not a sale, so it does not relabel.
     await make_order(bar_id, 10.0, payment_status="pending", items=[(beer, 1, 10.0)],
                      created_at=TODAY_START + timedelta(hours=2))
@@ -419,7 +426,7 @@ async def test_deleted_menu_items_stay_in_the_ranking(client):
     wine = await make_menu_item(bar_id, "Wine", 30.0)
     await make_order(bar_id, 110.0, items=[(beer, 2, 10.0), (wine, 3, 30.0)])
 
-    await delete_menu_item(client, wine)
+    await delete_menu_item(client, user, wine)
 
     body = (await get_stats(client, bar_id, user)).json()
     assert body["top_items"] == [
@@ -435,7 +442,7 @@ async def test_snapshot_is_preferred_over_newer_rows_without_one(client):
     user = await member(bar_id)
     beer = await make_menu_item(bar_id, "Beer", 10.0)
     await make_order(bar_id, 10.0, items=[(beer, 1, 10.0)], created_at=TODAY_START + timedelta(hours=1))
-    await rename_menu_item(client, beer, "Craft Lager")
+    await rename_menu_item(client, user, beer, "Craft Lager")
     await make_order(bar_id, 10.0, items=[(beer, 1, 10.0, None)], created_at=TODAY_START + timedelta(hours=2))
 
     body = (await get_stats(client, bar_id, user)).json()
@@ -447,7 +454,7 @@ async def test_legacy_rows_only_use_the_current_menu_name(client):
     user = await member(bar_id)
     beer = await make_menu_item(bar_id, "Beer", 10.0)
     await make_order(bar_id, 20.0, items=[(beer, 2, 10.0, None)])
-    await rename_menu_item(client, beer, "Craft Lager")
+    await rename_menu_item(client, user, beer, "Craft Lager")
 
     body = (await get_stats(client, bar_id, user)).json()
     assert body["top_items"] == [{"name": "Craft Lager", "quantity": 2, "revenue": 20.0}]
@@ -470,8 +477,8 @@ async def test_unnamed_deleted_items_are_kept_apart(client):
     gone_a = await make_menu_item(bar_id, "Gone A", 10.0)
     gone_b = await make_menu_item(bar_id, "Gone B", 5.0)
     await make_order(bar_id, 40.0, items=[(gone_a, 2, 10.0, None), (gone_b, 4, 5.0, None)])
-    await delete_menu_item(client, gone_a)
-    await delete_menu_item(client, gone_b)
+    await delete_menu_item(client, user, gone_a)
+    await delete_menu_item(client, user, gone_b)
 
     body = (await get_stats(client, bar_id, user)).json()
     assert body["top_items"] == [

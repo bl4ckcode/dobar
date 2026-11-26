@@ -1,6 +1,9 @@
 import pytest
 from httpx import AsyncClient
 
+from conftest import test_database
+from app.auth.rbac_models import BarStaff
+
 
 @pytest.mark.asyncio
 class TestBarOwners:
@@ -50,8 +53,12 @@ class TestBars:
 
 @pytest.mark.asyncio
 class TestBulkMenuItems:
-    async def test_bulk_create_menu_items(self, auth_client, test_menu_in_db):
-        client, headers, _ = auth_client
+    async def test_bulk_create_menu_items(self, auth_client, test_menu_in_db, test_bar_in_db):
+        client, headers, user = auth_client
+        # Adding items needs menu:create at the menu's venue.
+        await test_database.execute(BarStaff.__table__.insert().values(
+            user_id=user["id"], bar_id=test_bar_in_db["id"], role="owner", is_active=True,
+        ))
         menu_id = test_menu_in_db["id"]
         items = [
             {"name": "Item 1", "price": 10.50, "description": "First item", "category": "Drinks", "available": True},

@@ -866,6 +866,45 @@ async def test_ws_command_demoted_cashier_loses_access(db, ws_notifications):
     assert (await order_row(db, oid))["status"] == "confirmed"
 
 
+async def disable_account(db, user_id):
+    await db.execute(User.__table__.update()
+                     .where(User.__table__.c.id == user_id).values(is_active=False))
+
+
+async def test_ws_command_rejects_a_disabled_account_with_an_active_membership(
+    db, published, ws_notifications
+):
+    oid = await make_order(db)
+    assert (await ws_command(oid, "confirm", CASHIER_A))["type"] == "command_success"
+
+    # account disabled while their dashboard socket is still open; the bar
+    # membership row is untouched, exactly like the HTTP routes' 403 case
+    await disable_account(db, CASHIER_A)
+    result = await ws_command(oid, "prepare", CASHIER_A)
+
+    assert result == {"type": "error",
+                      "message": "You don't have permission to process orders at this bar"}
+    assert (await order_row(db, oid))["status"] == "confirmed"
+    assert [e["new_status"] for e in published] == ["confirmed"]  # nothing after the disable
+
+
+async def test_ws_handshake_rejects_a_disabled_account_with_an_active_membership(db):
+    token = jwt.encode({"sub": str(CASHIER_A)}, ws.SECRET_KEY, algorithm=ws.ALGORITHM)
+    assert (await ws.verify_bar_staff_access(token, BAR_A))["user_id"] == CASHIER_A
+
+    await disable_account(db, CASHIER_A)
+
+    assert await ws.verify_bar_staff_access(token, BAR_A) is None
+
+
+async def test_disabled_account_holds_no_bar_permissions(db):
+    assert await rbac_middleware.get_active_bar_permissions(CASHIER_A, BAR_A)
+
+    await disable_account(db, CASHIER_A)
+
+    assert await rbac_middleware.get_active_bar_permissions(CASHIER_A, BAR_A) == set()
+
+
 async def test_ws_command_honours_custom_permissions(db, ws_notifications):
     # same rules as require_bar_permission: custom permissions extend the role
     await db.execute(BarStaff.__table__.update()
