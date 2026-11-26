@@ -8,10 +8,25 @@ import sqlalchemy.exc
 from asyncpg.exceptions import UniqueViolationError
 import hashlib
 import httpx
+import logging
 
-from .order_payments import charge_order, customer_for_payment, raise_payment_error, owned_order, publish_payment, settle_order_rewards, update_attempt_status
+from .order_payments import (
+    REFUND_OPERATION,
+    begin_order_refund,
+    charge_order,
+    complete_order_refund,
+    customer_for_payment,
+    fail_order_refund,
+    operation_key,
+    owned_order,
+    publish_payment,
+    raise_payment_error,
+    refundable_order,
+    settle_order_rewards,
+    update_attempt_status,
+)
 
-from app.errors import APIError, map_gateway_error
+from app.errors import APIError, ErrorCode, map_gateway_error
 from app.auth.dependencies import get_current_user
 from app.auth.auth_models import User
 from app.database import database
@@ -35,6 +50,8 @@ from . import get_payment_gateway, PaymentGateway, get_dpe_client, DPEClient
 from .dpe_client import DPE_SERVICE_SECRET
 
 payment_router = APIRouter(prefix="/payments", tags=["Payments"])
+
+logger = logging.getLogger(__name__)
 
 IDEMPOTENCY_TTL_HOURS = 24
 
@@ -224,23 +241,70 @@ async def create_refund_v2(
     current_user: User = Depends(get_current_user),
     x_idempotency_key: Optional[str] = Header(None, alias="X-Idempotency-Key"),
 ):
-    dpe = get_dpe_client()
-    idempotency_key = x_idempotency_key or str(uuid.uuid4())
-    
-    result = await dpe.refund(
-        payment_id=request.payment_id,
-        amount=request.amount,
-        reason=request.reason,
-        idempotency_key=idempotency_key,
+    # Authorize before any money moves: only the consumer who paid, or the
+    # venue the payment was made to (order:refund there), may refund it.
+    order = await refundable_order(database, current_user.id, request.payment_id)
+
+    # Scoped to the caller so clients cannot collide on (or replay) each
+    # other's keys; the same client key from the same user is the same refund.
+    idempotency_key = operation_key(
+        current_user.id, REFUND_OPERATION, x_idempotency_key or str(uuid.uuid4())
     )
-    
+
+    # Record the refund as pending *before* any money moves. If this fails the
+    # request fails and DPE is never called. From here on the dashboard already
+    # subtracts it, so revenue cannot be overstated whatever happens next.
+    _, first_attempt = await begin_order_refund(
+        database, order, idempotency_key,
+        amount=request.amount, reason=request.reason,
+        requested_by_user_id=current_user.id,
+    )
+
+    dpe = get_dpe_client()
+    try:
+        result = await dpe.refund(
+            payment_id=request.payment_id,
+            amount=request.amount,
+            reason=request.reason,
+            idempotency_key=idempotency_key,
+        )
+    except httpx.TimeoutException:
+        # Outcome unknown: the refund stays pending (still subtracted) until a
+        # retry with the same key or reconciliation settles it.
+        raise APIError(status_code=504, error_code=ErrorCode.NETWORK_TIMEOUT,
+                       message="Refund outcome is unknown; retry with the same X-Idempotency-Key")
+    except httpx.HTTPError:
+        raise APIError(status_code=503, error_code=ErrorCode.SERVER_UNAVAILABLE,
+                       message="Payment service unavailable; retry with the same X-Idempotency-Key")
+
     if result.get("status") == "error":
-        if result.get("http_status") == 404:
+        http_status = result.get("http_status") or 500
+        # Only a first attempt rejected with a 4xx is known not to have moved
+        # money. A 5xx, or an error on a retry (the original attempt may have
+        # gone through), leaves it pending for reconciliation.
+        if first_attempt and 400 <= http_status < 500:
+            try:
+                await fail_order_refund(database, idempotency_key)
+            except Exception:
+                logger.exception("Rejected refund for payment %s stays pending", request.payment_id)
+        if http_status == 404:
             raise APIError.not_found(f"Payment {request.payment_id} not found")
         raise APIError.refund_failed(
             message=result.get("message", "Refund failed"),
         )
-    
+
+    # The money has moved. If storing the confirmation fails, the refund stays
+    # pending - still subtracted from revenue - and is settled by a retry with
+    # the same key or by reconciliation. An error response here could make the
+    # client refund again with a new key, so report the refund's success.
+    try:
+        await complete_order_refund(database, idempotency_key, result)
+    except Exception:
+        logger.exception(
+            "Refund %s for payment %s succeeded; confirmation not stored, left pending",
+            result.get("refund_id"), request.payment_id,
+        )
+
     return DPERefundResponse(
         refund_id=result["refund_id"],
         payment_id=result["payment_id"],

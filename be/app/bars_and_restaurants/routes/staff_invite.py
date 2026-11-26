@@ -1,24 +1,24 @@
 """
-Simplified Staff Invite Route - avoids complex middleware chain for reliability.
+Compatibility Staff Invite Route.
 
-This is an alternative invite endpoint that uses simpler auth patterns
-to avoid issues with BaseHTTPMiddleware on Fly.io deployments.
+``POST /staff/invite`` takes the target ``bar_id`` in the request body instead
+of the URL. It is otherwise identical to ``POST /bars/{bar_id}/staff/invite``:
+both authorize with the shared bar-permission resolver (role defaults + the
+membership's custom permissions, ``staff:manage`` required) and both
+delegate everything else (contact/role validation, the rule against
+inviting above your own role, the existing-member check, code generation and
+persistence) to ``create_staff_invitation``.
 """
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Response
 from pydantic import BaseModel, Field
 from typing import Optional
-from datetime import datetime, timezone, timedelta
-import secrets
+from datetime import datetime
 
-from ...database import database
 from ...auth.rbac_middleware import (
-    AuthUser, get_current_user, add_user_to_bar
+    AuthUser, get_current_user, authorize_bar_permission, emit_bar_headers
 )
-from ...auth.rbac_models import (
-    BarRole, BarStaff, StaffInvitation, UserProfile
-)
-from ...auth.auth_models import User
-from ...errors import APIError
+from ...auth.rbac_models import Permission
+from ...bars_and_restaurants.services.staff_invitations import create_staff_invitation
 
 
 invite_router = APIRouter(prefix="/staff", tags=["Staff Management"])
@@ -44,102 +44,17 @@ class StaffInviteResponse(BaseModel):
 @invite_router.post("/invite")
 async def invite_staff_simple(
     invite: StaffInviteRequest,
+    response: Response,
     user: AuthUser = Depends(get_current_user),
 ):
-    """Invite someone to join a bar's staff. Simpler auth chain for reliability."""
-    # Check if user has permission at this bar
-    user_role = user.get_role_at_bar(invite.bar_id)
-    if not user_role:
-        raise HTTPException(status_code=403, detail="You don't have access to this bar")
-    
-    # Check permission level
-    role_hierarchy = {
-        "owner": 5,
-        "admin": 4,
-        "manager": 3,
-        "cashier": 2,
-        "staff": 1,
-    }
-    
-    inviter_level = role_hierarchy.get(user_role, 0)
-    if inviter_level < 3:  # Manager or above can invite
-        raise HTTPException(
-            status_code=403,
-            detail="Insufficient permissions. Manager role or above required to invite staff."
-        )
-    
-    # Detect if contact is email or phone
-    email = None
-    phone = None
-    if "@" in invite.contact:
-        email = invite.contact
-    else:
-        phone = invite.contact
-    
-    if not email and not phone:
-        raise HTTPException(status_code=400, detail="Valid email or phone required")
-    
-    # Validate role
-    try:
-        role = BarRole(invite.role)
-    except ValueError:
-        raise HTTPException(status_code=400, detail=f"Invalid role: {invite.role}")
-    
-    # Only owner can invite another owner
-    if role == BarRole.OWNER and not user.is_bar_owner(invite.bar_id):
-        raise HTTPException(status_code=403, detail="Only owner can invite another owner")
-    
-    # Check if user already exists
-    existing_user = None
-    if email:
-        existing_user = await database.fetch_one(
-            User.__table__.select().where(User.email == email)
-        )
-    elif phone:
-        existing_user = await database.fetch_one(
-            User.__table__.select().where(User.phone_number == phone)
-        )
-    
-    invitation_code = secrets.token_urlsafe(16)
-    # Use naive UTC — StaffInvitation.expires_at is DateTime(timezone=False)
-    expires_at = datetime.utcnow() + timedelta(days=7)
-    
-    if existing_user:
-        # Check if already a staff member
-        existing_staff = await database.fetch_one(
-            BarStaff.__table__.select().where(
-                (BarStaff.user_id == existing_user["id"]) & 
-                (BarStaff.bar_id == invite.bar_id)
-            )
-        )
-        if existing_staff and existing_staff["is_active"]:
-            raise HTTPException(status_code=409, detail="User already staff at this bar")
-    # All invitations start pending — no auto-accept, even for existing users.
-    status_val = "pending"
-    
-    # Create invitation record
-    invitation_data = {
-        "bar_id": invite.bar_id,
-        "email": email,
-        "phone": phone,
-        "role": role.value,
-        "invitation_code": invitation_code,
-        "status": status_val,
-        "expires_at": expires_at,
-        "invited_by_id": user.id,
-    }
-    
-    inv_id = await database.execute(
-        StaffInvitation.__table__.insert().values(**invitation_data)
-    )
-    
-    return StaffInviteResponse(
-        id=inv_id,
-        bar_id=invite.bar_id,
-        email=email,
-        phone=phone,
-        role=role.value,
-        status=status_val,
-        invitation_code=invitation_code,
-        expires_at=expires_at,
-    )
+    """Invite someone to join a bar's staff (``bar_id`` in the body).
+
+    The body ``bar_id`` is the only bar considered: it is resolved exactly as
+    the ``{bar_id}`` path parameter is on ``/bars/{bar_id}/staff/invite``.
+    ``bar_id`` query parameters and the ``X-Bar-Id`` header are deliberately
+    ignored, so a caller cannot be authorized at one bar and invite to another.
+    """
+    auth = await authorize_bar_permission(user, invite.bar_id, Permission.STAFF_MANAGE)
+    invitation = await create_staff_invitation(auth, invite.contact, invite.role)
+    emit_bar_headers(response, auth)
+    return StaffInviteResponse(**invitation)
