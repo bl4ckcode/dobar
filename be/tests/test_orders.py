@@ -83,8 +83,32 @@ class TestOrderCancellation:
 
 @pytest.mark.asyncio
 class TestOrderStatusUpdate:
-    async def test_update_order_status_valid_transition(self, auth_client, test_order_in_db):
+    """Legacy PUT /orders/{id}/status requires order:process at the order's bar."""
+
+    @pytest.fixture
+    async def cashier_auth_client(self, auth_client, test_bar_in_db):
+        from app.auth.rbac_models import BarStaff
+        from conftest import test_database
+
         client, headers, user = auth_client
+        await test_database.execute(BarStaff.__table__.insert().values(
+            user_id=user["id"], bar_id=test_bar_in_db["id"], role="cashier", is_active=True,
+        ))
+        return client, headers, user
+
+    async def test_update_order_status_rejects_user_without_order_process(self, auth_client, test_order_in_db):
+        # The order's own customer has no bar membership: same 404 as a missing order.
+        client, headers, user = auth_client
+        response = await client.put(
+            f"/orders/{test_order_in_db['id']}/status",
+            json={"status": "confirmed"},
+            headers=headers
+        )
+        assert response.status_code == 404
+        assert response.json()["error_code"] == "ORDER_NOT_FOUND"
+
+    async def test_update_order_status_valid_transition(self, cashier_auth_client, test_order_in_db):
+        client, headers, user = cashier_auth_client
         response = await client.put(
             f"/orders/{test_order_in_db['id']}/status",
             json={"status": "confirmed"},
@@ -94,8 +118,8 @@ class TestOrderStatusUpdate:
         data = response.json()
         assert data["status"] == "confirmed"
 
-    async def test_update_order_status_invalid_transition(self, auth_client, test_order_in_db):
-        client, headers, user = auth_client
+    async def test_update_order_status_invalid_transition(self, cashier_auth_client, test_order_in_db):
+        client, headers, user = cashier_auth_client
         response = await client.put(
             f"/orders/{test_order_in_db['id']}/status",
             json={"status": "completed"},

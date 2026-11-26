@@ -64,9 +64,14 @@ class DeploymentWorkflowTests(unittest.TestCase):
 
     def detection_script(self):
         job = self.workflow("deploy.yml")["jobs"]["changes"]
-        checkout, detect = job["steps"]
+        steps = job["steps"]
+        checkout = next(s for s in steps if s.get("uses", "").startswith("actions/checkout@"))
+        detect = next(s for s in steps if s.get("id") == "detect")
         self.assertEqual(checkout["with"]["fetch-depth"], 0)
-        self.assertEqual(detect["env"]["BEFORE_SHA"], "${{ github.event.before }}")
+        # Deployed-target tags must be present before detection compares against them.
+        fetch_tags = steps.index(next(s for s in steps if "git fetch --tags" in s.get("run", "")))
+        self.assertLess(fetch_tags, steps.index(detect))
+        self.assertEqual(detect["env"]["EVENT_BEFORE"], "${{ github.event.before }}")
         for area in ("dpe", "be", "fe"):
             self.assertEqual(job["outputs"][area], "${{ steps.detect.outputs." + area + " }}")
         return textwrap.dedent(detect["run"].split("<<'PY'\n", 1)[1].rsplit("\nPY", 1)[0])
@@ -89,7 +94,7 @@ class DeploymentWorkflowTests(unittest.TestCase):
                 output.unlink(missing_ok=True)
                 subprocess.run(
                     ["python3", "-c", script], cwd=root, check=True,
-                    env={**os.environ, "BEFORE_SHA": before, "GITHUB_SHA": head, "GITHUB_OUTPUT": str(output)},
+                    env={**os.environ, "EVENT_BEFORE": before, "GITHUB_SHA": head, "GITHUB_OUTPUT": str(output)},
                     capture_output=True,
                 )
                 return dict(line.split("=", 1) for line in output.read_text().splitlines())
@@ -117,6 +122,37 @@ class DeploymentWorkflowTests(unittest.TestCase):
             (root / "fe/source").unlink()
             deleted = commit()
             self.assertEqual(detect(docs, deleted), {"dpe": "false", "be": "false", "fe": "true"})
+
+            # A deployed tag takes precedence over the pushed range: a target
+            # whose earlier deploy failed (tag left behind) is still redeployed
+            # even when the latest push does not touch it.
+            git("tag", "deployed/dpe", deleted)
+            git("tag", "deployed/be", deleted)
+            git("tag", "deployed/fe", base)
+            self.assertEqual(detect(docs, deleted), {"dpe": "false", "be": "false", "fe": "true"})
+            self.assertEqual(detect(deleted, deleted), {"dpe": "false", "be": "false", "fe": "true"})
+            git("tag", "-f", "deployed/fe", deleted)
+            self.assertEqual(detect(deleted, deleted), {"dpe": "false", "be": "false", "fe": "false"})
+            # Manual runs have no usable "before": untagged targets count as changed.
+            git("tag", "-d", "deployed/be")
+            self.assertEqual(detect("", deleted), {"dpe": "false", "be": "true", "fe": "false"})
+
+    def test_each_target_is_tagged_only_after_its_own_successful_deploy(self):
+        workflow = self.workflow("deploy.yml")
+        jobs = workflow["jobs"]
+        self.assertNotIn("write", str(workflow.get("permissions", {})))
+        for area in ("dpe", "be", "fe"):
+            with self.subTest(area=area):
+                job = jobs[f"mark-{area}"]
+                self.assertEqual(self.needs(job), [area])
+                self.assertEqual(job["if"], f"needs.{area}.result == 'success'")
+                self.assertEqual(job["permissions"], {"contents": "write"})
+                script = "\n".join(s.get("run", "") for s in job["steps"])
+                self.assertIn(f'git tag -f deployed/{area} "$GITHUB_SHA"', script)
+                self.assertIn(f"git push -f origin refs/tags/deployed/{area}", script)
+        for name, job in jobs.items():
+            if not name.startswith("mark-"):
+                self.assertNotIn("write", str(job.get("permissions", {})))
 
     def condition_allows(self, area, changes, results, cancelled=False):
         expression = self.workflow("deploy.yml")["jobs"][area]["if"]

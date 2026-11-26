@@ -29,7 +29,7 @@ from app.auth.middleware import get_current_active_user, get_optional_user
 from app.auth.auth_models import User
 from app.auth.admin import require_internal_or_admin
 from app.auth.rbac_models import Permission, ConsumerSubscriptionTier
-from app.auth.rbac_middleware import get_current_user as get_rbac_user, AuthUser, require_bar_permission, BarAuthContext
+from app.auth.rbac_middleware import get_current_user as get_rbac_user, AuthUser, require_bar_permission, BarAuthContext, get_active_bar_permissions
 from app.redis_client import get_redis
 from app.advertising.services.campaign_service import CampaignService
 
@@ -257,16 +257,20 @@ async def update_order_status(
     current_user: AuthUser = Depends(get_current_active_user)
 ):
     """
-    Update order status. Only allowed for the owner of the order's bar.
+    Update order status. Legacy, non-venue-scoped path kept for existing
+    callers; same authorization as PUT /bars/{bar_id}/orders/{order_id}/status:
+    an active membership with order:process at the order's bar.
     Status flow: pending -> confirmed -> preparing -> ready -> completed
     (pending may also go straight to preparing)
     """
     db_order = await fetch_order(order_id)
 
     # Authorize before validating the transition, so error messages never
-    # reveal an order's status to someone who doesn't own its bar.
-    if not current_user.is_bar_owner(db_order["bar_id"]):
-        raise APIError.forbidden("Only the bar owner can update this order's status")
+    # reveal an order's status. Callers without access to the order's bar get
+    # the same 404 as for a nonexistent order, so ids cannot be probed.
+    permissions = await get_active_bar_permissions(current_user.id, db_order["bar_id"])
+    if Permission.ORDER_PROCESS.value not in permissions:
+        raise APIError.order_not_found()
 
     return await apply_status_transition(db_order, status_update, current_user.id)
 
