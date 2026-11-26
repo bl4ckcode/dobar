@@ -26,6 +26,8 @@ Backend defines owner/admin/manager/cashier/staff with granular permissions; FE 
 
 Use server-issued per-venue permissions as authority, preserve unknown permission compatibility and resolve UI/server disagreements. Marketing is a capability grouping, not a role migration.
 
+Decided in [C06](C06-live-menu.md) on 2026-11-26 and to be reflected in the permission matrix and the FE enum: managers hold `menu:create` by default (already in PR #5), and a new `menu:availability` permission lets floor roles mark items sold out without being able to edit prices (default: owner, admin, manager, cashier; planner assumption pending confirmation).
+
 Observed source references (inspection only; no runtime or E2E validation):
 
 - [be/app/auth/rbac_models.py](../../be/app/auth/rbac_models.py)
