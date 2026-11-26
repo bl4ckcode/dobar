@@ -187,7 +187,6 @@ async def verify_token_and_get_user_id(token: str) -> int:
 
 
 async def verify_bar_staff_access(token: str, bar_id: int) -> Optional[dict]:
-    ALLOWED_ROLES = {"owner", "admin", "manager", "cashier"}
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id = payload.get("sub")
@@ -208,7 +207,9 @@ async def verify_bar_staff_access(token: str, bar_id: int) -> Optional[dict]:
         (BarStaff.is_active == True)
     )
     staff = await database.fetch_one(staff_query)
-    if not staff or staff["role"] not in ALLOWED_ROLES:
+    # Same rule as every command: order:process at this bar (role defaults
+    # plus custom grants), so the handshake and commands cannot disagree.
+    if not staff or Permission.ORDER_PROCESS.value not in await get_active_bar_permissions(user_id, bar_id):
         return None
 
     return {"user_id": user_id, "bar_id": bar_id, "bar_name": bar["name"], "role": staff["role"]}
@@ -415,7 +416,7 @@ async def handle_bar_owner_command(
         return {"type": "error", "message": "You don't have permission to process orders at this bar"}
 
     # JSON can carry any type; only accept a real integer id.
-    if isinstance(order_id, bool):
+    if isinstance(order_id, bool) or (isinstance(order_id, float) and not order_id.is_integer()):
         order_id = None
     try:
         order_id = int(order_id)

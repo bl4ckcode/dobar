@@ -1,7 +1,7 @@
 """
 Order status updates through both HTTP routes:
 
-    PUT  /orders/{order_id}/status                 (bar owner only)
+    PUT  /orders/{order_id}/status                 (order:process at the order's bar)
     PUT  /bars/{bar_id}/orders/{order_id}/status   (order:process at the bar)
     POST /orders/{order_id}/cancel                 (the order's customer)
     WS   /ws/bar/{bar_id}/orders commands          (order:process at the bar)
@@ -197,11 +197,17 @@ def venue(bar_id, order_id):
 # general route: authorization
 # ----------------------------------------------------------------------------
 
-async def test_general_route_allows_owner_of_the_orders_bar(client, db, published):
+@pytest.mark.parametrize("user_id", [
+    pytest.param(OWNER_A, id="owner"),
+    pytest.param(ADMIN_A, id="admin"),
+    pytest.param(MANAGER_A, id="manager"),
+    pytest.param(CASHIER_A, id="cashier"),
+])
+async def test_general_route_allows_order_process_at_the_orders_bar(client, db, published, user_id):
     oid = await make_order(db)
 
     r = await client.put(general(oid), json={"status": "confirmed", "notes": "on it"},
-                         headers=auth(OWNER_A))
+                         headers=auth(user_id))
 
     assert r.status_code == 200, r.text
     body = r.json()
@@ -209,7 +215,7 @@ async def test_general_route_allows_owner_of_the_orders_bar(client, db, publishe
     assert body["id"] == oid and body["status"] == "confirmed" and body["bar_id"] == BAR_A
     assert (await order_row(db, oid))["status"] == "confirmed"
     [h] = await history(db, oid)
-    assert (h["status"], h["updated_by_user_id"], h["notes"]) == ("confirmed", OWNER_A, "on it")
+    assert (h["status"], h["updated_by_user_id"], h["notes"]) == ("confirmed", user_id, "on it")
     assert published == [{"order_id": oid, "bar_id": BAR_A,
                           "old_status": "pending", "new_status": "confirmed"}]
 
@@ -217,33 +223,59 @@ async def test_general_route_allows_owner_of_the_orders_bar(client, db, publishe
 @pytest.mark.parametrize("user_id", [
     pytest.param(CUSTOMER, id="order-customer-no-bar-role"),
     pytest.param(OWNER_B, id="owner-of-other-bar"),
-    pytest.param(ADMIN_A, id="admin"),
-    pytest.param(MANAGER_A, id="manager"),
-    pytest.param(CASHIER_A, id="cashier"),
-    pytest.param(STAFF_A, id="staff"),
+    pytest.param(STAFF_A, id="staff-view-only"),
     pytest.param(INACTIVE_OWNER_A, id="deactivated-owner"),
 ])
-async def test_general_route_rejects_non_owners_without_side_effects(client, db, published, user_id):
+async def test_general_route_rejects_without_order_process(client, db, published, user_id):
     oid = await make_order(db)
     before = dict(await order_row(db, oid))
 
     r = await client.put(general(oid), json={"status": "cancelled"}, headers=auth(user_id))
 
-    assert r.status_code == 403, r.text
-    assert r.json()["error_code"] == "FORBIDDEN"
+    # Same answer as a nonexistent order: neither existence nor status leaks.
+    assert r.status_code == 404, r.text
+    assert r.json()["error_code"] == "ORDER_NOT_FOUND"
     assert dict(await order_row(db, oid)) == before
     assert await history(db, oid) == []
     assert published == []
 
 
-async def test_general_route_checks_owner_before_transition(client, db):
-    # A non-owner must get 403, not a 400 that would reveal the order's status.
+async def test_general_route_checks_permission_before_transition(client, db):
+    # An outsider must get 404, not a 400 that would reveal the order's status.
     oid = await make_order(db, status="completed")
 
     r = await client.put(general(oid), json={"status": "confirmed"}, headers=auth(OWNER_B))
 
-    assert r.status_code == 403
+    assert r.status_code == 404
     assert "completed" not in r.text
+
+
+async def test_general_route_cannot_touch_another_bars_order(client, db, published):
+    # Cashier of bar A holds order:process only at bar A.
+    other = await make_order(db, bar_id=BAR_B)
+
+    r = await client.put(general(other), json={"status": "confirmed"}, headers=auth(CASHIER_A))
+
+    assert r.status_code == 404
+    assert (await order_row(db, other))["status"] == "pending"
+    assert await history(db, other) == []
+    assert published == []
+
+
+async def test_general_route_honours_custom_order_process_grant(client, db, published):
+    # Custom permissions extend role defaults, exactly as on the venue route.
+    await db.execute(
+        BarStaff.__table__.update()
+        .where((BarStaff.__table__.c.user_id == STAFF_A) & (BarStaff.__table__.c.bar_id == BAR_A))
+        .values(custom_permissions=json.dumps(["order:process"]))
+    )
+    oid = await make_order(db)
+
+    for route in (general(oid), venue(BAR_A, oid)):
+        r = await client.put(route, json={"status": "preparing" if route == general(oid) else "ready"},
+                             headers=auth(STAFF_A))
+        assert r.status_code == 200, r.text
+    assert (await order_row(db, oid))["status"] == "ready"
 
 
 async def test_general_route_requires_authentication(client, db):
@@ -681,6 +713,7 @@ async def test_cancel_publish_failure_does_not_fail_committed_cancel(client, db,
     pytest.param("venue", CASHIER_A, id="cashier-venue-route"),
     pytest.param("venue", MANAGER_A, id="manager-venue-route"),
     pytest.param("general", OWNER_A, id="owner-general-route"),
+    pytest.param("general", CASHIER_A, id="cashier-general-route"),
 ])
 async def test_pending_can_go_straight_to_preparing(client, db, published, route, user_id):
     oid = await make_order(db)
