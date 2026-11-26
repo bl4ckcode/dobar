@@ -19,7 +19,15 @@ PHONE_E164_RE = re.compile(r"^\+[1-9][0-9]{7,14}$")
 _PHONE_FORMATTING_RE = re.compile(r"[\s\-()]")
 # "Phone-shaped": only ASCII digits and phone punctuation, at least one digit.
 # Used to classify input, not to validate it (see ``canonical_phone``).
-_PHONE_SHAPE_RE = re.compile(r"^[0-9+\s\-().]*[0-9][0-9+\s\-().]*$")
+# Two single-repetition checks instead of one pattern with a digit between two
+# repeated classes: that form backtracks quadratically on a long digit run
+# that ends in a non-phone character.
+_PHONE_CHARS_RE = re.compile(r"^[0-9+\s\-().]*$")
+_ASCII_DIGIT_RE = re.compile(r"[0-9]")
+
+
+def _is_phone_shaped(value: str) -> bool:
+    return _PHONE_CHARS_RE.match(value) is not None and _ASCII_DIGIT_RE.search(value) is not None
 
 _EMAIL = TypeAdapter(EmailStr)
 
@@ -42,7 +50,7 @@ def classify_contact(value: Optional[str]) -> Optional[Literal["email", "phone"]
         return None
     if "@" in value:
         return "email"
-    if _PHONE_SHAPE_RE.match(value):
+    if _is_phone_shaped(value):
         return "phone"
     return None
 

@@ -30,6 +30,10 @@ jobs:
         id: platform_specs
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
         run: python -m tools.agent_workflow --catalog platform validate
+      - name: Validate order-lifecycle specifications
+        id: order_lifecycle_specs
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
+        run: python -m tools.agent_workflow --catalog order-lifecycle validate
       - name: Test workflow tooling
         id: tests
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}

@@ -1662,11 +1662,13 @@ async def test_inviter_at_another_venue_never_receives_the_code(client, venues):
 @pytest.mark.parametrize("route", ROUTES)
 async def test_request_validation_errors_do_not_echo_the_contact(client, venues, route):
     owner = await _owner_at(venues["a"])
-    body = {"contact": SECRET_EMAIL, "role": ["not", "a", "string"]}
+    # The secret sits in the field that fails validation (a list, not a
+    # string); role and bar_id are valid, so only the contact is reported.
+    body = {"contact": [SECRET_EMAIL], "role": "cashier"}
     if route == "url":
         resp = await client.post(f"/bars/{venues['a']}/staff/invite", json=body, headers=headers_for(owner))
     else:
-        resp = await client.post("/staff/invite", json={**body, "bar_id": "nope"}, headers=headers_for(owner))
+        resp = await client.post("/staff/invite", json={**body, "bar_id": venues["a"]}, headers=headers_for(owner))
 
     assert resp.status_code == 422
     assert SECRET_EMAIL not in resp.text
@@ -2002,3 +2004,170 @@ def test_aiosqlite_redaction_is_installed():
         isinstance(f, AiosqliteStatementRedactionFilter)
         for f in logging.getLogger("aiosqlite").filters
     )
+
+
+# ---------------------------------------------------------------------------
+# Concurrency guards. The "race" is simulated deterministically: the other
+# party's write is applied right after the handler/service read its input.
+# ---------------------------------------------------------------------------
+
+class _AfterFirstRead:
+    """Wraps ``database``; runs ``action`` once, right after the first
+    ``fetch_one`` returns (so the caller keeps working with a stale row)."""
+
+    def __init__(self, real, action):
+        self._real = real
+        self._action = action
+        self._done = False
+
+    async def fetch_one(self, *args, **kwargs):
+        row = await self._real.fetch_one(*args, **kwargs)
+        if not self._done:
+            self._done = True
+            await self._action(self._real)
+        return row
+
+    def __getattr__(self, name):
+        return getattr(self._real, name)
+
+
+def _promote_to_admin(staff_id):
+    async def action(db):
+        await db.execute(
+            BarStaff.__table__.update().where(BarStaff.id == staff_id).values(role="admin")
+        )
+    return action
+
+
+async def test_role_update_does_not_overwrite_a_target_promoted_after_the_check(
+    client, venues, monkeypatch
+):
+    from app.bars_and_restaurants.routes import staff as staff_routes
+
+    actor, _ = await _member_with_role(venues["a"], "cashier")
+    target = await make_user()
+    target_staff_id = await add_staff(target["id"], venues["a"], "cashier")
+    monkeypatch.setattr(
+        staff_routes, "database",
+        _AfterFirstRead(staff_routes.database, _promote_to_admin(target_staff_id)),
+    )
+
+    resp = await change_role(client, actor, venues["a"], target_staff_id, "staff")
+
+    assert resp.status_code == 409, resp.text
+    assert await role_of(target_staff_id) == "admin"
+
+
+async def test_remove_staff_does_not_remove_a_target_promoted_after_the_check(
+    client, venues, monkeypatch
+):
+    from app.bars_and_restaurants.routes import staff as staff_routes
+
+    actor, _ = await _member_with_role(venues["a"], "cashier")
+    target = await make_user()
+    target_staff_id = await add_staff(target["id"], venues["a"], "cashier")
+    monkeypatch.setattr(
+        staff_routes, "database",
+        _AfterFirstRead(staff_routes.database, _promote_to_admin(target_staff_id)),
+    )
+
+    resp = await remove_member(client, actor, venues["a"], target_staff_id)
+
+    assert resp.status_code == 409, resp.text
+    assert await is_active(target_staff_id) is True
+    assert await role_of(target_staff_id) == "admin"
+
+
+async def test_unchanged_target_is_still_updated_and_removed(client, venues):
+    actor, _ = await _member_with_role(venues["a"], "manager")
+    target = await make_user()
+    target_staff_id = await add_staff(target["id"], venues["a"], "cashier")
+
+    updated = await change_role(client, actor, venues["a"], target_staff_id, "staff")
+    removed = await remove_member(client, actor, venues["a"], target_staff_id)
+
+    assert updated.status_code == 200, updated.text
+    assert removed.status_code == 200, removed.text
+    assert await is_active(target_staff_id) is False
+
+
+@pytest.mark.parametrize("route", ROUTES)
+async def test_resend_is_a_conflict_if_the_recipient_accepts_during_renewal(
+    client, venues, route, monkeypatch
+):
+    from app.bars_and_restaurants.services import staff_invitations as svc
+
+    owner = await _owner_at(venues["a"])
+    racer = await make_user(email="racer@example.com")
+    first = await invite(client, route, venues["a"], owner, "racer@example.com", role="cashier")
+    assert first.status_code == 200, first.text
+
+    real_find = svc.find_pending_invitations
+
+    async def accepted_after_lookup(*args, **kwargs):
+        found = await real_find(*args, **kwargs)
+        await test_database.execute(
+            StaffInvitation.__table__.update()
+            .where(StaffInvitation.id == first.json()["id"])
+            .values(status="accepted", accepted_by_user_id=racer["id"])
+        )
+        await add_staff(racer["id"], venues["a"], "cashier")
+        return found
+
+    monkeypatch.setattr(svc, "find_pending_invitations", accepted_after_lookup)
+
+    resp = await invite(client, route, venues["a"], owner, "racer@example.com", role="cashier")
+
+    assert resp.status_code == 409, resp.text
+    assert "already staff" in resp.text
+    assert first.json()["invitation_code"] not in resp.text
+    # No second invitation was issued for the new member. (The simulated
+    # acceptance shares the request's connection, so it is rolled back with
+    # the 409; only the absence of a new row is meaningful here.)
+    assert len(await invitations_for()) == 1
+
+
+async def test_renew_reports_nothing_for_an_invitation_that_is_no_longer_pending(venues):
+    from app.bars_and_restaurants.services import staff_invitations as svc
+
+    accepted_id, _ = await insert_invitation(venues["a"], email="done@example.com", status="accepted")
+    pending_id, _ = await insert_invitation(venues["a"], email="open@example.com")
+
+    assert await svc.renew_invitation(accepted_id) is None
+    renewed = await svc.renew_invitation(pending_id)
+    assert renewed is not None and renewed["id"] == pending_id
+
+
+async def test_accepting_an_invitation_takes_the_venue_invitation_lock(client, venues, monkeypatch):
+    from app.bars_and_restaurants.routes import staff as staff_routes
+
+    owner = await _owner_at(venues["a"])
+    invitee = await make_user(email="locked@example.com")
+    resp = await invite(client, "url", venues["a"], owner, "locked@example.com", role="cashier")
+    locked = []
+
+    async def spy(bar_id):
+        locked.append(bar_id)
+
+    monkeypatch.setattr(staff_routes, "lock_bar_invitations", spy)
+
+    accept = await client.post(
+        "/me/bars/accept-invitation",
+        json={"invitation_code": resp.json()["invitation_code"]},
+        headers=headers_for(invitee),
+    )
+
+    assert accept.status_code == 200, accept.text
+    assert locked == [venues["a"]]
+
+
+def test_contact_classification_is_linear_on_long_digit_runs():
+    import time
+    from app.auth.contact_validation import classify_contact
+
+    started = time.perf_counter()
+    assert classify_contact("1" * 50_000 + "x") is None
+    assert time.perf_counter() - started < 1.0
+    assert classify_contact("+55 (11) 91234-0000") == "phone"
+    assert classify_contact("(  ) - .") is None
+    assert classify_contact("a@b.co") == "email"

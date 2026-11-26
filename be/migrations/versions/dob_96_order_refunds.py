@@ -7,8 +7,14 @@ Create Date: 2026-11-15 00:00:00.000000
 Additive only: new table, no data backfill, safe to deploy before callers.
 Rows are written as "pending" before the payment engine is called, so a
 refund can never move money without a row here.
-Refunds issued before this table existed are not in it; they can be
-backfilled from the payment engine if historical revenue must be corrected.
+Refunds issued before this table existed are not in it; R01 (order-lifecycle
+spec) imports them from the payment engine with their original dates.
+
+Rollback: rolling the application back keeps this table and is safe. Do not
+run the schema downgrade once any refund has been issued: it drops the refund
+and idempotency records without reversing the provider refunds, and
+re-applying the migration creates an empty ledger. Export the table first
+(and restore it after re-applying) if the downgrade is unavoidable.
 """
 from typing import Sequence, Union
 

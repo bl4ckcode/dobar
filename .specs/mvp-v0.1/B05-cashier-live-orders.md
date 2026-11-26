@@ -103,8 +103,12 @@ Planner ordering: BE-1 and REV-1 are done. BE-2 and FE-2 are independent of each
 - **FE-2 (frontend), B05-AC03, per D2:**
   - In `OrderSyncExecutor`, send queued status changes through the venue-scoped PUT instead of `POST /orders/sync`.
   - Treat 400 and 404 as a final rejection of the queued change, refetch on 409, and never treat `unknown_operation` as synced.
+- **BE-4 (backend), B05-AC05:** An order past its operating-day close must stay excluded even if the venue's hours are edited later. `get_live_orders` recomputes each order's expiry from the venue's *current* hours, so removing or changing that day's entry after the close can move the expiry into the future and re-admit the order (a Monday 22:00 order that expired at 23:00 returns until Tuesday 22:00 once Monday's entry is removed).
+  - Recommended: store the close at placement as an additive, nullable `orders.live_until` (UTC), computed once with `order_expiry_utc` when the order is created. `/live` uses the stored value and falls back to the computation only for legacy rows without it.
+  - Needs an additive migration. Keep legacy rows working without a backfill, or backfill from `created_at` with the hours at migration time.
+  - Tests: hours edited after the close, a closed day added, and the no-hours 24 h fallback.
 - **REV-1 (human review): done.**
-- **VER-1 (verifier):** After BE-1/BE-2/BE-3/FE-1/FE-2 (offline replay and payment invariance need BE-2 and FE-2), run the validation scenarios below and record the evidence per criterion.
+- **VER-1 (verifier):** After BE-1 to BE-4, FE-1 and FE-2 (offline replay and payment invariance need BE-2 and FE-2), run the validation scenarios below and record the evidence per criterion.
 
 ## Validation scenarios and evidence
 
@@ -128,7 +132,7 @@ Historical observation after the 2026-11-25 fixes (same environment; Flutter 3.4
 
 ## Delivery and verification
 
-Delivery: in progress. Backend route hardening (including BE-1) is delivered and D1/D2 are decided; BE-2, BE-3, FE-1, FE-2 and VER-1 remain. Verification: unverified. The evidence is deterministic backend tests and source inspection only; no product E2E, provider or device checks have run. A passing foundation check validates artifact structure only. An independent verifier must assess every criterion before changing the verification status.
+Delivery: in progress. Backend route hardening (including BE-1) is delivered and D1/D2 are decided; BE-2, BE-3, BE-4, FE-1, FE-2 and VER-1 remain. Verification: unverified. The evidence is deterministic backend tests and source inspection only; no product E2E, provider or device checks have run. A passing foundation check validates artifact structure only. An independent verifier must assess every criterion before changing the verification status.
 
 ## Source requirements
 

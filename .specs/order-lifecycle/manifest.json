@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "expected_ids": ["R01"],
+  "required_checks": ["foundation", "product-e2e"],
+  "specs": ["R01-order-cancellation-refunds.md"],
+  "requirements": "requirements.json"
+}

@@ -22,8 +22,8 @@ from ...auth.rbac_models import (
 from ...auth.auth_models import User
 from ...bars_and_restaurants.models.relational_models import Bar
 from ...bars_and_restaurants.services.staff_invitations import (
-    create_staff_invitation, normalize_email, normalize_phone,
-    sanitized_invitation_errors,
+    create_staff_invitation, lock_bar_invitations, normalize_email,
+    normalize_phone, sanitized_invitation_errors,
 )
 from ...errors import APIError, ErrorCode
 
@@ -194,12 +194,23 @@ async def update_staff_role(
             detail=f"Cannot assign {new_role.value}: role is above your own ({auth.role})",
         )
         
-    await database.execute(
+    # Write only if the target is still the active member (and role) that the
+    # rank checks above were made against; a concurrent promotion must not be
+    # overwritten by a caller who was only allowed to change the old role.
+    updated = await database.fetch_one(
         BarStaff.__table__.update()
-        .where(BarStaff.id == staff_id)
+        .where(
+            (BarStaff.id == staff_id)
+            & (BarStaff.bar_id == bar_id)
+            & (BarStaff.is_active == True)
+            & (BarStaff.role == staff["role"])
+        )
         .values(role=new_role.value, updated_at=datetime.utcnow())
+        .returning(BarStaff.id)
     )
-    
+    if updated is None:
+        raise APIError.conflict("Staff member changed; reload and try again")
+
     return {
         "message": "Role updated successfully",
         "staff_id": str(staff_id),
@@ -236,11 +247,20 @@ async def remove_staff(
             detail=f"Cannot remove a {staff['role']}: role is above your own ({auth.role})",
         )
     
-    await database.execute(
+    # Same guard as the role update: remove only the membership that was
+    # authorized above, not one promoted in the meantime.
+    removed = await database.fetch_one(
         BarStaff.__table__.update()
-        .where(BarStaff.id == staff_id)
+        .where(
+            (BarStaff.id == staff_id)
+            & (BarStaff.bar_id == bar_id)
+            & (BarStaff.role == staff["role"])
+        )
         .values(is_active=False, updated_at=datetime.utcnow())
+        .returning(BarStaff.id)
     )
+    if removed is None:
+        raise APIError.conflict("Staff member changed; reload and try again")
     return {"message": "Staff member removed"}
 
 
@@ -525,6 +545,12 @@ async def _accept_invitation(
 
     claimed_invitation = False
     async with database.transaction():
+        # Same per-venue lock as invitation issuance, taken first (issuance
+        # also locks the bar before touching invitations, so there is no
+        # lock-order inversion). Without it, an acceptance could commit
+        # between issuance's membership check and its insert, leaving a
+        # pending invitation for someone who just became an active member.
+        await lock_bar_invitations(invitation["bar_id"])
         now_naive = datetime.utcnow()
         claimed_row = await database.fetch_one(
             StaffInvitation.__table__.update()

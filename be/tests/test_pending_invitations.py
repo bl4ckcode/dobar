@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock
 import pytest
 from app.auth.rbac_middleware import AuthUser, get_current_user
 from app.bars_and_restaurants.routes import staff
+from app.errors import APIError
 from app.main import app
 
 
@@ -63,10 +64,14 @@ async def test_verified_other_contact_does_not_bypass_recipient_verification(mon
 @pytest.mark.asyncio
 async def test_discovery_failure_is_not_empty_list(monkeypatch):
     database = AsyncMock()
-    database.fetch_all.side_effect = RuntimeError("database unavailable")
+    database.fetch_all.side_effect = RuntimeError("database unavailable: staff@example.com")
     monkeypatch.setattr(staff, "database", database)
-    with pytest.raises(RuntimeError):
+    # A failed lookup is an error, never an empty list, and the driver's
+    # message (which can embed a contact or code) is not exposed.
+    with pytest.raises(APIError) as failure:
         await staff.get_pending_invitations(recipient())
+    assert failure.value.status_code == 500
+    assert "staff@example.com" not in failure.value.message
 
 
 @pytest.mark.asyncio

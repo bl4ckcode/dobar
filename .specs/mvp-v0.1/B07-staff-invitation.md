@@ -56,12 +56,23 @@ Use [FE/BE contract](../../docs/FE_BE_COMMUNICATION.md) for durable interfaces; 
 - Exercise both routes with role defaults and custom permissions, cross-venue callers, rank boundaries, malformed contacts, existing members, pending duplicates and concurrent PostgreSQL issuance; verify new and existing accounts have no membership before acceptance.
 - Deliver invitations through a test adapter, inject failure and retry/resend; independently verify provider delivery with redacted sandbox evidence. Verify expired, replaced and explicitly revoked invitations cannot grant access, and record the absence of an explicit revoke endpoint until resolved.
 - Verify logged and returned errors do not expose contacts or codes, including validation and database failures. Review legacy invitation rows and client compatibility for normalized contacts and reuse/replacement behavior.
-- Local working-tree check: `cd be && PYTHONDONTWRITEBYTECODE=1 ../tmp/be-submission-quarantine/venv/bin/python -m pytest -o addopts='' -p no:cacheprovider tests/test_staff_invite_authorization.py -q --disable-warnings` passed 493 tests on SQLite with mocked services; this does not prove provider delivery, PostgreSQL concurrency or product E2E.
+- Local check at the PR #2 review: `cd be && python -m pytest -o addopts='' -p no:cacheprovider tests/test_staff_invite_authorization.py tests/test_pending_invitations.py -q --disable-warnings` passed on SQLite with mocked services (Python 3.12, the `be-unit-tests.yml` environment variables); this does not prove provider delivery, PostgreSQL lock behavior or product E2E.
 - Run configured foundation checks and affected-area contract/unit checks before product E2E. Record exact commit, command, environment, fixture/account roles, result and artifact references for each criterion.
+
+## Remaining work and handoffs
+
+Items from the PR #2 review that need design work and are not yet fixed:
+
+- **BE-1 (backend), B07-AC01/AC04, security:** Recheck the inviter's authority inside the issuance transaction, after taking the venue lock (`create_staff_invitation`). Today an admin who is demoted while their request waits for the lock still issues an admin invitation using the stale `auth`.
+  - Re-read the active membership, `staff:manage` and rank (`resolve_bar_context`), then run `ensure_can_invite_role` against the fresh context.
+  - To close the window completely, role changes and removals (`update_staff_role`, `remove_staff`) must take `lock_bar_invitations` in a transaction, so a demotion cannot commit between the recheck and the insert. Their conditional writes already reject a concurrently changed target.
+  - Test on PostgreSQL with two concurrent sessions. SQLite has no row locks.
+
+Fixed in the PR #2 review: conditional role update and removal writes (409 on a concurrent change), resend is a conflict if the recipient accepted during renewal, and acceptance takes the same venue lock as issuance. These are SQLite-simulated tests; the real lock behavior still needs PostgreSQL verification.
 
 ## Delivery and verification
 
-Delivery: partial in the working tree. Shared authorization, pending issuance, rank checks and duplicate handling are implemented; delivery, delivery-failure visibility and an explicit revoke workflow remain open. Verification: unverified for the journey. The focused SQLite suite passed as recorded above; the authorization handoff's PostgreSQL claims require independent reproduction, and provider and product E2E checks have not been established here. Foundation validation currently fails on references to files moved to the submission quarantine; a passing foundation check would validate artifact structure only.
+Delivery: partial in the working tree. Shared authorization, pending issuance, rank checks and duplicate handling are implemented; delivery, delivery-failure visibility and an explicit revoke workflow remain open. Verification: unverified for the journey. The focused SQLite suite passed as recorded above; the authorization handoff's PostgreSQL claims require independent reproduction, and provider and product E2E checks have not been established here. Foundation validation passes; it validates artifact structure only.
 
 ## Source requirements
 

@@ -309,16 +309,24 @@ async def _fetch_invitation(invitation_id: int) -> dict:
     return dict(row._mapping) if hasattr(row, "_mapping") else dict(row)
 
 
-async def renew_invitation(invitation_id: int) -> dict:
-    """Resend: keep the code, restart the 7-day window, return the row."""
-    await database.execute(
+async def renew_invitation(invitation_id: int) -> Optional[dict]:
+    """Resend: keep the code, restart the 7-day window, return the row.
+
+    Returns None when the invitation is no longer pending (it was accepted,
+    revoked or expired after it was looked up), so a resend is never reported
+    for an invitation that did not change.
+    """
+    renewed = await database.fetch_one(
         StaffInvitation.__table__.update()
         .where(
             (StaffInvitation.id == invitation_id)
             & (StaffInvitation.status == INVITATION_PENDING)
         )
         .values(expires_at=datetime.utcnow() + INVITATION_TTL)
+        .returning(StaffInvitation.__table__.c.id)
     )
+    if renewed is None:
+        return None
     return await _fetch_invitation(invitation_id)
 
 
@@ -347,7 +355,13 @@ async def resolve_pending_invitations(
         INVITATION_REVOKED,
     )
     if keep is not None:
-        return await renew_invitation(keep["id"])
+        renewed = await renew_invitation(keep["id"])
+        if renewed is not None:
+            return renewed
+        # The invitation stopped being pending while we worked on it. If the
+        # recipient became an active member (accepted), this is a conflict,
+        # not a resend; otherwise fall through and issue a fresh invitation.
+        await ensure_not_active_member(auth.bar_id, email, phone)
     return None
 
 

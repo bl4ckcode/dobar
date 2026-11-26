@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "sources": [
+    {
+      "id": "product-decisions-2026-11-26",
+      "note": "Product decisions given during the B04 / PR #2 review; recorded in R01 'Product decisions' and B04 D4-D6."
+    }
+  ],
+  "requirements": [
+    {
+      "id": "R01-R01",
+      "source": "product-decisions-2026-11-26",
+      "source_text": "If the user cancels the order while it is not preparing/confirmed yet, they should be able to cancel it.",
+      "specs": ["R01"],
+      "criteria": ["R01-AC01"]
+    },
+    {
+      "id": "R01-R02",
+      "source": "product-decisions-2026-11-26",
+      "source_text": "Otherwise they must request it from the venue; the frontend stays the same, but instead of auto-cancelling it asks the venue.",
+      "specs": ["R01"],
+      "criteria": ["R01-AC02"]
+    },
+    {
+      "id": "R01-R03",
+      "source": "product-decisions-2026-11-26",
+      "source_text": "Customers should not be able to refund unless the venue has authorized or refunded it for the user.",
+      "specs": ["R01"],
+      "criteria": ["R01-AC03"]
+    },
+    {
+      "id": "R01-R04",
+      "source": "product-decisions-2026-11-26",
+      "source_text": "After a 24-hour window past the end of operating hours the user cannot request a refund; only the venue can refund, and the venue may refund after more than 24 h.",
+      "specs": ["R01"],
+      "criteria": ["R01-AC04"]
+    },
+    {
+      "id": "R01-R05",
+      "source": "product-decisions-2026-11-26",
+      "source_text": "Refunds must be safe to retry and reconcile: money moves at most once and the ledger reflects it exactly once (B04 review of PR #2).",
+      "specs": ["R01"],
+      "criteria": ["R01-AC05"]
+    },
+    {
+      "id": "R01-R06",
+      "source": "product-decisions-2026-11-26",
+      "source_text": "Old refunds should be maintained in history.",
+      "specs": ["R01"],
+      "criteria": ["R01-AC06"]
+    },
+    {
+      "id": "R01-R07",
+      "source": "product-decisions-2026-11-26",
+      "source_text": "Unanswered requests stay visible to the cashier for now; an Expired tab may be created later.",
+      "specs": ["R01"],
+      "criteria": ["R01-AC02"]
+    },
+    {
+      "id": "R01-R08",
+      "source": "product-decisions-2026-11-26",
+      "source_text": "The customer can ask again after a request is declined.",
+      "specs": ["R01"],
+      "criteria": ["R01-AC02"]
+    }
+  ]
+}

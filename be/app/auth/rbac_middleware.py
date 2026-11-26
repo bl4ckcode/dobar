@@ -289,19 +289,8 @@ async def resolve_bar_context(user: AuthUser, bar_id: int) -> BarAuthContext:
         )
     )
     if staff is None:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You don't have access to this bar",
-        )
-
-    staff_query = BarStaff.__table__.select().where(
-        (BarStaff.user_id == user.id) &
-        (BarStaff.bar_id == bar_id) &
-        (BarStaff.is_active == True)
-    )
-    staff = await database.fetch_one(staff_query)
-    if staff is None:
-        # Membership revoked after get_current_user loaded the roles.
+        # No active membership (never had one, or it was revoked after
+        # get_current_user loaded the roles).
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You don't have access to this bar",
